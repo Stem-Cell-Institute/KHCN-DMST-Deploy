@@ -1,0 +1,48 @@
+{
+  "name": "sci-ace",
+  "version": "2.0.0",
+  "description": "Hệ thống Quản lý KHCN & ĐMST - Viện Tế bào gốc (SCI-ACE)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build:crd": "esbuild crd-lab-booking/main.jsx --bundle --outfile=crd-lab-booking/bundle.js --format=iife --loader:.jsx=jsx --jsx=automatic --platform=browser",
+    "migrate:turso": "node scripts/migrate-to-turso.js",
+    "db:status": "node scripts/db-status.js",
+    "import:sjr": "node scripts/import-sjr-csv.js",
+    "migrate:reset-precreated": "node migrations/reset-precreated-passwords.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
+  },
+  "keywords": [
+    "khcn",
+    "dmst",
+    "sci-ace",
+    "turso",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "archiver": "^6.0.1",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.7.0",
+    "cors": "^2.8.6",
+    "csv-parse": "^6.2.1",
+    "docxtemplater": "^3.68.3",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "jsonwebtoken": "^9.0.2",
+    "lucide": "^0.577.0",
+    "lucide-react": "^0.577.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.7",
+    "pizzip": "^3.2.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "sortablejs": "^1.15.2",
+    "xlsx": "^0.18.5"
+  }
+}

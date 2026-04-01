@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hồ sơ Đạo đức Nghiên cứu Động vật - SCI-ACE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a4d2e;
+            --primary-light: #2d6a4f;
+            --accent: #f77f00;
+            --accent-light: #fcbf49;
+            --dark: #0a1f1a;
+            --gray: #495057;
+            --gray-light: #adb5bd;
+            --bg: #fafafa;
+            --white: #ffffff;
+            --shadow: rgba(26, 77, 46, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--bg);
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: var(--white);
+            padding: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(-50px, -50px) rotate(180deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .logo {
+            min-width: 100px;
+            height: 80px;
+            padding: 0 1rem;
+            background: var(--white);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Libre Baskerville', serif;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        .header-text h1 {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .header-text p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--white);
+            box-shadow: 0 2px 10px var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav .container {
+            display: flex;
+            gap: 2rem;
+            padding: 1rem 2rem;
+        }
+
+        nav a {
+            color: var(--gray);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        nav a:hover, nav a.active {
+            color: var(--primary);
+            background: rgba(26, 77, 46, 0.05);
+        }
+
+        /* Nav dropdown: Nộp hồ sơ */
+        .nav-dropdown { position: relative; display: inline-block; }
+        .nav-dropdown-trigger {
+            display: inline-flex; align-items: center; gap: 0.25rem;
+            color: var(--gray); font-weight: 500; padding: 0.5rem 1rem;
+            border-radius: 8px; cursor: pointer; transition: all 0.3s ease;
+            font-family: inherit; font-size: inherit; background: none; border: none;
+            white-space: nowrap;
+        }
+        .nav-dropdown:hover .nav-dropdown-trigger {
+            color: var(--primary); background: rgba(26, 77, 46, 0.05);
+        }
+        .nav-dropdown-menu {
+            position: absolute; top: 100%; left: 0; min-width: 260px;
+            margin-top: 0.25rem; padding: 0.5rem 0;
+            background: var(--white); border-radius: 8px;
+            box-shadow: 0 8px 24px var(--shadow);
+            opacity: 0; visibility: hidden; transform: translateY(-4px);
+            transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+            z-index: 200; border: 1px solid rgba(26, 77, 46, 0.08);
+        }
+        .nav-dropdown:hover .nav-dropdown-menu {
+            opacity: 1; visibility: visible; transform: translateY(0);
+        }
+        .nav-dropdown-menu a {
+            display: block; padding: 0.6rem 1rem; color: var(--gray);
+            text-decoration: none; font-weight: 500; white-space: nowrap; border-radius: 0;
+        }
+        .nav-dropdown-menu a:hover {
+            background: rgba(26, 77, 46, 0.06); color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 4rem 0;
+            text-align: center;
+        }
+
+        .hero h2 {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 2.8rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--gray);
+            max-width: 800px;
+            margin: 0 auto 2rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .stat-card {
+            background: var(--white);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px var(--shadow);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Libre Baskerville', serif;
+        }
+
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.95rem;
+            margin-top: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Cards Grid */
+        .cards-section {
+            padding: 4rem 0;
+        }
+
+        .section-title {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 50px;
+            height: 4px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .section-desc {
+            color: var(--gray);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px var(--shadow);
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(26, 77, 46, 0.15);
+            border-color: var(--accent-light);
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(247, 127, 0, 0.3);
+        }
+
+        .card-title {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.3rem;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .card-code {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--white);
+            padding: 0.3rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .card-desc {
+            color: var(--gray);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .card-meta {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(26, 77, 46, 0.08);
+            color: var(--primary);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge.required {
+            background: rgba(247, 127, 0, 0.1);
+            color: var(--accent);
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: var(--white);
+            padding: 4rem 0;
+            margin: 4rem 0;
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-section::after {
+            content: '';
+            position: absolute;
+            bottom: -100px;
+            left: -100px;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .cta-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .cta-content h3 {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .cta-content p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2.5rem;
+            background: var(--accent);
+            color: var(--white);
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(247, 127, 0, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(247, 127, 0, 0.5);
+            background: #e67300;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: var(--white);
+            padding: 3rem 0 1.5rem;
+            margin-top: 4rem;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h4 {
+            font-family: 'Libre Baskerville', serif;
+            margin-bottom: 1rem;
+            color: var(--accent-light);
+        }
+
+        .footer-section p, .footer-section a {
+            color: var(--gray-light);
+            text-decoration: none;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section a:hover {
+            color: var(--accent-light);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            color: var(--gray-light);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .header-text h1 {
+                font-size: 1.8rem;
+            }
+
+            .hero h2 {
+                font-size: 2rem;
+            }
+
+            nav .container {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .tips-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .guide-section {
+                padding: 2rem 1.5rem !important;
+            }
+        }
+
+        /* Animation on scroll */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+        .card:nth-child(5) { animation-delay: 0.5s; }
+        .card:nth-child(6) { animation-delay: 0.6s; }
+
+        /* Quick Steps */
+        .quick-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .step-card {
+            padding: 2rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 12px;
+            border: 2px solid var(--accent-light);
+            position: relative;
+        }
+
+        .step-number {
+            position: absolute;
+            top: -20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: var(--accent);
+            color: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(247, 127, 0, 0.3);
+        }
+
+        .step-card h3 {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.3rem;
+        }
+
+        .step-card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .step-card li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            color: var(--gray);
+        }
+
+        .step-card li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .guide-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .guide-section {
+            margin-bottom: 3rem;
+            background: var(--white);
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px var(--shadow);
+        }
+
+        .guide-section h2 {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 2rem;
+        }
+
+        /* Process Flow */
+        .process-flow {
+            margin-top: 2rem;
+        }
+
+        .process-step {
+            margin-bottom: 1rem;
+        }
+
+        .process-arrow {
+            text-align: center;
+            font-size: 2rem;
+            color: var(--accent);
+            margin: 0.5rem 0;
+        }
+
+        .process-box {
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            border-left: 4px solid;
+        }
+
+        .process-box h4 {
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .process-box.researcher {
+            background: rgba(247, 127, 0, 0.1);
+            border-color: var(--accent);
+        }
+
+        .process-box.secretary {
+            background: rgba(26, 77, 46, 0.1);
+            border-color: var(--primary);
+        }
+
+        .process-box.chair {
+            background: rgba(45, 106, 79, 0.1);
+            border-color: var(--primary-light);
+        }
+
+        .process-box.reviewer {
+            background: rgba(252, 191, 73, 0.1);
+            border-color: var(--accent-light);
+        }
+
+        .process-box.meeting {
+            background: rgba(26, 77, 46, 0.15);
+            border-color: var(--primary);
+        }
+
+        .process-box.implementation {
+            background: rgba(247, 127, 0, 0.15);
+            border-color: var(--accent);
+        }
+
+        .process-note {
+            font-size: 0.9rem;
+            color: var(--gray);
+            font-style: italic;
+        }
+
+        .process-decision {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .decision-option {
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .decision-option.approved {
+            background: rgba(40, 167, 69, 0.1);
+            border: 2px solid #28a745;
+        }
+
+        .decision-option.conditional {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #ffc107;
+        }
+
+        .decision-option.rejected {
+            background: rgba(220, 53, 69, 0.1);
+            border: 2px solid #dc3545;
+        }
+
+        /* FAQ */
+        .faq-list {
+            margin-top: 2rem;
+        }
+
+        .faq-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .faq-item summary {
+            padding: 1.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--primary);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .faq-item summary::before {
+            content: '▶';
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+        }
+
+        .faq-item[open] summary::before {
+            transform: rotate(90deg);
+        }
+
+        .faq-item summary:hover {
+            background: rgba(26, 77, 46, 0.05);
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem 1.5rem;
+            color: var(--gray);
+        }
+
+        .faq-answer ul, .faq-answer ol {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .warning-box {
+            background: rgba(247, 127, 0, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        /* Tips */
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .tip-card {
+            padding: 2rem;
+            border-radius: 12px;
+            border: 2px solid;
+        }
+
+        .tip-card h4 {
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .tip-card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .tip-card li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .tip-do {
+            background: rgba(40, 167, 69, 0.05);
+            border-color: #28a745;
+        }
+
+        .tip-do li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: 700;
+        }
+
+        .tip-dont {
+            background: rgba(220, 53, 69, 0.05);
+            border-color: #dc3545;
+        }
+
+        .tip-dont li::before {
+            content: '✗';
+            position: absolute;
+            left: 0;
+            color: #dc3545;
+            font-weight: 700;
+        }
+
+        /* Contact */
+        .contact-box {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: var(--white);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+        }
+
+        .contact-box h3 {
+            margin-bottom: 1rem;
+        }
+
+        .contact-details {
+            margin-top: 1.5rem;
+        }
+
+        .contact-item {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .contact-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="access-denied" style="display:none;max-width:760px;margin:48px auto;padding:0 16px;">
+        <div style="background:#fff3f3;border:1px solid #f5c2c7;color:#842029;border-radius:10px;padding:16px 18px;">
+            <strong>Không có quyền truy cập</strong>
+            <p style="margin:8px 0 0;">Module này chỉ dành cho người dùng trong viện (<code>@sci.edu.vn</code>).</p>
+            <p style="margin:10px 0 0;"><a href="dang-nhap.html?returnUrl=sci-ace.html">Đăng nhập</a> hoặc <a href="index.html">về Trang chủ</a>.</p>
+        </div>
+    </div>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">ACE-SCI</a>
+                <div class="header-text">
+                    <h1>Hồ sơ Đạo đức Nghiên cứu Động vật</h1>
+                    <p>Viện Tế bào gốc, Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <a href="index.html">🏠 Trang chủ</a>
+            <a href="nhom-1.html">📚 Nhóm hồ sơ 1: Hướng dẫn vận hành</a>
+            <a href="nhom-2.html">📝 Nhóm hồ sơ 2: Dành cho Nghiên cứu viên</a>
+            <a href="nhom-3.html">👥 Nhóm hồ sơ 3: Dành cho thành viên Hội đồng</a>
+            <div class="nav-dropdown">
+                <span class="nav-dropdown-trigger">📤 Nộp hồ sơ ▾</span>
+                <div class="nav-dropdown-menu">
+                    <a href="nop-ho-so.html">Nộp hồ sơ (Nghiên cứu viên)</a>
+                    <a href="hoi-dong.html">Khu vực Hội đồng (xem hồ sơ đã nộp)</a>
+                    <a href="quan-tri.html">Quản trị (Admin)</a>
+                </div>
+            </div>
+            <div id="auth-status"></div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <div class="guide-section fade-in" style="text-align: left;">
+                    <div class="guide-icon">🚀</div>
+                    <h2>Tổng quan quy trình thực hiện</h2>
+                    
+                    <div class="quick-steps">
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <h3>Nghiên cứu viên</h3>
+                            <ul>
+                                <li>Đọc <strong>Mục lục Hệ thống</strong></li>
+                                <li>Hoàn thiện <strong>SCI-ACE-01, 02, 03</strong></li>
+                                <li>Chuẩn bị tài liệu đính kèm</li>
+                                <li>Nộp hồ sơ cho Thư ký HĐ</li>
+                            </ul>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <h3>Hội đồng đánh giá</h3>
+                            <ul>
+                                <li>Phân công phản biện</li>
+                                <li>Sử dụng <strong>SCI-ACE-PĐG</strong></li>
+                                <li>Họp thẩm định → <strong>SCI-ACE-05</strong></li>
+                                <li>Cấp Quyết định → <strong>SCI-ACE-QĐ</strong></li>
+                            </ul>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <h3>Thực hiện & Báo cáo</h3>
+                            <ul>
+                                <li>Nhận Quyết định chính thức</li>
+                                <li>Thực hiện theo đề cương</li>
+                                <li>Thay đổi? → <strong>SCI-ACE-06</strong></li>
+                                <li>Báo cáo → <strong>SCI-ACE-07</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cards-section">
+            <div class="container">
+                <div class="guide-section fade-in">
+                    <div class="guide-icon">📋</div>
+                    <h2>Quy trình chi tiết</h2>
+                    
+                    <div class="process-flow">
+                        <div class="process-step">
+                            <div class="process-arrow">↓</div>
+                            <div class="process-box researcher">
+                                <h4>📝 Nghiên cứu viên</h4>
+                                <p>Chuẩn bị hồ sơ: SCI-ACE-01, 02, 03</p>
+                                <p class="process-note">+ Tài liệu đính kèm</p>
+                            </div>
+                        </div>
+
+                        <div class="process-step">
+                            <div class="process-arrow">↓</div>
+                            <div class="process-box secretary">
+                                <h4>🗂️ Thư ký Hội đồng</h4>
+                                <p>Tiếp nhận và kiểm tra hồ sơ</p>
+                                <p class="process-note">Thời gian: 3 ngày</p>
+                            </div>
+                        </div>
+
+                        <div class="process-step">
+                            <div class="process-arrow">↓</div>
+                            <div class="process-box chair">
+                                <h4>👔 Chủ tịch Hội đồng</h4>
+                                <p>Phân công phản biện (≥2 thành viên)</p>
+                                <p class="process-note">Gửi hồ sơ trước 1 tuần</p>
+                            </div>
+                        </div>
+
+                        <div class="process-step">
+                            <div class="process-arrow">↓</div>
+                            <div class="process-box reviewer">
+                                <h4>👥 Thành viên Hội đồng</h4>
+                                <p>Đánh giá → SCI-ACE-PĐG</p>
+                                <p class="process-note">Phiếu nhận xét</p>
+                            </div>
+                        </div>
+
+                        <div class="process-step">
+                            <div class="process-arrow">↓</div>
+                            <div class="process-box meeting">
+                                <h4>🤝 Họp Hội đồng</h4>
+                                <p>Thảo luận, quyết định → SCI-ACE-05</p>
+                                <p class="process-note">Cần ≥2/3 thành viên, >2/3 phiếu ủng hộ</p>
+                            </div>
+                        </div>
+
+                        <div class="process-step">
+                            <div class="process-arrow">↓</div>
+                            <div class="process-decision">
+                                <div class="decision-option approved">
+                                    <h4>✅ Chấp thuận</h4>
+                                    <p>→ Cấp SCI-ACE-QĐ (VN+EN)</p>
+                                </div>
+                                <div class="decision-option conditional">
+                                    <h4>⚠️ Có điều kiện</h4>
+                                    <p>→ NCV nộp SCI-ACE-04</p>
+                                </div>
+                                <div class="decision-option rejected">
+                                    <h4>❌ Không chấp thuận</h4>
+                                    <p>→ Thông báo lý do</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="process-step">
+                            <div class="process-arrow">↓</div>
+                            <div class="process-box implementation">
+                                <h4>🔬 Thực hiện nghiên cứu</h4>
+                                <p>• Thay đổi? → SCI-ACE-06</p>
+                                <p>• Báo cáo định kỳ/kết thúc → SCI-ACE-07</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="guide-section fade-in">
+                    <div class="guide-icon">❓</div>
+                    <h2>Câu hỏi thường gặp</h2>
+                    
+                    <div class="faq-list">
+                        <details class="faq-item">
+                            <summary>Tôi cần nộp những mẫu nào khi lần đầu xin xét duyệt?</summary>
+                            <div class="faq-answer">
+                                <p><strong>Ba mẫu bắt buộc:</strong></p>
+                                <ul>
+                                    <li>SCI-ACE-01 (Đơn đề nghị)</li>
+                                    <li>SCI-ACE-02 (Phiếu thuyết minh)</li>
+                                    <li>SCI-ACE-03 (Báo cáo 3R)</li>
+                                </ul>
+                                <p><strong>Tài liệu đính kèm:</strong></p>
+                                <ul>
+                                    <li>Thuyết minh đề tài/Hợp đồng nghiên cứu</li>
+                                    <li>Lý lịch khoa học của Chủ nhiệm và Nghiên cứu viên</li>
+                                    <li>Quyết định người hướng dẫn (nếu là học viên/sinh viên)</li>
+                                    <li>Bản cam kết thực hiện theo đúng nguyên tắc đạo đức</li>
+                                </ul>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary>Sự khác biệt giữa SCI-ACE-02 và SCI-ACE-03?</summary>
+                            <div class="faq-answer">
+                                <p><strong>SCI-ACE-02 (Phiếu thuyết minh):</strong> Mô tả TOÀN BỘ kế hoạch nghiên cứu bao gồm mục tiêu, phương pháp, thiết kế, động vật sử dụng, chỉ tiêu đánh giá...</p>
+                                <p><strong>SCI-ACE-03 (Báo cáo 3R):</strong> Tập trung vào việc GIẢI TRÌNH cụ thể về nguyên tắc 3R:</p>
+                                <ul>
+                                    <li><strong>Replacement:</strong> Tại sao không thể thay thế động vật?</li>
+                                    <li><strong>Reduction:</strong> Tại sao số lượng động vật này là hợp lý?</li>
+                                    <li><strong>Refinement:</strong> Làm thế nào giảm thiểu đau đớn, căng thẳng?</li>
+                                </ul>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary>Khi nào cần nộp SCI-ACE-06 (Báo cáo thay đổi)?</summary>
+                            <div class="faq-answer">
+                                <p>Khi có <strong>BẤT KỲ</strong> thay đổi nào so với đề cương đã được phê duyệt:</p>
+                                <ul>
+                                    <li>Thay đổi mục tiêu nghiên cứu</li>
+                                    <li>Thay đổi thiết kế nghiên cứu</li>
+                                    <li>Thay đổi số lượng hoặc loài động vật</li>
+                                    <li>Thay đổi phương pháp nghiên cứu</li>
+                                    <li>Thay đổi quy trình thí nghiệm</li>
+                                    <li>Thay đổi chỉ tiêu đánh giá kết quả</li>
+                                </ul>
+                                <p class="warning-box">⚠️ <strong>LƯU Ý:</strong> Phải báo cáo và được Hội đồng chấp thuận TRƯỚC KHI thực hiện thay đổi.</p>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary>Mất bao lâu để được xét duyệt?</summary>
+                            <div class="faq-answer">
+                                <p><strong>Tối đa 30 ngày</strong> kể từ khi nộp hồ sơ hợp lệ.</p>
+                                <p>Thời gian có thể ngắn hơn tùy thuộc vào:</p>
+                                <ul>
+                                    <li>Độ phức tạp của nghiên cứu</li>
+                                    <li>Tính đầy đủ của hồ sơ</li>
+                                    <li>Lịch họp Hội đồng</li>
+                                </ul>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary>Tôi có thể bắt đầu nghiên cứu ngay sau khi nộp hồ sơ?</summary>
+                            <div class="faq-answer">
+                                <p class="warning-box">❌ <strong>KHÔNG!</strong> Bạn phải đợi đến khi nhận được <strong>Quyết định SCI-ACE-QĐ</strong> chính thức từ Hội đồng.</p>
+                                <p>Bắt đầu nghiên cứu trước khi có Quyết định là vi phạm quy định đạo đức.</p>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary>Nếu Hội đồng yêu cầu chỉnh sửa thì làm sao?</summary>
+                            <div class="faq-answer">
+                                <p>Khi nhận kết luận "Chấp thuận có điều kiện", bạn cần:</p>
+                                <ol>
+                                    <li>Nghiên cứu kỹ ý kiến của Hội đồng</li>
+                                    <li>Chỉnh sửa đề cương theo yêu cầu</li>
+                                    <li>Nộp <strong>SCI-ACE-04</strong> (Báo cáo giải trình tiếp thu) giải thích cách bạn đã chỉnh sửa</li>
+                                    <li>Thời hạn: Tối đa <strong>30 ngày</strong></li>
+                                </ol>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary>Tôi có cần báo cáo trong quá trình thực hiện?</summary>
+                            <div class="faq-answer">
+                                <p><strong>CÓ!</strong> Bạn cần nộp <strong>SCI-ACE-07</strong> (Báo cáo kết quả tuân thủ) trong các trường hợp:</p>
+                                <ul>
+                                    <li><strong>Báo cáo định kỳ:</strong> Theo yêu cầu của Hội đồng (thường là 6 tháng/lần cho nghiên cứu dài hạn)</li>
+                                    <li><strong>Báo cáo kết thúc:</strong> Khi hoàn thành nghiên cứu</li>
+                                    <li><strong>Báo cáo bất thường:</strong> Khi có sự cố ảnh hưởng đến phúc lợi động vật</li>
+                                </ul>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary>Tôi có cần nộp cả hai phiên bản Quyết định (VN và EN)?</summary>
+                            <div class="faq-answer">
+                                <p><strong>KHÔNG.</strong> Hội đồng sẽ tự động cấp cả hai phiên bản (tiếng Việt và tiếng Anh) cho bạn khi chấp thuận.</p>
+                                <p>Bạn có thể sử dụng phiên bản tiếng Anh khi cần xuất trình cho tạp chí quốc tế hoặc đối tác nước ngoài.</p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cards-section">
+            <div class="container">
+                <div class="guide-section fade-in">
+                    <div class="guide-icon">💡</div>
+                    <h2>Mẹo hữu ích</h2>
+                    
+                    <div class="tips-grid">
+                        <div class="tip-card tip-do">
+                            <h4>✅ NÊN</h4>
+                            <ul>
+                                <li>Đọc kỹ hướng dẫn trước khi điền</li>
+                                <li>Nộp hồ sơ sớm để có thời gian chỉnh sửa</li>
+                                <li>Tham khảo ý kiến Thư ký nếu không chắc</li>
+                                <li>Lưu giữ bản sao tất cả hồ sơ</li>
+                                <li>Báo cáo mọi thay đổi kịp thời</li>
+                                <li>Tuân thủ nghiêm ngặt nguyên tắc 3R</li>
+                            </ul>
+                        </div>
+
+                        <div class="tip-card tip-dont">
+                            <h4>❌ KHÔNG NÊN</h4>
+                            <ul>
+                                <li>Bắt đầu nghiên cứu trước khi có Quyết định</li>
+                                <li>Thay đổi định dạng hoặc cấu trúc mẫu</li>
+                                <li>Nộp hồ sơ thiếu tài liệu đính kèm</li>
+                                <li>Thực hiện thay đổi mà không báo cáo</li>
+                                <li>Bỏ qua yêu cầu chỉnh sửa của Hội đồng</li>
+                                <li>Sử dụng phiên bản mẫu cũ</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="guide-section fade-in">
+                    <div class="guide-icon">📞</div>
+                    <h2>Thông tin liên hệ</h2>
+                    
+                    <div class="contact-box">
+                        <h3>Thư ký Hội đồng Đạo đức Nghiên cứu trên Động vật</h3>
+                        <p><strong>Viện Tế bào gốc</strong><br>
+                        Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM</p>
+                        <div class="contact-details">
+                            <div class="contact-item">
+                                <strong>📍 Địa chỉ:</strong>
+                                <span>[Cập nhật địa chỉ]</span>
+                            </div>
+                            <div class="contact-item">
+                                <strong>📧 Email:</strong>
+                                <span>[Cập nhật email]</span>
+                            </div>
+                            <div class="contact-item">
+                                <strong>📱 Điện thoại:</strong>
+                                <span>[Cập nhật số điện thoại]</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <section class="cta-section fade-in" style="margin-top: 2rem;">
+                    <div class="container">
+                        <div class="cta-content">
+                            <h3>Sẵn sàng bắt đầu?</h3>
+                            <p>Đăng ký / đăng nhập để nộp hồ sơ hoặc theo dõi tiến độ xét duyệt.</p>
+                            <a href="nop-ho-so.html" class="btn">📤 Nộp hồ sơ</a>
+                            <a href="dang-nhap.html?returnUrl=sci-ace.html" class="btn" style="margin-left: 1rem; background: rgba(255,255,255,0.2); border: 2px solid var(--white);">🔐 Đăng ký / Đăng nhập</a>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Về hệ thống</h4>
+                    <p>Hệ thống tài liệu chuẩn hóa SCI-ACE được thiết kế để hỗ trợ quy trình xét duyệt đạo đức trong nghiên cứu trên động vật.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Liên kết nhanh</h4>
+                    <a href="nhom-1.html">Nhóm hồ sơ 1: Hướng dẫn vận hành</a>
+                    <a href="nhom-2.html">Nhóm hồ sơ 2: Dành cho Nghiên cứu viên</a>
+                    <a href="nhom-3.html">Nhóm hồ sơ 3: Dành cho thành viên Hội đồng</a>
+                    <a href="huong-dan.html">Hướng dẫn sử dụng</a>
+                    <a href="dang-nhap.html?returnUrl=sci-ace.html">Đăng ký / Đăng nhập</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Liên hệ</h4>
+                    <p>Thư ký Hội đồng Đạo đức<br>
+                    Viện Tế bào gốc<br>
+                    Trường ĐHKHTN, ĐHQG-HCM</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 SCI-ACE. Phiên bản 1.0 | Cập nhật: Tháng 1/2026</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/auth-status.js"></script>
+    <script src="js/system-access.js"></script>
+    <script>
+        const INSTITUTE_DOMAIN = '@sci.edu.vn';
+        function enforceInstituteAccess() {
+            let user = {};
+            try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (_) { user = {}; }
+            const token = localStorage.getItem('token');
+            const email = String((user && user.email) || '').toLowerCase().trim();
+            const allowed = Boolean(token) && (typeof hasInstituteModuleAccess === 'function' ? hasInstituteModuleAccess(user) : email.endsWith(INSTITUTE_DOMAIN));
+            if (allowed) return true;
+
+            const denied = document.getElementById('access-denied');
+            if (denied) denied.style.display = 'block';
+            document.querySelectorAll('header, nav, main, footer').forEach(function(el) {
+                el.style.display = 'none';
+            });
+            return false;
+        }
+
+        if (!enforceInstituteAccess()) {
+            // Chặn nội dung với tài khoản ngoài viện hoặc chưa đăng nhập.
+        } else {
+        // Add animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.card, .stat-card').forEach(el => {
+            observer.observe(el);
+        });
+        }
+    </script>
+</body>
+</html>

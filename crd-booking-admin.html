@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản trị đặt lịch thiết bị CRD | Admin</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);min-height:100vh;padding:20px;color:#e8e8f0;}
+:root{--card:#fff;--text:#1a1a2e;--muted:#5c5c7a;--border:#e0e4f0;--primary:#667eea;--danger:#e05c6a;--ok:#2e7d52;}
+a{color:#a8b4ff;}
+.container{max-width:1280px;margin:0 auto;}
+.topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;}
+.topbar h1{font-size:1.35rem;font-weight:700;color:#fff;}
+.topbar .sub{font-size:12px;opacity:.85;margin-top:4px;}
+.btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:8px;padding:9px 16px;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:none;}
+.btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;}
+.btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);}
+.btn-danger{background:var(--danger);color:#fff;padding:6px 12px;font-size:12px;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.card{background:var(--card);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;}
+.tabs{display:flex;border-bottom:1px solid var(--border);flex-wrap:wrap;background:#f8f9ff;}
+.tab{border:none;background:none;padding:14px 18px;font-weight:600;font-size:13px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;font-family:inherit;}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary);}
+.pane{display:none;padding:22px;}
+.pane.active{display:block;}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-bottom:22px;}
+.stat{background:#f0f2ff;border-radius:10px;padding:14px;text-align:center;}
+.stat b{display:block;font-size:1.5rem;color:var(--primary);}
+.stat span{font-size:11px;color:var(--muted);}
+table.data{width:100%;border-collapse:collapse;font-size:13px;}
+table.data th{text-align:left;padding:10px 12px;background:#f0f2ff;font-size:11px;text-transform:uppercase;color:var(--muted);}
+table.data td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);}
+table.data tr:hover td{background:#fafbff;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;}
+.field input,.field select,.field textarea{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;}
+.field textarea{min-height:72px;resize:vertical;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:720px){.grid2{grid-template-columns:1fr;}}
+.alert{padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px;}
+.alert-err{background:#fde8eb;color:#a32030;}
+.alert-ok{background:#e8f8f1;color:var(--ok);}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;}
+.badge-open{background:#fff3e0;color:#e65100;}
+.badge-review{background:#e3f2fd;color:#1565c0;}
+.badge-done{background:#e8f5e9;color:#2e7d52;}
+.badge-rej{background:#ffebee;color:#c62828;}
+/* ── Inner sub-tabs ─────────────────────────────── */
+.u-sub-tabs{display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border);}
+.u-sub-tab{border:none;background:none;padding:9px 20px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;}
+.u-sub-tab.active{color:var(--primary);border-bottom-color:var(--primary);}
+.u-sub-tab:hover:not(.active){color:var(--primary);}
+/* ── System users table ───────────────────────── */
+.sys-table{width:100%;border-collapse:collapse;font-size:13px;}
+.sys-table th{text-align:left;padding:9px 12px;background:#f0f2ff;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:2px solid var(--border);white-space:nowrap;}
+.sys-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);}
+.sys-table tbody tr:hover td{background:#fafbff;}
+.sys-table .col-type{width:100px;}
+.sys-table .col-role{width:120px;}
+.sys-table .col-stat{width:90px;text-align:center;}
+.sys-table .col-crd{width:140px;}
+.sys-table .col-acts{width:210px;}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:100;}
+.modal.show{display:flex;}
+.modal-box{background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;padding:22px;}
+.modal-box h3{margin-bottom:14px;color:var(--text);}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+.search{flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;}
+.m-card{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;}
+.m-card h4{color:var(--text);font-size:14px;}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <div>
+      <h1>⚙️ Quản trị đặt lịch thiết bị CRD</h1>
+      <div class="sub">Thiết bị · khung giờ mở · lịch · người dùng CRD · kiện cáo · tin nhắn</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a class="btn btn-ghost" href="crd-booking-v2.html">← Lịch đặt (user)</a>
+      <a class="btn btn-ghost" href="index.html">Trang chủ</a>
+    </div>
+  </div>
+  <div id="gate-msg" class="card pane active" style="padding:40px;text-align:center;color:var(--text);">
+    <p>Đang kiểm tra quyền…</p>
+  </div>
+  <div id="app-root" class="card" style="display:none;">
+    <div class="tabs" id="tabs"></div>
+    <div id="pane-overview" class="pane">
+      <div class="stats" id="overview-stats"></div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;">
+        Dữ liệu lưu trên máy chủ (SQLite). Người đăng nhập hệ thống được ánh xạ tự động sang <strong>người dùng CRD</strong> (id dạng <code>u_app_*</code>) khi mở trang đặt lịch.
+        Trang này chỉ dành cho <strong>Admin</strong> hệ thống SCI-ACE.
+      </p>
+    </div>
+    <div id="pane-machines" class="pane">
+      <div class="toolbar">
+        <button type="button" class="btn btn-primary btn-sm" onclick="openMachineModal(null)">+ Thêm thiết bị</button>
+      </div>
+      <div id="machines-list"></div>
+    </div>
+    <div id="pane-users" class="pane">
+      <!-- Sub-tabs -->
+      <div class="u-sub-tabs" id="u-sub-tabs" style="display:none;">
+        <button class="u-sub-tab active" id="utab-crd" onclick="switchUserTab('crd')">🔬 Người dùng CRD</button>
+        <button class="u-sub-tab" id="utab-sys" onclick="switchUserTab('sys')">⚙️ Tài khoản Hệ thống</button>
+      </div>
+
+      <!-- CRD sub-tab -->
+      <div id="u-panel-crd">
+        <div class="toolbar">
+          <button type="button" class="btn btn-primary btn-sm" onclick="openPersonModal(null)">+ Thêm người dùng CRD</button>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Quản trị đầy đủ: sửa, ban, gỡ CRD hoặc xoá — kể cả tài khoản đồng bộ <code>u_app_*</code> (xoá CRD = gỡ quyền module, không xoá user hệ thống).</p>
+        <div id="users-list"></div>
+      </div>
+
+      <!-- Hệ thống sub-tab -->
+      <div id="u-panel-sys" style="display:none;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+          <input type="text" id="sys-filter" placeholder="Lọc tên, email…" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;" oninput="renderSysUsers()">
+          <select id="sys-filter-type" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;" onchange="renderSysUsers()">
+            <option value="all">Tất cả</option>
+            <option value="in">🏛 Trong Viện (@sci.edu.vn)</option>
+            <option value="out">🌐 Ngoài Viện (khách CRD)</option>
+            <option value="disabled">⛔ Đã vô hiệu hoá</option>
+            <option value="no_crd">❌ Chưa vào CRD</option>
+          </select>
+          <span id="sys-count-label" style="font-size:12px;color:var(--muted);margin-left:auto;"></span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="sys-table">
+            <thead>
+              <tr>
+                <th class="col-type">Loại TK</th>
+                <th>Họ tên</th>
+                <th>Email</th>
+                <th class="col-role">Vai trò</th>
+                <th class="col-crd">Hồ sơ CRD</th>
+                <th class="col-stat">Trạng thái</th>
+                <th class="col-acts">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="sys-users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="pane-bookings" class="pane">
+      <div class="toolbar">
+        <input type="text" class="search" id="bk-filter" placeholder="Lọc theo thiết bị, người, ngày…" oninput="renderBookings()">
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data"><thead><tr>
+          <th>Thiết bị</th><th>Ngày</th><th>Giờ</th><th>Người đặt</th><th>Mục đích</th><th>TT</th><th></th>
+        </tr></thead><tbody id="bookings-tbody"></tbody></table>
+      </div>
+    </div>
+    <div id="pane-complaints" class="pane">
+      <div id="complaints-list"></div>
+    </div>
+    <div id="pane-chats" class="pane">
+      <!-- Sub-tabs cho Chat -->
+      <div class="u-sub-tabs" id="chat-sub-tabs">
+        <button class="u-sub-tab active" id="chat-tab-bc" onclick="switchChatSubTab('bc')">📢 Kênh chung</button>
+        <button class="u-sub-tab" id="chat-tab-p2p" onclick="switchChatSubTab('p2p')">💬 Nhắn riêng</button>
+      </div>
+
+      <!-- Kênh chung -->
+      <div id="bc-panel" style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <p style="font-size:12px;color:var(--muted);margin:0;">Tất cả tin nhắn trên kênh chung CRD. Nhấn <strong>🗑 Xóa</strong> để ẩn tin vi phạm.</p>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="bc-filter" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;" onchange="renderBroadcastAdmin()">
+              <option value="all">Tất cả</option>
+              <option value="today">Hôm nay</option>
+              <option value="week">7 ngày gần đây</option>
+            </select>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data"><thead><tr>
+            <th style="width:150px;">Thời gian</th><th style="width:140px;">Người gửi</th><th>Nội dung</th><th style="width:180px;">Booking đính kèm</th><th style="width:80px;"></th>
+          </tr></thead><tbody id="bc-tbody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- Nhắn riêng -->
+      <div id="p2p-panel" style="display:none;">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Xóa tin nhắn riêng vi phạm / spam (không thể hoàn tác).</p>
+        <div style="overflow-x:auto;">
+          <table class="data"><thead><tr>
+            <th>Thời gian</th><th>Từ</th><th>Đến</th><th>Booking</th><th>Nội dung</th><th></th>
+          </tr></thead><tbody id="chats-tbody"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-machine">
+  <div class="modal-box">
+    <h3 id="mm-h3">Thiết bị</h3>
+    <div id="mm-alert"></div>
+    <div class="field"><label>Tên *</label><input id="mm-name" placeholder="VD: SEM-7000"></div>
+    <div class="field"><label>Loại / mô tả ngắn</label><input id="mm-type" placeholder="Kính hiển vi điện tử quét"></div>
+    <div class="field"><label>Vị trí</label><input id="mm-loc" placeholder="Lab A-01"></div>
+    <div class="grid2">
+      <div class="field"><label>Màu</label><input id="mm-color" type="color" value="#667eea" style="width:60px;height:38px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><span id="mm-color-hex" style="margin-left:8px;font-size:12px;color:var(--muted);font-family:monospace;">#667eea</span></div>
+      <div class="field"><label>Thứ tự hiển thị</label><input id="mm-sort" type="number" value="0"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Mở đặt từ (giờ 0–23)</label><input id="mm-from" type="number" min="0" max="23" value="8"></div>
+      <div class="field"><label>Đến (giờ 1–24, exclusive)</label><input id="mm-to" type="number" min="1" max="24" value="20"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Tối đa (giờ/lần)</label><input id="mm-max" type="number" min="1" max="24" value="4"></div>
+    </div>
+    <div class="field"><label>Mô tả dài</label><textarea id="mm-desc"></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+      <button type="button" class="btn btn-ghost" style="color:var(--text);border:1px solid var(--border);" onclick="closeModal('modal-machine')">Huỷ</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="saveMachine()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-person">
+  <div class="modal-box">
+    <h3 id="pm-h3">Người dùng CRD</h3>
+    <div id="pm-alert"></div>
+    <div class="field"><label>Tên hiển thị *</label><input id="pm-name"></div>
+    <div class="field"><label>Email</label><input id="pm-email" type="email"></div>
+    <div class="field"><label>Vai trò</label>
+      <select id="pm-role"><option value="user">Researcher</option><option value="admin">Admin CRD (demo)</option></select>
+    </div>
+    <div class="field"><label>Avatar (1–2 ký tự)</label><input id="pm-av" maxlength="2"></div>
+    <div id="pm-extras" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      <label style="display:block;margin-bottom:8px;"><input type="checkbox" id="pm-ban"> Tạm khoá (ban) trong CRD</label>
+      <label style="display:block;"><input type="checkbox" id="pm-revoked"> Gỡ quyền CRD (đồng bộ không tự tạo lại)</label>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+      <button type="button" class="btn btn-ghost" style="color:var(--text);border:1px solid var(--border);" onclick="closeModal('modal-person')">Huỷ</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="savePerson()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-reset-pwd">
+  <div class="modal-box" style="max-width:440px;">
+    <h3 id="rp-title" style="margin-bottom:14px;">🔑 Đặt lại mật khẩu</h3>
+    <div id="rp-alert"></div>
+    <div class="field"><label>Email tài khoản</label><input id="rp-email" type="email" readonly style="background:#f0f0f8;cursor:not-allowed;"></div>
+    <div class="field"><label>Mật khẩu mới <span style="color:var(--danger);">*</span></label><input id="rp-password" type="text" placeholder="Nhập mật khẩu mới (≥ 6 ký tự)"></div>
+    <div id="rp-hint" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button type="button" class="btn btn-ghost" style="color:var(--text);border:1px solid var(--border);" onclick="closeModal('modal-reset-pwd')">Huỷ</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="submitResetPassword()">Đặt lại mật khẩu</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-booking">
+  <div class="modal-box">
+    <h3>Sửa lịch</h3>
+    <div id="bm-alert"></div>
+    <div class="field"><label>Thiết bị</label><select id="bm-mid"></select></div>
+    <div class="field"><label>Người đặt</label><select id="bm-uid"></select></div>
+    <div class="field"><label>Ngày</label><input id="bm-date" type="date"></div>
+    <div class="grid2">
+      <div class="field"><label>Bắt đầu (số giờ, bước 0.5 = 30 phút)</label><input id="bm-sh" type="number" min="0" max="24" step="0.5"></div>
+      <div class="field"><label>Kết thúc (tương tự, VD 9.5 = 9:30)</label><input id="bm-eh" type="number" min="0" max="24" step="0.5"></div>
+    </div>
+    <div class="field"><label>Nhóm nghiên cứu</label><input type="text" id="bm-rg"></div>
+    <div class="field"><label>Mục đích</label><textarea id="bm-purpose"></textarea></div>
+    <div class="field"><label>Trạng thái</label>
+      <select id="bm-status"><option value="confirmed">confirmed</option><option value="cancelled">cancelled</option></select>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+      <button type="button" class="btn btn-ghost" style="color:var(--text);border:1px solid var(--border);" onclick="closeModal('modal-booking')">Đóng</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="saveBooking()">Cập nhật</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+let snapshot = null;
+let editingMachineId = null;
+let editingPersonId = null;
+let editingBookingId = null;
+let sysUsers = [];
+
+const adminApi = {
+  getAllSysUsers: () => api('/api/crd/admin/users'),
+  disableSysUser: id => api(`/api/crd/admin/users/${id}/disable`, { method:'PUT' }),
+  resetPassword: (id, password) => api(`/api/crd/admin/users/${id}/reset-password`, { method:'POST', body: JSON.stringify({ password }) }),
+  deleteChat: id => api(`/api/crd/admin/chats/${id}`, { method:'DELETE' }),
+};
+
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const fmt = h => String(h).padStart(2,'0') + ':00';
+const fmtT = t => {
+  const totalMins = Math.round(Number(t) * 60);
+  const hh = Math.floor(totalMins / 60) % 24;
+  const mm = totalMins % 60;
+  return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+};
+
+async function api(path, opt = {}) {
+  const method = (opt.method || 'GET').toUpperCase();
+  const headers = { ...(method !== 'GET' ? { 'Content-Type': 'application/json' } : {}), ...(opt.headers || {}) };
+  const r = await fetch(path, { credentials: 'same-origin', ...opt, headers });
+  const text = await r.text();
+  let j = null;
+  try { j = text ? JSON.parse(text) : null; } catch (_) {}
+  if (!r.ok) throw new Error((j && j.message) || text || r.status);
+  return j;
+}
+
+function showGate(html) {
+  document.getElementById('gate-msg').innerHTML = html;
+  document.getElementById('gate-msg').style.display = 'block';
+  document.getElementById('app-root').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('gate-msg').style.display = 'none';
+  document.getElementById('app-root').style.display = 'block';
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+
+async function loadSnapshot() {
+  snapshot = await api('/api/crd/admin/snapshot', { method: 'GET' });
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + id));
+  if (id === 'users' && !sysUsers.length) loadSysUsers();
+}
+
+function renderTabs() {
+  const items = [
+    ['overview', '📊 Tổng quan'],
+    ['machines', '🔬 Thiết bị'],
+    ['users', '👥 Người dùng CRD'],
+    ['bookings', '📋 Lịch đặt'],
+    ['complaints', '⚖️ Kiện cáo'],
+    ['chats', '💬 Chat']
+  ];
+  document.getElementById('tabs').innerHTML = items.map(([id, label]) =>
+    `<button type="button" class="tab${id==='overview'?' active':''}" data-tab="${id}" onclick="switchTab('${id}')">${label}</button>`
+  ).join('');
+}
+
+function renderOverview() {
+  const m = snapshot.machines.length;
+  const u = snapshot.users.length;
+  const b = snapshot.bookings.length;
+  const c = snapshot.complaints.filter(x => x.status === 'open').length;
+  document.getElementById('overview-stats').innerHTML = `
+    <div class="stat"><b>${m}</b><span>Thiết bị</span></div>
+    <div class="stat"><b>${u}</b><span>Người CRD</span></div>
+    <div class="stat"><b>${b}</b><span>Lịch</span></div>
+    <div class="stat"><b>${c}</b><span>Kiện cáo mở</span></div>
+    <div class="stat"><b>${snapshot.chats.length}</b><span>Tin nhắn</span></div>
+  `;
+}
+
+function renderMachines() {
+  document.getElementById('machines-list').innerHTML = snapshot.machines.map(m => `
+    <div class="m-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+        <div>
+          <h4><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${esc(m.color)};margin-right:6px;"></span>${esc(m.name)}</h4>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;">
+            ${esc(m.type)} · ${esc(m.location)}<br>
+            Giờ mở: ${fmt(m.availFrom)} – ${fmt(m.availTo)} · Tối đa ${m.maxHours}h/lần
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="openMachineModal('${esc(m.id)}')">Sửa</button>
+          <button type="button" class="btn btn-danger btn-sm" onclick="deleteMachine('${esc(m.id)}')">Xoá</button>
+        </div>
+      </div>
+    </div>
+  `).join('') || '<p style="color:var(--muted);">Chưa có thiết bị.</p>';
+}
+
+function renderUsers() {
+  document.getElementById('users-list').innerHTML = snapshot.users.map(u => {
+    const synced = String(u.id).startsWith('u_app_');
+    const tags = [];
+    if (synced) tags.push('<span class="badge badge-review">Đồng bộ</span>');
+    if (u.isBanned) tags.push('<span class="badge badge-rej">Ban</span>');
+    if (u.crdAccessRevoked) tags.push('<span class="badge badge-rej">Gỡ CRD</span>');
+    return `
+    <div class="m-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div>
+          <h4>${esc(u.name)} ${tags.join(' ')}</h4>
+          <div style="font-size:12px;color:var(--muted);">${esc(u.email)} · id: <code>${esc(u.id)}</code></div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="openPersonModal('${esc(u.id)}')">Sửa</button>
+          <button type="button" class="btn btn-danger btn-sm" onclick="deletePerson('${esc(u.id)}')">${synced ? 'Gỡ CRD' : 'Xoá'}</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function personName(id) {
+  const u = snapshot.users.find(x => x.id === id);
+  return u ? u.name : id;
+}
+
+function machineName(id) {
+  const m = snapshot.machines.find(x => x.id === id);
+  return m ? m.name : id;
+}
+
+function renderBookings() {
+  const q = (document.getElementById('bk-filter').value || '').toLowerCase();
+  let rows = snapshot.bookings.slice();
+  if (q) {
+    rows = rows.filter(b => {
+      const line = [machineName(b.machineId), personName(b.userId), b.date, b.purpose].join(' ').toLowerCase();
+      return line.includes(q);
+    });
+  }
+  rows.sort((a, b) => (b.date + '').localeCompare(a.date + '') || a.startH - b.startH);
+  document.getElementById('bookings-tbody').innerHTML = rows.length ? rows.map(b => `
+    <tr>
+      <td>${esc(machineName(b.machineId))}</td>
+      <td>${esc(b.date)}</td>
+      <td>${fmtT(b.startH)} – ${fmtT(b.endH)}</td>
+      <td>${esc(personName(b.userId))}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(b.purpose)}">${esc(b.purpose)}</td>
+      <td>${esc(b.status)}</td>
+      <td>
+        <button type="button" class="btn btn-primary btn-sm" onclick="openBookingModal('${esc(b.id)}')">Sửa</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteBooking('${esc(b.id)}')">Xoá</button>
+      </td>
+    </tr>
+  `).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Không có lịch.</td></tr>';
+}
+
+function complaintBadge(st) {
+  const map = { open: 'badge-open', in_review: 'badge-review', resolved: 'badge-done', rejected: 'badge-rej' };
+  return map[st] || 'badge-review';
+}
+
+function renderComplaints() {
+  const list = snapshot.complaints || [];
+  document.getElementById('complaints-list').innerHTML = list.length ? list.map(cp => `
+    <div class="m-card" style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+        <div>
+          <span class="badge ${complaintBadge(cp.status)}">${esc(cp.status)}</span>
+          <strong style="margin-left:8px;color:var(--text);">${esc(cp.subject)}</strong>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;">
+            #${cp.id} · Gửi: ${esc(personName(cp.reporterId))} · ${esc(cp.createdAt || '')}
+            ${cp.bookingId ? ' · Booking: ' + esc(cp.bookingId) : ''}
+            ${cp.againstId ? ' · Liên quan: ' + esc(personName(cp.againstId)) : ''}
+          </div>
+          <p style="margin-top:10px;font-size:13px;color:var(--text);white-space:pre-wrap;">${esc(cp.body)}</p>
+          ${cp.adminNote ? `<p style="margin-top:8px;font-size:12px;color:var(--muted);"><em>Ghi chú admin:</em> ${esc(cp.adminNote)}</p>` : ''}
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <select id="cp-st-${cp.id}" style="padding:6px;border-radius:6px;border:1px solid var(--border);">
+          <option value="open" ${cp.status==='open'?'selected':''}>open</option>
+          <option value="in_review" ${cp.status==='in_review'?'selected':''}>in_review</option>
+          <option value="resolved" ${cp.status==='resolved'?'selected':''}>resolved</option>
+          <option value="rejected" ${cp.status==='rejected'?'selected':''}>rejected</option>
+        </select>
+        <input type="text" id="cp-note-${cp.id}" placeholder="Ghi chú xử lý" value="${esc(cp.adminNote)}" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="saveComplaint(${cp.id})">Lưu</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteComplaint(${cp.id})">Xoá</button>
+      </div>
+    </div>
+  `).join('') : '<p style="color:var(--muted);">Chưa có kiện cáo.</p>';
+}
+
+function bcPersonName(id) {
+  if (!id) return '—';
+  if (id === '__crd_broadcast__') return '<span style="color:#667eea;font-weight:600;">📢 Kênh chung</span>';
+  return esc(personName(id));
+}
+
+function renderBroadcastAdmin() {
+  const filter = document.getElementById('bc-filter')?.value || 'all';
+  const now = Date.now();
+  const dayMs = 86400_000;
+  const broadcast = snapshot.chats.filter(c => c.toId === '__crd_broadcast__');
+  const filtered = broadcast.filter(c => {
+    if (filter === 'today') return c.ts >= now - dayMs;
+    if (filter === 'week') return c.ts >= now - 7 * dayMs;
+    return true;
+  });
+  const sorted = [...filtered].sort((a, b) => b.ts - a.ts);
+  const machines = snapshot.machines || [];
+  document.getElementById('bc-tbody').innerHTML = sorted.length ? sorted.map(c => {
+    const sender = snapshot.users.find(u => u.id === c.fromId);
+    const bk = c.bookingId && (snapshot.bookings || []).find(b => b.id === c.bookingId);
+    const mc = bk && machines.find(m => m.id === bk.machineId);
+    const bkLabel = bk
+      ? `${esc(mc?.name || '?')} | ${bk.date} | ${bk.startH}–${bk.endH}`
+      : '—';
+    return `<tr>
+      <td style="white-space:nowrap;font-size:12px;">${new Date(c.ts).toLocaleString('vi-VN')}</td>
+      <td>
+        <div style="font-weight:600;">${esc(sender?.name || c.fromId)}</div>
+        <div style="font-size:10px;color:var(--muted);">${esc(sender?.email || '')}</div>
+      </td>
+      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(c.msg)}">${esc(c.msg)}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;" title="${bkLabel}">${esc(bkLabel)}</td>
+      <td><button type="button" class="btn btn-danger btn-sm" onclick="deleteChat('${esc(c.id)}')">🗑 Xoá</button></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">Chưa có tin nhắn nào trên kênh chung.</td></tr>';
+}
+
+function renderChats() {
+  /* Chỉ hiện tin nhắn P2P (lọc bỏ kênh chung) */
+  const p2p = [...snapshot.chats].filter(c => c.toId !== '__crd_broadcast__').sort((a, b) => b.ts - a.ts);
+  document.getElementById('chats-tbody').innerHTML = p2p.length ? p2p.map(c => `
+    <tr>
+      <td style="white-space:nowrap;font-size:12px;">${new Date(c.ts).toLocaleString('vi-VN')}</td>
+      <td>${bcPersonName(c.fromId)}</td>
+      <td>${bcPersonName(c.toId)}</td>
+      <td><code style="font-size:11px;">${esc(c.bookingId || '—')}</code></td>
+      <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(c.msg)}">${esc(c.msg)}</td>
+      <td><button type="button" class="btn btn-danger btn-sm" onclick="deleteChat('${esc(c.id)}')">🗑 Xoá</button></td>
+    </tr>
+  `).join('') : '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);">Không có tin nhắn riêng.</td></tr>';
+  renderBroadcastAdmin();
+}
+
+function renderAll() {
+  renderOverview();
+  renderMachines();
+  renderUsers();
+  renderBookings();
+  renderComplaints();
+  renderChats();
+}
+
+function switchChatSubTab(tab) {
+  document.querySelectorAll('.u-sub-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('chat-tab-' + tab).classList.add('active');
+  document.getElementById('bc-panel').style.display   = tab === 'bc'  ? '' : 'none';
+  document.getElementById('p2p-panel').style.display  = tab === 'p2p' ? '' : 'none';
+  if (tab === 'bc') renderBroadcastAdmin();
+  if (tab === 'p2p') renderChats();
+}
+
+async function saveComplaint(id) {
+  const st = document.getElementById('cp-st-' + id).value;
+  const adminNote = document.getElementById('cp-note-' + id).value;
+  await api('/api/crd/admin/complaints/' + id, { method: 'PUT', body: JSON.stringify({ status: st, adminNote }) });
+  await loadSnapshot();
+  renderAll();
+}
+
+async function deleteComplaint(id) {
+  if (!confirm('Xoá kiện cáo #' + id + '?')) return;
+  await api('/api/crd/admin/complaints/' + id, { method: 'DELETE' });
+  await loadSnapshot();
+  renderAll();
+}
+
+async function deleteChat(id) {
+  if (!confirm('Xoá tin nhắn này?')) return;
+  await api('/api/crd/admin/chats/' + encodeURIComponent(id), { method: 'DELETE' });
+  await loadSnapshot();
+  renderAll();
+}
+
+function openMachineModal(id) {
+  editingMachineId = id;
+  document.getElementById('mm-alert').innerHTML = '';
+  const m = id ? snapshot.machines.find(x => x.id === id) : null;
+  document.getElementById('mm-h3').textContent = m ? 'Sửa thiết bị' : 'Thêm thiết bị';
+  document.getElementById('mm-name').value = m ? m.name : '';
+  document.getElementById('mm-type').value = m ? m.type : '';
+  document.getElementById('mm-loc').value = m ? m.location : '';
+  const color = m ? m.color : '#667eea';
+  document.getElementById('mm-color').value = color;
+  document.getElementById('mm-color-hex').textContent = color;
+  document.getElementById('mm-from').value = m ? m.availFrom : 8;
+  document.getElementById('mm-to').value = m ? m.availTo : 20;
+  document.getElementById('mm-max').value = m ? m.maxHours : 4;
+  document.getElementById('mm-desc').value = m ? m.desc : '';
+  document.getElementById('mm-sort').value = m ? (m.sort_order || 0) : 0;
+  openModal('modal-machine');
+}
+
+async function saveMachine() {
+  document.getElementById('mm-alert').innerHTML = '';
+  const body = {
+    name: document.getElementById('mm-name').value.trim(),
+    type: document.getElementById('mm-type').value.trim(),
+    location: document.getElementById('mm-loc').value.trim(),
+    color: document.getElementById('mm-color').value.trim(),
+    availFrom: +document.getElementById('mm-from').value,
+    availTo: +document.getElementById('mm-to').value,
+    maxHours: +document.getElementById('mm-max').value,
+    desc: document.getElementById('mm-desc').value.trim(),
+    sort_order: +document.getElementById('mm-sort').value || 0
+  };
+  try {
+    if (editingMachineId) {
+      await api('/api/crd/admin/machines/' + encodeURIComponent(editingMachineId), { method: 'PUT', body: JSON.stringify(body) });
+    } else {
+      await api('/api/crd/admin/machines', { method: 'POST', body: JSON.stringify(body) });
+    }
+    closeModal('modal-machine');
+    await loadSnapshot();
+    renderAll();
+  } catch (e) {
+    document.getElementById('mm-alert').innerHTML = '<div class="alert alert-err">' + esc(e.message) + '</div>';
+  }
+}
+
+async function deleteMachine(id) {
+  if (!confirm('Xoá thiết bị và mọi lịch liên quan?')) return;
+  await api('/api/crd/admin/machines/' + encodeURIComponent(id), { method: 'DELETE' });
+  await loadSnapshot();
+  renderAll();
+}
+
+function openPersonModal(id) {
+  editingPersonId = id;
+  document.getElementById('pm-alert').innerHTML = '';
+  const u = id ? snapshot.users.find(x => x.id === id) : null;
+  const extras = document.getElementById('pm-extras');
+  document.getElementById('pm-h3').textContent = u ? 'Sửa người dùng CRD' : 'Thêm người dùng CRD';
+  document.getElementById('pm-name').value = u ? u.name : '';
+  document.getElementById('pm-email').value = u ? u.email : '';
+  document.getElementById('pm-role').value = u && u.role === 'admin' ? 'admin' : 'user';
+  document.getElementById('pm-av').value = u ? u.avatar : '';
+  if (u) {
+    extras.style.display = 'block';
+    document.getElementById('pm-ban').checked = !!u.isBanned;
+    document.getElementById('pm-revoked').checked = !!u.crdAccessRevoked;
+  } else {
+    extras.style.display = 'none';
+  }
+  openModal('modal-person');
+}
+
+async function savePerson() {
+  document.getElementById('pm-alert').innerHTML = '';
+  const body = {
+    name: document.getElementById('pm-name').value.trim(),
+    email: document.getElementById('pm-email').value.trim(),
+    role: document.getElementById('pm-role').value,
+    avatar: document.getElementById('pm-av').value.trim()
+  };
+  if (editingPersonId) {
+    body.isBanned = document.getElementById('pm-ban').checked;
+    body.crdAccessRevoked = document.getElementById('pm-revoked').checked;
+  }
+  try {
+    if (editingPersonId) {
+      await api('/api/crd/admin/persons/' + encodeURIComponent(editingPersonId), { method: 'PUT', body: JSON.stringify(body) });
+    } else {
+      await api('/api/crd/admin/persons', { method: 'POST', body: JSON.stringify(body) });
+    }
+    closeModal('modal-person');
+    await loadSnapshot();
+    renderAll();
+  } catch (e) {
+    document.getElementById('pm-alert').innerHTML = '<div class="alert alert-err">' + esc(e.message) + '</div>';
+  }
+}
+
+async function deletePerson(id) {
+  const synced = String(id).startsWith('u_app_');
+  const msg = synced
+    ? 'Gỡ quyền CRD (xoá lịch/chat), giữ hồ sơ để không tự tạo lại khi đăng nhập?'
+    : 'Xoá hoàn toàn người dùng CRD và lịch của họ?';
+  if (!confirm(msg)) return;
+  await api('/api/crd/admin/persons/' + encodeURIComponent(id), { method: 'DELETE' });
+  await loadSnapshot();
+  renderAll();
+}
+
+function openBookingModal(id) {
+  editingBookingId = id;
+  document.getElementById('bm-alert').innerHTML = '';
+  const b = snapshot.bookings.find(x => x.id === id);
+  if (!b) return;
+  const selM = document.getElementById('bm-mid');
+  const selU = document.getElementById('bm-uid');
+  selM.innerHTML = snapshot.machines.map(m => `<option value="${esc(m.id)}" ${m.id===b.machineId?'selected':''}>${esc(m.name)}</option>`).join('');
+  selU.innerHTML = snapshot.users.map(u => `<option value="${esc(u.id)}" ${u.id===b.userId?'selected':''}>${esc(u.name)} (${esc(u.id)})</option>`).join('');
+  document.getElementById('bm-date').value = b.date;
+  document.getElementById('bm-sh').value = b.startH;
+  document.getElementById('bm-eh').value = b.endH;
+  document.getElementById('bm-rg').value = b.researchGroup || '';
+  document.getElementById('bm-purpose').value = b.purpose || '';
+  document.getElementById('bm-status').value = b.status === 'cancelled' ? 'cancelled' : 'confirmed';
+  openModal('modal-booking');
+}
+
+async function saveBooking() {
+  document.getElementById('bm-alert').innerHTML = '';
+  const body = {
+    machineId: document.getElementById('bm-mid').value,
+    userId: document.getElementById('bm-uid').value,
+    date: document.getElementById('bm-date').value,
+    startH: parseFloat(document.getElementById('bm-sh').value),
+    endH: parseFloat(document.getElementById('bm-eh').value),
+    researchGroup: document.getElementById('bm-rg').value.trim(),
+    purpose: document.getElementById('bm-purpose').value.trim(),
+    status: document.getElementById('bm-status').value
+  };
+  try {
+    await api('/api/crd/admin/bookings/' + encodeURIComponent(editingBookingId), { method: 'PUT', body: JSON.stringify(body) });
+    closeModal('modal-booking');
+    await loadSnapshot();
+    renderAll();
+  } catch (e) {
+    document.getElementById('bm-alert').innerHTML = '<div class="alert alert-err">' + esc(e.message) + '</div>';
+  }
+}
+
+async function deleteBooking(id) {
+  if (!confirm('Xoá lịch này?')) return;
+  await api('/api/crd/admin/bookings/' + encodeURIComponent(id), { method: 'DELETE' });
+  await loadSnapshot();
+  renderAll();
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const meR = await fetch('/api/me', { credentials: 'same-origin' });
+    if (!meR.ok) {
+      showGate('<p style="color:var(--text);">Bạn cần <a href="dang-nhap.html">đăng nhập</a> để vào trang quản trị.</p>');
+      return;
+    }
+    const me = await meR.json();
+    if ((me.role || '').toLowerCase() !== 'admin') {
+      showGate('<p style="color:var(--text);">Chỉ <strong>Admin</strong> hệ thống mới xem được trang này. <a href="index.html">Về trang chủ</a></p>');
+      return;
+    }
+    await loadSnapshot();
+    showApp();
+    renderTabs();
+    switchTab('overview');
+    renderAll();
+    document.getElementById('u-sub-tabs').style.display = 'flex';
+
+    // Add color picker event listener
+    document.getElementById('mm-color').addEventListener('input', function(e) {
+      document.getElementById('mm-color-hex').textContent = e.target.value;
+    });
+  } catch (e) {
+    showGate('<p class="alert alert-err" style="margin:0;">' + esc(e.message) + '</p><p style="margin-top:12px;"><a href="index.html">Trang chủ</a></p>');
+  }
+});
+
+/* ═══ SUB-TABS NGƯỜI DÙNG ════════════════════════════════════ */
+let activeUserTab = 'crd';
+
+function switchUserTab(tab) {
+  activeUserTab = tab;
+  document.querySelectorAll('.u-sub-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('utab-' + tab).classList.add('active');
+  document.getElementById('u-panel-crd').style.display = tab === 'crd' ? '' : 'none';
+  document.getElementById('u-panel-sys').style.display  = tab === 'sys' ? '' : 'none';
+  if (tab === 'sys' && !sysUsers.length) loadSysUsers();
+}
+
+function loadSysUsers() {
+  adminApi.getAllSysUsers()
+    .then(data => {
+      sysUsers = Array.isArray(data) ? data : [];
+      renderSysUsers();
+    })
+    .catch(err => console.error('Lỗi tải tài khoản hệ thống:', err));
+}
+
+function renderSysUsers() {
+  const tbody = document.getElementById('sys-users-tbody');
+  if (!tbody) return;
+  const filterText = (document.getElementById('sys-filter')?.value || '').toLowerCase();
+  const filterType = document.getElementById('sys-filter-type')?.value || 'all';
+
+  const filtered = sysUsers.filter(u => {
+    if (filterText) {
+      const inName  = (u.fullname || '').toLowerCase().includes(filterText);
+      const inEmail = (u.email     || '').toLowerCase().includes(filterText);
+      if (!inName && !inEmail) return false;
+    }
+    const isInVien   = u.crd?.isInVien ?? false;
+    const isDisabled = !!u.isDisabled;
+    const hasCrd     = !!u.crd;
+    switch (filterType) {
+      case 'in':       if (!isInVien)    return false; break;
+      case 'out':      if (isInVien)    return false; break;
+      case 'disabled': if (!isDisabled)  return false; break;
+      case 'no_crd':  if (hasCrd)      return false; break;
+    }
+    return true;
+  });
+
+  const countLabel = document.getElementById('sys-count-label');
+  if (countLabel) countLabel.textContent = `${filtered.length} / ${sysUsers.length} tài khoản`;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted);">Không có tài khoản nào phù hợp</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(u => {
+    const inVien    = u.crd?.isInVien ?? false;
+    const isDisabled = !!u.isDisabled;
+    const crd       = u.crd;
+    const hasCrd    = !!crd;
+    const synced    = crd?.syncedFromApp ?? false;
+    const crdBanned = crd?.isBanned ?? false;
+    const crdRevoke = crd?.crdAccessRevoked ?? false;
+
+    const typeBadge = inVien
+      ? `<span class="badge" style="background:#e8f5e9;color:#2e7d32;">🏛 Viện</span>`
+      : `<span class="badge" style="background:#e3f2fd;color:#1565c0;">🌐 Khách</span>`;
+
+    const statBadges = [];
+    if (isDisabled) statBadges.push(`<span class="badge" style="background:#ffebee;color:#c62828;">⛔ Đã vô hiệu hoá</span>`);
+    if (!isDisabled && !hasCrd) statBadges.push(`<span class="badge" style="background:#f5f5f5;color:#757575;">❌ Chưa vào CRD</span>`);
+
+    const roleBadge = {
+      admin:      `<span class="badge" style="background:#f3eeff;color:#764ba2;">🔑 Admin</span>`,
+      crd_user:   `<span class="badge" style="background:#fff3e0;color:#e65100;">🌐 CRD Guest</span>`,
+      researcher: `<span class="badge" style="background:#eef0ff;color:#667eea;">🔬 Researcher</span>`,
+    }[u.role] || `<span class="badge" style="background:#f5f5f5;color:#757575;">${esc(u.role || '—')}</span>`;
+
+    let crdCell = '—';
+    if (hasCrd) {
+      const crdRoleBadges = crd.personRole === 'admin'
+        ? `<span class="badge" style="background:#f3eeff;color:#764ba2;">🔑 Admin</span>`
+        : `<span class="badge" style="background:#eef0ff;color:#667eea;">👤 ${esc(crd.personRole || 'user')}</span>`;
+      const crdStatusBadges = [];
+      if (crdBanned) crdStatusBadges.push(`<span class="badge" style="background:#fff3e0;color:#e65100;">⛔ Khoá</span>`);
+      if (crdRevoke) crdStatusBadges.push(`<span class="badge" style="background:#fce4ec;color:#c2185b;">🚫 Gỡ CRD</span>`);
+      if (synced)    crdStatusBadges.push(`<span class="badge" style="background:#e8f5e9;color:#2e7d32;">Đồng bộ</span>`);
+      crdCell = `<div style="display:flex;flex-direction:column;gap:3px;">
+        <div>${crdRoleBadges}</div>
+        ${crdStatusBadges.length ? `<div>${crdStatusBadges.join('')}</div>` : ''}
+      </div>`;
+    }
+
+    const acts = [];
+    const disableStyle = isDisabled
+      ? 'background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;'
+      : 'background:#fff3e0;color:#e65100;border:1px solid #ffcc80;';
+    acts.push(`<button type="button" class="btn btn-sm" style="${disableStyle}" onclick="toggleSysDisable(${u.id})">${isDisabled ? '🔓 Kích hoạt' : '⛔ Vô hiệu hoá'}</button>`);
+    acts.push(`<button type="button" class="btn btn-sm btn-ghost" style="border:1px solid var(--border);" onclick="openResetPwdModal(${u.id})">🔑 Đặt lại MK</button>`);
+    if (hasCrd) {
+      acts.push(`<button type="button" class="btn btn-sm btn-ghost" style="border:1px solid var(--border);" onclick="openPersonModal(${JSON.stringify(crd.personId)})">✏️ Sửa CRD</button>`);
+    }
+
+    return `<tr>
+      <td>${typeBadge}</td>
+      <td style="font-weight:600;">${esc(u.fullname || '—')}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(u.email || '—')}</td>
+      <td>${roleBadge}</td>
+      <td>${crdCell}</td>
+      <td style="text-align:center;">${statBadges.join('')}</td>
+      <td><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">${acts.join('')}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+let resetPwdUserId = null;
+function openResetPwdModal(userId) {
+  resetPwdUserId = userId;
+  const u = sysUsers.find(x => x.id === userId);
+  if (!u) return;
+  document.getElementById('rp-email').value = u.email || '';
+  document.getElementById('rp-password').value = '';
+  document.getElementById('rp-hint').innerHTML = `Tài khoản: <strong>${esc(u.fullname || u.email)}</strong> — Mật khẩu mới có hiệu lực ngay.`;
+  document.getElementById('rp-alert').innerHTML = '';
+  openModal('modal-reset-pwd');
+}
+
+async function submitResetPassword() {
+  const alertEl = document.getElementById('rp-alert');
+  alertEl.innerHTML = '';
+  const password = document.getElementById('rp-password').value.trim();
+  if (!password || password.length < 6) {
+    alertEl.innerHTML = `<div class="alert alert-err">⚠️ Mật khẩu phải ít nhất 6 ký tự</div>`;
+    return;
+  }
+  try {
+    await adminApi.resetPassword(resetPwdUserId, password);
+    alertEl.innerHTML = `<div class="alert alert-ok">✅ Mật khẩu đã được đặt lại thành công.</div>`;
+    setTimeout(() => closeModal('modal-reset-pwd'), 1200);
+  } catch (err) {
+    alertEl.innerHTML = `<div class="alert alert-err">⚠️ ${esc(err.message)}</div>`;
+  }
+}
+
+async function toggleSysDisable(userId) {
+  const u = sysUsers.find(x => x.id === userId);
+  const action = u?.isDisabled ? 'kích hoạt lại' : 'vô hiệu hoá';
+  if (!confirm(`Chắc chắn muốn ${action} tài khoản "${u?.fullname || u?.email}"?`)) return;
+  try {
+    await adminApi.disableSysUser(userId);
+    loadSysUsers();
+  } catch (err) {
+    alert('Lỗi: ' + err.message);
+  }
+}
+</script>
+</body>
+</html>

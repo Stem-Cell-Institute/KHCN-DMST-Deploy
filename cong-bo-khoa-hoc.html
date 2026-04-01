@@ -1,0 +1,4136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý Công bố Khoa học — SCI-KHCN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,300;1,9..144,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --bg2: #eceae3;
+    --bg3: #e2dfd5;
+    --surface: #ffffff;
+    --border: #d0cdc4;
+    --border-strong: #b0ada3;
+    --text: #1a1916;
+    --text-2: #4a4842;
+    --text-3: #787470;
+    --accent: #1c4f8a;
+    --accent-light: #e8f0fb;
+    --accent-2: #c8490e;
+    --accent-2-light: #fdf0eb;
+    --green: #1a5c3a;
+    --green-light: #e8f5ee;
+    --amber: #8a5a00;
+    --amber-light: #fdf5e0;
+    --scopus: #e87722;
+    --wos: #004990;
+    --isi: #c00;
+    --shadow: 0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+    --shadow-lg: 0 4px 24px rgba(0,0,0,.1);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── TOP BANNER ── */
+  .page-header {
+    background: var(--accent);
+    color: #fff;
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .page-header .breadcrumb {
+    font-size: 11px;
+    opacity: .7;
+    font-family: var(--mono);
+    letter-spacing: .03em;
+    margin-bottom: 3px;
+  }
+  .page-header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -.01em;
+  }
+  .page-header .subtitle {
+    font-size: 12px;
+    opacity: .75;
+    margin-top: 2px;
+  }
+  .page-header-brand {
+    flex: 1;
+    min-width: 0;
+  }
+  .header-home-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    background: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    text-decoration: none;
+    box-shadow: 0 1px 4px rgba(0,0,0,.18);
+    transition: background .15s ease, box-shadow .15s ease;
+  }
+  .header-home-btn:hover {
+    background: #eef4fc;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  .header-stats {
+    display: flex;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+  .header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    min-width: max-content;
+    flex-shrink: 0;
+  }
+  .welcome-user {
+    font-size: 12px;
+    font-family: var(--mono);
+    opacity: .95;
+    background: rgba(255,255,255,.16);
+    border: 1px solid rgba(255,255,255,.24);
+    border-radius: 999px;
+    padding: 4px 10px;
+    line-height: 1.2;
+  }
+  .hstat {
+    text-align: right;
+  }
+  .hstat-num {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .hstat-lbl {
+    font-size: 10px;
+    opacity: .7;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-top: 2px;
+  }
+
+  /* ── LAYOUT ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: calc(100vh - 80px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    position: sticky;
+    top: 0;
+    height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+  .sidebar-section {
+    margin-bottom: 4px;
+  }
+  .sidebar-label {
+    font-size: 12px;
+    font-family: var(--mono);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    padding: 12px 20px 8px;
+    display: block;
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: background .15s;
+    font-size: 13.5px;
+    color: var(--text-2);
+    border-left: 3px solid transparent;
+  }
+  .sidebar-item:hover { background: var(--bg); }
+  .sidebar-item.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-left-color: var(--accent);
+    font-weight: 500;
+  }
+  .sidebar-item .si-count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--bg2);
+    color: var(--text-3);
+    padding: 1px 7px;
+    border-radius: 20px;
+  }
+  .sidebar-item.active .si-count {
+    background: rgba(28,79,138,.15);
+    color: var(--accent);
+  }
+  .sidebar .si-icon {
+    display: none;
+  }
+  .sidebar-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 10px 20px;
+  }
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    padding: 24px 28px;
+    overflow-x: hidden;
+  }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .search-box {
+    flex: 1;
+    min-width: 240px;
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .search-box input {
+    border: none;
+    outline: none;
+    padding: 9px 0;
+    font-size: 13.5px;
+    font-family: inherit;
+    background: transparent;
+    flex: 1;
+    color: var(--text);
+  }
+  .search-box input::placeholder { color: var(--text-3); }
+  .search-icon { color: var(--text-3); font-size: 16px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    color: var(--text-2);
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--bg2); border-color: var(--border-strong); }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .btn-primary:hover { background: #163d6e; border-color: #163d6e; }
+
+  /* ── STAT CARDS ROW ── */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-color, var(--accent));
+  }
+  .stat-card .sc-num {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--card-color, var(--accent));
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-card .sc-lbl {
+    font-size: 12px;
+    color: var(--text-3);
+  }
+  .stat-card .sc-sub {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 5px;
+    font-family: var(--mono);
+  }
+  .stat-card .sc-trend {
+    position: absolute;
+    top: 14px; right: 14px;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 20px;
+    font-family: var(--mono);
+  }
+  .trend-up { background: var(--green-light); color: var(--green); }
+  .trend-down { background: #fef2f2; color: #c00; }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .filter-group label {
+    display: block;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text-3);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .filter-group select,
+  .filter-group input {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+  }
+  .filter-group select:focus,
+  .filter-group input:focus {
+    border-color: var(--accent);
+    background: #fff;
+  }
+
+  /* ── PUBLICATION TABLE ── */
+  .pub-table-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .table-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .table-top-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+  }
+  .table-top-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left;
+    font-size: 11px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--text-3);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: var(--accent); }
+  thead th .sort-icon { opacity: .4; margin-left: 4px; }
+  thead th.sorted .sort-icon { opacity: 1; color: var(--accent); }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+    cursor: pointer;
+  }
+  tbody tr:hover { background: var(--accent-light); }
+  tbody tr:last-child { border-bottom: none; }
+
+  td {
+    padding: 11px 12px;
+    vertical-align: top;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .pub-title-cell {
+    max-width: 320px;
+  }
+  .pub-title {
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.45;
+    margin-bottom: 3px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pub-authors {
+    font-size: 11.5px;
+    color: var(--text-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+  }
+  .pub-authors .author-sci {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* Badges (phân hạng SJR / quartile) */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: var(--mono);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-q1 { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+  .badge-q2 { background: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+  .badge-q3 { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+  .badge-q4 { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+  .badge-na  { background: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
+  .badge-warn { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+  .badge-pending { background: #e2e3e5; color: #6c757d; font-style: italic; }
+  .badge-scopus { background: #fff3e8; color: var(--scopus); border: 1px solid #fcd9b5; }
+  .badge-wos { background: #e8f0ff; color: var(--wos); border: 1px solid #93c5fd; }
+  .badge-conf { background: #f3e8ff; color: #7c3aed; border: 1px solid #c4b5fd; }
+  .badge-book { background: var(--bg2); color: var(--text-2); border: 1px solid var(--border); }
+  .badge-patent { background: var(--green-light); color: var(--green); border: 1px solid #86efac; }
+  .badge-preprint { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+  .badge-type {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+
+  /* Index icons */
+  .idx-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-family: var(--mono);
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-right: 2px;
+  }
+  .idx-scopus { background: var(--scopus); color: #fff; }
+  .idx-wos { background: var(--wos); color: #fff; }
+  .idx-isi { background: var(--isi); color: #fff; }
+  .idx-pubmed { background: var(--green); color: #fff; }
+  .idx-doaj { background: #5b21b6; color: #fff; }
+
+  .doi-link {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .doi-link:hover { text-decoration: underline; }
+
+  .cite-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .cite-if {
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: var(--mono);
+  }
+
+  /* Status pill */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: var(--mono);
+  }
+  .sp-published { background: var(--green-light); color: var(--green); }
+  .sp-accepted { background: var(--amber-light); color: var(--amber); }
+  .sp-under-review { background: var(--accent-light); color: var(--accent); }
+  .sp-preprint { background: #fef9c3; color: #854d0e; }
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* ── PAGINATION ── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text-3);
+  }
+  .page-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .page-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text-2);
+    transition: all .15s;
+  }
+  .page-btn:hover { background: var(--bg2); }
+  .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .page-btn.disabled { opacity: .35; cursor: not-allowed; }
+
+  /* ── DETAIL MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,8,.45);
+    z-index: 100;
+    backdrop-filter: blur(2px);
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 12px;
+    width: 720px;
+    max-width: 95vw;
+    max-height: 88vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    display: flex;
+    flex-direction: column;
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .modal-title {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--text);
+    flex: 1;
+  }
+  .modal-close {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--text-3);
+    flex-shrink: 0;
+    transition: all .15s;
+  }
+  .modal-close:hover { background: var(--bg2); color: var(--text); }
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+  }
+  .modal-section-title {
+    font-size: 11px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--text-3);
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+  .modal-section-title:first-child { margin-top: 0; }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .meta-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+  }
+  .meta-item-full { grid-column: 1 / -1; }
+  .meta-key {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin-bottom: 3px;
+  }
+  .meta-val {
+    font-size: 13px;
+    color: var(--text);
+    word-break: break-word;
+  }
+  .meta-val.mono { font-family: var(--mono); font-size: 12px; }
+  .meta-val a { color: var(--accent); text-decoration: none; }
+  .meta-val a:hover { text-decoration: underline; }
+  .modal-footer {
+    padding: 14px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    background: var(--bg);
+  }
+
+  /* ── ADD MODAL FORM ── */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .form-row.full { grid-template-columns: 1fr; }
+  .form-group label {
+    display: block;
+    font-size: 11.5px;
+    font-family: var(--mono);
+    color: var(--text-2);
+    margin-bottom: 5px;
+    letter-spacing: .04em;
+  }
+  .form-group label .req { color: var(--accent-2); }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 8px 11px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--surface);
+    outline: none;
+    transition: border .15s;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(28,79,138,.1);
+  }
+  .form-group textarea { resize: vertical; min-height: 72px; }
+  .form-hint {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 4px;
+  }
+  .doi-fetch-row {
+    display: flex;
+    gap: 8px;
+  }
+  .doi-fetch-row input { flex: 1; }
+
+  /* ── TABS ── */
+  .modal-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    padding: 0 24px;
+  }
+  .tab-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+    font-family: var(--mono);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--text-3);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all .15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* ── CHART AREA ── */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .chart-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-2);
+    margin-bottom: 14px;
+  }
+  .bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .bar-label {
+    font-size: 11.5px;
+    color: var(--text-2);
+    width: 80px;
+    flex-shrink: 0;
+    text-align: right;
+    font-family: var(--mono);
+  }
+  .bar-track {
+    flex: 1;
+    height: 18px;
+    background: var(--bg2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    padding-left: 7px;
+    font-size: 10px;
+    color: #fff;
+    font-family: var(--mono);
+    font-weight: 600;
+    transition: width .6s ease;
+  }
+  .bar-q1 { background: #b91c1c; }
+  .bar-q2 { background: var(--amber); }
+  .bar-q3 { background: var(--green); }
+  .bar-q4 { background: var(--border-strong); }
+  .bar-scopus { background: var(--scopus); }
+  .bar-wos { background: var(--wos); }
+
+  .donut-wrap {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .donut-svg { flex-shrink: 0; }
+  .donut-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--text-2);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .stats-toolbar-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin-bottom: 8px;
+  }
+  .stats-toolbar-row2 { margin-bottom: 0; }
+  .stats-toolbar-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-2);
+    min-width: 120px;
+  }
+  .stats-select {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    max-width: 100%;
+  }
+  .stats-year { min-width: 88px; }
+  .stats-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--text-2);
+  }
+  .stats-hint {
+    margin: 10px 0 0;
+    font-size: 11px;
+    color: var(--text-3);
+    line-height: 1.45;
+  }
+  .stats-footnote {
+    margin: 10px 0 0;
+    font-size: 10.5px;
+    color: var(--text-3);
+    line-height: 1.4;
+  }
+  .donut-pie-wrap {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+  }
+  .donut-pie {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: conic-gradient(#eceae3 0% 100%);
+    box-sizing: border-box;
+  }
+  .donut-hole {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--surface);
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .donut-center-text {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+    line-height: 1.1;
+  }
+  .donut-center-num {
+    display: block;
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .donut-center-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+  }
+
+  .legend-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-3);
+    margin-left: auto;
+  }
+
+  /* ── ORCID chip ── */
+  .orcid-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #a6ce39;
+    color: #fff;
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .btn-danger { background: #dc3545; color: #fff; border-color: #dc3545; }
+
+  /* ── Admin: quản lý danh sách công bố ── */
+  .pub-admin-bar {
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    background: #fff8e6;
+    border: 1px solid #f5d78e;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+  }
+  body.pub-is-admin .pub-admin-bar { display: flex; }
+  .pub-admin-bar label { font-size: 11px; font-family: var(--mono); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+  .pub-admin-bar select { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; background: var(--surface); }
+  .pub-admin-only { display: none !important; }
+  body.pub-is-admin .pub-admin-only { display: inline-flex !important; align-items: center; gap: 4px; }
+  body.pub-is-admin .pub-admin-only.pub-admin-stack { display: flex !important; flex-direction: column; align-items: stretch; }
+  #pubTable th.pub-check-col,
+  #pubTable td.pub-check-col { display: none; }
+  body.pub-is-admin #pubTable th.pub-check-col,
+  body.pub-is-admin #pubTable td.pub-check-col { display: table-cell; }
+
+  /* Thanh enrich: flex (không dùng inline-flex của .pub-admin-only) */
+  body.pub-is-admin .pub-enrich-statusbar.pub-admin-only {
+    display: flex !important;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  @keyframes enrich-run-pulse {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.5);
+    }
+    50% {
+      opacity: 0.88;
+      box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);
+    }
+  }
+  #enrichRunNowBtn.enrich-run-busy {
+    animation: enrich-run-pulse 0.9s ease-in-out infinite;
+  }
+
+  /* ── Admin: quản lý NCV ORCID (mục cố định trên trang) ── */
+  .nv-admin-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 20px;
+    scroll-margin-top: 12px;
+    border-left: 4px solid var(--accent);
+  }
+  .nv-admin-panel .nv-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .nv-admin-panel h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .nv-admin-panel .nv-desc {
+    font-size: 12.5px;
+    color: var(--text-3);
+    line-height: 1.55;
+    max-width: 720px;
+    margin-top: 4px;
+  }
+  .nv-admin-panel .nv-actions-top { display: flex; gap: 8px; flex-wrap: wrap; }
+  .nv-form-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .nv-form-row input {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    min-width: 140px;
+    flex: 1;
+  }
+  .nv-form-row input#nvOrcidIdInput { font-family: var(--mono); min-width: 200px; }
+  .nv-table-wrap { overflow-x: auto; max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+  .nv-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .nv-table th, .nv-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  .nv-table th { background: var(--bg); font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); }
+  .nv-badge { font-family: var(--mono); font-size: 11px; background: var(--accent-light); color: var(--accent); padding: 2px 8px; border-radius: 999px; }
+
+  /* ── NOTIFICATION ── */
+  .notif {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--green);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 13.5px;
+    box-shadow: var(--shadow-lg);
+    z-index: 200;
+    display: none;
+    animation: slideInRight .25s ease;
+  }
+  @keyframes slideInRight {
+    from { transform: translateX(30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .stat-row { grid-template-columns: repeat(3, 1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+    .filter-bar { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="access-denied" style="display:none;max-width:760px;margin:48px auto;padding:0 16px;">
+  <div style="background:#fff3f3;border:1px solid #f5c2c7;color:#842029;border-radius:10px;padding:16px 18px;">
+    <strong>Không có quyền truy cập</strong>
+    <p style="margin:8px 0 0;">Trang Quản lý công bố khoa học chỉ dành cho người dùng trong viện (<code>@sci.edu.vn</code>).</p>
+    <p style="margin:10px 0 0;"><a href="dang-nhap.html?returnUrl=cong-bo-khoa-hoc.html">Đăng nhập</a> hoặc <a href="index.html">về Trang chủ</a>.</p>
+  </div>
+</div>
+
+<!-- ── HEADER ── -->
+<header class="page-header">
+  <div class="page-header-brand">
+    <a href="index.html" class="header-home-btn" aria-label="Về trang chủ SCI-KHCN">Trang chủ</a>
+    <h1>Quản lý Công bố Khoa học</h1>
+    <div class="subtitle">Hệ thống RIMS/CRIS — Viện Tế bào gốc - Trường Đại học khoa học tự nhiên - ĐHQG HCM</div>
+  </div>
+  <div class="header-right">
+    <div class="welcome-user" id="welcome-user">Xin chào!</div>
+    <div class="header-stats">
+      <div class="hstat">
+        <div class="hstat-num" id="hstatTotalPubs">—</div>
+        <div class="hstat-lbl">Tổng công bố</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-num" id="hstatScopusWos">—</div>
+        <div class="hstat-lbl">Scopus/WoS</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-num" id="hstatQ12">—</div>
+        <div class="hstat-lbl">Q1/Q2</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-num" id="hstatCitations">—</div>
+        <div class="hstat-lbl">Tổng trích dẫn</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <span class="sidebar-label">Loại hình</span>
+      <div class="sidebar-item active" onclick="filterType('all')">
+        <span class="si-icon">📋</span> Tất cả công bố
+        <span class="si-count" id="sidebarCountTotal">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterType('journal')">
+        <span class="si-icon">📄</span> Bài báo tạp chí
+        <span class="si-count" id="sidebarCountJournal">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterType('conference')">
+        <span class="si-icon">🎤</span> Kỷ yếu hội nghị
+        <span class="si-count" id="sidebarCountConference">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterType('book')">
+        <span class="si-icon">📚</span> Chương sách / Sách
+        <span class="si-count" id="sidebarCountBook">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterType('patent')">
+        <span class="si-icon">🔏</span> Bằng sáng chế / GPHI
+        <span class="si-count" id="sidebarCountPatent">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterType('preprint')">
+        <span class="si-icon">📝</span> Preprint / Dataset
+        <span class="si-count" id="sidebarCountPreprint">—</span>
+      </div>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section">
+      <span class="sidebar-label">Cơ sở dữ liệu</span>
+      <div class="sidebar-item" onclick="filterIdx('scopus')">
+        <span class="si-icon">🟠</span> Scopus
+        <span class="si-count" id="sidebarCountScopus">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterIdx('wos')">
+        <span class="si-icon">🔵</span> Web of Science
+        <span class="si-count" id="sidebarCountWos">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterIdx('pubmed')">
+        <span class="si-icon">🟢</span> PubMed / MEDLINE
+        <span class="si-count" id="sidebarCountPubmed">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterIdx('doaj')">
+        <span class="si-icon">🟣</span> DOAJ
+        <span class="si-count" id="sidebarCountDoaj">—</span>
+      </div>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section">
+      <span class="sidebar-label">Phân hạng</span>
+      <div class="sidebar-item" onclick="filterQ('Q1')">
+        <span class="si-icon" style="color:#b91c1c">●</span> Q1
+        <span class="si-count" id="sidebarCountQ1">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterQ('Q2')">
+        <span class="si-icon" style="color:#b45309">●</span> Q2
+        <span class="si-count" id="sidebarCountQ2">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterQ('Q3')">
+        <span class="si-icon" style="color:#1a5c3a">●</span> Q3
+        <span class="si-count" id="sidebarCountQ3">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterQ('Q4')">
+        <span class="si-icon" style="color:#999">●</span> Q4
+        <span class="si-count" id="sidebarCountQ4">—</span>
+      </div>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section">
+      <span class="sidebar-label">Trạng thái</span>
+      <div class="sidebar-item" onclick="filterStatus('published')">
+        <span class="si-icon">✅</span> Đã đăng
+        <span class="si-count" id="sidebarCountPublished">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterStatus('accepted')">
+        <span class="si-icon">📬</span> Chấp nhận đăng
+        <span class="si-count" id="sidebarCountAccepted">—</span>
+      </div>
+      <div class="sidebar-item" onclick="filterStatus('under-review')">
+        <span class="si-icon">🔄</span> Đang phản biện
+        <span class="si-count" id="sidebarCountUnderReview">—</span>
+      </div>
+    </div>
+
+    <div class="pub-admin-only pub-admin-stack" style="gap:0">
+      <hr class="sidebar-divider">
+      <div class="sidebar-section">
+        <span class="sidebar-label">Quản trị</span>
+        <div class="sidebar-item" onclick="scrollToOrcidNvAdmin()">
+          <span class="si-icon">👥</span> NCV &amp; ORCID
+          <span class="si-count" id="sidebarNvActiveCount">—</span>
+        </div>
+      </div>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section">
+      <span class="sidebar-label">Báo cáo nhanh</span>
+      <div class="sidebar-item" onclick="quickExportExcelSidebar()" title="Theo khoảng năm ở thống kê phía dưới (nếu đang chọn)">
+        <span class="si-icon">📊</span> Xuất Excel
+      </div>
+      <div class="sidebar-item" onclick="quickReportPdfSidebar()" title="Mở trang in — Ctrl+P → Lưu PDF">
+        <span class="si-icon">📑</span> Báo cáo PDF
+      </div>
+      <div class="sidebar-item pub-admin-only" onclick="quickSyncOrcidSidebar(event)" style="cursor:pointer" title="Admin: quét ORCID hàng loạt (máy chủ).">
+        <span class="si-icon">🔗</span> Đồng bộ ORCID
+      </div>
+      <div class="sidebar-item pub-admin-only" onclick="quickRefreshScopusWosSidebar()" title="Cần SCOPUS_API_KEY trong .env để lấy EID/trích dẫn Scopus; luôn thử OpenAlex.">
+        <span class="si-icon">🔄</span> Cập nhật Scopus/WoS
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <!-- Stat cards (theo bộ lọc năm bên dưới) -->
+    <div class="stat-row">
+      <div class="stat-card" style="--card-color:#b91c1c">
+        <div class="sc-num" id="dashCardQ1">—</div>
+        <div class="sc-lbl">Bài Q1</div>
+        <div class="sc-sub" id="dashCardQ1Sub">IF TB: —</div>
+        <span class="sc-trend" id="dashCardQ1Trend">—</span>
+      </div>
+      <div class="stat-card" style="--card-color:#b45309">
+        <div class="sc-num" id="dashCardQ2">—</div>
+        <div class="sc-lbl">Bài Q2</div>
+        <div class="sc-sub" id="dashCardQ2Sub">IF TB: —</div>
+        <span class="sc-trend" id="dashCardQ2Trend">—</span>
+      </div>
+      <div class="stat-card" style="--card-color:#1a5c3a">
+        <div class="sc-num" id="dashCardCites">—</div>
+        <div class="sc-lbl">Tổng trích dẫn</div>
+        <div class="sc-sub" id="dashCardCitesSub">Trong phạm vi lọc</div>
+        <span class="sc-trend" id="dashCardCitesTrend">—</span>
+      </div>
+      <div class="stat-card" style="--card-color:#7c3aed">
+        <div class="sc-num" id="dashCardTotal">—</div>
+        <div class="sc-lbl">Tổng công bố</div>
+        <div class="sc-sub" id="dashCardTotalSub">—</div>
+        <span class="sc-trend" id="dashCardTotalTrend">—</span>
+      </div>
+      <div class="stat-card" style="--card-color:var(--accent-2)">
+        <div class="sc-num" id="dashCardPatents">—</div>
+        <div class="sc-lbl">GPHI / Bằng sáng chế</div>
+        <div class="sc-sub" id="dashCardPatentsSub">—</div>
+        <span class="sc-trend" id="dashCardPatentsTrend">—</span>
+      </div>
+    </div>
+
+    <div class="stats-toolbar chart-card" style="margin-bottom:16px;padding:12px 16px">
+      <div class="stats-toolbar-row">
+        <span class="stats-toolbar-label">Khoảng thời gian</span>
+        <select id="statsPreset" class="stats-select" aria-label="Chọn khoảng năm">
+          <option value="all">Toàn bộ (theo năm xuất bản)</option>
+          <option value="last5">5 năm gần nhất (theo dữ liệu)</option>
+          <option value="last10">10 năm gần nhất</option>
+          <option value="2020_2024">Cụm 2020–2024</option>
+          <option value="2015_2019">Cụm 2015–2019</option>
+          <option value="custom">Tùy chọn từ–đến</option>
+        </select>
+        <label class="stats-inline"><span>Từ</span>
+          <select id="statsYearFrom" class="stats-select stats-year" disabled aria-label="Năm bắt đầu"></select>
+        </label>
+        <label class="stats-inline"><span>Đến</span>
+          <select id="statsYearTo" class="stats-select stats-year" disabled aria-label="Năm kết thúc"></select>
+        </label>
+      </div>
+      <div class="stats-toolbar-row stats-toolbar-row2">
+        <span class="stats-toolbar-label">Biểu đồ cột ngang</span>
+        <select id="statsChartMode" class="stats-select" aria-label="Chế độ biểu đồ">
+          <option value="quartile">Theo phân hạng Q + Hội nghị</option>
+          <option value="by_year">Theo từng năm</option>
+          <option value="by_cluster">Theo cụm năm</option>
+        </select>
+        <label class="stats-inline" id="statsClusterWrap" style="display:none"><span>Cỡ cụm</span>
+          <select id="statsClusterSize" class="stats-select">
+            <option value="3">3 năm</option>
+            <option value="5" selected>5 năm</option>
+            <option value="10">10 năm</option>
+          </select>
+        </label>
+        <button type="button" class="btn" id="statsRefreshBtn" style="font-size:12px;padding:6px 12px">Làm mới số liệu</button>
+      </div>
+      <p class="stats-hint" id="statsHint">Đang tải thống kê từ cơ sở dữ liệu công bố…</p>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title" id="chartLeftTitle">📊 Công bố theo phân hạng</div>
+        <div class="bar-chart" id="chartBarsContainer"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">🗂️ Phân bổ theo chỉ mục (ưu tiên 1 nhóm / bài — tổng các cung = số bản ghi)</div>
+        <div class="donut-wrap">
+          <div class="donut-pie-wrap" aria-hidden="true">
+            <div class="donut-pie" id="pubDonutPie"></div>
+            <div class="donut-hole"></div>
+            <div class="donut-center-text">
+              <span class="donut-center-num" id="pubDonutTotal">—</span>
+              <span class="donut-center-sub">bài</span>
+            </div>
+          </div>
+          <div class="donut-legend" id="pubDonutLegend">
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#e87722"></span>
+              Scopus <span class="legend-num" data-ix="scopus">—</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#004990"></span>
+              Web of Science <span class="legend-num" data-ix="wos">—</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#1a5c3a"></span>
+              PubMed/MEDLINE <span class="legend-num" data-ix="pubmed">—</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#5b21b6"></span>
+              DOAJ <span class="legend-num" data-ix="doaj">—</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot" style="background:#d1d5db"></span>
+              Khác / Hội nghị <span class="legend-num" data-ix="other">—</span>
+            </div>
+          </div>
+        </div>
+        <p class="stats-footnote" id="pubDonutFootnote"></p>
+      </div>
+    </div>
+
+    <!-- Quản lý nghiên cứu viên — ORCID (chỉ Admin) -->
+    <section id="admin-orcid-nv" class="nv-admin-panel pub-admin-only pub-admin-stack" aria-labelledby="nv-admin-heading">
+      <div class="nv-head">
+        <div>
+          <h2 id="nv-admin-heading">Quản lý nghiên cứu viên (ORCID)</h2>
+          <p class="nv-desc">
+            Khai báo <strong>mã ORCID</strong> (định dạng 0000-0000-0000-000X) cho từng nghiên cứu viên. Quét works và duyệt import: dùng trang riêng <a href="orcid-harvest.html" style="color:var(--accent);font-weight:600">ORCID Auto-Harvest</a>.
+            <strong>Tắt</strong> khi tạm dừng quét; <strong>Xóa</strong> khi nghỉ việc / không còn trong Viện. Cùng một ORCID có thể cập nhật lại họ tên hoặc phòng bằng cách thêm lại (ghi đè).
+          </p>
+        </div>
+        <div class="nv-actions-top">
+          <span class="nv-badge" id="nvActiveBadge">Đang bật quét: 0</span>
+          <a class="btn" href="orcid-harvest.html" style="text-decoration:none;display:inline-flex;align-items:center;">🛰 Trang ORCID Auto-Harvest</a>
+        </div>
+      </div>
+      <div class="nv-form-row">
+        <input type="text" id="nvOrcidNameInput" placeholder="Họ và tên" autocomplete="name">
+        <input type="text" id="nvOrcidDeptInput" placeholder="Phòng / đơn vị" autocomplete="organization">
+        <input type="text" id="nvOrcidIdInput" placeholder="ORCID iD: 0000-0000-0000-000X" inputmode="text" spellcheck="false">
+        <button type="button" class="btn btn-primary" onclick="saveOrcidResearcher()">Thêm / cập nhật</button>
+      </div>
+      <div class="nv-table-wrap">
+        <table class="nv-table">
+          <thead>
+            <tr>
+              <th>Họ tên</th>
+              <th>Phòng</th>
+              <th>ORCID iD</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="nvOrcidResearchersTbody">
+            <tr><td colspan="5" style="color:var(--text-3)">Đang tải danh sách…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="admin-sjr-import" class="nv-admin-panel pub-admin-only" aria-labelledby="sjr-import-heading" style="margin-top:16px">
+      <div class="nv-head">
+        <div>
+          <h2 id="sjr-import-heading">Import SCImago Journal Rank (Admin)</h2>
+          <p class="nv-desc" style="margin:8px 0 0">
+            Nạp <strong>dữ liệu offline</strong> vào bảng <code>journal_metrics</code> để tra cứu phân hạng Q / SJR theo ISSN khi enrich.
+            Trên SCImago: <a href="https://www.scimagojr.com/journalrank.php" target="_blank" rel="noopener">Journal Rank</a> → menu <strong>Export → CSV</strong>
+            (định dạng chuẩn của hệ thống: cột phân tách bằng dấu <code>;</code>, có header <em>Issn</em>, <em>Title</em>, <em>SJR Best Quartile</em>, <em>SJR</em>…).
+            File <code>.xlsx</code> tải thẳng từ trình duyệt thường <strong>không</strong> dùng được — cần bản CSV xuất từ trang SCImago, hoặc mở Excel → Lưu dưới dạng CSV với phân tách <code>;</code> (kiểu châu Âu) và đúng tên cột.
+          </p>
+        </div>
+      </div>
+      <form id="sjrImportForm" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:12px" onsubmit="submitSjrCsvImport(event)">
+        <label class="stats-inline"><span>Năm kỳ SJR</span>
+          <select id="sjrImportYear" class="stats-select stats-year" required aria-label="Năm dữ liệu SCImago">
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024" selected>2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+            <option value="2021">2021</option>
+            <option value="2020">2020</option>
+            <option value="2019">2019</option>
+            <option value="2018">2018</option>
+            <option value="2017">2017</option>
+            <option value="2016">2016</option>
+            <option value="2015">2015</option>
+          </select>
+        </label>
+        <label class="stats-inline"><span>File CSV</span>
+          <input type="file" id="sjrImportFile" accept=".csv,text/csv" required aria-label="File CSV SCImago">
+        </label>
+        <button type="submit" class="btn btn-primary" id="sjrImportBtn">📥 Import vào CSDL</button>
+      </form>
+      <pre id="sjrImportLog" style="margin-top:12px;padding:12px;background:var(--accent-light);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;max-height:220px;overflow:auto;white-space:pre-wrap;display:none"></pre>
+    </section>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Tìm trong mọi trường dữ liệu (tiêu đề, tác giả, DOI, abstract, đề tài, ORCID, ISSN, trích dẫn…)" oninput="filterTable()">
+      </div>
+      <button type="button" class="btn" onclick="exportToolbarExcel()" title="Xuất các dòng đang hiển thị (sau ô tìm &amp; lọc) — file CSV, mở bằng Excel">📊 Xuất Excel</button>
+      <button type="button" class="btn" onclick="exportToolbarBibtex()" title="File .bib cho các công bố đang hiển thị">📎 BibTeX</button>
+      <button type="button" class="btn pub-admin-only" onclick="scrollToSjrImportAdmin()" title="Nạp CSV SCImago vào CSDL">📥 Import SCImago (SJR)</button>
+      <a class="btn pub-admin-only" href="orcid-harvest.html" style="text-decoration:none;display:inline-flex;align-items:center;">🛰 ORCID Auto-Harvest</a>
+      <button type="button" class="btn btn-primary pub-admin-only" onclick="openAddModal()">＋ Thêm công bố</button>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>NĂM CÔNG BỐ</label>
+        <select id="filterYear" onchange="filterTable()">
+          <option value="">Tất cả năm</option>
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+          <option value="2022">2022</option>
+          <option value="2021">2021</option>
+          <option value="2020">2020</option>
+          <option value="2019">2019</option>
+          <option value="2018">2018</option>
+          <option value="2017">2017</option>
+          <option value="2016">2016</option>
+          <option value="2015">2015</option>
+          <option value="2014">2014</option>
+          <option value="2013">2013</option>
+          <option value="2012">2012</option>
+          <option value="2011">2011</option>
+          <option value="2010">2010</option>
+          <option value="2009">2009</option>
+          <option value="2008">2008</option>
+          <option value="2007">2007</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>LOẠI HÌNH</label>
+        <select id="filterTypeSelect" onchange="filterTable()">
+          <option value="">Tất cả</option>
+          <option value="journal">Bài báo tạp chí</option>
+          <option value="conference">Kỷ yếu hội nghị</option>
+          <option value="book">Chương sách</option>
+          <option value="patent">Bằng sáng chế</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>PHÂN HẠNG</label>
+        <select id="filterQSelect" onchange="filterTable()">
+          <option value="">Tất cả</option>
+          <option value="Q1">Q1</option>
+          <option value="Q2">Q2</option>
+          <option value="Q3">Q3</option>
+          <option value="Q4">Q4</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>TRẠNG THÁI</label>
+        <select id="filterStatusSelect" onchange="filterTable()">
+          <option value="">Tất cả</option>
+          <option value="published">Đã đăng</option>
+          <option value="accepted">Chấp nhận đăng</option>
+          <option value="under-review">Đang phản biện</option>
+        </select>
+      </div>
+      <button class="btn" onclick="clearFilters()">✕ Xóa lọc</button>
+    </div>
+
+    <!-- Table -->
+    <div class="pub-table-wrapper">
+      <div id="enrich-statusbar" class="pub-admin-only pub-enrich-statusbar" style="padding:8px 12px;margin-bottom:10px;background:var(--accent-light);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--text-2)">
+        <span style="font-weight:600;color:var(--text)">Phân hạng tạp chí:</span>
+        <span><strong id="enrich-pending-count">?</strong> bài chờ enrich</span>
+        <button type="button" class="btn btn-primary pub-admin-only" style="font-size:12px;padding:5px 12px" id="enrichRunNowBtn" data-label-idle="Run" data-label-busy="Running…" onclick="triggerManualEnrich()">Run</button>
+      </div>
+      <div id="pubAdminBar" class="pub-admin-bar" aria-label="Thao tác admin danh sách công bố">
+        <span style="font-weight:600;color:var(--text)">Quản trị danh sách</span>
+        <button type="button" class="btn" style="font-size:12px;padding:6px 12px" onclick="pubToggleSelectAllVisible(true)">☑ Chọn tất cả (đang hiện)</button>
+        <button type="button" class="btn" style="font-size:12px;padding:6px 12px" onclick="pubToggleSelectAllVisible(false)">☐ Bỏ chọn</button>
+        <button type="button" class="btn btn-danger" style="font-size:12px;padding:6px 12px;border:1px dashed rgba(220,53,69,.85);background:#fff;color:#c82333" title="Xóa các công bố đã tích chọn khỏi danh sách và khỏi máy chủ (bản ghi đã đồng bộ)" onclick="bulkDeleteSelectedPubs()">⚠ Xóa các công bố đã chọn (danh sách và server)…</button>
+        <span style="width:1px;height:24px;background:var(--border);margin:0 4px"></span>
+        <label for="bulkStatus">Trạng thái</label>
+        <select id="bulkStatus">
+          <option value="">— Chọn —</option>
+          <option value="published">Đã đăng</option>
+          <option value="accepted">Chấp nhận đăng</option>
+          <option value="under-review">Đang phản biện</option>
+          <option value="preprint">Preprint</option>
+        </select>
+        <button type="button" class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="applyBulkStatus()">Áp dụng</button>
+        <label for="bulkQ">Phân hạng Q</label>
+        <select id="bulkQ">
+          <option value="">— Giữ nguyên —</option>
+          <option value="Q1">Q1</option>
+          <option value="Q2">Q2</option>
+          <option value="Q3">Q3</option>
+          <option value="Q4">Q4</option>
+          <option value="__clear__">Xóa Q (hội nghị / không áp dụng)</option>
+        </select>
+        <button type="button" class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="applyBulkQ()">Áp dụng Q</button>
+      </div>
+      <div class="table-top">
+        <div class="table-top-title">
+          Danh sách công bố — <span id="rowCount">0</span> kết quả
+        </div>
+        <div class="table-top-actions">
+          <button type="button" class="btn pub-admin-only" style="font-size:12px;padding:6px 12px" onclick="pubToggleSelectAllVisible(true)">☑ Chọn tất cả</button>
+        </div>
+      </div>
+      <table id="pubTable">
+        <thead>
+          <tr>
+            <th class="pub-check-col" style="width:36px"><input type="checkbox" id="pubSelectAll" class="pub-row-check" title="Chọn tất cả đang hiển thị" onchange="pubToggleSelectAllVisible(this.checked)"></th>
+            <th onclick="sortTable(1)">TIÊU ĐỀ / TÁC GIẢ <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable(2)">TẠP CHÍ / HỘI NGHỊ <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable(3)">CƠ SỞ DỮ LIỆU <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable(4)">PHÂN HẠNG <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable(5)" style="text-align:right">IF / CITE <span class="sort-icon">↕</span></th>
+            <th onclick="sortTable(6)">NĂM <span class="sort-icon">↕</span></th>
+            <th>TRẠNG THÁI</th>
+            <th>THAO TÁC</th>
+          </tr>
+        </thead>
+        <tbody id="pubTbody"></tbody>
+      </table>
+
+      <!-- Phân trang: dữ liệu hiển thị một trang; dòng dưới đồng bộ với lọc -->
+      <div class="pagination" id="pubPaginationWrap">
+        <span id="pubTableFooterLine">—</span>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── DETAIL MODAL ── -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="detailTitle">—</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="modal-tabs">
+      <button class="tab-btn active" onclick="switchTab(this,'tabMeta')">📋 Siêu dữ liệu</button>
+      <button class="tab-btn" onclick="switchTab(this,'tabIndex')">🗂️ Chỉ mục & Trích dẫn</button>
+      <button class="tab-btn" onclick="switchTab(this,'tabLink')">🔗 Liên kết & Đề tài</button>
+      <button class="tab-btn" onclick="switchTab(this,'tabHistory')">📜 Lịch sử</button>
+    </div>
+    <div class="modal-body" id="detailBody">
+
+      <div class="tab-pane active" id="tabMeta">
+        <div class="modal-section-title">Thông tin cơ bản</div>
+        <div class="meta-grid">
+          <div class="meta-item meta-item-full">
+            <div class="meta-key">Tiêu đề đầy đủ</div>
+            <div class="meta-val" id="d-title">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Tác giả</div>
+            <div class="meta-val" id="d-authors">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Tác giả SCI (gạch dưới)</div>
+            <div class="meta-val" id="d-sciauthors">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Tạp chí / Hội nghị</div>
+            <div class="meta-val" id="d-journal">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">ISSN / ISBN</div>
+            <div class="meta-val mono" id="d-issn">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Năm xuất bản</div>
+            <div class="meta-val mono" id="d-year">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Số tập / Trang</div>
+            <div class="meta-val mono" id="d-volume">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">DOI</div>
+            <div class="meta-val mono" id="d-doi">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">ORCID tác giả chính</div>
+            <div class="meta-val mono" id="d-orcid">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Loại hình</div>
+            <div class="meta-val" id="d-type">—</div>
+          </div>
+          <div class="meta-item meta-item-full">
+            <div class="meta-key">Tóm tắt (Abstract)</div>
+            <div class="meta-val" id="d-abstract" style="font-size:12.5px;line-height:1.6;color:var(--text-2)">—</div>
+          </div>
+          <div class="meta-item meta-item-full">
+            <div class="meta-key">Từ khóa</div>
+            <div class="meta-val" id="d-keywords">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tabIndex">
+        <div class="modal-section-title">Cơ sở dữ liệu & Chỉ mục</div>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-key">Cơ sở dữ liệu</div>
+            <div class="meta-val" id="d-db">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Phân hạng Scopus</div>
+            <div class="meta-val" id="d-q">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Impact Factor (IF)</div>
+            <div class="meta-val mono" id="d-if">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">CiteScore</div>
+            <div class="meta-val mono" id="d-cs">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">SJR</div>
+            <div class="meta-val mono" id="d-sjr">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Số lần trích dẫn</div>
+            <div class="meta-val mono" id="d-cite">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Scopus EID</div>
+            <div class="meta-val mono" id="d-eid">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">WoS Accession No.</div>
+            <div class="meta-val mono" id="d-wos">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">PubMed ID (PMID)</div>
+            <div class="meta-val mono" id="d-pmid">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Open Access</div>
+            <div class="meta-val" id="d-oa">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tabLink">
+        <div class="modal-section-title">Liên kết với đề tài KHCN</div>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-key">Mã đề tài</div>
+            <div class="meta-val mono" id="d-project">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Cấp đề tài</div>
+            <div class="meta-val" id="d-plevel">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Cơ quan tài trợ</div>
+            <div class="meta-val" id="d-funder">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">Mã tài trợ (Grant No.)</div>
+            <div class="meta-val mono" id="d-grant">—</div>
+          </div>
+          <div class="meta-item meta-item-full">
+            <div class="meta-key">Ghi chú liên kết</div>
+            <div class="meta-val" id="d-linknote">Bài báo là sản phẩm trực tiếp của đề tài nghiên cứu</div>
+          </div>
+          <div class="meta-item meta-item-full">
+            <div class="meta-key">File đính kèm / Preprint</div>
+            <div class="meta-val"><a href="#" id="d-filelink">📎 manuscript_final.pdf</a></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tabHistory">
+        <div class="modal-section-title">Lịch sử cập nhật</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="meta-item">
+            <div class="meta-key">15/01/2024 · Hệ thống</div>
+            <div class="meta-val" style="font-size:12.5px">Tự động cập nhật số trích dẫn từ Scopus API (+47 citations)</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">10/01/2024 · Nguyễn Văn A</div>
+            <div class="meta-val" style="font-size:12.5px">Nhập công bố mới từ DOI auto-fetch, xác nhận thông tin tác giả SCI</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">08/01/2024 · Hệ thống</div>
+            <div class="meta-val" style="font-size:12.5px">ORCID sync: liên kết thành công với record 0000-0002-XXXX-XXXX</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="showNotif('Đã sao chép trích dẫn APA')">📋 Copy trích dẫn</button>
+      <button type="button" class="btn" onclick="exportDetailModalBibtex()">📎 BibTeX</button>
+      <button type="button" class="btn btn-primary pub-admin-only" onclick="openEditFromDetail()">✏️ Chỉnh sửa</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADD MODAL ── -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="addModalTitle">Thêm công bố mới</div>
+      <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--accent-light);border:1px solid rgba(28,79,138,.2);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:18px;font-size:13px;color:var(--accent)">
+        💡 <strong>Nhập nhanh từ DOI:</strong> Điền DOI để tự động lấy metadata từ Crossref, Scopus và WoS.
+      </div>
+
+      <div class="modal-section-title">Nhập DOI tự động</div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>DOI <span class="req">*</span></label>
+          <div class="doi-fetch-row">
+            <input type="text" id="addDoi" placeholder="vd: 10.1016/j.jhep.2024.01.001">
+            <button class="btn btn-primary" onclick="fetchDOI()">🔍 Tự động điền</button>
+          </div>
+          <div class="form-hint">Hỗ trợ: Crossref · Scopus API · PubMed API · WoS API</div>
+        </div>
+      </div>
+
+      <div class="modal-section-title" style="margin-top:20px">Thông tin cơ bản</div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label>Tiêu đề <span class="req">*</span></label>
+          <textarea id="addTitle" placeholder="Tiêu đề đầy đủ của công bố…"></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Danh sách tác giả <span class="req">*</span></label>
+          <input type="text" id="addAuthors" placeholder="Họ A, Họ B, Họ C…">
+          <div class="form-hint">Tác giả thuộc SCI gạch dưới trong hệ thống</div>
+        </div>
+        <div class="form-group">
+          <label>Tác giả liên hệ (SCI)</label>
+          <input type="text" id="addSciAuthor" placeholder="Họ tên tác giả tại SCI">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tên tạp chí / Hội nghị <span class="req">*</span></label>
+          <input type="text" id="addJournal" placeholder="Journal of…">
+        </div>
+        <div class="form-group">
+          <label>Loại hình <span class="req">*</span></label>
+          <select id="addType">
+            <option value="journal">Bài báo tạp chí</option>
+            <option value="conference">Kỷ yếu hội nghị quốc tế</option>
+            <option value="book">Chương sách</option>
+            <option value="patent">Bằng sáng chế / GPHI</option>
+            <option value="preprint">Preprint / Dataset</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>ISSN / ISBN</label>
+          <input type="text" id="addISSN" placeholder="XXXX-XXXX">
+        </div>
+        <div class="form-group">
+          <label>Năm xuất bản <span class="req">*</span></label>
+          <input type="number" id="addYear" placeholder="2024" min="2000" max="2030">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Số tập (Volume)</label>
+          <input type="text" id="addVolume" placeholder="Vol. 45, No. 3, pp. 112–125">
+        </div>
+        <div class="form-group">
+          <label>ORCID tác giả chính</label>
+          <input type="text" id="addORCID" placeholder="0000-0002-XXXX-XXXX">
+        </div>
+      </div>
+
+      <div class="modal-section-title">Chỉ mục & Phân hạng</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cơ sở dữ liệu</label>
+          <select id="addDB">
+            <option value="scopus-wos">Scopus + Web of Science</option>
+            <option value="scopus">Scopus</option>
+            <option value="wos">Web of Science</option>
+            <option value="pubmed">PubMed / MEDLINE</option>
+            <option value="doaj">DOAJ</option>
+            <option value="other">Khác</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Phân hạng (Q)</label>
+          <select id="addQ">
+            <option value="">Không áp dụng</option>
+            <option value="Q1">Q1</option>
+            <option value="Q2">Q2</option>
+            <option value="Q3">Q3</option>
+            <option value="Q4">Q4</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Impact Factor (IF)</label>
+          <input type="number" id="addIF" placeholder="vd: 5.2" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Trạng thái <span class="req">*</span></label>
+          <select id="addStatus">
+            <option value="published">Đã đăng (Published)</option>
+            <option value="accepted">Chấp nhận đăng (Accepted)</option>
+            <option value="under-review">Đang phản biện (Under review)</option>
+            <option value="preprint">Preprint</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-section-title">Liên kết đề tài</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mã đề tài liên quan</label>
+          <input type="text" id="addProject" placeholder="vd: B2024-18-01">
+        </div>
+        <div class="form-group">
+          <label>Cơ quan tài trợ</label>
+          <input type="text" id="addFunder" placeholder="vd: ĐHQG-HCM, Bộ KH&CN">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('addModal')">Hủy</button>
+      <button type="button" class="btn btn-primary" onclick="savePubForm()">💾 Lưu công bố</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notification -->
+<div class="notif" id="notif">✅ Thao tác thành công!</div>
+
+<script src="js/system-access.js"></script>
+<script>
+// ── TRUY CẬP VIỆN (@sci.edu.vn hoặc super admin hệ thống) ──
+var PUB_INSTITUTE_DOMAIN = '@sci.edu.vn';
+var PUB_INSTITUTE_OK = (function () {
+  try {
+    var user = JSON.parse(localStorage.getItem('user') || '{}');
+    var token = localStorage.getItem('token');
+    if (!token) return false;
+    return typeof hasInstituteModuleAccess === 'function' ? hasInstituteModuleAccess(user) : false;
+  } catch (_) {
+    return false;
+  }
+})();
+
+const API_BASE = '/api';
+let orcidResearchers = [];
+
+async function apiFetch(path, options = {}) {
+  const token = localStorage.getItem('token');
+  const headers = Object.assign(
+    { 'Content-Type': 'application/json' },
+    options.headers || {}
+  );
+  if (token && !headers['Authorization']) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(API_BASE + path, {
+    credentials: 'include',
+    headers: headers,
+    ...options,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || data.message || ('HTTP ' + res.status));
+  return data;
+}
+
+/** Cập nhật localStorage.user từ CSDL (role, fullname) — JWT có thể cũ sau khi đổi vai trò. */
+function syncUserFromApiMe() {
+  return new Promise(function (resolve) {
+    var tok = localStorage.getItem('token');
+    if (!tok) {
+      resolve();
+      return;
+    }
+    fetch(API_BASE + '/me', {
+      credentials: 'include',
+      headers: { Authorization: 'Bearer ' + tok, Accept: 'application/json' },
+    })
+      .then(function (res) {
+        return res.ok ? res.json() : null;
+      })
+      .then(function (data) {
+        if (data && data.id != null && data.email != null) {
+          localStorage.setItem(
+            'user',
+            JSON.stringify({
+              id: data.id,
+              email: data.email,
+              fullname: data.fullname,
+              role: data.role,
+            })
+          );
+        }
+      })
+      .catch(function () {})
+      .finally(function () {
+        resolve();
+      });
+  });
+}
+
+function pubShowAccessDenied() {
+  var denied = document.getElementById('access-denied');
+  if (denied) denied.style.display = 'block';
+  document.querySelectorAll('.page-header, .layout, .modal-overlay, .notif').forEach(function (el) {
+    el.style.display = 'none';
+  });
+}
+if (!PUB_INSTITUTE_OK) pubShowAccessDenied();
+
+// ── DATA ──
+function getLoggedInDisplayName() {
+  try {
+    const userRaw = localStorage.getItem('user');
+    if (!userRaw) return '';
+    const user = JSON.parse(userRaw);
+    return (user && (user.fullname || user.name || user.email)) ? String(user.fullname || user.name || user.email).trim() : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function updateWelcomeUser() {
+  const el = document.getElementById('welcome-user');
+  if (!el) return;
+  const name = getLoggedInDisplayName();
+  el.textContent = name ? ('Xin chào, ' + name) : 'Xin chào!';
+}
+
+function normalizeDoiDedupe(d) {
+  var s = String(d || '').trim().toLowerCase();
+  if (!s || s === '—') return '';
+  return s.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').trim();
+}
+
+function pubDedupeKey(p) {
+  var dk = normalizeDoiDedupe(p.doi);
+  if (dk) return 'doi:' + dk;
+  return 't:' + String(p.title || '').toLowerCase().trim().slice(0, 240) + '|y:' + String(p.year || '').trim();
+}
+
+function apiPublicationToPub(row) {
+  var pubType = String(row.pub_type || 'journal').toLowerCase();
+  var rowType = pubType === 'book_chapter' ? 'book' : pubType;
+  var TYPE_LABEL = {
+    journal: 'Bài báo tạp chí',
+    conference: 'Kỷ yếu hội nghị quốc tế',
+    book_chapter: 'Chương sách',
+    patent: 'Bằng sáng chế / GPHI',
+    preprint: 'Preprint / Dataset'
+  };
+  var qRaw = String(row.quartile || '').trim().toUpperCase();
+  var q = /^Q[1-4]$/.test(qRaw) ? qRaw : '';
+  var idx = String(row.index_db || '').trim();
+  return ensurePubShape({
+    _serverId: row.id,
+    title: row.title || '—',
+    authors: row.authors || '—',
+    sciauthors: row.sci_authors || row.authors || '—',
+    journal: row.journal_name || row.conference_name || '—',
+    issn: row.issn || '—',
+    year: row.pub_year != null ? String(row.pub_year) : '—',
+    volume: [row.volume, row.pages].filter(Boolean).join(', ') || '—',
+    doi: row.doi || '—',
+    orcid: '—',
+    type: TYPE_LABEL[pubType] || TYPE_LABEL.journal,
+    rowType: rowType,
+    status: row.status || 'published',
+    abstract: row.abstract || '—',
+    keywords: row.keywords || '—',
+    db: idx || 'Khác',
+    q: q,
+    IF: row.impact_factor != null ? String(row.impact_factor) : '—',
+    cs: row.cite_score != null ? String(row.cite_score) : '—',
+    sjr: row.sjr != null ? String(row.sjr) : '—',
+    cite: row.citation_count != null ? String(row.citation_count) : '0',
+    eid: row.scopus_eid || '—',
+    wos: row.wos_id || '—',
+    pmid: row.pmid || '—',
+    oa: row.oa_type || (Number(row.is_open_access) === 1 ? 'Open Access' : '—'),
+    project: row.project_code || '—',
+    plevel: '—',
+    funder: row.funder || '—',
+    grant: row.grant_no || '—',
+    enrichment_status: row.enrichment_status != null ? row.enrichment_status : null,
+    sjr_year_used: row.sjr_year_used != null ? row.sjr_year_used : null,
+    quartile: q || null
+  });
+}
+
+/**
+ * Đồng bộ UI với server: toàn bộ bản ghi trên CSDL → hiển thị;
+ * giữ thêm các bản chỉ có trên trình duyệt (chưa có _serverId) nếu không trùng khóa với server.
+ */
+function rebuildPubsFromServerAndLocalDrafts(serverRows) {
+  var serverPubs = (serverRows || []).map(apiPublicationToPub);
+  var serverKeys = new Set(serverPubs.map(pubDedupeKey));
+  var localOnly = pubs.filter(function (p) {
+    return p && !p._serverId;
+  });
+  var keepLocal = localOnly.filter(function (p) {
+    return !serverKeys.has(pubDedupeKey(p));
+  });
+  pubs = serverPubs.concat(keepLocal);
+}
+
+function pubDraftToApiPayload(p) {
+  function dashToNull(s) {
+    if (s == null) return null;
+    var t = String(s).trim();
+    if (!t || t === '—') return null;
+    return t;
+  }
+  function parseNum(s) {
+    var t = dashToNull(s);
+    if (t == null) return null;
+    var n = parseFloat(String(t).replace(',', '.'));
+    return Number.isFinite(n) ? n : null;
+  }
+  var rowType = p.rowType || 'journal';
+  var pubType = rowType === 'book' ? 'book_chapter' : rowType;
+  var y = parseInt(String(p.year || '').trim(), 10);
+  return {
+    doi: dashToNull(p.doi),
+    title: dashToNull(p.title),
+    authors: dashToNull(p.authors),
+    sci_authors: dashToNull(p.sciauthors || p.authors),
+    abstract: dashToNull(p.abstract),
+    keywords: dashToNull(p.keywords),
+    pub_type: pubType,
+    journal_name: dashToNull(p.journal),
+    issn: dashToNull(p.issn),
+    volume: dashToNull(p.volume),
+    pages: null,
+    pub_year: Number.isFinite(y) ? y : null,
+    index_db: dashToNull(p.db),
+    quartile: /^Q[1-4]$/.test(String(p.q || '').trim()) ? String(p.q).trim().toUpperCase() : null,
+    impact_factor: parseNum(p.IF),
+    citation_count: parseNum(p.cite) != null ? parseNum(p.cite) : 0,
+    status: p.status || 'published',
+    project_code: dashToNull(p.project),
+    funder: dashToNull(p.funder),
+    grant_no: dashToNull(p.grant),
+    is_open_access: /open access/i.test(String(p.oa || '')) ? 1 : 0,
+    source: 'manual',
+  };
+}
+
+async function fetchAllPublicationsFromApi() {
+  var out = [];
+  var page = 1;
+  var limit = 100;
+  for (;;) {
+    var j = await apiFetch('/publications?limit=' + limit + '&page=' + page);
+    var chunk = (j && j.data) || [];
+    for (var i = 0; i < chunk.length; i++) out.push(chunk[i]);
+    var totalPages = j && j.pagination && Number(j.pagination.totalPages);
+    if (!chunk.length) break;
+    if (totalPages && page >= totalPages) break;
+    if (chunk.length < limit) break;
+    page++;
+    if (page > 200) break;
+  }
+  return out;
+}
+
+async function hydratePubsFromServerAndRender() {
+  try {
+    var rows = await fetchAllPublicationsFromApi();
+    rebuildPubsFromServerAndLocalDrafts(rows);
+    persistPubs();
+    renderPubTable();
+    filterTable();
+  } catch (e) {
+    console.warn('[Công bố] Không đồng bộ được từ server:', e.message || e);
+  }
+}
+
+/** Alias cho SSE / worker UI (refresh bảng sau enrich). */
+function loadPublications() {
+  return hydratePubsFromServerAndRender();
+}
+
+var __enrichEvtSource = null;
+
+function initEnrichStatsStream() {
+  if (__enrichEvtSource) {
+    try { __enrichEvtSource.close(); } catch (_) {}
+    __enrichEvtSource = null;
+  }
+  var evtSource = new EventSource('/api/enrich/stream');
+  __enrichEvtSource = evtSource;
+  evtSource.onmessage = function (event) {
+    try {
+      var stats = JSON.parse(event.data);
+      var pendingEl = document.getElementById('enrich-pending-count');
+      if (pendingEl) {
+        var n = stats.enrich_eligible != null ? stats.enrich_eligible : stats.pending;
+        if (n != null) pendingEl.textContent = String(n);
+      }
+      if (stats.pending > 0) {
+        clearTimeout(window._refreshTimer);
+        window._refreshTimer = setTimeout(function () {
+          loadPublications();
+        }, 5000);
+      }
+    } catch (_) {}
+  };
+  evtSource.onerror = function () {
+    try { evtSource.close(); } catch (_) {}
+    __enrichEvtSource = null;
+  };
+}
+
+async function triggerManualEnrich() {
+  if (!isPubAdmin()) {
+    showNotif('Chỉ Admin mới chạy enrich thủ công.');
+    return;
+  }
+  var btn = document.getElementById('enrichRunNowBtn');
+  var idle = (btn && btn.getAttribute('data-label-idle')) || 'Run';
+  var busy = (btn && btn.getAttribute('data-label-busy')) || 'Running…';
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('enrich-run-busy');
+    btn.textContent = busy;
+    btn.setAttribute('aria-busy', 'true');
+  }
+  try {
+    var data = await apiFetch('/enrich/trigger', {
+      method: 'POST',
+      body: JSON.stringify({ publicationIds: [] })
+    });
+    var st = data.stats || {};
+    var msg = 'Enrich: ' + (st.success || 0) + ' thành công';
+    if (st.failed) msg += ', ' + st.failed + ' lỗi';
+    if (st.skipped != null) msg += ', ' + st.skipped + ' bỏ qua (ISSN/SJR)';
+    showNotif(msg);
+    await loadPublications();
+  } catch (e) {
+    showNotif('Lỗi: ' + (e.message || String(e)));
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.classList.remove('enrich-run-busy');
+      btn.textContent = idle;
+      btn.removeAttribute('aria-busy');
+    }
+  }
+}
+
+/** @returns {{ ok: boolean, message?: string, localOnly?: boolean }} */
+async function deletePublicationOnServerIfAny(pub) {
+  if (!pub || !pub._serverId) return { ok: true, localOnly: true };
+  try {
+    var token = localStorage.getItem('token');
+    var headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    var res = await fetch(API_BASE + '/publications/' + encodeURIComponent(pub._serverId), {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: headers
+    });
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) {
+      return { ok: false, message: data.error || data.message || ('HTTP ' + res.status) };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: e.message || String(e) };
+  }
+}
+
+// ── Thống kê công bố (GET /api/publications/stats) ──
+var __pubStatsMeta = { yearMin: null, yearMax: null };
+/** Năm lớn nhất trong dropdown Từ/Đến (luôn ≥ năm có dữ liệu, để chọn trước khi có bản ghi). */
+var STATS_YEAR_SELECT_MAX = 2026;
+
+function statsNum(n) {
+  if (n == null || n === '' || Number.isNaN(Number(n))) return 0;
+  return Number(n);
+}
+
+function buildPublicationStatsQuery() {
+  var presetEl = document.getElementById('statsPreset');
+  var preset = presetEl ? presetEl.value : 'all';
+  var yf = '';
+  var yt = '';
+  var meta = __pubStatsMeta || {};
+  var yMin = meta.yearMin != null ? meta.yearMin : new Date().getFullYear() - 35;
+  var yMax = meta.yearMax != null ? meta.yearMax : new Date().getFullYear();
+
+  if (preset === 'custom') {
+    var a = document.getElementById('statsYearFrom');
+    var b = document.getElementById('statsYearTo');
+    if (a && b && a.value && b.value) {
+      yf = a.value;
+      yt = b.value;
+    }
+  } else if (preset === 'last5') {
+    yt = String(yMax);
+    yf = String(Math.max(yMin, yMax - 4));
+  } else if (preset === 'last10') {
+    yt = String(yMax);
+    yf = String(Math.max(yMin, yMax - 9));
+  } else if (preset === '2020_2024') {
+    yf = '2020';
+    yt = '2024';
+  } else if (preset === '2015_2019') {
+    yf = '2015';
+    yt = '2019';
+  }
+
+  if (yf && yt && Number(yf) > Number(yt)) {
+    var t = yf;
+    yf = yt;
+    yt = t;
+  }
+
+  var qs = new URLSearchParams();
+  if (yf && yt) {
+    qs.set('year_from', yf);
+    qs.set('year_to', yt);
+  }
+  var label = !yf || !yt ? 'Toàn bộ' : yf + '–' + yt;
+  return { qs: qs.toString(), label: label };
+}
+
+function fillStatsYearSelects(meta) {
+  var fromEl = document.getElementById('statsYearFrom');
+  var toEl = document.getElementById('statsYearTo');
+  if (!fromEl || !toEl) return;
+  if (fromEl.options.length > 1) return;
+  var now = new Date().getFullYear();
+  var lo = meta.yearMin != null ? meta.yearMin : now - 35;
+  var dataHi = meta.yearMax != null ? meta.yearMax : now;
+  var hiList = Math.max(dataHi, STATS_YEAR_SELECT_MAX);
+  var opts = '';
+  for (var y = lo; y <= hiList; y++) opts += '<option value="' + y + '">' + y + '</option>';
+  fromEl.innerHTML = opts;
+  toEl.innerHTML = opts;
+  var toDefault = Math.min(dataHi, hiList);
+  toEl.value = String(toDefault);
+  fromEl.value = String(Math.max(lo, toDefault - 4));
+}
+
+function toggleStatsCustomYears() {
+  var preset = document.getElementById('statsPreset');
+  var custom = preset && preset.value === 'custom';
+  var fromEl = document.getElementById('statsYearFrom');
+  var toEl = document.getElementById('statsYearTo');
+  if (fromEl) fromEl.disabled = !custom;
+  if (toEl) toEl.disabled = !custom;
+}
+
+function toggleClusterControl() {
+  var mode = document.getElementById('statsChartMode');
+  var wrap = document.getElementById('statsClusterWrap');
+  if (!wrap) return;
+  wrap.style.display = mode && mode.value === 'by_cluster' ? 'inline-flex' : 'none';
+}
+
+function barRowHtml(label, count, max, className, barStyle) {
+  var pct = max > 0 ? Math.max(6, Math.round((count / max) * 100)) : 0;
+  var extra = barStyle ? barStyle : '';
+  var cls = className ? 'bar-fill ' + className : 'bar-fill';
+  return ''
+    + '<div class="bar-row">'
+    + '<span class="bar-label">' + label + '</span>'
+    + '<div class="bar-track"><div class="' + cls + '" style="width:' + pct + '%;' + extra + '">' + count + '</div></div>'
+    + '</div>';
+}
+
+function renderQuartileBars(totals) {
+  var q1 = statsNum(totals.q1);
+  var q2 = statsNum(totals.q2);
+  var q3 = statsNum(totals.q3);
+  var q4 = statsNum(totals.q4);
+  var cf = statsNum(totals.conferences);
+  var max = Math.max(q1, q2, q3, q4, cf, 1);
+  var box = document.getElementById('chartBarsContainer');
+  if (!box) return;
+  box.innerHTML = ''
+    + barRowHtml('Q1', q1, max, 'bar-q1')
+    + barRowHtml('Q2', q2, max, 'bar-q2')
+    + barRowHtml('Q3', q3, max, 'bar-q3')
+    + barRowHtml('Q4', q4, max, 'bar-q4')
+    + barRowHtml('Hội nghị', cf, max, '', 'background:#7c3aed');
+}
+
+function renderYearBars(byYear) {
+  var rows = (byYear || []).slice();
+  var box = document.getElementById('chartBarsContainer');
+  if (!box) return;
+  if (!rows.length) {
+    box.innerHTML = '<p class="stats-hint">Không có dữ liệu theo năm trong phạm vi lọc.</p>';
+    return;
+  }
+  var max = 1;
+  for (var i = 0; i < rows.length; i++) max = Math.max(max, statsNum(rows[i].count));
+  var colors = ['#1a5c3a', '#0f766e', '#0369a1', '#7c3aed', '#b45309'];
+  var html = '';
+  for (var j = 0; j < rows.length; j++) {
+    var r = rows[j];
+    var c = statsNum(r.count);
+    var st = 'background:' + colors[j % colors.length];
+    html += barRowHtml(String(r.pub_year), c, max, '', st);
+  }
+  box.innerHTML = html;
+}
+
+function buildYearClusters(meta, filter, byYear, clusterSize) {
+  var map = {};
+  (byYear || []).forEach(function (r) {
+    map[r.pub_year] = statsNum(r.count);
+  });
+  var lo = filter && filter.yearFrom != null ? filter.yearFrom : meta.yearMin;
+  var hi = filter && filter.yearTo != null ? filter.yearTo : meta.yearMax;
+  var ys = Object.keys(map).map(Number).sort(function (a, b) { return a - b; });
+  if (lo == null || hi == null) {
+    if (!ys.length) return [];
+    lo = ys[0];
+    hi = ys[ys.length - 1];
+  }
+  var out = [];
+  var s = lo;
+  while (s <= hi) {
+    var e = Math.min(s + clusterSize - 1, hi);
+    var sum = 0;
+    for (var y = s; y <= e; y++) sum += map[y] || 0;
+    out.push({ label: s + '–' + e, count: sum });
+    s = e + 1;
+  }
+  return out;
+}
+
+function renderClusterBars(buckets) {
+  var box = document.getElementById('chartBarsContainer');
+  if (!box) return;
+  var nonZero = buckets.filter(function (b) { return b.count > 0; });
+  var src = nonZero.length ? nonZero : buckets;
+  if (!src.length) {
+    box.innerHTML = '<p class="stats-hint">Không đủ dữ liệu để gom cụm.</p>';
+    return;
+  }
+  var max = 1;
+  src.forEach(function (b) { max = Math.max(max, b.count); });
+  var colors = ['#b91c1c', '#b45309', '#1a5c3a', '#004990', '#7c3aed'];
+  var html = '';
+  src.forEach(function (b, idx) {
+    var st = 'background:' + colors[idx % colors.length];
+    html += barRowHtml(b.label, b.count, max, '', st);
+  });
+  box.innerHTML = html;
+}
+
+function renderDonut(indexExclusive, totalFiltered) {
+  var ix = indexExclusive || {};
+  var otherMerged = statsNum(ix.conference) + statsNum(ix.other);
+  var segments = [
+    { key: 'scopus', color: '#e87722', n: statsNum(ix.scopus) },
+    { key: 'wos', color: '#004990', n: statsNum(ix.wos) },
+    { key: 'pubmed', color: '#1a5c3a', n: statsNum(ix.pubmed) },
+    { key: 'doaj', color: '#5b21b6', n: statsNum(ix.doaj) },
+    { key: 'other', color: '#c4c8ce', n: otherMerged }
+  ];
+  var sum = 0;
+  segments.forEach(function (s) { sum += s.n; });
+  var pie = document.getElementById('pubDonutPie');
+  var totalEl = document.getElementById('pubDonutTotal');
+  if (totalEl) totalEl.textContent = String(statsNum(totalFiltered));
+
+  segments.forEach(function (seg) {
+    var el = document.querySelector('#pubDonutLegend .legend-num[data-ix="' + seg.key + '"]');
+    if (el) el.textContent = String(seg.n);
+  });
+
+  if (!pie) return;
+  if (sum === 0) {
+    pie.style.background = 'conic-gradient(#eceae3 0% 100%)';
+    return;
+  }
+  var acc = 0;
+  var parts = segments.map(function (seg) {
+    var pct = (seg.n / sum) * 100;
+    var start = acc;
+    acc += pct;
+    return seg.color + ' ' + start + '% ' + acc + '%';
+  });
+  pie.style.background = 'conic-gradient(' + parts.join(',') + ')';
+
+  var foot = document.getElementById('pubDonutFootnote');
+  if (foot) {
+    foot.textContent = 'Mỗi bài gán một nhóm duy nhất (ưu tiên: Scopus → WoS → PubMed → DOAJ → loại hội nghị → khác). Tổng ở giữa = số bản ghi trong phạm vi lọc; tổng các cung = tổng đó.';
+  }
+}
+
+function yoyFromByYear(byYear, field) {
+  var f = field || 'count';
+  var rows = (byYear || []).slice().sort(function (a, b) { return statsNum(b.pub_year) - statsNum(a.pub_year); });
+  if (rows.length < 2) return null;
+  return statsNum(rows[0][f]) - statsNum(rows[1][f]);
+}
+
+function applyStatTrend(el, delta, suffix) {
+  if (!el) return;
+  el.classList.remove('trend-up', 'trend-down');
+  if (delta == null || Number.isNaN(delta)) {
+    el.textContent = '—';
+    return;
+  }
+  if (delta > 0) {
+    el.classList.add('trend-up');
+    el.textContent = '+' + delta + (suffix || '');
+  } else if (delta < 0) {
+    el.classList.add('trend-down');
+    el.textContent = String(delta) + (suffix || '');
+  } else {
+    el.textContent = '= năm liền kề';
+  }
+}
+
+function applyPublicationDashboard(data) {
+  var totals = data.totals || {};
+  var byYear = data.byYear || [];
+  var filter = data.filter;
+  var meta = data.meta || {};
+  var modeEl = document.getElementById('statsChartMode');
+  var mode = modeEl ? modeEl.value : 'quartile';
+
+  var titleEl = document.getElementById('chartLeftTitle');
+  var label = data._filterLabel || 'Toàn bộ';
+  if (titleEl) {
+    if (mode === 'quartile') titleEl.textContent = '📊 Công bố theo phân hạng — ' + label;
+    else if (mode === 'by_year') titleEl.textContent = '📊 Số bài theo từng năm — ' + label;
+    else {
+      var cs = document.getElementById('statsClusterSize');
+      var sz = cs ? parseInt(cs.value, 10) || 5 : 5;
+      titleEl.textContent = '📊 Số bài theo cụm ' + sz + ' năm — ' + label;
+    }
+  }
+
+  if (mode === 'quartile') renderQuartileBars(totals);
+  else if (mode === 'by_year') renderYearBars(byYear);
+  else {
+    var csz = document.getElementById('statsClusterSize');
+    var size = csz ? parseInt(csz.value, 10) || 5 : 5;
+    var buckets = buildYearClusters(meta, filter, byYear, size);
+    renderClusterBars(buckets);
+  }
+
+  renderDonut(data.indexExclusive, totals.total);
+
+  function setText(id, v) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = v;
+  }
+  setText('dashCardQ1', String(statsNum(totals.q1)));
+  setText('dashCardQ2', String(statsNum(totals.q2)));
+  var avg1 = totals.avg_if_q1;
+  var avg2 = totals.avg_if_q2;
+  setText('dashCardQ1Sub', avg1 != null && !Number.isNaN(Number(avg1)) ? ('IF TB: ' + Number(avg1).toFixed(2)) : 'IF TB: —');
+  setText('dashCardQ2Sub', avg2 != null && !Number.isNaN(Number(avg2)) ? ('IF TB: ' + Number(avg2).toFixed(2)) : 'IF TB: —');
+
+  setText('dashCardCites', String(statsNum(totals.total_citations)));
+  setText('dashCardTotal', String(statsNum(totals.total)));
+  setText('dashCardTotalSub', label);
+  setText('dashCardPatents', String(statsNum(totals.patents)));
+  var pend = statsNum(totals.patents_pending);
+  setText('dashCardPatentsSub', pend ? pend + ' đang xử lý' : '—');
+
+  applyStatTrend(document.getElementById('dashCardTotalTrend'), yoyFromByYear(byYear, 'count'), ' bài (2 năm gần nhất)');
+  applyStatTrend(document.getElementById('dashCardCitesTrend'), yoyFromByYear(byYear, 'citations'), ' trích dẫn');
+  applyStatTrend(document.getElementById('dashCardQ1Trend'), null);
+  applyStatTrend(document.getElementById('dashCardQ2Trend'), null);
+  applyStatTrend(document.getElementById('dashCardPatentsTrend'), null);
+}
+
+function applySidebarAndHeaderStats(d) {
+  var sb = d.sidebar || {};
+  var ty = sb.types || {};
+  var q = sb.quartiles || {};
+  var ix = sb.index || {};
+  var st = sb.status || {};
+  var hd = d.header || {};
+
+  function set(id, v) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = v;
+  }
+  set('hstatTotalPubs', String(statsNum(hd.total)));
+  set('hstatScopusWos', String(statsNum(hd.scopusOrWos)));
+  set('hstatQ12', String(statsNum(hd.q1q2)));
+  set('hstatCitations', String(statsNum(hd.totalCitations)));
+
+  set('sidebarCountTotal', String(statsNum(ty.total)));
+  set('sidebarCountJournal', String(statsNum(ty.journals)));
+  set('sidebarCountConference', String(statsNum(ty.conferences)));
+  set('sidebarCountBook', String(statsNum(ty.book_chapters)));
+  set('sidebarCountPatent', String(statsNum(ty.patents)));
+  set('sidebarCountPreprint', String(statsNum(ty.preprints)));
+
+  set('sidebarCountScopus', String(statsNum(ix.scopus)));
+  set('sidebarCountWos', String(statsNum(ix.wos)));
+  set('sidebarCountPubmed', String(statsNum(ix.pubmed)));
+  set('sidebarCountDoaj', String(statsNum(ix.doaj)));
+
+  set('sidebarCountQ1', String(statsNum(q.q1)));
+  set('sidebarCountQ2', String(statsNum(q.q2)));
+  set('sidebarCountQ3', String(statsNum(q.q3)));
+  set('sidebarCountQ4', String(statsNum(q.q4)));
+
+  set('sidebarCountPublished', String(statsNum(st.published)));
+  set('sidebarCountAccepted', String(statsNum(st.accepted)));
+  set('sidebarCountUnderReview', String(statsNum(st.under_review)));
+}
+
+function wirePublicationStatsUI() {
+  var preset = document.getElementById('statsPreset');
+  if (preset) {
+    preset.addEventListener('change', function () {
+      toggleStatsCustomYears();
+      loadPublicationStats();
+    });
+  }
+  ['statsYearFrom', 'statsYearTo'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('change', function () { loadPublicationStats(); });
+  });
+  var mode = document.getElementById('statsChartMode');
+  if (mode) {
+    mode.addEventListener('change', function () {
+      toggleClusterControl();
+      loadPublicationStats();
+    });
+  }
+  var cs = document.getElementById('statsClusterSize');
+  if (cs) cs.addEventListener('change', function () { loadPublicationStats(); });
+  var btn = document.getElementById('statsRefreshBtn');
+  if (btn) btn.addEventListener('click', function () { loadPublicationStats(); });
+  toggleClusterControl();
+}
+
+async function loadPublicationStats() {
+  if (typeof PUB_INSTITUTE_OK !== 'undefined' && !PUB_INSTITUTE_OK) return;
+  var hint = document.getElementById('statsHint');
+  try {
+    var q = buildPublicationStatsQuery();
+    var url = '/publications/stats' + (q.qs ? ('?' + q.qs) : '');
+    var res = await apiFetch(url);
+    if (!res || !res.data) throw new Error('Phản hồi không hợp lệ');
+    var d = res.data;
+    __pubStatsMeta = d.meta || __pubStatsMeta;
+    fillStatsYearSelects(__pubStatsMeta);
+    toggleStatsCustomYears();
+    d._filterLabel = q.label;
+    applyPublicationDashboard(d);
+    applySidebarAndHeaderStats(d);
+    if (hint) {
+      hint.textContent = 'Header & sidebar: toàn bộ công bố trong CSDL. Thẻ số và biểu đồ: theo «Khoảng thời gian» phía trên (pub_year).';
+    }
+  } catch (e) {
+    if (hint) hint.textContent = 'Không tải được thống kê từ API: ' + (e.message || e) + ' (kiểm tra server và đường dẫn /api/publications).';
+  }
+}
+
+const PUB_STORAGE_KEY = 'cong_bo_khoa_hoc_pubs_v1';
+const PUB_SEED = [
+  {
+    title: "Mesenchymal stem cell-derived exosomes attenuate inflammatory responses in acute liver injury: a comprehensive mechanistic study",
+    authors: "Nguyễn Văn A, Trần Thị B, Lê Văn C, Zhang W, Kumar R",
+    sciauthors: "Nguyễn Văn A (Tác giả liên hệ), Trần Thị B",
+    journal: "Journal of Hepatology",
+    issn: "0168-8278",
+    year: "2024",
+    volume: "Vol. 80, No. 3, pp. 445–462",
+    doi: "10.1016/j.jhep.2024.01.012",
+    orcid: "0000-0002-1234-5678",
+    type: "Bài báo tạp chí",
+    abstract: "Exosomes derived from mesenchymal stem cells (MSC-Exo) have emerged as a promising therapeutic approach for liver disease. This study investigated the molecular mechanisms underlying MSC-Exo-mediated hepatoprotection in a murine model of acute liver injury, revealing key miRNA cargo…",
+    keywords: "MSC exosome, liver injury, inflammation, hepatoprotection, miRNA",
+    db: "Scopus · Web of Science · PubMed/MEDLINE",
+    q: "Q1",
+    IF: "25.7",
+    cs: "31.4",
+    sjr: "8.21",
+    cite: "47",
+    eid: "2-s2.0-XXXXXXXX",
+    wos: "WOS:000XXXXXXXX",
+    pmid: "38102345",
+    oa: "Không (Subscription)",
+    project: "C2023-18-001",
+    plevel: "Cấp ĐHQG-HCM",
+    funder: "ĐHQG-HCM",
+    grant: "ĐHQG-2023-18-001"
+  },
+  {
+    title: "NK cell expansion protocol optimization for clinical-grade manufacturing: lessons from GMP-compliant bioreactor systems",
+    authors: "Trần Thị B, Phạm Văn D, Nguyễn Văn A, Park SH",
+    sciauthors: "Trần Thị B (Tác giả đầu), Nguyễn Văn A",
+    journal: "Cytotherapy",
+    issn: "1465-3249",
+    year: "2024",
+    volume: "Vol. 26, No. 1, pp. 23–35",
+    doi: "10.1016/j.jcyt.2023.11.004",
+    orcid: "0000-0003-9876-5432",
+    type: "Bài báo tạp chí",
+    abstract: "Clinical-grade NK cell manufacturing requires stringent GMP compliance. This study optimized expansion protocols using closed bioreactor systems, achieving >500-fold NK cell expansion with maintained cytotoxic function and phenotypic stability…",
+    keywords: "NK cells, GMP, bioreactor, cell therapy, manufacturing",
+    db: "Scopus · Web of Science",
+    q: "Q2",
+    IF: "4.1",
+    cs: "5.8",
+    sjr: "1.12",
+    cite: "12",
+    eid: "2-s2.0-YYYYYYYY",
+    wos: "WOS:000YYYYYYYY",
+    pmid: "—",
+    oa: "Open Access (Gold)",
+    project: "B2022-18-05",
+    plevel: "Cấp Bộ KH&CN",
+    funder: "Bộ Khoa học và Công nghệ",
+    grant: "ĐTLB.DL-01/23"
+  },
+  {
+    title: "Single-cell RNA sequencing reveals heterogeneity in bone marrow-derived mesenchymal stromal cell populations",
+    authors: "Lê Văn C, Nguyễn Văn A, Smith J, Tanaka K, Hoàng Thị G",
+    sciauthors: "Lê Văn C (Tác giả đầu), Nguyễn Văn A",
+    journal: "Stem Cell Reports",
+    issn: "2213-6711",
+    year: "2023",
+    volume: "Vol. 18, No. 7, pp. 1456–1471",
+    doi: "10.1016/j.stemcr.2023.05.018",
+    orcid: "0000-0001-2345-6789",
+    type: "Bài báo tạp chí",
+    abstract: "Using scRNA-seq to profile 12,847 bone marrow MSCs, we identified 7 distinct subpopulations with unique transcriptional signatures, revealing previously unknown heterogeneity in MSC biology with implications for therapeutic applications…",
+    keywords: "scRNA-seq, MSC, bone marrow, heterogeneity, single-cell",
+    db: "Scopus · Web of Science · PubMed/MEDLINE",
+    q: "Q1",
+    IF: "6.8",
+    cs: "8.3",
+    sjr: "2.14",
+    cite: "89",
+    eid: "2-s2.0-ZZZZZZZZ",
+    wos: "WOS:000ZZZZZZZZ",
+    pmid: "37483921",
+    oa: "Open Access (Gold)",
+    project: "C2021-18-003",
+    plevel: "Cấp ĐHQG-HCM",
+    funder: "ĐHQG-HCM",
+    grant: "ĐHQG-2021-18-003"
+  },
+  {
+    title: "Development of smart cell therapy monitoring system using IoT sensors and machine learning algorithms",
+    authors: "Phạm Văn D, Trần Thị B, Hoàng Văn E",
+    sciauthors: "Phạm Văn D (Tác giả đầu), Trần Thị B",
+    journal: "IEEE EMBC 2024 (46th Annual International Conference)",
+    issn: "—",
+    year: "2024",
+    volume: "Proceedings, pp. 1201–1206",
+    doi: "10.1109/EMBC.2024.XXXXX",
+    orcid: "0000-0002-8765-4321",
+    type: "Kỷ yếu hội nghị quốc tế (IEEE)",
+    abstract: "We present an IoT-based monitoring system for cell therapy manufacturing, integrating real-time environmental sensors with ML-based anomaly detection, achieving 97.3% accuracy in predicting batch failures…",
+    keywords: "IoT, cell therapy, monitoring, machine learning, GMP",
+    db: "Scopus · Web of Science (Conference Proceedings)",
+    q: "Hội nghị quốc tế (IEEE)",
+    IF: "—",
+    cs: "—",
+    sjr: "—",
+    cite: "5",
+    eid: "2-s2.0-AAAAAAAA",
+    wos: "WOS:000AAAAAAAA",
+    pmid: "—",
+    oa: "Open Access (Green)",
+    project: "B2023-18-07",
+    plevel: "Cấp Trường ĐHKTN",
+    funder: "Trường ĐH Khoa học Tự nhiên",
+    grant: "T2023-18-07"
+  },
+  {
+    title: "Regulatory landscape for advanced therapy medicinal products in Southeast Asia: comparative analysis and policy recommendations",
+    authors: "Nguyễn Văn A, Vo Thi F, Pham G, Lee H",
+    sciauthors: "Nguyễn Văn A (Tác giả liên hệ)",
+    journal: "Regenerative Medicine",
+    issn: "1746-0751",
+    year: "2024",
+    volume: "Accepted (in press)",
+    doi: "10.2217/rme-2024-0XXX",
+    orcid: "0000-0002-1234-5678",
+    type: "Bài báo tạp chí · Chính sách / Tổng quan",
+    abstract: "Advanced therapy medicinal products (ATMPs) face diverse regulatory challenges across Southeast Asia. This comparative study analyzes frameworks in 6 ASEAN countries, identifying gaps and proposing harmonization pathways aligned with EMA and FDA standards…",
+    keywords: "ATMP, regulation, Southeast Asia, cell therapy, policy",
+    db: "Scopus · Web of Science",
+    q: "Q2",
+    IF: "3.4",
+    cs: "4.2",
+    sjr: "0.89",
+    cite: "0",
+    eid: "—",
+    wos: "—",
+    pmid: "—",
+    oa: "Subscription",
+    project: "C2023-18-002",
+    plevel: "Cấp ĐHQG-HCM",
+    funder: "ĐHQG-HCM",
+    grant: "ĐHQG-2023-18-002"
+  },
+  {
+    title: "Optimization of cryopreservation protocols for human adipose-derived stem cells: impact on viability and differentiation potential",
+    authors: "Hoàng Văn E, Trần Thị B, Le H, Nguyen I, Kim J",
+    sciauthors: "Hoàng Văn E (Tác giả đầu), Trần Thị B",
+    journal: "Cryobiology",
+    issn: "0011-2240",
+    year: "2022",
+    volume: "Vol. 108, pp. 45–54",
+    doi: "10.1016/j.cryobiol.2022.09.003",
+    orcid: "0000-0003-1111-2222",
+    type: "Bài báo tạp chí",
+    abstract: "DMSO-based cryopreservation remains standard but suboptimal for ADSCs. We systematically compared 8 cryoprotectant formulations and identified a novel combination achieving 94.2% post-thaw viability with preserved multipotency…",
+    keywords: "cryopreservation, ADSC, adipose stem cell, DMSO, viability",
+    db: "Scopus · PubMed/MEDLINE",
+    q: "Q3",
+    IF: "2.1",
+    cs: "3.0",
+    sjr: "0.52",
+    cite: "34",
+    eid: "2-s2.0-BBBBBBBB",
+    wos: "—",
+    pmid: "36180234",
+    oa: "Subscription",
+    project: "B2021-18-04",
+    plevel: "Cấp Bộ KH&CN",
+    funder: "Bộ Khoa học và Công nghệ",
+    grant: "ĐTLB.DL-02/21"
+  },
+  {
+    title: "Tủ hồ sơ thông minh tự động có điều khiển máy tính — Giải pháp hữu ích",
+    authors: "Nguyễn Văn A, Phạm Văn D",
+    sciauthors: "Nguyễn Văn A, Phạm Văn D · Viện Tế bào gốc, ĐHQG-HCM",
+    journal: "Cục Sở hữu trí tuệ Việt Nam (NOIP)",
+    issn: "Số đơn: 5-2024-00XXX",
+    year: "2024",
+    volume: "Ngày nộp: 15/06/2024",
+    doi: "—",
+    orcid: "0000-0002-1234-5678",
+    type: "Giải pháp hữu ích (Utility Patent)",
+    abstract: "Hệ thống tủ hồ sơ 50 ngăn được điều khiển tự động bằng máy tính, sử dụng Arduino Mega 2560, servo SG90, và RFID reader để nhận dạng người dùng và tự động mở ngăn tương ứng theo lệnh phần mềm quản lý…",
+    keywords: "tủ hồ sơ thông minh, Arduino, RFID, servo, tự động hóa",
+    db: "Cục SHTT Việt Nam · Đang chờ thẩm định",
+    q: "—",
+    IF: "—",
+    cs: "—",
+    sjr: "—",
+    cite: "—",
+    eid: "—",
+    wos: "—",
+    pmid: "—",
+    oa: "—",
+    project: "Tự đề xuất SCI",
+    plevel: "Nội bộ / IP",
+    funder: "Viện Tế bào gốc",
+    grant: "SCI-IP-2024-01"
+  },
+  {
+    title: "Clinical-grade production of NK cells from umbilical cord blood for adoptive cell therapy: a phase I feasibility study",
+    authors: "Lê Văn C, Nguyễn Văn A, Trần Thị B, Kim JS, Park YS",
+    sciauthors: "Lê Văn C (Tác giả đầu), Nguyễn Văn A, Trần Thị B",
+    journal: "Frontiers in Immunology",
+    issn: "1664-3224",
+    year: "2023",
+    volume: "Vol. 14, Article 1187234",
+    doi: "10.3389/fimmu.2023.1187234",
+    orcid: "0000-0001-2345-6789",
+    type: "Bài báo tạp chí · Clinical Study",
+    abstract: "This phase I feasibility study demonstrates the clinical-grade production of NK cells from umbilical cord blood using a GMP-compliant manufacturing platform. We achieved sufficient NK cell numbers for clinical dosing with acceptable purity (>95% CD56+CD3-) and potency…",
+    keywords: "NK cells, cord blood, adoptive cell therapy, GMP, phase I",
+    db: "Scopus · Web of Science · PubMed/MEDLINE · DOAJ",
+    q: "Q1",
+    IF: "7.3",
+    cs: "9.1",
+    sjr: "2.76",
+    cite: "112",
+    eid: "2-s2.0-CCCCCCCC",
+    wos: "WOS:000CCCCCCCC",
+    pmid: "37051255",
+    oa: "Open Access (Gold — DOAJ)",
+    project: "C2022-18-001",
+    plevel: "Cấp ĐHQG-HCM",
+    funder: "ĐHQG-HCM + Vingroup Innovation Foundation",
+    grant: "ĐHQG-2022-18-001 / VINIF-2022-DA00088"
+  }
+];
+
+function ensurePubShape(p) {
+  const o = Object.assign({}, p);
+  const ty = String(o.type || '').toLowerCase();
+  const j = String(o.journal || '').toLowerCase();
+  const dbLow = String(o.db || '').toLowerCase();
+  if (!o.rowType) {
+    if (/hội nghị|ieee|proceeding|kỷ yếu/.test(ty)) o.rowType = 'conference';
+    else if (/giải pháp|patent|sáng chế|gphi|noip|shtt|utility/.test(ty + j + dbLow)) o.rowType = 'patent';
+    else if (/preprint/.test(ty)) o.rowType = 'preprint';
+    else if (/chương sách|sách/.test(ty)) o.rowType = 'book';
+    else o.rowType = 'journal';
+  }
+  if (!o.status) {
+    if (/Regulatory landscape/i.test(String(o.title || ''))) o.status = 'accepted';
+    else if (o.rowType === 'patent') o.status = 'under-review';
+    else o.status = 'published';
+  }
+  return o;
+}
+
+let pubs = (function () {
+  try {
+    const raw = localStorage.getItem(PUB_STORAGE_KEY);
+    if (raw != null && raw !== '') {
+      const arr = JSON.parse(raw);
+      // Luôn tin mảng đã lưu (kể cả [] sau khi xóa hết) — tránh fallback về demo
+      if (Array.isArray(arr)) return arr.map(ensurePubShape);
+    }
+  } catch (_) {}
+  return PUB_SEED.map(function (item) { return ensurePubShape(Object.assign({}, item)); });
+})();
+
+let detailModalIdx = -1;
+let editingPubIndex = null;
+
+function isPubAdmin() {
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    if (String(u.role || '').toLowerCase() === 'admin') return true;
+    return typeof isSystemSuperAdminEmail === 'function' && isSystemSuperAdminEmail(u.email);
+  } catch (_) { return false; }
+}
+
+function persistPubs() {
+  try { localStorage.setItem(PUB_STORAGE_KEY, JSON.stringify(pubs)); } catch (_) {}
+}
+
+function applyPubAdminChrome() {
+  document.body.classList.toggle('pub-is-admin', isPubAdmin());
+}
+
+function escHtmlPub(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/"/g, '&quot;');
+}
+
+function pubFilterQAttr(p) {
+  const q = String(p.q || '').trim();
+  return /^Q[1-4]$/.test(q) ? q : '';
+}
+
+function dbStringToIdxHtml(db) {
+  const s = String(db || '').toLowerCase();
+  let html = '';
+  if (s.includes('scopus')) html += '<span class="idx-tag idx-scopus">SCO</span>';
+  if (s.includes('web of science') || /\bwos\b/.test(s)) html += '<span class="idx-tag idx-wos">WoS</span>';
+  if (s.includes('pubmed')) html += '<span class="idx-tag idx-pubmed">PM</span>';
+  if (s.includes('doaj')) html += '<span class="idx-tag idx-doaj">DOAJ</span>';
+  if (!html && (s.includes('shtt') || s.includes('cục'))) {
+    html += '<span class="idx-tag" style="background:#5b21b6;color:#fff">SHTT</span>';
+  }
+  if (!html) html = '<span style="font-size:11px;color:var(--text-3)">—</span>';
+  return html;
+}
+
+function renderQuartileBadge(pub) {
+  var qRaw = (pub.quartile != null && pub.quartile !== '') ? pub.quartile : pub.q;
+  var q = String(qRaw || '').trim().toUpperCase();
+  var status = String(pub.enrichment_status || '').trim() || 'pending';
+  var year = (pub.sjr_year_used != null && pub.sjr_year_used !== '') ? String(pub.sjr_year_used) : '';
+  if (q === 'Q1') return '<span class="badge badge-q1" title="SJR ' + escHtmlPub(year) + '">Q1</span>';
+  if (q === 'Q2') return '<span class="badge badge-q2" title="SJR ' + escHtmlPub(year) + '">Q2</span>';
+  if (q === 'Q3') return '<span class="badge badge-q3" title="SJR ' + escHtmlPub(year) + '">Q3</span>';
+  if (q === 'Q4') return '<span class="badge badge-q4" title="SJR ' + escHtmlPub(year) + '">Q4</span>';
+  if (status === 'not_in_sjr') return '<span class="badge badge-na" title="Tạp chí không có trong SJR">Ngoài SJR</span>';
+  if (status === 'no_issn') return '<span class="badge badge-warn" title="Không xác định được ISSN">Thiếu ISSN</span>';
+  if (status === 'pending') return '<span class="badge badge-pending">Chờ enrich</span>';
+  return '<span class="badge badge-na">–</span>';
+}
+
+function phanHangCellHtmlPub(p) {
+  var p2 = ensurePubShape(p);
+  if (p2.rowType === 'conference') return '<span class="badge badge-conf">Hội nghị</span>';
+  if (p2.rowType === 'patent') return '<span class="badge badge-patent">GPHI</span>';
+  if (p2.rowType === 'preprint') return '<span class="badge badge-preprint">Preprint</span>';
+  return renderQuartileBadge(p2);
+}
+
+function statusPillForPub(p) {
+  const st = p.status || 'published';
+  const labels = {
+    published: ['sp-published', 'Đã đăng'],
+    accepted: ['sp-accepted', 'Chấp nhận đăng'],
+    'under-review': ['sp-under-review', p.rowType === 'patent' ? 'Đang xử lý' : 'Đang phản biện'],
+    preprint: ['sp-preprint', 'Preprint']
+  };
+  const pair = labels[st] || labels.published;
+  return '<span class="status-pill ' + pair[0] + '"><span class="status-dot"></span>' + pair[1] + '</span>';
+}
+
+function citeCellHtmlPub(p) {
+  const ifv = p.IF != null ? String(p.IF) : '—';
+  const cite = p.cite != null ? String(p.cite) : '0';
+  let sub = '—';
+  if (cite !== '—') sub = cite + (cite === '0' ? ' citations' : ' citations');
+  return '<div class="cite-num">' + escHtmlPub(ifv) + '</div><div class="cite-if">' + escHtmlPub(sub) + '</div>';
+}
+
+function renderPubTable() {
+  const tb = document.getElementById('pubTbody');
+  if (!tb) return;
+  tb.innerHTML = pubs.map(function (p, i) {
+    const p2 = ensurePubShape(p);
+    const year = String(p2.year || '').trim();
+    const qAttr = pubFilterQAttr(p2);
+    const orcid = String(p2.orcid || '').trim();
+    const chip = (orcid && orcid !== '—') ? ' · <span class="orcid-chip">iD</span>' : '';
+    return ''
+      + '<tr class="pub-row" data-pub-index="' + i + '" data-year="' + escHtmlPub(year) + '" data-q="' + escHtmlPub(qAttr) + '" data-type="' + escHtmlPub(p2.rowType) + '" data-status="' + escHtmlPub(p2.status) + '" onclick="openDetailModal(' + i + ')">'
+      + '<td class="pub-check-col" onclick="event.stopPropagation()"><input type="checkbox" class="pub-row-check"></td>'
+      + '<td class="pub-title-cell"><div class="pub-title">' + escHtmlPub(p2.title) + '</div><div class="pub-authors">' + escHtmlPub(p2.authors) + chip + '</div></td>'
+      + '<td><div style="font-weight:500;font-size:12.5px">' + escHtmlPub(p2.journal) + '</div><div style="font-size:11px;color:var(--text-3);font-family:var(--mono)">ISSN: ' + escHtmlPub(p2.issn) + '</div></td>'
+      + '<td>' + dbStringToIdxHtml(p2.db) + '</td>'
+      + '<td>' + phanHangCellHtmlPub(p2) + '</td>'
+      + '<td style="text-align:right">' + citeCellHtmlPub(p2) + '</td>'
+      + '<td><span style="font-family:var(--mono);font-size:12px">' + escHtmlPub(year) + '</span></td>'
+      + '<td>' + statusPillForPub(p2) + '</td>'
+      + '<td onclick="event.stopPropagation()">'
+      + '<button type="button" class="btn" style="font-size:11px;padding:4px 9px" onclick="event.stopPropagation();openDetailModal(' + i + ')">Chi tiết</button>'
+      + '<span class="pub-admin-only">'
+      + '<button type="button" class="btn" style="font-size:11px;padding:4px 9px;margin-left:4px;background:#6c757d;color:#fff;border:none;border-radius:6px" onclick="event.stopPropagation();openEditPub(' + i + ')">Sửa</button>'
+      + '<button type="button" class="btn" style="font-size:11px;padding:4px 9px;margin-left:4px;background:#dc3545;color:#fff;border:none;border-radius:6px" onclick="event.stopPropagation();deletePubAt(' + i + ')">Xóa</button>'
+      + '</span></td>'
+      + '</tr>';
+  }).join('');
+  updatePubTableFooterLine(pubs.length);
+}
+
+function pubToggleSelectAllVisible(checked) {
+  document.querySelectorAll('#pubTbody tr.pub-row').forEach(function (row) {
+    if (row.style.display === 'none') return;
+    var cb = row.querySelector('.pub-row-check');
+    if (cb) cb.checked = !!checked;
+  });
+  var head = document.getElementById('pubSelectAll');
+  if (head) { head.checked = !!checked; head.indeterminate = false; }
+}
+
+function getSelectedPubIndices() {
+  var out = [];
+  document.querySelectorAll('#pubTbody tr.pub-row').forEach(function (row) {
+    if (row.style.display === 'none') return;
+    var cb = row.querySelector('.pub-row-check');
+    if (!cb || !cb.checked) return;
+    var i = parseInt(row.getAttribute('data-pub-index'), 10);
+    if (!isNaN(i)) out.push(i);
+  });
+  return out;
+}
+
+async function clearAllPublicationsOnServer() {
+  if (!isPubAdmin()) {
+    showNotif('Chỉ Admin mới thực hiện được.');
+    return;
+  }
+  var msg =
+    'XÓA TOÀN BỘ công bố trên MÁY CHỦ (không hoàn tác):\n\n' +
+    '• Bảng publications — mọi bài đã import / lưu CSDL\n' +
+    '• Hàng chờ ORCID (publication_queue) — để lần quét sau không bị «trùng DOI»\n\n' +
+    'Danh sách trên trang sẽ được làm trống và lưu vào trình duyệt.\n\n' +
+    'Nhấn OK để tiếp tục, Cancel để hủy.';
+  if (!window.confirm(msg)) return;
+  try {
+    var token = localStorage.getItem('token');
+    var headers = {};
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    var res = await fetch(API_BASE + '/publications/admin/clear-all', {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: headers
+    });
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error(data.message || ('HTTP ' + res.status));
+    pubs = [];
+    persistPubs();
+    renderPubTable();
+    filterTable();
+    showNotif('Đã xóa trên server: ' + (data.publicationsDeleted || 0) + ' công bố, ' + (data.queueDeleted || 0) + ' dòng hàng chờ ORCID.');
+  } catch (e) {
+    showNotif('Lỗi: ' + (e.message || String(e)));
+  }
+}
+
+function bulkDeleteSelectedPubs() {
+  if (!isPubAdmin()) { showNotif('Chỉ Admin mới xóa được.'); return; }
+  var idxs = getSelectedPubIndices();
+  if (!idxs.length) { showNotif('Chưa chọn bài nào (trong các dòng đang hiển thị).'); return; }
+  if (!confirm('Xóa ' + idxs.length + ' công bố đã chọn khỏi danh sách và khỏi máy chủ (nếu đã lưu trên server)?')) return;
+  idxs.sort(function (a, b) { return b - a; });
+  (async function () {
+    var okCount = 0;
+    var failMsg = '';
+    for (var j = 0; j < idxs.length; j++) {
+      var i = idxs[j];
+      if (i < 0 || i >= pubs.length) continue;
+      var del = await deletePublicationOnServerIfAny(pubs[i]);
+      if (!del.ok) {
+        failMsg = del.message || 'Lỗi xóa server';
+        showNotif('Không xóa được: ' + failMsg);
+        break;
+      }
+      pubs.splice(i, 1);
+      okCount++;
+    }
+    persistPubs();
+    renderPubTable();
+    filterTable();
+    if (okCount) showNotif('Đã xóa ' + okCount + ' bài khỏi danh sách và trên server.');
+  })();
+}
+
+function applyBulkStatus() {
+  if (!isPubAdmin()) { showNotif('Chỉ Admin.'); return; }
+  var sel = document.getElementById('bulkStatus');
+  var st = sel ? sel.value : '';
+  if (!st) { showNotif('Chọn trạng thái cần áp dụng.'); return; }
+  var idxs = getSelectedPubIndices();
+  if (!idxs.length) { showNotif('Chưa chọn bài nào.'); return; }
+  idxs.forEach(function (i) { if (pubs[i]) pubs[i].status = st; });
+  persistPubs();
+  renderPubTable();
+  filterTable();
+  showNotif('Đã cập nhật trạng thái cho ' + idxs.length + ' bài.');
+}
+
+function applyBulkQ() {
+  if (!isPubAdmin()) { showNotif('Chỉ Admin.'); return; }
+  var sel = document.getElementById('bulkQ');
+  var v = sel ? sel.value : '';
+  if (v === '') { showNotif('Chọn Q hoặc «Xóa Q».'); return; }
+  var idxs = getSelectedPubIndices();
+  if (!idxs.length) { showNotif('Chưa chọn bài nào.'); return; }
+  idxs.forEach(function (i) {
+    if (!pubs[i]) return;
+    if (v === '__clear__') pubs[i].q = '';
+    else pubs[i].q = v;
+  });
+  persistPubs();
+  renderPubTable();
+  filterTable();
+  showNotif('Đã cập nhật phân hạng Q.');
+}
+
+async function deletePubAt(i) {
+  if (!isPubAdmin()) return;
+  if (i < 0 || i >= pubs.length) return;
+  if (!confirm('Xóa công bố này khỏi danh sách?')) return;
+  var del = await deletePublicationOnServerIfAny(pubs[i]);
+  if (!del.ok) {
+    showNotif('Không xóa được trên server: ' + (del.message || ''));
+    return;
+  }
+  pubs.splice(i, 1);
+  persistPubs();
+  closeModal('detailModal');
+  renderPubTable();
+  filterTable();
+  showNotif('Đã xóa khỏi danh sách và trên server.');
+}
+
+function clearAddPubForm() {
+  ['addDoi','addTitle','addAuthors','addSciAuthor','addJournal','addISSN','addYear','addVolume','addORCID','addIF','addProject','addFunder'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  var t = document.getElementById('addType'); if (t) t.value = 'journal';
+  var db = document.getElementById('addDB'); if (db) db.value = 'scopus-wos';
+  var q = document.getElementById('addQ'); if (q) q.value = '';
+  var st = document.getElementById('addStatus'); if (st) st.value = 'published';
+}
+
+function dbStringToSelectValue(db) {
+  const s = String(db || '').toLowerCase();
+  if (s.includes('scopus') && s.includes('web of science')) return 'scopus-wos';
+  if (s.includes('scopus')) return 'scopus';
+  if (s.includes('web of science') || s.includes('wos')) return 'wos';
+  if (s.includes('pubmed')) return 'pubmed';
+  if (s.includes('doaj')) return 'doaj';
+  return 'other';
+}
+
+function fillAddPubFormFromRecord(p) {
+  if (!p) return;
+  setFieldValue('addDoi', p.doi && p.doi !== '—' ? p.doi : '');
+  setFieldValue('addTitle', p.title);
+  setFieldValue('addAuthors', p.authors);
+  setFieldValue('addSciAuthor', p.sciauthors);
+  setFieldValue('addJournal', p.journal);
+  setFieldValue('addISSN', p.issn && p.issn !== '—' ? p.issn : '');
+  setFieldValue('addYear', p.year);
+  setFieldValue('addVolume', p.volume && p.volume !== '—' ? p.volume : '');
+  setFieldValue('addORCID', p.orcid && p.orcid !== '—' ? p.orcid : '');
+  setFieldValue('addIF', p.IF && p.IF !== '—' ? p.IF : '');
+  setFieldValue('addProject', p.project && p.project !== '—' ? p.project : '');
+  setFieldValue('addFunder', p.funder && p.funder !== '—' ? p.funder : '');
+  var rt = p.rowType || 'journal';
+  var ts = document.getElementById('addType'); if (ts && ['journal','conference','book','patent','preprint'].indexOf(rt) >= 0) ts.value = rt;
+  var dbEl = document.getElementById('addDB'); if (dbEl) dbEl.value = dbStringToSelectValue(p.db);
+  var qEl = document.getElementById('addQ');
+  if (qEl) qEl.value = /^Q[1-4]$/.test(String(p.q || '').trim()) ? p.q : '';
+  var stEl = document.getElementById('addStatus'); if (stEl && p.status) stEl.value = p.status;
+}
+
+function buildPubFromForm(mergeFrom) {
+  const typeEl = document.getElementById('addType');
+  const typeVal = typeEl ? typeEl.value : 'journal';
+  const TYPE_LABEL = {
+    journal: 'Bài báo tạp chí',
+    conference: 'Kỷ yếu hội nghị quốc tế',
+    book: 'Chương sách',
+    patent: 'Bằng sáng chế / GPHI',
+    preprint: 'Preprint / Dataset'
+  };
+  const dbEl = document.getElementById('addDB');
+  const dbVal = dbEl ? dbEl.value : 'other';
+  const DB_LABEL = {
+    'scopus-wos': 'Scopus · Web of Science',
+    scopus: 'Scopus',
+    wos: 'Web of Science',
+    pubmed: 'PubMed / MEDLINE',
+    doaj: 'DOAJ',
+    other: 'Khác'
+  };
+  const stEl = document.getElementById('addStatus');
+  const st = stEl ? stEl.value : 'published';
+  const qEl = document.getElementById('addQ');
+  var qv = qEl ? qEl.value : '';
+  if (typeVal === 'conference' && !qv) qv = '';
+  const title = (document.getElementById('addTitle').value || '').trim();
+  const authors = (document.getElementById('addAuthors').value || '').trim();
+  const sci = (document.getElementById('addSciAuthor').value || '').trim();
+  const journal = (document.getElementById('addJournal').value || '').trim();
+  const base = mergeFrom ? Object.assign({}, mergeFrom) : {};
+  return ensurePubShape(Object.assign(base, {
+    title: title,
+    authors: authors,
+    sciauthors: sci || authors,
+    journal: journal,
+    issn: (document.getElementById('addISSN').value || '').trim() || '—',
+    year: String((document.getElementById('addYear').value || '')).trim() || String(new Date().getFullYear()),
+    volume: (document.getElementById('addVolume').value || '').trim() || '—',
+    doi: (document.getElementById('addDoi').value || '').trim() || '—',
+    orcid: (document.getElementById('addORCID').value || '').trim() || '—',
+    type: TYPE_LABEL[typeVal] || TYPE_LABEL.journal,
+    rowType: typeVal,
+    status: st,
+    abstract: base.abstract != null ? base.abstract : '—',
+    keywords: base.keywords != null ? base.keywords : '—',
+    db: DB_LABEL[dbVal] || DB_LABEL.other,
+    q: qv || (typeVal === 'conference' ? '' : (base.q || '')),
+    IF: String((document.getElementById('addIF').value || '').trim() || (base.IF != null ? base.IF : '—')),
+    cs: base.cs != null ? base.cs : '—',
+    sjr: base.sjr != null ? base.sjr : '—',
+    cite: String((base.cite != null ? base.cite : '0')),
+    eid: base.eid != null ? base.eid : '—',
+    wos: base.wos != null ? base.wos : '—',
+    pmid: base.pmid != null ? base.pmid : '—',
+    oa: base.oa != null ? base.oa : '—',
+    project: (document.getElementById('addProject').value || '').trim() || '—',
+    plevel: base.plevel != null ? base.plevel : '—',
+    funder: (document.getElementById('addFunder').value || '').trim() || '—',
+    grant: base.grant != null ? base.grant : '—'
+  }));
+}
+
+async function savePubForm() {
+  if (!isPubAdmin()) { showNotif('Chỉ Admin mới lưu danh sách công bố.'); return; }
+  const prev = (editingPubIndex != null && editingPubIndex >= 0 && editingPubIndex < pubs.length) ? pubs[editingPubIndex] : null;
+  const draft = buildPubFromForm(prev);
+  if (!draft.title || !draft.authors || !draft.journal) {
+    showNotif('Vui lòng nhập tiêu đề, tác giả và tạp chí / hội nghị.');
+    return;
+  }
+  const payload = pubDraftToApiPayload(draft);
+  try {
+    var displayPub;
+    if (prev && prev._serverId) {
+      await apiFetch('/publications/' + encodeURIComponent(prev._serverId), {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      var rowPut = await apiFetch('/publications/' + encodeURIComponent(prev._serverId));
+      displayPub = apiPublicationToPub(rowPut.data);
+      pubs[editingPubIndex] = displayPub;
+    } else {
+      var created = await apiFetch('/publications', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      var nid = created && created.id;
+      if (nid == null) throw new Error('Server không trả id bản ghi mới');
+      var rowPost = await apiFetch('/publications/' + encodeURIComponent(nid));
+      displayPub = apiPublicationToPub(rowPost.data);
+      if (editingPubIndex != null && editingPubIndex >= 0 && editingPubIndex < pubs.length) {
+        pubs[editingPubIndex] = displayPub;
+      } else {
+        pubs.push(displayPub);
+      }
+    }
+    editingPubIndex = null;
+    persistPubs();
+    renderPubTable();
+    filterTable();
+    closeModal('addModal');
+    document.getElementById('addModalTitle').textContent = 'Thêm công bố mới';
+    showNotif('Đã lưu lên server và đồng bộ danh sách.');
+  } catch (e) {
+    showNotif('Không lưu được lên server: ' + (e.message || String(e)));
+  }
+}
+
+function openAddModal() {
+  if (!isPubAdmin()) { showNotif('Chỉ Admin mới thêm công bố mới.'); return; }
+  editingPubIndex = null;
+  clearAddPubForm();
+  var t = document.getElementById('addModalTitle'); if (t) t.textContent = 'Thêm công bố mới';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function openEditPub(i) {
+  if (!isPubAdmin()) return;
+  if (i < 0 || i >= pubs.length) return;
+  editingPubIndex = i;
+  fillAddPubFormFromRecord(pubs[i]);
+  var t = document.getElementById('addModalTitle'); if (t) t.textContent = 'Sửa công bố';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function openEditFromDetail() {
+  if (!isPubAdmin()) return;
+  closeModal('detailModal');
+  if (detailModalIdx >= 0) openEditPub(detailModalIdx);
+}
+
+// ── DETAIL MODAL ──
+function openDetailModal(idx) {
+  const p = pubs[idx];
+  if (!p) return;
+  detailModalIdx = idx;
+  document.getElementById('detailTitle').textContent = p.title;
+  document.getElementById('d-title').textContent = p.title;
+  document.getElementById('d-authors').textContent = p.authors;
+  document.getElementById('d-sciauthors').innerHTML = p.sciauthors;
+  document.getElementById('d-journal').textContent = p.journal;
+  document.getElementById('d-issn').textContent = p.issn;
+  document.getElementById('d-year').textContent = p.year;
+  document.getElementById('d-volume').textContent = p.volume;
+  document.getElementById('d-doi').innerHTML = p.doi !== '—' ? `<a href="https://doi.org/${p.doi}" target="_blank">${p.doi}</a>` : '—';
+  document.getElementById('d-orcid').innerHTML = p.orcid !== '—' ? `<span class="orcid-chip">iD</span> <a href="https://orcid.org/${p.orcid}" target="_blank">${p.orcid}</a>` : '—';
+  document.getElementById('d-type').textContent = p.type;
+  document.getElementById('d-abstract').textContent = p.abstract;
+  var kwRaw = String(p.keywords || '').trim();
+  var dKw = document.getElementById('d-keywords');
+  if (dKw) {
+    if (!kwRaw || kwRaw === '—') {
+      dKw.textContent = '—';
+    } else {
+      var chips = kwRaw.split(',').map(function (k) { return k.trim(); }).filter(Boolean);
+      dKw.innerHTML = chips.length
+        ? chips.map(function (t) {
+            return '<span style="display:inline-block;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:1px 8px;font-size:11px;margin:2px">' + escHtmlPub(t) + '</span>';
+          }).join('')
+        : '—';
+    }
+  }
+  document.getElementById('d-db').textContent = p.db;
+  document.getElementById('d-q').innerHTML = phanHangCellHtmlPub(p);
+  document.getElementById('d-if').textContent = p.IF;
+  document.getElementById('d-cs').textContent = p.cs;
+  document.getElementById('d-sjr').textContent = p.sjr;
+  document.getElementById('d-cite').textContent = p.cite + (p.cite !== '—' && p.cite !== '0' ? ' lần' : '');
+  document.getElementById('d-eid').textContent = p.eid;
+  document.getElementById('d-wos').textContent = p.wos;
+  document.getElementById('d-pmid').textContent = p.pmid;
+  document.getElementById('d-oa').textContent = p.oa;
+  document.getElementById('d-project').textContent = p.project;
+  document.getElementById('d-plevel').textContent = p.plevel;
+  document.getElementById('d-funder').textContent = p.funder;
+  document.getElementById('d-grant').textContent = p.grant;
+  // reset tabs
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelector('.tab-btn').classList.add('active');
+  document.getElementById('tabMeta').classList.add('active');
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function switchTab(btn, paneId) {
+  btn.closest('.modal').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.closest('.modal').querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(paneId).classList.add('active');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if(e.target === ov) ov.classList.remove('open'); });
+});
+
+// ── FILTER / SEARCH ──
+/** Chuẩn hóa chuỗi tìm kiếm: thường + bỏ dấu (gõ không dấu vẫn khớp). */
+function pubSearchFold(s) {
+  try {
+    return String(s == null ? '' : s)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  } catch (e) {
+    return String(s == null ? '' : s).toLowerCase();
+  }
+}
+
+/** Chuỗi “full text” cho một bản ghi: toàn bộ object JSON + nhãn hiển thị (trạng thái, loại, Q…). */
+function pubSearchHaystack(p) {
+  var p2 = ensurePubShape(p || {});
+  var chunks = [];
+  try {
+    chunks.push(JSON.stringify(p2));
+  } catch (e) {
+    chunks.push(String(p2.title || ''), String(p2.authors || ''), String(p2.doi || ''));
+  }
+  var st = String(p2.status || 'published');
+  var stMap = {
+    published: 'Đã đăng đăng published',
+    accepted: 'Chấp nhận đăng accepted chấp nhận',
+    'under-review': 'Đang phản biện phản biện under review under-review đang xử lý',
+    preprint: 'Preprint preprint'
+  };
+  if (stMap[st]) chunks.push(stMap[st]);
+  var rt = String(p2.rowType || 'journal');
+  var rtMap = {
+    journal: 'Bài báo tạp chí journal article',
+    conference: 'Hội nghị conference proceeding kỷ yếu',
+    book: 'Chương sách sách book chapter',
+    patent: 'Bằng sáng chế GPHI patent giải pháp hữu ích',
+    preprint: 'Preprint dataset'
+  };
+  if (rtMap[rt]) chunks.push(rtMap[rt]);
+  if (p2.type) chunks.push(String(p2.type));
+  if (p2.q && /^Q[1-4]$/i.test(String(p2.q).trim())) chunks.push('Q phân hạng quartile ' + String(p2.q).trim().toUpperCase());
+  if (p2._serverId != null && p2._serverId !== '') chunks.push('id server _serverid ' + String(p2._serverId));
+  return pubSearchFold(chunks.join(' '));
+}
+
+/** Khớp ô tìm kiếm: mọi từ (cách bằng khoảng trắng) đều phải xuất hiện trong haystack. */
+function pubSearchQueryMatches(haystackFolded, queryRaw) {
+  var q = pubSearchFold(queryRaw).trim();
+  if (!q) return true;
+  var tokens = q.split(/\s+/).filter(function (t) { return t.length > 0; });
+  if (!tokens.length) return true;
+  return tokens.every(function (t) { return haystackFolded.indexOf(t) !== -1; });
+}
+
+function filterTable() {
+  const searchRaw = document.getElementById('searchInput').value;
+  const yr = document.getElementById('filterYear').value;
+  const tp = document.getElementById('filterTypeSelect').value;
+  const qf = document.getElementById('filterQSelect').value;
+  const sf = document.getElementById('filterStatusSelect').value;
+  let count = 0;
+  document.querySelectorAll('.pub-row').forEach(row => {
+    const idx = parseInt(row.getAttribute('data-pub-index'), 10);
+    const pub = !Number.isNaN(idx) && pubs[idx] != null ? pubs[idx] : null;
+    const haystack = pub ? pubSearchHaystack(pub) : pubSearchFold(row.textContent);
+    const year = row.dataset.year || '';
+    const type = row.dataset.type || '';
+    const qval = row.dataset.q || '';
+    const status = row.dataset.status || '';
+    const ok = pubSearchQueryMatches(haystack, searchRaw)
+      && (!yr || year === yr)
+      && (!tp || type === tp)
+      && (!qf || qval === qf)
+      && (!sf || status === sf);
+    row.style.display = ok ? '' : 'none';
+    if(ok) count++;
+  });
+  document.getElementById('rowCount').textContent = count;
+  pubSyncSelectAllAfterFilter();
+  updatePubTableFooterLine(count);
+}
+
+function updatePubTableFooterLine(visibleAfterFilter) {
+  var el = document.getElementById('pubTableFooterLine');
+  if (!el) return;
+  var total = pubs.length;
+  var v = visibleAfterFilter != null ? visibleAfterFilter : 0;
+  if (total === 0) {
+    el.textContent = 'Không có công bố trong danh sách hiện tại.';
+    return;
+  }
+  el.textContent = 'Đang hiển thị ' + v + ' / ' + total + ' công bố (số trên cùng = sau bộ lọc tìm kiếm).';
+}
+
+function pubSyncSelectAllAfterFilter() {
+  var head = document.getElementById('pubSelectAll');
+  if (!head) return;
+  var visible = 0;
+  var checked = 0;
+  document.querySelectorAll('#pubTbody tr.pub-row').forEach(function (row) {
+    if (row.style.display === 'none') return;
+    visible++;
+    var cb = row.querySelector('.pub-row-check');
+    if (cb && cb.checked) checked++;
+  });
+  if (visible === 0) {
+    head.checked = false;
+    head.indeterminate = false;
+    return;
+  }
+  head.checked = checked === visible;
+  head.indeterminate = checked > 0 && checked < visible;
+}
+
+function clearFilters() {
+  ['filterYear','filterTypeSelect','filterQSelect','filterStatusSelect'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('searchInput').value = '';
+  filterTable();
+}
+
+function filterType(type) {
+  setActiveNav();
+  document.getElementById('filterTypeSelect').value = type === 'all' ? '' : type;
+  filterTable();
+}
+function filterIdx(idx) { setActiveNav(); }
+function filterQ(q) { setActiveNav(); document.getElementById('filterQSelect').value = q; filterTable(); }
+function filterStatus(s) { setActiveNav(); document.getElementById('filterStatusSelect').value = s; filterTable(); }
+function setActiveNav() {
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+function visibleCount() {
+  return document.querySelectorAll('.pub-row:not([style*="display: none"])').length;
+}
+
+// ── SORT ──
+function sortTable(col) {
+  document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
+  event.currentTarget.classList.add('sorted');
+}
+
+// ── DOI FETCH (Crossref live API) ──
+function normalizeDOI(input) {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  return raw
+    .replace(/^https?:\/\/(dx\.)?doi\.org\//i, '')
+    .replace(/^doi:\s*/i, '')
+    .trim();
+}
+
+function getVisiblePubIndices() {
+  const searchRaw = document.getElementById('searchInput').value;
+  const yr = document.getElementById('filterYear').value;
+  const tp = document.getElementById('filterTypeSelect').value;
+  const qf = document.getElementById('filterQSelect').value;
+  const sf = document.getElementById('filterStatusSelect').value;
+  const out = [];
+  document.querySelectorAll('#pubTbody tr.pub-row').forEach(function (row) {
+    const idx = parseInt(row.getAttribute('data-pub-index'), 10);
+    const pub = !Number.isNaN(idx) && pubs[idx] != null ? pubs[idx] : null;
+    const haystack = pub ? pubSearchHaystack(pub) : pubSearchFold(row.textContent);
+    const year = row.dataset.year || '';
+    const type = row.dataset.type || '';
+    const qval = row.dataset.q || '';
+    const status = row.dataset.status || '';
+    const ok = pubSearchQueryMatches(haystack, searchRaw)
+      && (!yr || year === yr)
+      && (!tp || type === tp)
+      && (!qf || qval === qf)
+      && (!sf || status === sf);
+    if (ok) out.push(idx);
+  });
+  return out;
+}
+
+function downloadTextFile(filename, text, mime, withBom) {
+  var body = text == null ? '' : String(text);
+  var blob = new Blob([withBom ? ('\uFEFF' + body) : body], { type: mime || 'text/plain;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+}
+
+function csvEscapeCell(val) {
+  var s = String(val == null ? '' : val);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function exportToolbarExcel() {
+  var idxs = getVisiblePubIndices();
+  if (!idxs.length) {
+    showNotif('Không có dòng nào đang hiển thị để xuất.');
+    return;
+  }
+  var headers = ['Tiêu đề', 'Tác giả', 'Tạp chí / Xuất bản', 'Năm', 'Loại', 'Trạng thái', 'DOI', 'ISSN', 'CSDL', 'Q', 'IF', 'Trích dẫn', 'ORCID', 'Đề tài', 'Abstract'];
+  var rows = [headers.map(csvEscapeCell).join(',')];
+  idxs.forEach(function (i) {
+    var p = ensurePubShape(pubs[i]);
+    var doiCell = normalizeDOI(p.doi || '') || String(p.doi || '').trim();
+    rows.push([
+      p.title, p.authors, p.journal, p.year, p.type || p.rowType, p.status,
+      doiCell, p.issn, p.db, p.q, p.IF, p.cite, p.orcid, p.project, p.abstract
+    ].map(csvEscapeCell).join(','));
+  });
+  downloadTextFile('cong-bo-khoa-hoc-loc.csv', rows.join('\r\n'), 'text/csv;charset=utf-8', true);
+  showNotif('Đã tải CSV (' + idxs.length + ' bản ghi) — mở bằng Excel');
+}
+
+function pubAuthorsForBibtex(authorsStr) {
+  return String(authorsStr || '')
+    .split(/[,;]/)
+    .map(function (a) { return a.trim(); })
+    .filter(Boolean)
+    .join(' and ');
+}
+
+function bibtexSanitizeKeyPart(s) {
+  return String(s || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 30);
+}
+
+function pubBibtexCiteKey(p) {
+  var doi = normalizeDOI(p.doi || '');
+  if (doi) return 'doi_' + doi.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').slice(0, 64);
+  var y = bibtexSanitizeKeyPart(p.year) || 'nd';
+  var firstAuth = String(p.authors || 'x').split(/[,;]/)[0].trim().split(/\s+/).pop() || 'Author';
+  var auth = bibtexSanitizeKeyPart(firstAuth) || 'pub';
+  var suf = (p._serverId != null && p._serverId !== '') ? '_' + String(p._serverId) : '';
+  return auth + y + suf;
+}
+
+function pubToBibtexEntry(p) {
+  var p2 = ensurePubShape(p);
+  var key = pubBibtexCiteKey(p2);
+  var lines = [];
+  function addField(name, v) {
+    v = String(v == null ? '' : v).trim();
+    if (!v || v === '—') return;
+    v = v.replace(/[{}]/g, '');
+    lines.push('  ' + name + ' = {' + v + '}');
+  }
+  var rt = p2.rowType;
+  if (rt === 'conference') {
+    lines.push('@inproceedings{' + key + ',');
+    addField('title', p2.title);
+    addField('author', pubAuthorsForBibtex(p2.authors));
+    addField('booktitle', p2.journal);
+    addField('year', p2.year);
+    addField('doi', normalizeDOI(p2.doi || ''));
+  } else if (rt === 'patent') {
+    lines.push('@misc{' + key + ',');
+    addField('title', p2.title);
+    addField('author', pubAuthorsForBibtex(p2.authors));
+    addField('year', p2.year);
+    addField('howpublished', p2.journal);
+    addField('note', p2.type);
+  } else if (rt === 'book') {
+    lines.push('@incollection{' + key + ',');
+    addField('title', p2.title);
+    addField('author', pubAuthorsForBibtex(p2.authors));
+    addField('booktitle', p2.journal);
+    addField('year', p2.year);
+    addField('doi', normalizeDOI(p2.doi || ''));
+  } else {
+    lines.push('@article{' + key + ',');
+    addField('title', p2.title);
+    addField('author', pubAuthorsForBibtex(p2.authors));
+    addField('journal', p2.journal);
+    addField('year', p2.year);
+    addField('doi', normalizeDOI(p2.doi || ''));
+    addField('issn', p2.issn);
+    addField('volume', p2.volume);
+  }
+  lines.push('}');
+  return lines.join('\n');
+}
+
+function exportToolbarBibtex() {
+  var idxs = getVisiblePubIndices();
+  if (!idxs.length) {
+    showNotif('Không có dòng nào đang hiển thị để xuất.');
+    return;
+  }
+  var seen = Object.create(null);
+  var parts = [];
+  idxs.forEach(function (i) {
+    var raw = pubToBibtexEntry(pubs[i]);
+    var m = /^(@\w+)\{([^,]+),/.exec(raw);
+    if (m) {
+      var typ = m[1];
+      var baseKey = m[2];
+      var k = baseKey;
+      var n = 1;
+      while (seen[k]) { n++; k = baseKey + '_' + n; }
+      seen[k] = true;
+      raw = raw.replace(/^@\w+\{[^,]+,/, typ + '{' + k + ',');
+    }
+    parts.push(raw);
+  });
+  downloadTextFile('cong-bo-khoa-hoc.bib', parts.join('\n\n'), 'text/plain;charset=utf-8', false);
+  showNotif('Đã tải BibTeX (' + idxs.length + ' mục)');
+}
+
+function exportDetailModalBibtex() {
+  if (detailModalIdx < 0 || !pubs[detailModalIdx]) {
+    showNotif('Không có bản ghi để xuất BibTeX.');
+    return;
+  }
+  var raw = pubToBibtexEntry(pubs[detailModalIdx]);
+  downloadTextFile('cong-bo-chi-tiet.bib', raw, 'text/plain;charset=utf-8', false);
+  showNotif('Đã tải BibTeX (chi tiết)');
+}
+
+function parseCrossrefAuthors(list) {
+  if (!Array.isArray(list) || !list.length) return '';
+  return list.map(function(a) {
+    const given = (a && a.given ? String(a.given) : '').trim();
+    const family = (a && a.family ? String(a.family) : '').trim();
+    const full = (given + ' ' + family).trim();
+    return full || (a && a.name ? String(a.name).trim() : '');
+  }).filter(Boolean).join(', ');
+}
+
+function pickBestJournal(message) {
+  const containers = Array.isArray(message['container-title']) ? message['container-title'] : [];
+  const shortContainers = Array.isArray(message['short-container-title']) ? message['short-container-title'] : [];
+  return String(containers[0] || shortContainers[0] || '').trim();
+}
+
+function mapCrossrefTypeToForm(type) {
+  const t = String(type || '').toLowerCase();
+  if (t === 'proceedings-article') return 'conference';
+  if (t === 'book-chapter' || t === 'book') return 'book';
+  if (t === 'posted-content') return 'preprint';
+  return 'journal';
+}
+
+function setFieldValue(id, value) {
+  const el = document.getElementById(id);
+  if (!el || value == null) return;
+  const v = String(value).trim();
+  if (v) el.value = v;
+}
+
+async function fetchDOI() {
+  const doiInput = document.getElementById('addDoi');
+  const btn = document.querySelector('.doi-fetch-row .btn-primary');
+  const normalized = normalizeDOI(doiInput ? doiInput.value : '');
+  if (!normalized) {
+    showNotif('Vui lòng nhập DOI hợp lệ');
+    return;
+  }
+
+  if (doiInput) doiInput.value = normalized;
+  if (btn) { btn.disabled = true; btn.textContent = 'Đang tra cứu...'; }
+  showNotif('⏳ Đang tra cứu DOI từ hệ thống...');
+
+  try {
+    const res = await fetch('/api/doi/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ doi: normalized })
+    });
+    if (!res.ok) {
+      const er = await res.json().catch(() => ({}));
+      throw new Error(er.error || ('HTTP ' + res.status));
+    }
+    const payload = await res.json();
+    const m = payload && payload.data ? payload.data : {};
+    const title = m.title || '';
+    const authors = m.authors || '';
+    const journal = m.journal_name || '';
+    const year = m.pub_year || '';
+    const issn = m.issn || '';
+    const type = m.pub_type || '';
+
+    setFieldValue('addTitle', title);
+    setFieldValue('addAuthors', authors);
+    setFieldValue('addJournal', journal);
+    setFieldValue('addYear', year);
+    setFieldValue('addISSN', issn);
+    if (type) setFieldValue('addType', mapCrossrefTypeToForm(type));
+    if (m.impact_factor != null) setFieldValue('addIF', m.impact_factor);
+
+    // Tự gán DOI chuẩn nếu field tiêu đề/doi ở form cần đồng bộ sau này.
+    setFieldValue('addDoi', normalized);
+
+    showNotif('✅ Đã tự động điền từ Crossref/PubMed/Unpaywall');
+  } catch (err) {
+    showNotif('❌ ' + (err.message || 'Không tra cứu được DOI'));
+    console.error('DOI fetch failed:', err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔍 Tự động điền'; }
+  }
+}
+
+function escHtmlOrcid(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+}
+
+function scrollToOrcidNvAdmin() {
+  const el = document.getElementById('admin-orcid-nv');
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function scrollToSjrImportAdmin() {
+  const el = document.getElementById('admin-sjr-import');
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function quickReportQueryString() {
+  try {
+    var q = buildPublicationStatsQuery();
+    return q.qs ? ('?' + q.qs) : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function quickExportExcelSidebar() {
+  var token = localStorage.getItem('token');
+  if (!token) {
+    showNotif('Vui lòng đăng nhập để xuất Excel.');
+    return;
+  }
+  showNotif('Đang xuất Excel…');
+  var qs = quickReportQueryString();
+  fetch('/api/publications/export/excel' + qs, {
+    headers: { Authorization: 'Bearer ' + token },
+    credentials: 'include'
+  })
+    .then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (t) {
+          try {
+            var j = JSON.parse(t);
+            throw new Error(j.message || t);
+          } catch (e) {
+            if (e instanceof Error && e.message && e.message !== t) throw e;
+            throw new Error(t || ('HTTP ' + res.status));
+          }
+        });
+      }
+      var fn = 'cong-bo-khoa-hoc.xlsx';
+      var cd = res.headers.get('Content-Disposition');
+      if (cd && /filename="([^"]+)"/.test(cd)) fn = RegExp.$1;
+      return res.blob().then(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fn;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+      });
+    })
+    .then(function () { showNotif('✅ Đã tải Excel'); })
+    .catch(function (e) { showNotif('❌ ' + (e.message || e)); });
+}
+
+function quickReportPdfSidebar() {
+  var token = localStorage.getItem('token');
+  if (!token) {
+    showNotif('Vui lòng đăng nhập.');
+    return;
+  }
+  showNotif('Đang tạo báo cáo (mở tab mới — Ctrl+P → Lưu PDF)…');
+  var qs = quickReportQueryString();
+  fetch('/api/publications/export/report' + qs, {
+    headers: { Authorization: 'Bearer ' + token },
+    credentials: 'include'
+  })
+    .then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (t) {
+          try {
+            var j = JSON.parse(t);
+            throw new Error(j.message || t);
+          } catch (e) {
+            if (e instanceof Error && e.message && e.message !== t) throw e;
+            throw new Error(t || ('HTTP ' + res.status));
+          }
+        });
+      }
+      return res.blob();
+    })
+    .then(function (blob) {
+      var u = URL.createObjectURL(blob);
+      window.open(u, '_blank', 'noopener');
+      setTimeout(function () { URL.revokeObjectURL(u); }, 120000);
+      showNotif('✅ Đã mở báo cáo');
+    })
+    .catch(function (e) { showNotif('❌ ' + (e.message || e)); });
+}
+
+function quickSyncOrcidSidebar() {
+  if (!isPubAdmin()) {
+    showNotif('Chỉ Admin mới dùng Đồng bộ ORCID.');
+    return;
+  }
+  if (!confirm('Chạy đồng bộ ORCID cho mọi NCV đang bật quét? Có thể mất vài phút — không đóng tab.')) return;
+  var token = localStorage.getItem('token');
+  if (!token) {
+    showNotif('Đăng nhập lại.');
+    return;
+  }
+  showNotif('Đang đồng bộ ORCID (chờ server)…');
+  fetch('/api/orcid/harvest', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: '{}'
+  })
+    .then(function (res) {
+      return res.json().then(function (j) {
+        if (!res.ok) throw new Error(j.message || j.error || ('HTTP ' + res.status));
+        return j;
+      });
+    })
+    .then(function () {
+      showNotif('✅ Đồng bộ ORCID hoàn tất');
+      loadPublications();
+      loadPublicationStats().catch(function () {});
+    })
+    .catch(function (e) { showNotif('❌ ' + (e.message || e)); });
+}
+
+function quickRefreshScopusWosSidebar() {
+  if (!isPubAdmin()) {
+    showNotif('Chỉ Admin.');
+    return;
+  }
+  if (!confirm('Cập nhật trích dẫn / Scopus EID (nếu có SCOPUS_API_KEY) và OpenAlex cho tối đa 45 bài có DOI?')) return;
+  var token = localStorage.getItem('token');
+  if (!token) {
+    showNotif('Đăng nhập lại.');
+    return;
+  }
+  showNotif('Đang gọi API cập nhật…');
+  fetch('/api/publications/admin/refresh-external-metrics', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ limit: 45 })
+  })
+    .then(function (res) {
+      return res.json().then(function (j) {
+        if (!res.ok) throw new Error(j.message || ('HTTP ' + res.status));
+        return j;
+      });
+    })
+    .then(function (data) {
+      showNotif('✅ ' + (data.message || 'Xong'));
+      if (data.wosNote) console.log('[WoS]', data.wosNote);
+      loadPublications();
+      loadPublicationStats().catch(function () {});
+    })
+    .catch(function (e) { showNotif('❌ ' + (e.message || e)); });
+}
+
+async function submitSjrCsvImport(ev) {
+  ev.preventDefault();
+  if (!isPubAdmin()) {
+    showNotif('Chỉ Admin mới import SJR.');
+    return;
+  }
+  const token = localStorage.getItem('token');
+  if (!token) {
+    showNotif('Vui lòng đăng nhập lại.');
+    return;
+  }
+  const yearEl = document.getElementById('sjrImportYear');
+  const fileEl = document.getElementById('sjrImportFile');
+  const btn = document.getElementById('sjrImportBtn');
+  const logEl = document.getElementById('sjrImportLog');
+  if (!yearEl || !fileEl || !fileEl.files.length) {
+    showNotif('Chọn năm kỳ và file CSV.');
+    return;
+  }
+  const fd = new FormData();
+  fd.append('year', yearEl.value);
+  fd.append('file', fileEl.files[0]);
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Đang import…';
+  }
+  if (logEl) {
+    logEl.style.display = 'none';
+    logEl.textContent = '';
+  }
+  try {
+    const res = await fetch('/api/admin/sjr-csv-import', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: fd,
+      credentials: 'include'
+    });
+    const data = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error(data.message || ('HTTP ' + res.status));
+    var lines = [data.message || 'OK', 'OK: ' + data.ok, 'Lỗi/bỏ qua: ' + data.fail, 'Tổng dòng CSV: ' + data.total];
+    if (data.errors && data.errors.length) {
+      lines.push('---');
+      for (var i = 0; i < Math.min(30, data.errors.length); i++) lines.push(data.errors[i]);
+      if (data.errors.length > 30) lines.push('… còn ' + (data.errors.length - 30) + ' dòng ghi chú');
+    }
+    if (logEl) {
+      logEl.textContent = lines.join('\n');
+      logEl.style.display = 'block';
+    }
+    showNotif('✅ ' + (data.message || 'Import SJR xong'));
+    loadPublicationStats().catch(function () {});
+  } catch (e) {
+    showNotif('❌ ' + (e.message || String(e)));
+    if (logEl) {
+      logEl.textContent = String(e.message || e);
+      logEl.style.display = 'block';
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '📥 Import vào CSDL';
+    }
+  }
+}
+
+function renderOrcidResearchers() {
+  const list = orcidResearchers || [];
+  const active = list.filter(r => Number(r.is_active) === 1).length;
+  const badge = document.getElementById('nvActiveBadge');
+  if (badge) badge.textContent = 'Đang bật quét: ' + active;
+  const side = document.getElementById('sidebarNvActiveCount');
+  if (side) side.textContent = String(active);
+
+  const rowHtml = list.map(r => `
+    <tr>
+      <td>${escHtmlOrcid(r.full_name)}</td>
+      <td>${escHtmlOrcid(r.department || '—')}</td>
+      <td><code>${escHtmlOrcid(r.orcid_id)}</code></td>
+      <td>${Number(r.is_active) === 1 ? 'Hoạt động' : 'Tạm dừng'}</td>
+      <td>
+        <button type="button" class="btn" style="padding:4px 8px;font-size:11px" onclick="toggleOrcidResearcher(${Number(r.id)})">${Number(r.is_active) === 1 ? 'Tắt quét' : 'Bật quét'}</button>
+        <button type="button" class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="deleteOrcidResearcher(${Number(r.id)})">Xóa</button>
+      </td>
+    </tr>
+  `).join('');
+
+  const emptyMsg = '<tr><td colspan="5" style="color:var(--text-3)">Chưa có NCV. Nhập họ tên và ORCID, bấm «Thêm / cập nhật».</td></tr>';
+  const tbPanel = document.getElementById('nvOrcidResearchersTbody');
+  if (tbPanel) tbPanel.innerHTML = rowHtml || emptyMsg;
+}
+
+async function loadOrcidResearchers() {
+  const res = await apiFetch('/orcid/researchers');
+  orcidResearchers = res.data || [];
+  renderOrcidResearchers();
+}
+
+async function saveOrcidResearcher() {
+  const nameEl = document.getElementById('nvOrcidNameInput');
+  const deptEl = document.getElementById('nvOrcidDeptInput');
+  const idEl = document.getElementById('nvOrcidIdInput');
+  if (!nameEl || !idEl) { showNotif('Không tìm thấy form nhập liệu'); return; }
+  const name = (nameEl.value || '').trim();
+  const dept = (deptEl && deptEl.value || '').trim();
+  const orcid = (idEl.value || '').trim();
+  if (!name || !orcid) { showNotif('Nhập họ tên và ORCID'); return; }
+  if (!/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/.test(orcid)) { showNotif('ORCID sai định dạng 0000-0000-0000-000X'); return; }
+  await apiFetch('/orcid/researchers', {
+    method: 'POST',
+    body: JSON.stringify({ full_name: name, department: dept, orcid_id: orcid, is_active: 1 })
+  });
+  nameEl.value = '';
+  if (deptEl) deptEl.value = '';
+  idEl.value = '';
+  await loadOrcidResearchers();
+  showNotif('✅ Đã lưu nghiên cứu viên ORCID');
+}
+
+async function toggleOrcidResearcher(id) {
+  const row = orcidResearchers.find(r => Number(r.id) === Number(id));
+  if (!row) return;
+  await apiFetch('/orcid/researchers', {
+    method: 'POST',
+    body: JSON.stringify({
+      full_name: row.full_name, department: row.department, position: row.position,
+      orcid_id: row.orcid_id, is_active: Number(row.is_active) === 1 ? 0 : 1
+    })
+  });
+  await loadOrcidResearchers();
+}
+
+async function deleteOrcidResearcher(id) {
+  if (!confirm('Xóa nghiên cứu viên này khỏi danh sách ORCID? (Thường dùng khi nghỉ việc / không còn trong Viện.)')) return;
+  await apiFetch('/orcid/researchers/' + encodeURIComponent(id), { method: 'DELETE' });
+  await loadOrcidResearchers();
+  showNotif('Đã xóa khỏi danh sách');
+}
+
+// ── NOTIFICATION ──
+function showNotif(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg || '✅ Thao tác thành công!';
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 2800);
+}
+
+if (PUB_INSTITUTE_OK) {
+  syncUserFromApiMe().then(function () {
+    updateWelcomeUser();
+    if (isPubAdmin()) {
+      loadOrcidResearchers().catch(function () {
+        var tb = document.getElementById('nvOrcidResearchersTbody');
+        if (tb) {
+          tb.innerHTML =
+            '<tr><td colspan="5" style="color:var(--accent-2)">Không tải được danh sách NCV. Hãy chạy backend và thử tải lại trang (hoặc đăng nhập nếu API yêu cầu).</td></tr>';
+        }
+      });
+    }
+    applyPubAdminChrome();
+    renderPubTable();
+    filterTable();
+    hydratePubsFromServerAndRender().catch(function () {});
+    wirePublicationStatsUI();
+    loadPublicationStats().catch(function () {});
+    if (isPubAdmin()) initEnrichStatsStream();
+
+    (function wirePubListServerSyncRefresh() {
+      var lastMs = 0;
+      window.addEventListener('focus', function () {
+        if (!localStorage.getItem('token')) return;
+        var now = Date.now();
+        if (now - lastMs < 10000) return;
+        lastMs = now;
+        hydratePubsFromServerAndRender().catch(function () {});
+      });
+    })();
+
+    var pubTbodyEl = document.getElementById('pubTbody');
+    if (pubTbodyEl) {
+      pubTbodyEl.addEventListener('change', function (e) {
+        var t = e.target;
+        if (t && t.classList && t.classList.contains('pub-row-check')) pubSyncSelectAllAfterFilter();
+      });
+    }
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nộp đề tài cấp Viện</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .upload-page { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        .upload-intro { background: var(--white); padding: 1.5rem 2rem; border-radius: 12px; margin-bottom: 2rem; border-left: 4px solid var(--accent); }
+        .upload-intro h2 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem; }
+        .upload-intro p { color: var(--gray); font-size: 0.95rem; }
+        .upload-section { background: var(--white); padding: 2rem; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); margin-bottom: 1.5rem; }
+        .upload-section h3 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem; font-size: 1.2rem; }
+        .upload-section .code { display: inline-block; background: var(--accent); color: var(--white); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; margin-right: 0.5rem; }
+        .upload-section .desc { color: var(--gray); font-size: 0.9rem; margin-bottom: 1rem; }
+        .upload-section .required { color: #dc3545; font-size: 0.85rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 0.4rem; }
+        .form-group input[type="file"] { width: 100%; padding: 0.5rem; border: 2px dashed #dee2e6; border-radius: 8px; background: #f8f9fa; }
+        .form-group input[type="text"] { width: 100%; padding: 0.75rem 1rem; border: 2px solid #dee2e6; border-radius: 8px; }
+        .btn-submit { padding: 1rem 2rem; background: var(--primary); color: var(--white); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem; }
+        .btn-submit:hover { background: var(--primary-light); }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .msg.error { background: #f8d7da; color: #721c24; display: block; }
+        .user-bar { background: rgba(26, 77, 46, 0.08); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+        .user-bar span { font-weight: 500; color: var(--primary); }
+        .user-bar a { color: var(--gray); font-size: 0.9rem; }
+        .resubmit-files-list { padding: 1rem; background: #fff; border: 1px solid #dee2e6; border-radius: 8px; }
+        .resubmit-files-list .file-group { margin-bottom: 1rem; }
+        .resubmit-files-list .file-group:last-child { margin-bottom: 0; }
+        .resubmit-files-list .file-group-title { font-weight: 600; color: var(--primary); margin-bottom: 0.5rem; font-size: 0.95rem; }
+        .resubmit-files-list .file-item { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; font-size: 0.9rem; }
+        .resubmit-files-list .file-item a { color: var(--accent); text-decoration: none; }
+        .resubmit-files-list .file-item a:hover { text-decoration: underline; }
+        .btn-add-file { padding: 0.5rem 1rem; background: #e9ecef; border: 1px solid #dee2e6; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+        .btn-add-file:hover { background: #dee2e6; }
+        .supplement-row { margin-bottom: 0.75rem; }
+    </style>
+</head>
+<body class="theme-cap-vien">
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="de-tai-cap-vien.html" class="logo"><img src="images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc" style="height:72px;width:auto;display:block;"></a>
+                <div class="header-text">
+                    <h1>Nộp đề tài cấp Viện</h1>
+                    <p>Nghiên cứu viên — Nhiệm vụ KHCN cấp cơ sở</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">🏠 Trang chủ</a>
+            <a href="quan-ly-de-tai-co-so.html">📋 Nhiệm vụ KHCN</a>
+            <a href="de-tai-cap-vien.html">🔬 Đề tài cấp Viện</a>
+            <a href="nop-de-tai-cap-vien.html">📝 Nộp đề tài</a>
+            <a href="theo-doi-de-tai-cap-vien.html">📁 Theo dõi hồ sơ</a>
+            <a href="hoi-dong-de-tai-cap-vien.html">👥 Hội đồng</a>
+            <div id="auth-status"></div>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="upload-page">
+            <div id="user-bar" class="user-bar" style="display: none;">
+                <span id="user-email"></span>
+                <div>
+                    <a href="theo-doi-de-tai-cap-vien.html">📁 Xem hồ sơ đã nộp</a>
+                    <a href="#" id="btn-logout">Thoát đăng nhập</a>
+                </div>
+            </div>
+            <div id="resubmit-box" class="upload-section" style="display: none;">
+                <h2 style="font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem;">Nộp hồ sơ bổ sung (Bước 2)</h2>
+                <p class="desc" style="margin-bottom: 1rem;">Quá trình vẫn đang ở <strong>Bước 2</strong>. Hồ sơ đã nộp (gốc và bổ sung) hiển thị bên dưới. Nếu cần, thêm file bổ sung qua các ô tải lên và nhấn <strong>Gửi hồ sơ bổ sung</strong>. Thư ký sẽ kiểm tra lại và nhấn Hợp lệ hoặc Yêu cầu bổ sung tiếp.</p>
+                <div id="resubmit-files-list" class="resubmit-files-list" style="margin-bottom: 1.5rem;"></div>
+                <div class="upload-section" style="background: #f8f9fa; padding: 1.25rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">📎 Hồ sơ bổ sung (lần mới)</h3>
+                    <p class="desc" style="font-size: 0.85rem; margin-bottom: 0.75rem;">Thêm file (PDF, DOCX). Nhấn dấu <strong>+</strong> để thêm ô tải lên.</p>
+                    <div id="supplement-inputs">
+                        <div class="form-group supplement-row">
+                            <input type="file" name="supplement" accept=".pdf,.doc,.docx" class="supplement-file">
+                        </div>
+                    </div>
+                    <button type="button" id="btn-add-supplement" class="btn-add-file" style="margin-bottom: 1rem;">➕ Thêm ô tải file</button>
+                    <button type="button" id="btn-submit-supplement" class="btn-submit">📤 Gửi hồ sơ bổ sung</button>
+                </div>
+                <p id="resubmit-msg" class="msg" style="display: none; margin-top: 1rem;"></p>
+            </div>
+            <div class="upload-intro">
+                <h2>Nộp hồ sơ đề tài cấp Viện</h2>
+                <p>Điền tên đề tài và tải lên Thuyết minh, Kế hoạch thực hiện và tài liệu đính kèm. Sau khi nộp, bạn có thể theo dõi tiến độ xét duyệt tại "Theo dõi hồ sơ của tôi".</p>
+            </div>
+            <div id="msg" class="msg"></div>
+            <form id="form-nop-ho-so">
+                <input type="hidden" id="submission-title" name="title" value="">
+                <div class="form-group">
+                    <label for="title">Tên đề tài / Mã hồ sơ</label>
+                    <input type="text" id="title" name="titleDisplay" placeholder="VD: Nghiên cứu ứng dụng tế bào gốc - 2026" required>
+                </div>
+                <div class="form-group" id="submission-options-wrap">
+                    <label>Đánh dấu (tùy chọn)</label>
+                    <div id="submission-options-list" style="display:flex;flex-wrap:wrap;gap:1rem;margin-top:0.5rem;"></div>
+                </div>
+                <div class="upload-section">
+                    <h3><span class="code">1</span> Thuyết minh đề tài</h3>
+                    <p class="desc">Mô tả mục tiêu, nội dung, phương pháp và kết quả dự kiến. * Bắt buộc.</p>
+                    <div class="form-group">
+                        <label>Tải file (PDF hoặc DOCX)</label>
+                        <input type="file" name="sci_ace_01" accept=".pdf,.doc,.docx">
+                    </div>
+                </div>
+                <div class="upload-section">
+                    <h3><span class="code">2</span> Kế hoạch thực hiện</h3>
+                    <p class="desc">Tiến độ, nhân lực, kinh phí dự kiến. * Bắt buộc.</p>
+                    <div class="form-group">
+                        <label>Tải file (PDF hoặc DOCX)</label>
+                        <input type="file" name="sci_ace_02" accept=".pdf,.doc,.docx">
+                    </div>
+                </div>
+                <div class="upload-section">
+                    <h3><span class="code">3</span> Tài liệu bổ sung</h3>
+                    <p class="desc">Lý lịch khoa học, cam kết (nếu có). * Bắt buộc.</p>
+                    <div class="form-group">
+                        <label>Tải file (PDF hoặc DOCX)</label>
+                        <input type="file" name="sci_ace_03" accept=".pdf,.doc,.docx">
+                    </div>
+                </div>
+                <div class="upload-section">
+                    <h3>Tài liệu đính kèm (tùy chọn)</h3>
+                    <div class="form-group">
+                        <label>Tải file (có thể chọn nhiều)</label>
+                        <input type="file" name="attachments" accept=".pdf,.doc,.docx,.xls,.xlsx" multiple>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn-submit" id="btn-submit">Gửi hồ sơ</button>
+                </div>
+            </form>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Viện Tế bào gốc — Đề tài cấp Viện</p>
+        </div>
+    </footer>
+    <script src="js/auth-status.js"></script>
+    <script>
+        var token = localStorage.getItem('token');
+        var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
+        var resubmitId = (function() { var m = /[?&]resubmit=(\d+)/.exec(window.location.search); return m ? parseInt(m[1], 10) : 0; })();
+
+        (function loadSubmissionOptions() {
+            var wrap = document.getElementById('submission-options-list');
+            if (!wrap) return;
+            fetch(apiBase + '/api/cap-vien/submission-options').then(function(r) { return r.json(); }).then(function(data) {
+                var opts = data.options || [];
+                if (opts.length === 0) { wrap.parentElement.style.display = 'none'; return; }
+                wrap.innerHTML = opts.map(function(o) {
+                    return '<label style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer;"><input type="checkbox" name="option_' + (o.code || '').replace(/"/g, '&quot;') + '" value="' + (o.code || '').replace(/"/g, '&quot;') + '" data-code="' + (o.code || '').replace(/"/g, '&quot;') + '"> ' + (o.label || o.code || '') + '</label>';
+                }).join('');
+            }).catch(function() { wrap.parentElement.style.display = 'none'; });
+        })();
+        var resubmitBox = document.getElementById('resubmit-box');
+        var btnResubmit = document.getElementById('btn-resubmit');
+        var resubmitMsg = document.getElementById('resubmit-msg');
+        if (resubmitId && resubmitBox) {
+            resubmitBox.style.display = 'block';
+            var listEl = document.getElementById('resubmit-files-list');
+            var btnAdd = document.getElementById('btn-add-supplement');
+            var btnSubmitSupplement = document.getElementById('btn-submit-supplement');
+            function renderFilesList(data) {
+                var files = data.files || [];
+                var byRound = {};
+                files.forEach(function(f) {
+                    var r = f.revisionRound != null ? f.revisionRound : 0;
+                    if (!byRound[r]) byRound[r] = []; byRound[r].push(f);
+                });
+                var rounds = Object.keys(byRound).map(Number).sort(function(a,b){ return a - b; });
+                var html = '';
+                rounds.forEach(function(round) {
+                    var title = round === 0 ? 'Hồ sơ gốc' : 'Hồ sơ bổ sung (lần ' + round + ')';
+                    html += '<div class="file-group"><div class="file-group-title">' + title + '</div>';
+                    byRound[round].forEach(function(f) {
+                        var name = (f.originalName || f.fieldName || 'file');
+                        html += '<div class="file-item"><span>' + name.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span> <button type="button" class="btn-download-one" data-file-id="' + (f.id || '') + '" style="padding:2px 8px;font-size:12px;cursor:pointer">Tải về</button></div>';
+                    });
+                    html += '</div>';
+                });
+                if (listEl) listEl.innerHTML = html || '<p class="desc" style="margin:0">Chưa có file nào.</p>';
+                listEl.querySelectorAll('.btn-download-one').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var fid = this.getAttribute('data-file-id');
+                        if (!fid || !token) return;
+                        var btnEl = this;
+                        var suggestedName = (btnEl.previousElementSibling && btnEl.previousElementSibling.textContent) ? btnEl.previousElementSibling.textContent.trim().replace(/^.*[\\/]/, '') : 'file';
+                        fetch(apiBase + '/api/cap-vien/submissions/' + resubmitId + '/files/' + fid + '/download', { headers: { 'Authorization': 'Bearer ' + token } })
+                            .then(function(r) { if (!r.ok) throw new Error(); return r.blob(); })
+                            .then(function(blob) {
+                                var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = suggestedName || 'file'; a.click(); URL.revokeObjectURL(a.href);
+                            })
+                            .catch(function() { alert('Không tải được file.'); });
+                    });
+                });
+            }
+            if (token && listEl) {
+                fetch(apiBase + '/api/cap-vien/submissions/' + resubmitId, { headers: { 'Authorization': 'Bearer ' + token } })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) { if (data.id) renderFilesList(data); })
+                    .catch(function() { if (listEl) listEl.innerHTML = '<p class="desc" style="margin:0;color:#856404">Không tải được danh sách hồ sơ. Kiểm tra đăng nhập hoặc kết nối máy chủ.</p>'; });
+            } else if (listEl) listEl.innerHTML = '<p class="desc" style="margin:0">Vui lòng đăng nhập để xem hồ sơ đã nộp.</p>';
+            if (btnAdd) {
+                btnAdd.onclick = function() {
+                    var container = document.getElementById('supplement-inputs');
+                    var first = container.querySelector('.supplement-row');
+                    if (first) {
+                        var clone = first.cloneNode(true);
+                        if (clone.querySelector('input')) clone.querySelector('input').value = '';
+                        container.appendChild(clone);
+                    }
+                };
+            }
+            if (btnSubmitSupplement) {
+                btnSubmitSupplement.onclick = function() {
+                    if (!token) { alert('Vui lòng đăng nhập.'); return; }
+                    btnSubmitSupplement.disabled = true;
+                    if (resubmitMsg) { resubmitMsg.style.display = 'none'; resubmitMsg.textContent = ''; }
+                    var formData = new FormData();
+                    var inputs = document.querySelectorAll('#resubmit-box input[name="supplement"]');
+                    var hasFile = false;
+                    inputs.forEach(function(inp) { if (inp.files && inp.files[0]) { formData.append('supplement', inp.files[0]); hasFile = true; } });
+                    fetch(apiBase + '/api/cap-vien/submissions/' + resubmitId + '/supplement', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: formData
+                    }).then(function(r) {
+                        return r.text().then(function(t) {
+                            try { var d = t ? JSON.parse(t) : {}; return { ok: r.ok, data: d }; } catch(e) { return { ok: false, data: { message: t || 'Lỗi máy chủ' } }; }
+                        });
+                    }).then(function(res) {
+                        if (res.ok) {
+                            if (resubmitMsg) { resubmitMsg.textContent = res.data.message || 'Đã ghi nhận.'; resubmitMsg.className = 'msg'; resubmitMsg.style.display = 'block'; resubmitMsg.style.background = '#d4edda'; resubmitMsg.style.color = '#155724'; }
+                            setTimeout(function() { window.location.href = 'theo-doi-de-tai-cap-vien-chi-tiet.html?id=' + resubmitId; }, 2000);
+                        } else {
+                            if (resubmitMsg) { resubmitMsg.textContent = res.data.message || 'Thất bại.'; resubmitMsg.className = 'msg error'; resubmitMsg.style.display = 'block'; }
+                            btnSubmitSupplement.disabled = false;
+                        }
+                    }).catch(function() {
+                        if (resubmitMsg) { resubmitMsg.textContent = 'Không kết nối được máy chủ.'; resubmitMsg.className = 'msg error'; resubmitMsg.style.display = 'block'; }
+                        btnSubmitSupplement.disabled = false;
+                    });
+                };
+            }
+        }
+        var userBar = document.getElementById('user-bar');
+        var userEmail = document.getElementById('user-email');
+        var btnLogout = document.getElementById('btn-logout');
+        if (token && userBar) {
+            try {
+                var user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (user.email) { userEmail.textContent = user.email; userBar.style.display = 'flex'; }
+            } catch (_) {}
+        } else {
+            var intro = document.querySelector('.upload-intro');
+            if (intro) {
+                var p = document.createElement('p');
+                p.style.marginTop = '0.75rem'; p.style.color = '#856404'; p.style.background = '#fff3cd';
+                p.style.padding = '0.75rem 1rem'; p.style.borderRadius = '8px';
+                p.innerHTML = 'Bạn cần <a href="dang-nhap.html">đăng nhập</a> với tài khoản @sci.edu.vn để nộp hồ sơ.';
+                intro.appendChild(p);
+            }
+        }
+        if (btnLogout) { btnLogout.href = 'dang-nhap.html'; btnLogout.addEventListener('click', function() { localStorage.removeItem('token'); localStorage.removeItem('user'); }); }
+
+        document.getElementById('form-nop-ho-so').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var msgEl = document.getElementById('msg');
+            var btn = document.getElementById('btn-submit');
+            var titleRaw = document.getElementById('title').value.trim();
+            if (!titleRaw) { msgEl.textContent = 'Vui lòng nhập tên đề tài / mã hồ sơ.'; msgEl.className = 'msg error'; return; }
+            var title = titleRaw;
+            var f01 = document.querySelector('input[name="sci_ace_01"]').files[0];
+            var f02 = document.querySelector('input[name="sci_ace_02"]').files[0];
+            var f03 = document.querySelector('input[name="sci_ace_03"]').files[0];
+            if (!f01 || !f02 || !f03) {
+                msgEl.textContent = 'Cần đủ 3 file: Thuyết minh, Kế hoạch, Tài liệu bổ sung.';
+                msgEl.className = 'msg error';
+                return;
+            }
+            var formData = new FormData();
+            formData.append('title', title);
+            var checkedOptions = [];
+            document.querySelectorAll('#submission-options-list input[type="checkbox"]:checked').forEach(function(cb) {
+                var c = cb.getAttribute('data-code') || cb.value;
+                if (c) checkedOptions.push(c);
+            });
+            formData.append('options_checked', JSON.stringify(checkedOptions));
+            formData.append('sci_ace_01', f01);
+            formData.append('sci_ace_02', f02);
+            formData.append('sci_ace_03', f03);
+            var att = document.querySelector('input[name="attachments"]');
+            if (att.files.length) for (var i = 0; i < att.files.length; i++) formData.append('attachments', att.files[i]);
+            msgEl.className = 'msg'; msgEl.textContent = '';
+            btn.disabled = true;
+            try {
+                var res = await fetch(apiBase + '/api/cap-vien/submissions', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') },
+                    body: formData
+                });
+                var data = await res.json().catch(function() { return {}; });
+                if (res.ok) {
+                    window.location.href = 'nop-ho-so-thanh-cong.html?from=capvien&module=cap-vien';
+                    return;
+                } else {
+                    msgEl.textContent = data.message || 'Gửi hồ sơ thất bại.';
+                    msgEl.className = 'msg error';
+                }
+                btn.disabled = false;
+            } catch (err) {
+                msgEl.textContent = 'Không thể kết nối máy chủ.';
+                msgEl.className = 'msg error';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

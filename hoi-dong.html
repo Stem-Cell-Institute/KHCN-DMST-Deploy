@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khu vực Hội đồng - SCI-ACE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .council-page { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+        .page-title { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 1rem; }
+        .user-bar { background: rgba(26, 77, 46, 0.08); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+        .user-bar span { font-weight: 500; color: var(--primary); }
+        .submissions-list { background: var(--white); border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); overflow: hidden; }
+        .submission-item { padding: 1.25rem 1.5rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .submission-item:last-child { border-bottom: none; }
+        .submission-item h4 { color: var(--primary); margin-bottom: 0.25rem; }
+        .submission-item h4 a:hover { text-decoration: underline; color: var(--accent); }
+        .submission-item .meta { font-size: 0.9rem; color: var(--gray); }
+        .submission-item .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .btn-sm { padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; text-decoration: none; font-weight: 500; border: none; cursor: pointer; }
+        .btn-view { background: var(--primary); color: var(--white); text-decoration: none; }
+        .btn-download { background: var(--accent); color: var(--white); }
+        .btn-delete { background: #dc3545; color: var(--white); }
+        .btn-delete:hover { background: #c82333; }
+        .empty-state { padding: 3rem 2rem; text-align: center; color: var(--gray); }
+        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
+        .msg.error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">ACE-SCI</a>
+                <div class="header-text">
+                    <h1>Khu vực Hội đồng</h1>
+                    <p>Xem và tải hồ sơ đã nộp — SCI-ACE</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">🏠 Trang chủ</a>
+            <a href="nhom-1.html">📚 Nhóm hồ sơ 1</a>
+            <a href="nhom-2.html">📝 Nhóm hồ sơ 2</a>
+            <a href="nhom-3.html">👥 Nhóm hồ sơ 3</a>
+            <div class="nav-dropdown">
+                <span class="nav-dropdown-trigger">📤 Nộp hồ sơ ▾</span>
+                <div class="nav-dropdown-menu">
+                    <a href="nop-ho-so.html">Nộp hồ sơ (Nghiên cứu viên)</a>
+                    <a href="hoi-dong.html">Khu vực Hội đồng (xem hồ sơ đã nộp)</a>
+                    <a href="quan-tri.html">Quản trị (Admin)</a>
+                </div>
+            </div>
+            <div id="auth-status"></div>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="council-page">
+            <div id="user-bar" class="user-bar" style="display: none;">
+                <span id="user-email"></span>
+                <a href="dang-nhap.html" id="btn-logout">Thoát đăng nhập</a>
+            </div>
+            <h2 class="page-title">Hồ sơ đã nộp</h2>
+            <div id="msg" class="msg" style="display: none;"></div>
+            <div id="submissions-list" class="submissions-list">
+                <div class="empty-state">Đang tải danh sách...</div>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="footer-bottom"><p>&copy; 2026 SCI-ACE. Phiên bản 1.0</p></div>
+        </div>
+    </footer>
+    <script src="js/auth-status.js"></script>
+    <script>
+        let user = {};
+        try {
+            user = JSON.parse(localStorage.getItem('user') || '{}');
+        } catch (e) {
+            user = {};
+        }
+        const token = localStorage.getItem('token');
+        const listEl = document.getElementById('submissions-list');
+        const msgEl = document.getElementById('msg');
+        const userBar = document.getElementById('user-bar');
+        const userEmail = document.getElementById('user-email');
+        var apiBase = '';
+        (function() {
+            var port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+            if (window.location.protocol === 'file:' || port !== '3000') apiBase = 'http://localhost:3000';
+        })();
+
+        if (token && user && user.email) {
+            userEmail.textContent = user.email + (user.role ? ' (' + user.role + ')' : '');
+            userBar.style.display = 'flex';
+        }
+
+        function escapeHtml(s) {
+            if (s == null) return '';
+            const div = document.createElement('div');
+            div.textContent = String(s);
+            return div.innerHTML;
+        }
+
+        async function loadSubmissions() {
+            if (!token) {
+                listEl.innerHTML = '<div class="empty-state">Vui lòng <a href="dang-nhap.html">đăng nhập</a> với tài khoản thành viên Hội đồng để xem hồ sơ.</div>';
+                return;
+            }
+            try {
+                const res = await fetch(apiBase + '/api/submissions', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.status === 401) {
+                    listEl.innerHTML = '<div class="empty-state">Phiên đăng nhập hết hạn. <a href="dang-nhap.html">Đăng nhập lại</a>.</div>';
+                    return;
+                }
+                if (res.status === 403) {
+                    listEl.innerHTML = '<div class="empty-state">Bạn không có quyền xem danh sách hồ sơ. Chỉ thành viên Hội đồng hoặc Admin mới được xem.</div>';
+                    return;
+                }
+                if (!res.ok) {
+                    listEl.innerHTML = '<div class="empty-state">Máy chủ trả về lỗi. Vui lòng thử lại sau hoặc <a href="dang-nhap.html">đăng nhập lại</a>.</div>';
+                    return;
+                }
+                let data;
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    data = {};
+                }
+                const items = Array.isArray(data) ? data : (data.items || data.submissions || []);
+                if (items.length === 0) {
+                    listEl.innerHTML = '<div class="empty-state">Chưa có hồ sơ nào được nộp.</div>';
+                    return;
+                }
+                const isAdmin = (user.role || '').toLowerCase() === 'admin';
+                listEl.innerHTML = items.map(function(s) {
+                    const id = s.id || s._id;
+                    const title = s.title || s.tenDeTai || 'Không tên';
+                    const by = s.submittedBy || s.email || '';
+                    const byName = s.submittedByName ? (escapeHtml(s.submittedByName) + ' (' + escapeHtml(by) + ')') : escapeHtml(by);
+                    const date = s.createdAt || s.ngayNop || '';
+                    const trackingUrl = 'theo-doi-ho-so.html?id=' + id;
+                    let actions = '<a href="' + trackingUrl + '" class="btn-sm btn-view">Xem tiến trình</a><button type="button" class="btn-sm btn-download" data-id="' + id + '">Tải hồ sơ</button>';
+                    if (isAdmin) actions += '<button type="button" class="btn-sm btn-delete" data-id="' + id + '" data-title="' + escapeHtml(title) + '">Xóa</button>';
+                    return '<div class="submission-item" data-submission-id="' + id + '">' +
+                        '<div><h4><a href="' + trackingUrl + '" style="color: inherit; text-decoration: none;">' + escapeHtml(title) + '</a></h4><p class="meta"><strong>Mã hồ sơ: #' + id + '</strong> — Nộp bởi: ' + byName + (date ? ' — ' + date : '') + '</p></div>' +
+                        '<div class="actions">' + actions + '</div></div>';
+                }).join('');
+                listEl.querySelectorAll('.btn-download').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        const token = localStorage.getItem('token');
+                        if (!token) { alert('Vui lòng đăng nhập.'); return; }
+                        fetch(apiBase + '/api/submissions/' + id + '/download', { headers: { 'Authorization': 'Bearer ' + token } })
+                            .then(function(r) {
+                                if (!r.ok) throw new Error('Không tải được');
+                                return r.blob();
+                            })
+                            .then(function(blob) {
+                                const a = document.createElement('a');
+                                a.href = URL.createObjectURL(blob);
+                                a.download = 'ho-so-' + id + '.zip';
+                                a.click();
+                                URL.revokeObjectURL(a.href);
+                            })
+                            .catch(function() { alert('Không tải được hồ sơ.'); });
+                    });
+                });
+                listEl.querySelectorAll('.btn-delete').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        const title = this.getAttribute('data-title') || 'hồ sơ này';
+                        var confirmMsg = "Bạn có chắc muốn xóa hồ sơ " + title + "? Hành động không thể hoàn tác.";
+                        if (!confirm(confirmMsg)) return;
+                        // 
+                        // có chắc muốn xóa hồ sơ “‘ + title + '”? Hành động không thể hoàn tác;
+                        const token = localStorage.getItem('token');
+                        if (!token) { alert('Vui lòng đăng nhập.'); return; }
+                        fetch(apiBase + '/api/submissions/' + id, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': 'Bearer ' + token }
+                        })
+                            .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+                            .then(function(result) {
+                                if (result.ok) {
+                                    if (msgEl) { msgEl.textContent = 'Đã xóa hồ sơ.'; msgEl.className = 'msg'; msgEl.style.display = 'block'; msgEl.style.background = '#d4edda'; msgEl.style.color = '#155724'; }
+                                    loadSubmissions();
+                                } else {
+                                    alert(result.data.message || 'Không thể xóa hồ sơ.');
+                                }
+                            })
+                            .catch(function() { alert('Không thể kết nối máy chủ.'); });
+                    });
+                });
+            } catch (err) {
+                listEl.innerHTML = '<div class="empty-state">Không thể tải danh sách. Kiểm tra kết nối và đảm bảo backend đang chạy (npm start). <a href="dang-nhap.html">Đăng nhập lại</a>.</div>';
+            }
+        }
+        loadSubmissions();
+    </script>
+</body>
+</html>

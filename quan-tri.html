@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản trị - Cấp quyền Hội đồng - SCI-ACE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .admin-page { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        .page-title { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 1rem; }
+        .user-bar { background: rgba(26, 77, 46, 0.08); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; }
+        .card { background: var(--white); padding: 2rem; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); margin-bottom: 1.5rem; }
+        .card h3 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 1rem; font-size: 1.2rem; }
+        .note { font-size: 0.9rem; color: var(--gray); margin-bottom: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 8px; }
+        .method-card { background: linear-gradient(135deg, rgba(26, 77, 46, 0.06) 0%, rgba(45, 106, 79, 0.06) 100%); padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 4px solid var(--primary); margin-bottom: 1.5rem; }
+        .method-card h3 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.75rem; font-size: 1.1rem; }
+        .method-steps { margin: 0; padding-left: 1.25rem; color: var(--gray); font-size: 0.95rem; line-height: 1.7; }
+        .method-steps li { margin-bottom: 0.35rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
+        th { font-weight: 600; color: var(--primary); }
+        select { padding: 0.5rem; border-radius: 6px; border: 2px solid #dee2e6; }
+        .btn-sm { padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; border: none; cursor: pointer; background: var(--primary); color: var(--white); }
+        .btn-sm:hover { background: var(--primary-light); }
+        .add-role-form .form-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; align-items: flex-end; }
+        .add-role-form .form-group { flex: 1; min-width: 140px; }
+        .add-role-form .form-group label { display: block; font-weight: 500; margin-bottom: 0.35rem; font-size: 0.9rem; }
+        .add-role-form .form-group input, .add-role-form .form-group select { width: 100%; padding: 0.6rem 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; }
+        .add-role-form .form-group-btn { flex: 0 0 auto; }
+        .btn-submit-role { padding: 0.65rem 1.25rem; background: var(--primary); color: var(--white); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem; }
+        .btn-submit-role:hover { background: var(--primary-light); }
+        .btn-submit-role:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-send-email { margin-left: 0.75rem; padding: 0.65rem 1.25rem; background: var(--accent); color: var(--white); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem; }
+        .btn-send-email:hover { background: #e67300; }
+        .btn-send-email:disabled { opacity: 0.6; cursor: not-allowed; }
+        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .msg.error { background: #f8d7da; color: #721c24; display: block; }
+        .msg.success { background: #d4edda; color: #155724; display: block; }
+        .empty-state { color: var(--gray); padding: 1rem 0; }
+        .btn-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .btn-secondary { background: #17a2b8 !important; }
+        .btn-delete { background: #dc3545 !important; color: #fff !important; }
+        .user-search { width: 100%; max-width: 320px; padding: 0.5rem 0.75rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">ACE-SCI</a>
+                <div class="header-text">
+                    <h1>Quản trị hệ thống</h1>
+                    <p>Admin — Cấp quyền Chủ tịch, Thư ký, Thành viên Hội đồng</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">🏠 Trang chủ</a>
+            <a href="nhom-1.html">📚 Nhóm hồ sơ 1</a>
+            <a href="nhom-2.html">📝 Nhóm hồ sơ 2</a>
+            <a href="nhom-3.html">👥 Nhóm hồ sơ 3</a>
+            <div class="nav-dropdown">
+                <span class="nav-dropdown-trigger">📤 Nộp hồ sơ ▾</span>
+                <div class="nav-dropdown-menu">
+                    <a href="nop-ho-so.html">Nộp hồ sơ (Nghiên cứu viên)</a>
+                    <a href="hoi-dong.html">Khu vực Hội đồng (xem hồ sơ đã nộp)</a>
+                    <a href="quan-tri.html">Quản trị (Admin)</a>
+                </div>
+            </div>
+            <div id="auth-status"></div>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div id="access-denied" class="admin-page" style="display: none;">
+            <p class="msg error" style="display:block;">Chỉ tài khoản có vai trò <strong>Admin</strong> mới vào được trang này.</p>
+            <p><a href="dang-nhap.html">Đăng nhập</a> · <a href="index.html">Trang chủ</a></p>
+        </div>
+        <div class="admin-page" id="admin-content">
+            <div id="user-bar" class="user-bar" style="display: none;">
+                <strong>Đăng nhập:</strong> <span id="user-email"></span> (Admin)
+            </div>
+            <h2 class="page-title">Cấp quyền thành viên Hội đồng</h2>
+            <div class="method-card">
+                <h3>Phương thức cấp vai trò</h3>
+                <ol class="method-steps">
+                    <li>Mọi tài khoản có vai trò <strong>Admin</strong> trong hệ thống đều quản trị được danh sách user (không giới hạn một email cố định).</li>
+                    <li>Vai trò có thể gán: <strong>Nghiên cứu viên</strong>, <strong>Chủ tịch / Thư ký / Thành viên Hội đồng</strong> (SCI-ACE), <strong>Admin</strong>, <strong>Phòng KHCN</strong>, <strong>Tổ thẩm định tài chính</strong> (Tổ trưởng / Thành viên).</li>
+                    <li>Chỉ email <strong>@sci.edu.vn</strong> mới được gán Chủ tịch, Thư ký hoặc Thành viên Hội đồng (theo quy định server).</li>
+                    <li>Form bên dưới: thêm mới hoặc cập nhật họ tên + vai trò; bảng toàn hệ thống có <strong>Lưu</strong>, <strong>Cấp lại mật khẩu</strong>, <strong>Xóa</strong> (xóa chỉ khi user chưa có hồ sơ nộp).</li>
+                </ol>
+            </div>
+            <div id="msg" class="msg"></div>
+            <div class="card add-role-card">
+                <h3>Thêm / Cấp vai trò thành viên Hội đồng</h3>
+                <form id="form-add-role" class="add-role-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="add-fullname">Họ và tên</label>
+                            <input type="text" id="add-fullname" name="fullname" placeholder="VD: Nguyễn Văn A">
+                        </div>
+                        <div class="form-group">
+                            <label for="add-email">Email</label>
+                            <input type="email" id="add-email" name="email" placeholder="user@sci.edu.vn" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="add-role">Vai trò</label>
+                            <select id="add-role" name="role">
+                                <option value="researcher">Nghiên cứu viên</option>
+                                <option value="thanh_vien">Thành viên Hội đồng (Ủy viên)</option>
+                                <option value="thu_ky">Thư ký</option>
+                                <option value="chu_tich">Chủ tịch</option>
+                                <option value="phong_khcn">Phòng KHCN&amp;QHĐN</option>
+                                <option value="admin">Quản trị viên (Admin)</option>
+                                <option value="totruong_tham_dinh_tc">Tổ trưởng Tổ thẩm định TC</option>
+                                <option value="thanh_vien_tham_dinh_tc">Thành viên Tổ thẩm định TC</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="add-password">Mật khẩu (chỉ khi thêm tài khoản mới)</label>
+                            <input type="text" id="add-password" name="password" placeholder="Để trống = chưa kích hoạt; ≥6 ký tự = kích hoạt ngay" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
+                        </div>
+                        <div class="form-group form-group-btn">
+                            <button type="submit" class="btn-submit-role" id="btn-add-role">Thêm / Cấp vai trò</button>
+                            <button type="button" class="btn-send-email" id="btn-send-email">Gửi email thông báo</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card">
+                <h3>Danh sách tài khoản và vai trò</h3>
+                <p class="note">Tìm theo email hoặc họ tên. <strong>Cấp lại MK</strong>: để trống = đưa về chưa kích hoạt; nhập ≥6 ký tự = đặt mật khẩu mới. <strong>Xóa</strong> chỉ thành công nếu user chưa có hồ sơ SCI-ACE / Đề tài cấp Viện.</p>
+                <input type="search" id="user-search" class="user-search" placeholder="Lọc email hoặc họ tên…" autocomplete="off">
+                <div id="msg-users" class="msg" style="display:none;"></div>
+                <div id="users-table-wrap">
+                    <div class="empty-state">Đang tải...</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📧 Danh sách người nhận email thông báo</h3>
+                <p class="note">Mọi thông báo (hồ sơ mới, yêu cầu bổ sung, kết quả họp, đề tài cấp Viện...) sẽ gửi tới danh sách bên dưới. Mỗi đề tài / mỗi bước có thể cần người nhận khác nhau — Admin thêm hoặc xóa bớt khi cần. <strong>Nếu danh sách trống</strong>, hệ thống dùng email từ vai trò Hội đồng trong DB (hoặc biến NOTIFICATION_EMAILS trong .env).</p>
+                <div id="recipients-msg" class="msg" style="display:none;"></div>
+                <form id="form-add-recipient" class="add-role-form" style="margin-bottom:1rem;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="recipient-email">Email</label>
+                            <input type="email" id="recipient-email" name="email" placeholder="user@sci.edu.vn" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="recipient-fullname">Họ tên (tùy chọn)</label>
+                            <input type="text" id="recipient-fullname" name="fullname" placeholder="VD: Nguyễn Văn A">
+                        </div>
+                        <div class="form-group form-group-btn">
+                            <button type="submit" class="btn-submit-role" id="btn-add-recipient">Thêm người nhận</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="recipients-table-wrap">
+                    <div class="empty-state">Đang tải...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="footer-bottom"><p>&copy; 2026 SCI-ACE. Phiên bản 1.0</p></div>
+        </div>
+    </footer>
+    <script src="js/auth-status.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
+        const isAdmin = (user.role || '').toLowerCase() === 'admin';
+        let allUsersCache = [];
+
+        (function gate() {
+            const adm = document.getElementById('admin-content');
+            const deny = document.getElementById('access-denied');
+            if (!token || !isAdmin) {
+                if (adm) adm.style.display = 'none';
+                if (deny) deny.style.display = 'block';
+                return;
+            }
+            if (deny) deny.style.display = 'none';
+            if (adm) adm.style.display = 'block';
+            const bar = document.getElementById('user-bar');
+            if (bar && user.email) {
+                document.getElementById('user-email').textContent = user.email;
+                bar.style.display = 'block';
+            }
+        })();
+
+        const roleLabels = {
+            chu_tich: 'Chủ tịch HĐ', thu_ky: 'Thư ký', thanh_vien: 'Thành viên HĐ',
+            researcher: 'Nghiên cứu viên', admin: 'Admin', phong_khcn: 'Phòng KHCN',
+            totruong_tham_dinh_tc: 'Tổ trưởng thẩm định TC', thanh_vien_tham_dinh_tc: 'TV thẩm định TC'
+        };
+        const ALLOWED_DOMAIN = '@sci.edu.vn';
+        const currentEmailLower = (user.email || '').toLowerCase();
+
+        function canAssignCouncilRole(email) {
+            return (email || '').toLowerCase().endsWith(ALLOWED_DOMAIN);
+        }
+
+        function roleOptionsForUser(email) {
+            var base = ['researcher', 'admin', 'phong_khcn', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
+            if (canAssignCouncilRole(email)) {
+                base = ['researcher', 'thanh_vien', 'thu_ky', 'chu_tich', 'admin', 'phong_khcn', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
+            }
+            return base;
+        }
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        }
+
+        function renderUserTable(filterText) {
+            const wrap = document.getElementById('users-table-wrap');
+            const q = (filterText || '').trim().toLowerCase();
+            var users = allUsersCache.slice();
+            if (q) {
+                users = users.filter(function(u) {
+                    var em = (u.email || '').toLowerCase();
+                    var fn = (u.fullname || '').toLowerCase();
+                    return em.indexOf(q) >= 0 || fn.indexOf(q) >= 0;
+                });
+            }
+            if (users.length === 0) {
+                wrap.innerHTML = '<div class="empty-state">' + (allUsersCache.length ? 'Không khớp bộ lọc.' : 'Chưa có tài khoản nào.') + '</div>';
+                return;
+            }
+            wrap.innerHTML = '<table><thead><tr><th>Email</th><th>Họ tên</th><th>Ngày tạo</th><th>Vai trò</th><th>Thao tác</th></tr></thead><tbody>' +
+                users.map(function(u) {
+                    var email = u.email || '';
+                    var emailEsc = escapeHtml(email);
+                    var fullname = u.fullname || '';
+                    var role = (u.role || 'researcher').toLowerCase();
+                    var created = (u.createdAt || '').slice(0, 10);
+                    var opts = roleOptionsForUser(email);
+                    if (opts.indexOf(role) < 0) opts = opts.concat([role]);
+                    var sel = '<select data-email="' + emailEsc + '" class="role-select">' +
+                        opts.map(function(r) {
+                            return '<option value="' + r + '"' + (r === role ? ' selected' : '') + '>' + (roleLabels[r] || r) + '</option>';
+                        }).join('') + '</select>';
+                    var isSelf = email.toLowerCase() === currentEmailLower;
+                    var actions = '<div class="btn-row"><button type="button" class="btn-sm btn-save-role" data-email="' + emailEsc + '">Lưu</button>' +
+                        '<button type="button" class="btn-sm btn-secondary btn-reset-pw" data-email="' + emailEsc + '">Cấp lại MK</button>' +
+                        (isSelf ? '' : '<button type="button" class="btn-sm btn-delete-user btn-delete" data-email="' + emailEsc + '">Xóa</button>') +
+                        '</div>';
+                    return '<tr><td>' + emailEsc + '</td><td>' + escapeHtml(fullname || '—') + '</td><td>' + escapeHtml(created) + '</td><td>' + sel + '</td><td>' + actions + '</td></tr>';
+                }).join('') + '</tbody></table>';
+        }
+
+        async function loadUsers() {
+            const wrap = document.getElementById('users-table-wrap');
+            if (!isAdmin || !token) {
+                if (wrap) wrap.innerHTML = '<div class="empty-state">—</div>';
+                return;
+            }
+            wrap.innerHTML = '<div class="empty-state">Đang tải...</div>';
+            try {
+                const res = await fetch(apiBase + '/api/admin/users', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (res.status === 401 || res.status === 403) {
+                    wrap.innerHTML = '<div class="empty-state">Không có quyền hoặc phiên hết hạn. <a href="dang-nhap.html">Đăng nhập lại</a>.</div>';
+                    return;
+                }
+                const data = await res.json().catch(function() { return {}; });
+                allUsersCache = data.users || data || [];
+                var inp = document.getElementById('user-search');
+                renderUserTable(inp ? inp.value : '');
+            } catch (err) {
+                wrap.innerHTML = '<div class="empty-state">Không thể tải danh sách. Vui lòng chạy backend.</div>';
+            }
+        }
+
+        var userSearchEl = document.getElementById('user-search');
+        if (userSearchEl) {
+            userSearchEl.addEventListener('input', function() { renderUserTable(this.value); });
+        }
+
+        document.getElementById('users-table-wrap').addEventListener('click', function(e) {
+            var btn = e.target.closest('.btn-save-role, .btn-reset-pw, .btn-delete-user');
+            if (!btn) return;
+            var email = btn.getAttribute('data-email');
+            if (!email) return;
+            if (btn.classList.contains('btn-save-role')) {
+                var row = btn.closest('tr');
+                var select = row.querySelector('.role-select');
+                saveRole(email, select ? select.value : '');
+            } else if (btn.classList.contains('btn-reset-pw')) {
+                var pw = prompt('Mật khẩu mới (≥6 ký tự). Để trống = đưa tài khoản về chưa kích hoạt (user tự đặt qua trang Đăng ký @sci.edu.vn).');
+                if (pw !== null) {
+                    var t = (pw || '').trim();
+                    if (t.length > 0 && t.length < 6) { alert('Mật khẩu tối thiểu 6 ký tự, hoặc để trống để chưa kích hoạt.'); return; }
+                    resetUserPassword(email, t);
+                }
+            } else if (btn.classList.contains('btn-delete-user')) {
+                if (confirm('Xóa tài khoản ' + email + '? Chỉ xóa được khi chưa có hồ sơ nộp.')) deleteUserAccount(email);
+            }
+        });
+
+        async function resetUserPassword(email, newPassword) {
+            var msgEl = document.getElementById('msg-users');
+            msgEl.style.display = 'block';
+            msgEl.textContent = 'Đang cấp lại mật khẩu...';
+            msgEl.className = 'msg';
+            try {
+                var res = await fetch(apiBase + '/api/admin/users/' + encodeURIComponent(email) + '/password', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(newPassword ? { newPassword: newPassword } : { newPassword: '' })
+                });
+                var data = await res.json().catch(function() { return {}; });
+                if (res.ok) {
+                    msgEl.innerHTML = (data.message || 'Đã cấp lại mật khẩu.') + (data.tempPassword ? ' <strong>Mật khẩu tạm:</strong> <code style="background:#f0f0f0;padding:2px 6px;">' + escapeHtml(data.tempPassword) + '</code>' : '');
+                    msgEl.className = 'msg success';
+                } else {
+                    msgEl.textContent = data.message || 'Thất bại.';
+                    msgEl.className = 'msg error';
+                }
+            } catch (err) {
+                msgEl.textContent = 'Lỗi kết nối.';
+                msgEl.className = 'msg error';
+            }
+        }
+
+        async function deleteUserAccount(email) {
+            var msgEl = document.getElementById('msg-users');
+            msgEl.style.display = 'block';
+            msgEl.textContent = 'Đang xóa...';
+            msgEl.className = 'msg';
+            try {
+                var res = await fetch(apiBase + '/api/admin/users/' + encodeURIComponent(email), {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                var data = await res.json().catch(function() { return {}; });
+                if (res.ok) {
+                    msgEl.textContent = data.message || 'Đã xóa.';
+                    msgEl.className = 'msg success';
+                    loadUsers();
+                } else {
+                    msgEl.textContent = data.message || 'Xóa thất bại.';
+                    msgEl.className = 'msg error';
+                }
+            } catch (err) {
+                msgEl.textContent = 'Lỗi kết nối.';
+                msgEl.className = 'msg error';
+            }
+        }
+
+        async function saveRole(email, role) {
+            const msgEl = document.getElementById('msg');
+            try {
+                const res = await fetch(apiBase + '/api/admin/users/role', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ email, role })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    msgEl.textContent = 'Đã cập nhật vai trò cho ' + email + '.';
+                    msgEl.className = 'msg success';
+                    loadUsers();
+                } else {
+                    msgEl.textContent = data.message || 'Cập nhật thất bại.';
+                    msgEl.className = 'msg error';
+                }
+            } catch (err) {
+                msgEl.textContent = 'Lỗi kết nối.';
+                msgEl.className = 'msg error';
+            }
+        }
+        if (isAdmin) loadUsers();
+
+        async function loadRecipients() {
+            const wrap = document.getElementById('recipients-table-wrap');
+            const msgEl = document.getElementById('recipients-msg');
+            if (!token) {
+                wrap.innerHTML = '<div class="empty-state">Vui lòng đăng nhập Admin.</div>';
+                return;
+            }
+            try {
+                const res = await fetch(apiBase + '/api/admin/notification-recipients', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (res.status === 401 || res.status === 403) {
+                    wrap.innerHTML = '<div class="empty-state">Bạn không có quyền truy cập.</div>';
+                    return;
+                }
+                const data = await res.json().catch(() => ({}));
+                const list = data.recipients || [];
+                if (list.length === 0) {
+                    wrap.innerHTML = '<div class="empty-state">Chưa có ai trong danh sách. Thêm email bên trên để mọi thông báo gửi tới những người đó.</div>';
+                    return;
+                }
+                wrap.innerHTML = '<table><thead><tr><th>Email</th><th>Họ tên</th><th>Ngày thêm</th><th>Thao tác</th></tr></thead><tbody>' +
+                    list.map(function(r) {
+                        const date = (r.createdAt || '').slice(0, 10);
+                        return '<tr><td>' + (r.email || '') + '</td><td>' + (r.fullname || '-') + '</td><td>' + date + '</td><td><button type="button" class="btn-sm btn-delete-recipient" data-id="' + (r.id || '') + '" style="background:#dc3545;color:#fff">Xóa</button></td></tr>';
+                    }).join('') + '</tbody></table>';
+                wrap.querySelectorAll('.btn-delete-recipient').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        if (!id || !confirm('Xóa người nhận này khỏi danh sách?')) return;
+                        deleteRecipient(id);
+                    });
+                });
+            } catch (err) {
+                wrap.innerHTML = '<div class="empty-state">Không thể tải danh sách. Vui lòng chạy backend.</div>';
+            }
+        }
+        async function deleteRecipient(id) {
+            const msgEl = document.getElementById('recipients-msg');
+            try {
+                const res = await fetch(apiBase + '/api/admin/notification-recipients/' + id, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json().catch(() => ({}));
+                msgEl.style.display = 'block';
+                if (res.ok) {
+                    msgEl.textContent = data.message || 'Đã xóa.';
+                    msgEl.className = 'msg success';
+                    loadRecipients();
+                } else {
+                    msgEl.textContent = data.message || 'Xóa thất bại.';
+                    msgEl.className = 'msg error';
+                }
+            } catch (err) {
+                msgEl.style.display = 'block';
+                msgEl.textContent = 'Lỗi kết nối.';
+                msgEl.className = 'msg error';
+            }
+        }
+        if (isAdmin) loadRecipients();
+
+        document.getElementById('form-add-recipient').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const msgEl = document.getElementById('recipients-msg');
+            const btn = document.getElementById('btn-add-recipient');
+            const email = document.getElementById('recipient-email').value.trim().toLowerCase();
+            const fullname = document.getElementById('recipient-fullname').value.trim();
+            if (!email) { msgEl.textContent = 'Vui lòng nhập email.'; msgEl.className = 'msg error'; msgEl.style.display = 'block'; return; }
+            msgEl.style.display = 'none';
+            btn.disabled = true;
+            try {
+                const res = await fetch(apiBase + '/api/admin/notification-recipients', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ email, fullname: fullname || undefined })
+                });
+                const data = await res.json().catch(() => ({}));
+                msgEl.style.display = 'block';
+                if (res.ok) {
+                    msgEl.textContent = data.message || 'Đã thêm người nhận.';
+                    msgEl.className = 'msg success';
+                    document.getElementById('recipient-email').value = '';
+                    document.getElementById('recipient-fullname').value = '';
+                    loadRecipients();
+                } else {
+                    msgEl.textContent = data.message || 'Thêm thất bại.';
+                    msgEl.className = 'msg error';
+                }
+            } catch (err) {
+                msgEl.style.display = 'block';
+                msgEl.textContent = 'Lỗi kết nối.';
+                msgEl.className = 'msg error';
+            }
+            btn.disabled = false;
+        });
+
+        document.getElementById('form-add-role').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            lastTempPassword = null;
+            const msgEl = document.getElementById('msg');
+            const btn = document.getElementById('btn-add-role');
+            const email = document.getElementById('add-email').value.trim();
+            const fullname = document.getElementById('add-fullname').value.trim();
+            const role = document.getElementById('add-role').value;
+            const passwordTrim = (document.getElementById('add-password').value || '').trim();
+            if (!email) { msgEl.textContent = 'Vui lòng nhập email.'; msgEl.className = 'msg error'; return; }
+            msgEl.className = 'msg'; msgEl.textContent = '';
+            btn.disabled = true;
+            try {
+                const res = await fetch(apiBase + '/api/admin/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ email, fullname, role, password: passwordTrim || undefined })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    if (data.tempPassword) lastTempPassword = data.tempPassword;
+                    msgEl.className = 'msg success';
+                    if (data.activated === false) {
+                        lastTempPassword = null;
+                        msgEl.textContent = data.message || 'Đã thêm tài khoản chưa kích hoạt.';
+                    } else {
+                        msgEl.textContent = data.message || 'Đã xong.';
+                        if (data.tempPassword) msgEl.innerHTML = (data.message || '') + ' <br><strong>Bạn có thể nhấn "Gửi email thông báo" để gửi thư (kèm mật khẩu tạm) đến địa chỉ vừa thêm.</strong>';
+                    }
+                    document.getElementById('add-email').value = '';
+                    document.getElementById('add-fullname').value = '';
+                    document.getElementById('add-password').value = '';
+                    loadUsers();
+                } else {
+                    msgEl.textContent = data.message || 'Thao tác thất bại.';
+                    msgEl.className = 'msg error';
+                }
+            } catch (err) {
+                msgEl.textContent = 'Lỗi kết nối.';
+                msgEl.className = 'msg error';
+            }
+            btn.disabled = false;
+        });
+
+        var lastTempPassword = null;
+
+        document.getElementById('btn-send-email').addEventListener('click', async function() {
+            const msgEl = document.getElementById('msg');
+            const btn = document.getElementById('btn-send-email');
+            const email = document.getElementById('add-email').value.trim();
+            const fullname = document.getElementById('add-fullname').value.trim();
+            const role = document.getElementById('add-role').value;
+            const passwordTrim = (document.getElementById('add-password').value || '').trim();
+            if (!email) {
+                msgEl.textContent = 'Vui lòng nhập email người nhận.';
+                msgEl.className = 'msg error';
+                return;
+            }
+            msgEl.className = 'msg';
+            msgEl.textContent = '';
+            btn.disabled = true;
+            try {
+                const res = await fetch(apiBase + '/api/admin/users/send-role-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({
+                        email,
+                        fullname: fullname || undefined,
+                        role,
+                        tempPassword: passwordTrim || lastTempPassword || undefined
+                    })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    msgEl.textContent = data.message || 'Đã gửi email.';
+                    msgEl.className = 'msg success';
+                } else {
+                    msgEl.textContent = data.message || 'Gửi email thất bại.';
+                    msgEl.className = 'msg error';
+                }
+            } catch (err) {
+                msgEl.textContent = 'Lỗi kết nối.';
+                msgEl.className = 'msg error';
+            }
+            btn.disabled = false;
+        });
+    </script>
+</body>
+</html>

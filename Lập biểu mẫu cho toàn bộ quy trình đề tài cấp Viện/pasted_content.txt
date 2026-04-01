@@ -1,0 +1,155 @@
+QUY TRÌNH THEO DÕI TIẾN TRÌNH ĐỀ TÀI CẤP VIỆN - TỪ NỘP HỒ SƠ ĐẾN NGHIỆM THU
+GIAI ĐOẠN 1: ĐĂNG KÝ VÀ XÉT DUYỆT HỒ SƠ
+Bước 1: Nộp hồ sơ đề xuất (1-2 tuần trước deadline)
+Người thực hiện: Nghiên cứu viên (Chủ nhiệm đề tài)
+Hồ sơ cần nộp:
+•	Đơn đề xuất đề tài (theo mẫu SCI-TASK-01)
+•	Thuyết minh đề tài (10-15 trang)
+•	CV của chủ nhiệm và thành viên chính
+•	Dự toán kinh phí chi tiết
+(ở bước này cần làm nút upload file để Nghiên cứu viên nộp hồ sơ. 
+Sau khi upload các file, nghiên cứu viên bấm nút Nộp hồ sơ, lúc này trang web sẽ pop up thông báo là “Hồ sơ của nghiên cứu đã được nộp, hệ thống sẽ xử lý hồ sơ…hoặc đại loại như thế”. Lúc này hệ thống sẽ gửi email thông báo đến admin, chủ tịch Hội đồng KHCN Viện Tế bào gốc và các thành viên của Hội đồng. 
+Khi xong bước này thì hệ thống chuyển bước 1 thành màu xanh, chuyển bước 2 thành màu đỏ.
+________________________________________
+Bước 2: Kiểm tra hồ sơ hành chính (3-5 ngày)
+Người thực hiện: Thư ký Hội đồng Khoa học Viện
+Công việc:
+•	✅ Kiểm tra tính đầy đủ của hồ sơ
+•	✅ Kiểm tra format, chữ ký, con dấu
+•	✅ Kiểm tra điều kiện chủ nhiệm (học vị, kinh nghiệm)
+Kết quả:
+Nhấn nút ✅ HỢP LỆ → Chuyển GD3
+Nhấn nút thiếu⚠️ THIẾU → Yêu cầu bổ sung (trả lại GD1, Thông báo: Email tự động đến chủ nhiệm để họ bổ sung hồ sơ. 
+Lịch sử các hành động của Thư ký ở giai đoạn 2 này cần được lưu lại. 
+________________________________________
+Bước 3: Phân công phản biện (2-3 ngày)
+Người thực hiện: Chủ tịch Hội đồng Khoa học Viện
+Công việc:
+•	Phân công ≥2 phản biện độc lập
+•	Chọn phản biện phù hợp chuyên môn
+•	Tránh xung đột lợi ích
+Phản biện:
+•	Phản biện 1 
+•	Phản biện 2
+Hệ thống thông báo: Email đến phản biện và các thành viên khác của hội đồng. 
+Sau khi chủ tịch Hội đồng phân công bản biện xong, sẽ nhấn nút hoàn thành, sau đó hệ thống sẽ chuyển bước 3 thành xanh, bước 4 thành màu đỏ
+________________________________________
+Bước 4: Đánh giá phản biện (7-10 ngày)
+Bước này cũng lập trình giống như cách làm cho Hội đồng đạo đức trên động vật 
+________________________________________
+Bước 5: Họp Hội đồng Khoa học Viện (theo lịch) 
+Bước này cũng lập trình như bước Họp hội đồng đạo đức. 
+Kết quả:
+•	✅ CHẤP THUẬN → Chuyển GD6 
+•	⚠️ CHẤP THUẬN CÓ ĐIỀU KIỆN → vẫn chưa chuyển màu cho giai đoạn này, mà hệ thống sẽ thông báo email cho chủ nhiệm và các nghiên cứu viên. Mở ra các nút upload để nghiên cứu viên Chỉnh sửa, nộp lại bản giải trình chỉnh sửa, cùng cuốn thuyết minh có chỉnh sửa (2 file). 
+Sau đó Chủ tịch hội đồng sẽ đọc file chỉnh sửa, nếu chủ tịch hội đồng chấp thuận, sẽ nhấn nút chấp thuận, lúc này hệ thống sẽ chuyển giai đoạn. Nếu chủ tịch Hội đồng không chấp thuận, sẽ nhấn nút không chấp thuận, lúc này hệ thống lại quay lại bước để cho nghiên cứu viên nộp bản chỉnh sửa lần 2, và Chờ chủ tịch hội đồng Thông qua hay không. 
+•	❌ KHÔNG CHẤP THUẬN → Từ chối (kết thúc giai đoạn tại đây, không chuyển sang bước tiếp theo) 
+________________________________________
+Bước 6: Cấp Quyết định phê duyệt (3-5 ngày sau họp)
+Bước này cũng lập trình giống như là bước cấp quyết định của Hội đồng đạo đức 
+Người thực hiện: Viện trưởng (hoặc uỷ quyền)
+Văn bản:
+•	SCI-ACE-QĐ (Quyết định) - Tiếng Việt
+•	SCI-ACE-QĐ (Decision) - Tiếng Anh
+Thông báo: Email đến chủ nhiệm kèm Quyết định
+________________________________________
+GIAI ĐOẠN 2: KÝ HỢP ĐỒNG VÀ TRIỂN KHAI
+Bước 7: Ký hợp đồng thực hiện (7-10 ngày sau Quyết định)
+Thư ký upload Hợp đồng thực hiện nhiệm vụ khoa học 
+________________________________________
+Bước 8: Đăng ký đạo đức (nếu cần) (Song song với Bước 7-8)
+Điều kiện: Đề tài có thí nghiệm trên người/động vật
+Upload Quyết định phê duyệt của Hội đồng đạo đức 
+Lưu ý: KHÔNG được bắt đầu thí nghiệm trước khi có mã đạo đức
+________________________________________
+GIAI ĐOẠN 3: THỰC HIỆN VÀ BÁO CÁO
+Bước 9: Thực hiện đề tài (12-24 tháng)
+Trách nhiệm chủ nhiệm:
+•	Điều hành nhóm nghiên cứu
+•	Mua sắm thiết bị, vật tư
+•	Tiến hành thí nghiệm, thu thập dữ liệu
+•	Quản lý tài chính minh bạch
+•	Tuân thủ đạo đức nghiên cứu
+Sổ theo dõi: Lab notebook, sổ quỹ
+________________________________________
+Bước 10: Báo cáo định kỳ (Mỗi 6 tháng)
+Hình thức: Báo cáo tiến độ (SCI-ACE-07)
+Nội dung:
+•	Công việc đã thực hiện (so với kế hoạch)
+•	Kết quả đạt được
+•	Khó khăn, vướng mắc
+•	Kế hoạch 6 tháng tiếp theo
+•	Tình hình sử dụng kinh phí
+Nộp: Online hoặc trực tiếp Phòng KHCN
+Họp báo cáo: Trình bày trước Hội đồng tư vấn (15-20 phút)
+Tạm ứng đợt 2: Sau báo cáo giữa kỳ đạt yêu cầu
+________________________________________
+Bước 11: Điều chỉnh (nếu cần) (Trong quá trình thực hiện)
+Trường hợp:
+•	Thay đổi nhân sự chính
+•	Điều chỉnh kế hoạch
+•	Thay đổi dự toán (trong 10%)
+•	Gia hạn thời gian
+Quy trình:
+1.	Chủ nhiệm làm đơn giải trình (SCI-ACE-06)
+2.	Nộp Phòng KHCN
+3.	Hội đồng xem xét
+4.	Viện trưởng quyết định
+Văn bản: Quyết định điều chỉnh (nếu được chấp thuận)
+________________________________________
+GIAI ĐOẠN 4: NGHIỆM THU
+Bước 12: Nộp hồ sơ nghiệm thu (Trước deadline 1 tháng)
+Chủ nhiệm upload hồ sơ nghiệm thu
+Hồ sơ gồm:
+1.	Đơn đề nghị nghiệm thu
+2.	Báo cáo tổng kết 
+3.	Báo cáo tài chính quyết toán
+4.	Sản phẩm nghiên cứu: bài báo đã công bố hoặc đã accept; sáng chế hoặc giải pháp hữu ích, nếu là sản phẩm thì đính kém hình ảnh và mô tả sản phẩm ứng dụng
+5.	Tóm tắt tiếng Anh (2-3 trang)
+Kiểm tra: Thư ký kiểm tra tính đầy đủ (3-5 ngày)
+Sau khi kiểm tra hợp lệ thì thư kí nhấn nút Hợp lệ để chuyển giai đoạn, nếu không hợp lệ thì nhấn nút chỉnh sửa để chủ nhiệm đề tài nộp lại, hệ thống lúc này có email thông báo cho tất cả những người có liên quan. 
+________________________________________
+Bước 13: Phân công phản biện nghiệm thu (3-5 ngày)
+Bước phân công phản biện lập trình cũng giống như bước phân công phản biện ở trên
+________________________________________
+Bước 14: Đánh giá phản biện nghiệm thu (7-10 ngày)
+Bước này cũng lập trình giống như đánh giá phản biện như bên Hội đồng đạo đức trên động vật
+Phản biện đánh giá:
+•	Mức độ hoàn thành mục tiêu (40%)
+•	Chất lượng sản phẩm (30%)
+•	Tính ứng dụng (15%)
+•	Quản lý tài chính (15%)
+Kết luận:
+•	✅ ĐẠT - Đề nghị nghiệm thu
+•	⚠️ ĐẠT CÓ ĐIỀU KIỆN - Chỉnh sửa nhỏ
+•	❌ KHÔNG ĐẠT - Cần bổ sung hoặc gia hạn
+Nộp: Phiếu đánh giá + điểm số
+________________________________________
+Bước 15: Họp Hội đồng nghiệm thu (Theo lịch)
+Thành phần:
+•	Chủ tịch Hội đồng nghiệm thu 
+•	Ủy viên 
+•	Thư ký
+•	Phản biện nghiệm thu
+•	Chủ nhiệm + nhóm nghiên cứu
+Thư kí upload Biên bản Họp hội đồng nghiệm thu.
+Thư kí upload bản nhận xét chấm điểm của các thành viên Hội đồng.
+Thư kí nhấn nút Nghiệm thu Đạt hoặc không Đạt dựa vào kết quả cuối cùng trên biên bản nghiệm thu. 
+Sau đó nhấn nút Xong để chuyển giai đoạn. Nếu Đạt thì chuyển qua bước Quyết định nghiệm thu 
+________________________________________
+Bước 16: Quyết định nghiệm thu (5-7 ngày sau họp)
+Thư kí nhấn nút upload Quyết định nghiệm thu đã kí đóng dấu. 
+Thư kí nhấn nút Nghiệm thu để chuyển giai đoạn
+Hệ thống Thông báo: Email + văn bản chính thức
+Bước 17: Bàn giao sản phẩm, lưu trữ 
+Chủ nhiệm upload
+•	Báo cáo tổng kết (bản cuối)
+•	Sản phẩm nghiên cứu
+•	Dữ liệu, mẫu vật
+•	Tài liệu liên quan
+•	1 video giới thiệu tóm lược về công trình nghiên cứu 
+Lưu trữ: ≥10 năm
+
+Bước 18: 
+Thư kí upload Thanh lý hợp đồng thực hiện nhiệm vụ khoa học. 
+

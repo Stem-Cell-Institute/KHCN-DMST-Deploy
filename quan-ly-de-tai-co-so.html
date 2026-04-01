@@ -1,0 +1,1994 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý nhiệm vụ KHCN - Viện Tế bào gốc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .header .btn-add-task {
+            padding: 12px 24px;
+            font-size: 1rem;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4);
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .header .btn-add-task:hover {
+            background: #218838;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.5);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .header-greeting {
+            font-size: 15px;
+            font-weight: 500;
+            opacity: 0.95;
+            line-height: 1.35;
+            text-align: right;
+            max-width: min(340px, 42vw);
+        }
+
+        .breadcrumb {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .breadcrumb a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+        }
+
+        .menu-section {
+            padding: 20px;
+        }
+
+        .menu-title {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .menu-item {
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .menu-item:hover {
+            background: #f0f0f0;
+        }
+
+        .menu-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .menu-item .badge {
+            margin-left: auto;
+            background: #ff4757;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            color: #333;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        .btn-add-task {
+            padding: 14px 28px;
+            font-size: 1.1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+        }
+        .btn-add-task:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-success { background: #6bcf7f; color: white; }
+        .btn-warning { background: #ffd93d; color: #333; }
+        .btn-danger { background: #ff4757; color: white; }
+        .btn-info { background: #6bceff; color: #333; }
+        .btn-secondary { background: #94a3b8; color: white; }
+
+        tr.task-row-locked {
+            cursor: not-allowed;
+            opacity: 0.88;
+        }
+        tr.task-row-locked:hover {
+            background: inherit;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .stat-change.up { color: #6bcf7f; }
+        .stat-change.down { color: #ff4757; }
+
+        .filter-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f8f9fa;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            font-size: 14px;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+            background: #e0e0e0;
+            color: #424242;
+        }
+
+        .status-planning { background: #e3f2fd; color: #1976d2; }
+        .status-approved { background: #e8f5e9; color: #388e3c; }
+        .status-ongoing { background: #fff3e0; color: #f57c00; }
+        .status-review { background: #fce4ec; color: #c2185b; }
+        .status-completed { background: #f3e5f5; color: #7b1fa2; }
+        .status-overdue { background: #ffebee; color: #c62828; }
+        .status-cho_vien_xet_chon, .status-cho_bo_tham_dinh, .status-cho_ngoai_xet_chon { background: #e8eaf6; color: #3949ab; }
+        .status-cho_phe_duyet_ngoai, .status-cho_ky_hop_dong { background: #fff8e1; color: #f9a825; }
+        .status-da_phe_duyet { background: #e8f5e9; color: #388e3c; }
+        .status-dang_thuc_hien { background: #fff3e0; color: #f57c00; }
+        .status-xin_dieu_chinh { background: #ffecb3; color: #ff8f00; }
+        .status-cho_nghiem_thu_co_so, .status-nghiem_thu_trung_gian { background: #fce4ec; color: #c2185b; }
+        .status-cho_nghiem_thu_bo_nn, .status-nghiem_thu_tong_ket { background: #f3e5f5; color: #7b1fa2; }
+        .status-hoan_thien_sau_nghiem_thu, .status-thanh_ly_hop_dong { background: #e0f2f1; color: #00695c; }
+        .status-hoan_thanh { background: #f3e5f5; color: #7b1fa2; }
+        .status-khong_duoc_phe_duyet { background: #ffebee; color: #c62828; }
+        .status-cho_ct_hd_xet_duyet { background: #e8eaf6; color: #3949ab; }
+        .status-buoc4a, .status-buoc4b { background: #e3f2fd; color: #1976d2; }
+        .status-dung_khong_dat_dot { background: #ffebee; color: #c62828; }
+
+        .doc-section { padding: 5px 0; }
+        .doc-section h4 { margin-bottom: 8px; color: #333; }
+        .ho-so-list { margin: 15px 0; }
+        .ho-so-table { width: 100%; margin-top: 10px; font-size: 14px; }
+        .ho-so-form { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; }
+        .ho-so-form .form-group { margin-bottom: 12px; }
+
+        .level-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .level-national { background: #fff9c4; color: #f57f17; }
+        .level-ministry { background: #e1bee7; color: #6a1b9a; }
+        .level-university { background: #b3e5fc; color: #01579b; }
+        .level-institute { background: #c8e6c9; color: #2e7d32; }
+
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .form-group-full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .tab-container {
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e0e0e0;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            padding-left: 20px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #667eea;
+        }
+
+        .timeline-date {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="access-denied" style="display:none;max-width:760px;margin:48px auto;padding:0 16px;">
+        <div style="background:#fff3f3;border:1px solid #f5c2c7;color:#842029;border-radius:10px;padding:16px 18px;">
+            <strong>Không có quyền truy cập</strong>
+            <p style="margin:8px 0 0;">Module này chỉ dành cho người dùng trong viện (<code>@sci.edu.vn</code>).</p>
+            <p style="margin:10px 0 0;"><a href="dang-nhap.html?returnUrl=quan-ly-de-tai-co-so.html">Đăng nhập</a> hoặc <a href="index.html">về Trang chủ</a>.</p>
+        </div>
+    </div>
+    <div class="header">
+        <div>
+            <h1>Quản lý nhiệm vụ KHCN</h1>
+            <div class="breadcrumb">
+                <a href="index.html">Trang chủ</a> / Nhiệm vụ KHCN
+            </div>
+        </div>
+        <div class="header-actions">
+            <span id="header-greeting" class="header-greeting" aria-live="polite"></span>
+            <button type="button" class="btn btn-add-task" onclick="openAddTaskModal()">
+                Đăng ký đề tài mới
+            </button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="menu-section">
+                <div class="menu-title">Quản lý đề tài</div>
+                <div class="menu-item active" onclick="showSection('all-tasks')">
+                    <span>Tất cả đề tài</span>
+                    <span class="badge">156</span>
+                </div>
+                <a href="ct-hd-xet-duyet-de-tai.html" class="menu-item" style="text-decoration:none;color:inherit;">
+                    <span>CT HĐ xét duyệt</span>
+                </a>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Theo cấp</div>
+                <div class="menu-item" onclick="filterByLevel('national')">
+                    <span>Cấp Nhà nước</span>
+                    <span class="badge">8</span>
+                </div>
+                <div class="menu-item" onclick="filterByLevel('ministry')">
+                    <span>Cấp Bộ</span>
+                    <span class="badge">23</span>
+                </div>
+                <div class="menu-item" onclick="filterByLevel('university')">
+                    <span>Cấp ĐHQG</span>
+                    <span class="badge">34</span>
+                </div>
+                <div class="menu-item" onclick="filterByLevel('institute')">
+                    <span>Cấp Viện</span>
+                    <span class="badge">91</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Theo trạng thái</div>
+                <div class="menu-item" onclick="filterByStatus('planning')">
+                    <span>Lập kế hoạch</span>
+                    <span class="badge">0</span>
+                </div>
+                <div class="menu-item" onclick="filterByStatus('cho_vien_xet_chon,cho_ct_hd_xet_duyet,cho_bo_tham_dinh,cho_ngoai_xet_chon,cho_phe_duyet_ngoai')">
+                    <span>Chờ xét duyệt</span>
+                    <span class="badge">0</span>
+                </div>
+                <div class="menu-item" onclick="filterByStatus('da_phe_duyet,cho_ky_hop_dong,approved')">
+                    <span>Đã phê duyệt / Chờ ký HĐ</span>
+                    <span class="badge">0</span>
+                </div>
+                <div class="menu-item" onclick="filterByStatus('dang_thuc_hien,ongoing,xin_dieu_chinh')">
+                    <span>Đang thực hiện</span>
+                    <span class="badge">0</span>
+                </div>
+                <div class="menu-item" onclick="filterByStatus('cho_nghiem_thu_co_so,nghiem_thu_trung_gian,cho_nghiem_thu_bo_nn,nghiem_thu_tong_ket,hoan_thien_sau_nghiem_thu,review')">
+                    <span>Nghiệm thu</span>
+                    <span class="badge">0</span>
+                </div>
+                <div class="menu-item" onclick="filterByStatus('thanh_ly_hop_dong,hoan_thanh,completed')">
+                    <span>Hoàn thành</span>
+                    <span class="badge">0</span>
+                </div>
+                <div class="menu-item" onclick="filterByStatus('overdue')">
+                    <span>Quá hạn</span>
+                    <span class="badge">0</span>
+                </div>
+                <div class="menu-item" onclick="filterByStatus('khong_duoc_phe_duyet')">
+                    <span>Không được phê duyệt</span>
+                    <span class="badge">0</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Báo cáo</div>
+                <div class="menu-item" onclick="showSection('reports')">
+                    <span>Thống kê & Báo cáo</span>
+                </div>
+                <div class="menu-item" onclick="showSection('calendar')">
+                    <span>Lịch nghiệm thu</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="overview-section" class="section">
+                <div class="page-header">
+                    <h2 class="page-title">Tổng quan Nhiệm vụ KHCN</h2>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-label">Tổng số đề tài</div>
+                        <div class="stat-value">—</div>
+                        <div class="stat-change">Từ tất cả nguồn (Cấp Viện + Import)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Đang thực hiện</div>
+                        <div class="stat-value">—</div>
+                        <div class="stat-change">Trạng thái đang thực hiện</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Tổng kinh phí</div>
+                        <div class="stat-value">—</div>
+                        <div class="stat-change">Tổng từ tất cả đề tài</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Quá hạn</div>
+                        <div class="stat-value">—</div>
+                        <div class="stat-change">Đề tài quá hạn chưa hoàn thành</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Tỷ lệ hoàn thành đúng hạn</div>
+                        <div class="stat-value">—</div>
+                        <div class="stat-change">% đề tài hoàn thành / tổng đã kết thúc</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Đang nghiệm thu</div>
+                        <div class="stat-value">—</div>
+                        <div class="stat-change">Đề tài trong giai đoạn nghiệm thu</div>
+                    </div>
+                </div>
+
+                <div id="export-import-section" class="filter-bar" style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;">📥 Export / Import số liệu</h3>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">Tải mẫu CSV để điền số liệu, hoặc export số liệu hiện tại. <strong>Export Excel (.xlsx)</strong> hiển thị đúng tiếng Việt. Import file <strong>CSV hoặc Excel (.xlsx)</strong> để cập nhật dashboard.</p>
+                    <p style="font-size: 0.85rem; color: #555; margin-bottom: 12px;"><strong>Cách nhập hàng loạt:</strong> Trong file mẫu, <em>mỗi dòng</em> = 1 nhiệm vụ (mã, tên, chủ nhiệm, cấp, trạng thái, ngày bắt đầu/kết thúc, tiến độ %, kinh phí). Dòng 1 là tiêu đề cột, dòng 2 là ghi chú (bỏ qua). Từ dòng 3 trở đi: điền thêm nhiều dòng, mỗi dòng một nhiệm vụ. Khi import, hệ thống đọc từng dòng, tách theo cột; nếu <strong>mã đề tài</strong> đã tồn tại thì cập nhật, chưa có thì thêm mới.</p>
+                    <div class="filter-row" style="align-items: center; flex-wrap: wrap;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <a href="#" id="btn-export-template" class="btn btn-info">📄 Tải mẫu (Export template)</a>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <button type="button" class="btn btn-success" id="btn-export-excel">📊 Export Excel (.xlsx)</button>
+                            <button type="button" class="btn btn-secondary" id="btn-export-csv" style="margin-left: 8px;">Export CSV</button>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; gap: 8px;">
+                            <input type="file" id="importFile" accept=".csv,.xlsx" style="max-width: 260px;">
+                            <button type="button" class="btn btn-warning" id="btn-import">Import CSV / Excel</button>
+                        </div>
+                        <span id="import-msg" style="font-size: 0.9rem; color: #0a0;"></span>
+                    </div>
+                    <div id="templates-section" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
+                        <h4 style="margin-bottom: 10px;">📋 Mẫu hồ sơ đăng ký đề tài ngoài Viện</h4>
+                        <p style="font-size: 0.85rem; color: #555; margin-bottom: 12px;">Admin upload mẫu để user tải về khi đăng ký. User không thấy nút upload này.</p>
+                        <div class="filter-row" style="align-items: flex-end; flex-wrap: wrap; gap: 16px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.85rem;">Mẫu Thuyết minh chi tiết</label>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="file" id="template-thuyet-minh" accept=".pdf,.doc,.docx" style="max-width: 220px;">
+                                    <button type="button" class="btn btn-info" id="btn-upload-template-thuyet-minh" style="font-size: 0.9rem;">Upload mẫu</button>
+                                </div>
+                                <span id="template-thuyet-minh-msg" style="font-size: 0.8rem; color: #0a0;"></span>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.85rem;">Mẫu Văn bản xin phép Viện trưởng</label>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="file" id="template-van-ban-xin-phep" accept=".pdf,.doc,.docx" style="max-width: 220px;">
+                                    <button type="button" class="btn btn-info" id="btn-upload-template-van-ban" style="font-size: 0.9rem;">Upload mẫu</button>
+                                </div>
+                                <span id="template-van-ban-msg" style="font-size: 0.8rem; color: #0a0;"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-bar">
+                    <h3 style="margin-bottom: 15px;">Bộ lọc nhanh</h3>
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label>Tìm kiếm</label>
+                            <input type="text" placeholder="Tên đề tài, mã số, chủ nhiệm..." id="searchInput">
+                        </div>
+                        <div class="form-group">
+                            <label>Cấp đề tài</label>
+                            <select id="levelFilter">
+                                <option value="">Tất cả</option>
+                                <option value="national">Cấp Nhà nước</option>
+                                <option value="ministry">Cấp Bộ</option>
+                                <option value="university">Cấp ĐHQG</option>
+                                <option value="institute">Cấp Viện</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Trạng thái</label>
+                            <select id="statusFilter">
+                                <option value="">Tất cả</option>
+                                <optgroup label="Giai đoạn 1 — Trước hợp đồng">
+                                    <option value="planning">Lập kế hoạch</option>
+                                    <option value="cho_vien_xet_chon">Chờ HĐ Viện xét chọn</option>
+                                    <option value="cho_bo_tham_dinh">Chờ Bộ thẩm định</option>
+                                    <option value="cho_ngoai_xet_chon">Chờ cơ quan ngoài xét chọn</option>
+                                    <option value="cho_phe_duyet_ngoai">Chờ phê duyệt ngoài</option>
+                                    <option value="da_phe_duyet">Đã phê duyệt</option>
+                                    <option value="cho_ky_hop_dong">Chờ ký hợp đồng</option>
+                                    <option value="khong_duoc_phe_duyet">Không được phê duyệt</option>
+                                </optgroup>
+                                <optgroup label="Giai đoạn 2 — Thực hiện & nghiệm thu">
+                                    <option value="dang_thuc_hien">Đang thực hiện</option>
+                                    <option value="xin_dieu_chinh">Xin điều chỉnh nội dung</option>
+                                    <option value="cho_nghiem_thu_co_so">Chờ nghiệm thu cơ sở</option>
+                                    <option value="nghiem_thu_trung_gian">Nghiệm thu cơ sở (Viện)</option>
+                                    <option value="cho_nghiem_thu_bo_nn">Chờ nghiệm thu cấp Bộ/NN</option>
+                                    <option value="nghiem_thu_tong_ket">Nghiệm thu cấp Bộ/NN</option>
+                                    <option value="hoan_thien_sau_nghiem_thu">Hoàn thiện sau nghiệm thu</option>
+                                    <option value="thanh_ly_hop_dong">Thanh lý hợp đồng</option>
+                                    <option value="hoan_thanh">Hoàn thành</option>
+                                </optgroup>
+                                <optgroup label="Nhóm (sidebar)">
+                                    <option value="cho_vien_xet_chon,cho_bo_tham_dinh,cho_ngoai_xet_chon,cho_phe_duyet_ngoai">Chờ xét duyệt</option>
+                                    <option value="da_phe_duyet,cho_ky_hop_dong,approved">Đã phê duyệt / Chờ ký HĐ</option>
+                                    <option value="dang_thuc_hien,ongoing,xin_dieu_chinh">Đang thực hiện</option>
+                                    <option value="cho_nghiem_thu_co_so,nghiem_thu_trung_gian,cho_nghiem_thu_bo_nn,nghiem_thu_tong_ket,hoan_thien_sau_nghiem_thu,review">Nghiệm thu</option>
+                                    <option value="thanh_ly_hop_dong,hoan_thanh,completed">Hoàn thành</option>
+                                </optgroup>
+                                <optgroup label="Khác">
+                                    <option value="overdue">Quá hạn</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Năm</label>
+                            <select id="yearFilter">
+                                <option value="">Tất cả</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="tasksTable">
+                        <thead>
+                            <tr>
+                                <th>Mã đề tài</th>
+                                <th>Tên đề tài</th>
+                                <th>Chủ nhiệm</th>
+                                <th>Cấp</th>
+                                <th>Thời gian</th>
+                                <th>Tiến độ</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasksTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Đăng ký đề tài mới -->
+    <div id="addTaskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Đăng ký Nhiệm vụ KHCN mới</h2>
+                <button class="close-btn" onclick="closeAddTaskModal()">&times;</button>
+            </div>
+
+            <!-- Bước 0: Chọn cấp đề tài -->
+            <div id="addTaskStep0" style="padding: 1.5rem;">
+                <p style="margin-bottom: 1.25rem; font-weight: 600; color: #333;">Chọn cấp đề tài:</p>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer;">
+                        <input type="radio" name="addTaskLevel" value="institute">
+                        <span><strong>Cấp Viện</strong> — Form nội bộ (nộp tại trang Đề tài cấp Viện)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer;">
+                        <input type="radio" name="addTaskLevel" value="ministry">
+                        <span><strong>Cấp Bộ</strong> — Cơ quan phê duyệt bên ngoài (Bộ KH&CN, Bộ chủ quản)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer;">
+                        <input type="radio" name="addTaskLevel" value="university">
+                        <span><strong>Cấp ĐHQG</strong> — ĐHQG-HCM phê duyệt</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer;">
+                        <input type="radio" name="addTaskLevel" value="national">
+                        <span><strong>Cấp Nhà nước</strong> — Bộ KH&CN / Bộ GD&ĐT phê duyệt</span>
+                    </label>
+                </div>
+                <div style="margin-top: 1.5rem; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn btn-warning" onclick="closeAddTaskModal()">Hủy</button>
+                    <button class="btn btn-primary" id="btnAddTaskStep0Next">Tiếp tục</button>
+                </div>
+            </div>
+
+            <!-- Form Luồng B (Cấp Bộ/ĐHQG/Nhà nước) - ẩn ban đầu -->
+            <div id="addTaskFormLuongB" style="display: none;">
+            <div class="tab-container">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab(event, 'basic-info')">Thông tin cơ bản</button>
+                    <button class="tab" onclick="switchTab(event, 'team-info')">Nhóm thực hiện</button>
+                    <button class="tab" onclick="switchTab(event, 'budget-info')">Kinh phí</button>
+                    <button class="tab" onclick="switchTab(event, 'timeline-info')">Tiến độ</button>
+                    <button class="tab" onclick="switchTab(event, 'legal-info')">Hồ sơ pháp lý</button>
+                </div>
+                <div id="basic-info" class="tab-content active">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Mã đề tài</label>
+                            <input type="text" id="add-code" placeholder="Để trống — cơ quan ngoài cấp sau">
+                        </div>
+                        <div class="form-group">
+                            <label>Cơ quan quản lý</label>
+                            <input type="text" id="add-managing-agency" placeholder="VD: Bộ KH&CN, ĐHQG-HCM">
+                        </div>
+                        <div class="form-group">
+                            <label>Hợp đồng số</label>
+                            <input type="text" id="add-contract-number" placeholder="Số hợp đồng (nếu có)">
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Tên đề tài *</label>
+                            <input type="text" id="add-title" placeholder="Nhập tên đầy đủ của đề tài KHCN" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Loại đề tài</label>
+                            <select id="add-mission-type">
+                                <option value="research">Đề tài nghiên cứu</option>
+                                <option value="project">Dự án</option>
+                                <option value="program">Chương trình</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Lĩnh vực</label>
+                            <select id="add-field">
+                                <option value="stem-cell">Tế bào gốc</option>
+                                <option value="biotechnology">Công nghệ sinh học</option>
+                                <option value="medicine">Y sinh học</option>
+                                <option value="other">Khác</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Mục tiêu nghiên cứu</label>
+                            <textarea id="add-objectives" placeholder="Mô tả mục tiêu và ý nghĩa của đề tài" rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Ngày bắt đầu</label>
+                            <input type="date" id="add-start-date">
+                        </div>
+                        <div class="form-group">
+                            <label>Ngày kết thúc</label>
+                            <input type="date" id="add-end-date">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="team-info" class="tab-content">
+                    <div class="form-grid">
+                        <div class="form-group form-group-full">
+                            <label>Chủ nhiệm *</label>
+                            <select required>
+                                <option value="">Chọn chủ nhiệm...</option>
+                                <option value="1">TS. Nguyễn Văn A</option>
+                                <option value="2">PGS.TS. Trần Thị B</option>
+                                <option value="3">TS. Lê Văn C</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Số lượng thành viên</label>
+                            <input type="number" min="2" placeholder="Nhập số thành viên">
+                        </div>
+                        <div class="form-group">
+                            <label>Số nghiên cứu sinh</label>
+                            <input type="number" min="0" placeholder="Số NCS tham gia">
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Danh sách thành viên</label>
+                            <textarea placeholder="Nhập danh sách thành viên (mỗi người một dòng)"></textarea>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Đơn vị phối hợp</label>
+                            <textarea id="add-cooperating-units" placeholder="Các đơn vị trong/ngoài viện tham gia phối hợp (nếu có đơn vị ngoài SCI)"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="budget-info" class="tab-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Nguồn kinh phí</label>
+                            <select id="add-funding-source">
+                                <option value="">Chọn nguồn...</option>
+                                <option value="nsnn">Ngân sách Nhà nước</option>
+                                <option value="dhqg">Ngân sách ĐHQG</option>
+                                <option value="bo">Ngân sách Bộ</option>
+                                <option value="cooperation">Hợp tác</option>
+                                <option value="other">Nguồn khác</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tổng kinh phí / Kinh phí được duyệt (VNĐ)</label>
+                            <input type="number" id="add-budget" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Kinh phí đã giải ngân (VNĐ)</label>
+                            <input type="number" id="add-disbursed-budget" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Năm giải ngân</label>
+                            <input type="text" id="add-disbursement-year" placeholder="VD: 2025">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="timeline-info" class="tab-content">
+                    <div class="form-group">
+                        <label>Sản phẩm dự kiến</label>
+                        <textarea placeholder="Liệt kê các sản phẩm nghiên cứu dự kiến (bài báo, sáng chế, v.v.)" rows="4"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Kế hoạch thực hiện</label>
+                        <textarea placeholder="Mô tả các giai đoạn thực hiện và mốc thời gian chính" rows="6"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Rủi ro và giải pháp</label>
+                        <textarea placeholder="Các rủi ro dự kiến và giải pháp phòng ngừa" rows="4"></textarea>
+                    </div>
+                </div>
+
+                <div id="legal-info" class="tab-content">
+                    <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">Upload hồ sơ pháp lý (có thể bổ sung sau khi có QĐ phê duyệt):</p>
+                    <div class="form-grid">
+                        <div class="form-group form-group-full">
+                            <label>Quyết định phê duyệt</label>
+                            <input type="file" accept=".pdf,.doc,.docx" id="add-file-decision">
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Hợp đồng nghiên cứu</label>
+                            <input type="file" accept=".pdf,.doc,.docx" id="add-file-contract">
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Biên bản nghiệm thu (trung gian / tổng kết)</label>
+                            <input type="file" accept=".pdf,.doc,.docx" id="add-file-acceptance" multiple>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-warning" onclick="closeAddTaskModal()">Hủy</button>
+                <button class="btn btn-success" id="btnSubmitLuongB">Đăng ký</button>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chi tiết đề tài -->
+    <div id="taskDetailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="taskDetailTitle">Chi tiết Đề tài</h2>
+                <button class="close-btn" onclick="closeTaskDetailModal()">&times;</button>
+            </div>
+
+            <div class="tab-container">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab(event, 'detail-overview')">Tổng quan</button>
+                    <button class="tab" onclick="switchTab(event, 'detail-tien-trinh')">📋 Tiến trình</button>
+                    <button class="tab" onclick="switchTab(event, 'detail-finance')">Tài chính</button>
+                    <button class="tab" onclick="switchTab(event, 'detail-outputs')">Sản phẩm</button>
+                    <button class="tab" onclick="switchTab(event, 'detail-documents')">Hồ sơ</button>
+                </div>
+
+                <div id="detail-overview" class="tab-content active">
+                    <div id="taskOverviewContent"></div>
+                </div>
+
+                <div id="detail-tien-trinh" class="tab-content">
+                    <div id="taskTienTrinhContent"></div>
+                </div>
+
+                <div id="detail-finance" class="tab-content">
+                    <div id="financeContent"></div>
+                </div>
+
+                <div id="detail-outputs" class="tab-content">
+                    <div id="outputsContent"></div>
+                </div>
+
+                <div id="detail-documents" class="tab-content">
+                    <div id="documentsContent"></div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-primary" id="btn-edit-task" onclick="editTask()">✏️ Chỉnh sửa</button>
+                <button type="button" class="btn btn-success" id="btn-mission-update-progress" onclick="updateProgress()">📊 Cập nhật tiến độ</button>
+                <button type="button" class="btn btn-info" id="btn-mission-export-report" onclick="exportTask()">📥 Xuất báo cáo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chỉnh sửa đề tài -->
+    <div id="editTaskModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Chỉnh sửa đề tài</h2>
+                <button class="close-btn" onclick="closeEditTaskModal()">&times;</button>
+            </div>
+            <div id="editTaskMsg" style="display:none;padding:10px;margin-bottom:15px;border-radius:8px;"></div>
+            <div id="editTaskCapVienNote" style="display:none;padding:10px;margin-bottom:15px;background:#fff3cd;border-radius:8px;font-size:0.9rem;">Lưu ý: Đề tài này được đồng bộ từ Đề tài cấp Viện. Thông tin có thể bị ghi đè khi Admin chạy «Đồng bộ từ đề tài cấp Viện». Để sửa nội dung gốc, vui lòng vào trang Theo dõi đề tài cấp Viện.</div>
+            <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+                <div class="form-group">
+                    <label>Mã đề tài *</label>
+                    <input type="text" id="edit-code" required>
+                </div>
+                <div class="form-group">
+                    <label>Cấp đề tài *</label>
+                    <select id="edit-level">
+                        <option value="national">Cấp Nhà nước</option>
+                        <option value="ministry">Cấp Bộ</option>
+                        <option value="university">Cấp ĐHQG</option>
+                        <option value="institute">Cấp Viện</option>
+                    </select>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label>Tên đề tài *</label>
+                    <input type="text" id="edit-title" required>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label>Chủ nhiệm</label>
+                    <input type="text" id="edit-principal" placeholder="VD: TS. Nguyễn Văn A">
+                </div>
+                <div class="form-group">
+                    <label>Học vị CN</label>
+                    <input type="text" id="edit-principal-hoc-vi" placeholder="VD: TS., PGS.TS.">
+                </div>
+                <div class="form-group">
+                    <label>Đơn vị CN</label>
+                    <input type="text" id="edit-principal-don-vi" placeholder="VD: Phòng Tế bào gốc">
+                </div>
+                <div class="form-group">
+                    <label>ORCID CN</label>
+                    <input type="text" id="edit-principal-orcid" placeholder="VD: 0000-0001-2345-6789">
+                </div>
+                <div class="form-group">
+                    <label>Trạng thái *</label>
+                    <select id="edit-status">
+                        <optgroup label="Giai đoạn 1 — Trước hợp đồng">
+                            <option value="planning">Lập kế hoạch</option>
+                            <option value="cho_vien_xet_chon">Chờ HĐ Viện xét chọn</option>
+                            <option value="cho_ct_hd_xet_duyet">Chờ CT HĐ KHCN xét duyệt</option>
+                            <option value="buoc4a">Bước 4A (Nhánh A)</option>
+                            <option value="buoc4b">Bước 4B (Nhánh B)</option>
+                            <option value="cho_bo_tham_dinh">Chờ Bộ thẩm định</option>
+                            <option value="cho_ngoai_xet_chon">Chờ cơ quan ngoài xét chọn</option>
+                            <option value="cho_phe_duyet_ngoai">Chờ phê duyệt ngoài</option>
+                            <option value="da_phe_duyet">Đã phê duyệt</option>
+                            <option value="cho_ky_hop_dong">Chờ ký hợp đồng</option>
+                            <option value="khong_duoc_phe_duyet">Không được phê duyệt</option>
+                        </optgroup>
+                        <optgroup label="Giai đoạn 2 — Thực hiện & nghiệm thu">
+                            <option value="dang_thuc_hien">Đang thực hiện</option>
+                            <option value="xin_dieu_chinh">Xin điều chỉnh nội dung</option>
+                            <option value="cho_nghiem_thu_co_so">Chờ nghiệm thu cơ sở</option>
+                            <option value="nghiem_thu_trung_gian">Nghiệm thu cơ sở (Viện)</option>
+                            <option value="cho_nghiem_thu_bo_nn">Chờ nghiệm thu cấp Bộ/NN</option>
+                            <option value="nghiem_thu_tong_ket">Nghiệm thu cấp Bộ/NN</option>
+                            <option value="hoan_thien_sau_nghiem_thu">Hoàn thiện sau nghiệm thu</option>
+                            <option value="thanh_ly_hop_dong">Thanh lý hợp đồng</option>
+                            <option value="hoan_thanh">Hoàn thành</option>
+                        </optgroup>
+                        <optgroup label="Khác">
+                            <option value="approved">Đã phê duyệt</option>
+                            <option value="ongoing">Đang thực hiện</option>
+                            <option value="review">Nghiệm thu</option>
+                            <option value="completed">Hoàn thành</option>
+                            <option value="overdue">Quá hạn</option>
+                            <option value="dung_khong_dat_dot">Dừng — không đạt đợt này</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tiến độ (%)</label>
+                    <input type="number" id="edit-progress" min="0" max="100" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Ngày bắt đầu</label>
+                    <input type="date" id="edit-start-date">
+                </div>
+                <div class="form-group">
+                    <label>Ngày kết thúc</label>
+                    <input type="date" id="edit-end-date">
+                </div>
+                <div class="form-group">
+                    <label>Tổng kinh phí (VNĐ)</label>
+                    <input type="number" id="edit-budget" min="0" placeholder="0">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-warning" onclick="closeEditTaskModal()">Hủy</button>
+                <button class="btn btn-success" id="btn-save-edit-task">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/system-access.js"></script>
+    <script>
+        const apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
+        const INSTITUTE_DOMAIN = '@sci.edu.vn';
+        let tasks = [];
+        let currentTask = null;
+        let isAdmin = false;
+        let currentUser = {};
+        let stats = { total: 0, byLevel: {}, byStatus: {}, totalBudget: 0, overdue: 0, completionRate: 0, acceptanceThisMonth: 0, totalOngoing: 0 };
+
+        function enforceInstituteAccess() {
+            const token = localStorage.getItem('token');
+            let user = {};
+            try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (_) { user = {}; }
+            const email = String((user && user.email) || '').toLowerCase().trim();
+            const allowed = Boolean(token) && (typeof hasInstituteModuleAccess === 'function' ? hasInstituteModuleAccess(user) : email.endsWith(INSTITUTE_DOMAIN));
+            if (allowed) return true;
+
+            const denied = document.getElementById('access-denied');
+            if (denied) denied.style.display = 'block';
+            document.querySelectorAll('.header, .main-container').forEach(function(el) {
+                el.style.display = 'none';
+            });
+            return false;
+        }
+
+        function normMissionPrincipalNameClient(s) {
+            let t = String(s || '').trim();
+            let prev;
+            do {
+                prev = t;
+                t = t.replace(/^(PGS\.\s*TS\.|PGS\.\s*TS|PGS\s+TS\.|PGS\s+TS|GS\.\s*TS\.|GS\.\s*TS|GS\s+TS\.|GS\s+TS|TSCKH\.|TS\.|TS\s|ThS\.|ThS\s|BSCKII\.|BSCKI\.|BS\.|CN\.|DR\.|Dr\.)\s+/i, '').trim();
+            } while (t !== prev);
+            return t.toLowerCase().replace(/\s+/g, ' ').trim();
+        }
+
+        function missionPrincipalMatchesLoggedInUser(task) {
+            if (!task) return false;
+            const u = currentUser || {};
+            const pRaw = (task.leader || '').trim();
+            if (!pRaw || pRaw === '—') return false;
+            const email = (u.email || '').trim().toLowerCase();
+            if (email && pRaw.toLowerCase() === email) return true;
+            const fn = normMissionPrincipalNameClient(u.fullname || '');
+            const pn = normMissionPrincipalNameClient(pRaw);
+            if (fn.length >= 2 && pn === fn) return true;
+            if (fn.length >= 3 && pn.length >= 3 && (pn.includes(fn) || fn.includes(pn))) return true;
+            return false;
+        }
+
+        function canOpenMissionDetailModal(task) {
+            if (isAdmin) return true;
+            return missionPrincipalMatchesLoggedInUser(task);
+        }
+
+        function setMissionDetailFooterVisibility(task) {
+            const canAct = task && (isAdmin || missionPrincipalMatchesLoggedInUser(task));
+            var bProg = document.getElementById('btn-mission-update-progress');
+            var bExp = document.getElementById('btn-mission-export-report');
+            if (bProg) bProg.style.display = canAct ? '' : 'none';
+            if (bExp) bExp.style.display = canAct ? '' : 'none';
+        }
+
+        function updateHeaderGreeting() {
+            var el = document.getElementById('header-greeting');
+            if (!el) return;
+            var token = localStorage.getItem('token');
+            if (!token) {
+                el.textContent = 'Xin chào! Vui lòng đăng nhập để đồng bộ quyền truy cập.';
+                return;
+            }
+            // Ưu tiên fullname từ localStorage (được lưu khi đăng nhập)
+            var name = (currentUser && String(currentUser.fullname || '').trim()) || '';
+            var email = (currentUser && String(currentUser.email || '').trim()) || '';
+            if (name) {
+                el.textContent = 'Xin chào, ' + name + '!';
+                return;
+            }
+            // Nếu localStorage chưa có fullname (hoặc token cũ từ session khác),
+            // gọi /api/me để lấy thông tin đầy đủ từ DB rồi cập nhật lại
+            fetch(apiBase + '/api/me', { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(data) {
+                    if (data && data.fullname && data.fullname.trim()) {
+                        currentUser = data;
+                        localStorage.setItem('user', JSON.stringify(data));
+                        var gEl = document.getElementById('header-greeting');
+                        if (gEl) gEl.textContent = 'Xin chào, ' + data.fullname.trim() + '!';
+                    } else if (data && data.email) {
+                        var gEl2 = document.getElementById('header-greeting');
+                        if (gEl2) gEl2.textContent = 'Xin chào, ' + data.email.trim() + '!';
+                    } else {
+                        var gEl3 = document.getElementById('header-greeting');
+                        if (gEl3) gEl3.textContent = 'Xin chào!';
+                    }
+                })
+                .catch(function() {
+                    var gEl4 = document.getElementById('header-greeting');
+                    if (gEl4) gEl4.textContent = (email ? 'Xin chào, ' + email + '!' : 'Xin chào!');
+                });
+        }
+
+        function loadStats() {
+            fetch(apiBase + '/api/missions/stats').then(r => r.json()).then(data => {
+                stats = data;
+                document.querySelectorAll('.stat-value').forEach((el, i) => {
+                    const parent = el.closest('.stat-box');
+                    if (!parent) return;
+                    const label = (parent.querySelector('.stat-label') || {}).textContent || '';
+                    if (label.includes('Tổng số')) el.textContent = data.total || 0;
+                    else if (label.includes('Đang thực hiện')) el.textContent = data.totalOngoing != null ? data.totalOngoing : (data.byStatus && data.byStatus.ongoing) || 0;
+                    else if (label.includes('Tổng kinh phí')) el.textContent = formatBudgetShort(data.totalBudget || 0);
+                    else if (label.includes('Quá hạn')) el.textContent = data.overdue != null ? data.overdue : 0;
+                    else if (label.includes('Tỷ lệ hoàn thành')) el.textContent = (data.completionRate != null ? data.completionRate : 0) + '%';
+                    else if (label.includes('Nghiệm thu') || label.includes('Đang nghiệm thu')) el.textContent = data.acceptanceThisMonth != null ? data.acceptanceThisMonth : 0;
+                });
+                const badges = document.querySelectorAll('.sidebar .menu-item .badge');
+                const byLevel = data.byLevel || {};
+                const byStatus = data.byStatus || {};
+                document.querySelectorAll('.menu-item').forEach((item, idx) => {
+                    const badge = item.querySelector('.badge');
+                    if (!badge) return;
+                    const text = (item.textContent || '').trim();
+                    if (text.includes('Tất cả đề tài')) badge.textContent = data.total || 0;
+                    else if (text.includes('Cấp Nhà nước')) badge.textContent = byLevel.national || 0;
+                    else if (text.includes('Cấp Bộ')) badge.textContent = byLevel.ministry || 0;
+                    else if (text.includes('Cấp ĐHQG')) badge.textContent = byLevel.university || 0;
+                    else if (text.includes('Cấp Viện')) badge.textContent = byLevel.institute || 0;
+                    else if (text.includes('Lập kế hoạch')) badge.textContent = byStatus.planning || 0;
+                    else if (text.includes('Chờ xét duyệt')) badge.textContent = (byStatus.cho_vien_xet_chon || 0) + (byStatus.cho_bo_tham_dinh || 0) + (byStatus.cho_ngoai_xet_chon || 0) + (byStatus.cho_phe_duyet_ngoai || 0);
+                    else if (text.includes('Đã phê duyệt') || text.includes('Chờ ký HĐ')) badge.textContent = (byStatus.da_phe_duyet || 0) + (byStatus.cho_ky_hop_dong || 0) + (byStatus.approved || 0);
+                    else if (text.includes('Đang thực hiện')) badge.textContent = (byStatus.dang_thuc_hien || 0) + (byStatus.ongoing || 0) + (byStatus.xin_dieu_chinh || 0);
+                    else if (text.includes('Nghiệm thu')) badge.textContent = (byStatus.cho_nghiem_thu_co_so || 0) + (byStatus.nghiem_thu_trung_gian || 0) + (byStatus.cho_nghiem_thu_bo_nn || 0) + (byStatus.nghiem_thu_tong_ket || 0) + (byStatus.hoan_thien_sau_nghiem_thu || 0) + (byStatus.review || 0);
+                    else if (text.includes('Hoàn thành')) badge.textContent = (byStatus.thanh_ly_hop_dong || 0) + (byStatus.hoan_thanh || 0) + (byStatus.completed || 0);
+                    else if (text.includes('Quá hạn')) badge.textContent = byStatus.overdue != null ? byStatus.overdue : (data.overdue || 0);
+                    else if (text.includes('Không được phê duyệt')) badge.textContent = byStatus.khong_duoc_phe_duyet || 0;
+                });
+            }).catch(() => {});
+        }
+
+        function formatBudgetShort(num) {
+            if (num >= 1e9) return (num / 1e9).toFixed(0) + ' tỷ';
+            if (num >= 1e6) return (num / 1e6).toFixed(0) + ' tr';
+            return (num || 0).toLocaleString('vi-VN');
+        }
+
+        function loadMissions() {
+            const q = (document.getElementById('searchInput') || {}).value || '';
+            const level = (document.getElementById('levelFilter') || {}).value || '';
+            const status = (document.getElementById('statusFilter') || {}).value || '';
+            const year = (document.getElementById('yearFilter') || {}).value || '';
+            const params = new URLSearchParams();
+            if (q) params.set('q', q);
+            if (level) params.set('level', level);
+            if (status) params.set('status', status);
+            if (year) params.set('year', year);
+            fetch(apiBase + '/api/missions?' + params.toString()).then(r => r.json()).then(data => {
+                tasks = (data.missions || []).map(m => ({
+                    id: m.id,
+                    code: m.code,
+                    name: m.title,
+                    leader: m.principal || '—',
+                    principal_hoc_vi: m.principal_hoc_vi || '',
+                    principal_don_vi: m.principal_don_vi || '',
+                    principal_orcid: m.principal_orcid || '',
+                    level: m.level || 'institute',
+                    startDate: m.start_date,
+                    endDate: m.end_date,
+                    progress: m.progress != null ? m.progress : 0,
+                    status: m.status || 'planning',
+                    budget: m.budget,
+                    source_id: m.source_id,
+                    source_type: m.source_type
+                }));
+                renderTasksTable();
+            }).catch(() => {
+                document.getElementById('tasksTableBody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;">Không tải được dữ liệu. Kiểm tra kết nối máy chủ.</td></tr>';
+            });
+        }
+
+        function renderTasksTable() {
+            const tbody = document.getElementById('tasksTableBody');
+            if (!tasks.length) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;">Chưa có đề tài nào. Dữ liệu được trích xuất từ Đề tài cấp Viện và các nguồn khác.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = tasks.map(task => {
+                const codeEsc = (task.code || '').replace(/'/g, "\\'");
+                const open = canOpenMissionDetailModal(task);
+                const rowClass = open ? '' : ' class="task-row-locked"';
+                const rowClick = open ? ` onclick="openTaskDetail('${codeEsc}')"` : '';
+                const tip = 'Chỉ Chủ nhiệm đề tài hoặc Admin mới xem được chi tiết.';
+                const detailBtn = open
+                    ? `<button type="button" class="btn btn-primary" onclick="event.stopPropagation(); openTaskDetail('${codeEsc}')">Chi tiết</button>`
+                    : `<button type="button" class="btn btn-secondary" disabled title="${tip}">Chi tiết</button>`;
+                return `
+                <tr${rowClass}${rowClick}${open ? '' : ' title="' + tip + '"'}>
+                    <td><strong>${escapeHtml(task.code)}</strong></td>
+                    <td>${escapeHtml(task.name)}</td>
+                    <td>${escapeHtml(task.leader)}</td>
+                    <td><span class="level-badge level-${task.level}">${getLevelText(task.level)}</span></td>
+                    <td>${task.startDate && task.endDate ? (formatDate(task.startDate) + ' - ' + formatDate(task.endDate)) : '—'}</td>
+                    <td>
+                        <div>${task.progress}%</div>
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: ${Math.min(100, task.progress)}%"></div>
+                        </div>
+                    </td>
+                    <td><span class="status-badge status-${task.status}">${getStatusText(task.status)}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            ${detailBtn}
+                            ${typeof isAdmin !== 'undefined' && isAdmin && task.id ? `<button type="button" class="btn btn-danger" style="margin-left:6px;background:#c0392b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;" onclick="event.stopPropagation(); deleteTask(${task.id}, '${(task.code || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">Xóa</button>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+            }).join('');
+        }
+        function escapeHtml(s) {
+            if (!s) return '';
+            const div = document.createElement('div');
+            div.textContent = String(s);
+            return div.innerHTML;
+        }
+
+        function getLevelText(level) {
+            const levels = { 'national': 'Cấp Nhà nước', 'ministry': 'Cấp Bộ', 'university': 'Cấp ĐHQG', 'institute': 'Cấp Viện' };
+            return levels[level] || level;
+        }
+
+        function getStatusText(status) {
+            const statuses = {
+                'planning': 'Lập kế hoạch', 'approved': 'Đã phê duyệt', 'ongoing': 'Đang thực hiện',
+                'review': 'Nghiệm thu', 'completed': 'Hoàn thành', 'overdue': 'Quá hạn',
+                'cho_phe_duyet_ngoai': 'Chờ phê duyệt ngoài', 'da_phe_duyet': 'Đã phê duyệt',
+                'dang_thuc_hien': 'Đang thực hiện', 'nghiem_thu_trung_gian': 'Nghiệm thu cơ sở (Viện)',
+                'nghiem_thu_tong_ket': 'Nghiệm thu cấp Bộ/NN', 'hoan_thanh': 'Hoàn thành',
+                'khong_duoc_phe_duyet': 'Không được phê duyệt',
+                'cho_vien_xet_chon': 'Chờ HĐ Viện xét chọn', 'cho_ct_hd_xet_duyet': 'Chờ CT HĐ KHCN xét duyệt',
+                'buoc4a': 'Bước 4A (Nhánh A)', 'buoc4b': 'Bước 4B (Nhánh B)', 'cho_bo_tham_dinh': 'Chờ Bộ thẩm định',
+                'cho_ngoai_xet_chon': 'Chờ cơ quan ngoài xét chọn', 'cho_ky_hop_dong': 'Chờ ký hợp đồng',
+                'dung_khong_dat_dot': 'Dừng — không đạt đợt này',
+                'xin_dieu_chinh': 'Xin điều chỉnh nội dung', 'cho_nghiem_thu_co_so': 'Chờ nghiệm thu cơ sở',
+                'cho_nghiem_thu_bo_nn': 'Chờ nghiệm thu cấp Bộ/NN', 'hoan_thien_sau_nghiem_thu': 'Hoàn thiện sau nghiệm thu',
+                'thanh_ly_hop_dong': 'Thanh lý hợp đồng'
+            };
+            return statuses[status] || status;
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.getDate().toString().padStart(2, '0') + '/' + (date.getMonth() + 1).toString().padStart(2, '0') + '/' + date.getFullYear();
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN').format(amount) + ' VNĐ';
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            const item = document.querySelector('.menu-item[onclick*="' + section + '"]');
+            if (item) item.classList.add('active');
+            if (section === 'all-tasks') {
+                var levelSel = document.getElementById('levelFilter');
+                var statusSel = document.getElementById('statusFilter');
+                var yearSel = document.getElementById('yearFilter');
+                if (levelSel) levelSel.value = '';
+                if (statusSel) statusSel.value = '';
+                if (yearSel) yearSel.value = '';
+                loadMissions();
+            }
+        }
+        function filterByLevel(level) {
+            const sel = document.getElementById('levelFilter');
+            if (sel) { sel.value = level || ''; loadMissions(); }
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.sidebar .menu-item').forEach(el => { if ((el.textContent || '').includes('Cấp')) el.classList.toggle('active', (el.getAttribute('onclick') || '').includes(level)); });
+        }
+        function filterByStatus(status) {
+            const sel = document.getElementById('statusFilter');
+            if (sel) { sel.value = status || ''; loadMissions(); }
+        }
+
+        let addTaskSelectedLevel = null;
+
+        function openAddTaskModal() {
+            document.getElementById('addTaskModal').classList.add('active');
+            document.getElementById('addTaskStep0').style.display = 'block';
+            document.getElementById('addTaskFormLuongB').style.display = 'none';
+            document.querySelectorAll('input[name="addTaskLevel"]').forEach(function(r) { r.checked = false; });
+        }
+
+        function closeAddTaskModal() {
+            document.getElementById('addTaskModal').classList.remove('active');
+            document.getElementById('addTaskStep0').style.display = 'block';
+            document.getElementById('addTaskFormLuongB').style.display = 'none';
+        }
+
+        function onAddTaskStep0Next() {
+            const selected = document.querySelector('input[name="addTaskLevel"]:checked');
+            if (!selected) { alert('Vui lòng chọn cấp đề tài.'); return; }
+            const level = selected.value;
+            if (level === 'institute') {
+                closeAddTaskModal();
+                window.location.href = 'nop-de-tai-cap-vien.html';
+                return;
+            }
+            closeAddTaskModal();
+            window.location.href = 'dang-ky-de-tai-ngoai-vien.html?level=' + encodeURIComponent(level);
+        }
+
+        function submitLuongB() {
+            const token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập để đăng ký đề tài.'); return; }
+            const title = (document.getElementById('add-title') || {}).value || '';
+            if (!title.trim()) { alert('Vui lòng nhập tên đề tài.'); return; }
+            const payload = {
+                level: addTaskSelectedLevel || 'ministry',
+                title: title.trim(),
+                code: (document.getElementById('add-code') || {}).value.trim() || undefined,
+                managing_agency: (document.getElementById('add-managing-agency') || {}).value.trim() || undefined,
+                contract_number: (document.getElementById('add-contract-number') || {}).value.trim() || undefined,
+                mission_type: (document.getElementById('add-mission-type') || {}).value || undefined,
+                field: (document.getElementById('add-field') || {}).value || undefined,
+                objectives: (document.getElementById('add-objectives') || {}).value.trim() || undefined,
+                start_date: (document.getElementById('add-start-date') || {}).value || undefined,
+                end_date: (document.getElementById('add-end-date') || {}).value || undefined,
+                cooperating_units: (document.getElementById('add-cooperating-units') || {}).value.trim() || undefined,
+                funding_source: (document.getElementById('add-funding-source') || {}).value || undefined,
+                budget: (document.getElementById('add-budget') || {}).value ? parseFloat(document.getElementById('add-budget').value) : undefined,
+                approved_budget: (document.getElementById('add-budget') || {}).value ? parseFloat(document.getElementById('add-budget').value) : undefined,
+                disbursed_budget: (document.getElementById('add-disbursed-budget') || {}).value ? parseFloat(document.getElementById('add-disbursed-budget').value) : undefined,
+                disbursement_year: (document.getElementById('add-disbursement-year') || {}).value.trim() || undefined,
+                status: 'cho_phe_duyet_ngoai'
+            };
+            const btn = document.getElementById('btnSubmitLuongB');
+            if (btn) btn.disabled = true;
+            fetch(apiBase + '/api/missions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(payload)
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }).catch(function() { return { ok: false, data: {} }; }); })
+                .then(function(res) {
+                    if (btn) btn.disabled = false;
+                    if (res.ok) {
+                        alert(res.data.message || 'Đã đăng ký đề tài.');
+                        closeAddTaskModal();
+                        loadStats();
+                        loadMissions();
+                    } else {
+                        alert(res.data.message || 'Đăng ký thất bại.');
+                    }
+                })
+                .catch(function() {
+                    if (btn) btn.disabled = false;
+                    alert('Lỗi kết nối. Kiểm tra máy chủ.');
+                });
+        }
+
+        function deleteTask(id, code) {
+            if (!id) return;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập (Admin) để xóa đề tài.'); return; }
+            if (!confirm('Bạn có chắc muốn xóa đề tài này?\n\nMã: ' + (code || id) + '\n\nHành động không thể hoàn tác.')) return;
+            fetch(apiBase + '/api/admin/missions/' + id, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }).catch(function() { return { ok: false, data: {} }; }); })
+                .then(function(res) {
+                    if (res.ok) {
+                        loadStats();
+                        loadMissions();
+                    } else {
+                        alert(res.data.message || 'Không thể xóa đề tài.');
+                    }
+                })
+                .catch(function() { alert('Lỗi kết nối. Kiểm tra máy chủ.'); });
+        }
+
+        function openTaskDetail(code) {
+            const task = tasks.find(t => t.code === code);
+            if (!task) return;
+            if (!canOpenMissionDetailModal(task)) {
+                alert('Bạn không có quyền xem chi tiết đề tài này. Chỉ Chủ nhiệm đề tài hoặc Admin mới được truy cập.');
+                return;
+            }
+            currentTask = task;
+
+            document.getElementById('taskDetailTitle').textContent = task.name;
+            const budgetStr = task.budget != null ? formatCurrency(task.budget) : '—';
+            let detailLink = '';
+            if (task.source_type === 'cap_vien' && task.source_id) {
+                detailLink = '<p style="margin-top:1rem;"><a href="theo-doi-de-tai-cap-vien-chi-tiet.html?id=' + task.source_id + '" class="btn btn-primary">📋 Xem tiến trình đề tài cấp Viện</a></p>';
+            } else if (task.id || task.code) {
+                var parts = [];
+                if (task.id) parts.push('id=' + task.id);
+                if (task.code) parts.push('code=' + encodeURIComponent(task.code));
+                if (parts.length) detailLink = '<p style="margin-top:1rem;"><a href="theo-doi-de-tai-ngoai-vien-chi-tiet.html?' + parts.join('&') + '" class="btn btn-primary">📋 Xem tiến trình đề tài</a></p>';
+            }
+            document.getElementById('taskOverviewContent').innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                    <div><strong>Mã đề tài:</strong> ${escapeHtml(task.code)}</div>
+                    <div><strong>Cấp:</strong> ${getLevelText(task.level)}</div>
+                    <div><strong>Chủ nhiệm:</strong> ${escapeHtml(task.leader)}</div>
+                    <div><strong>Trạng thái:</strong> <span class="status-badge status-${task.status}">${getStatusText(task.status)}</span></div>
+                    <div><strong>Thời gian:</strong> ${task.startDate && task.endDate ? (formatDate(task.startDate) + ' - ' + formatDate(task.endDate)) : '—'}</div>
+                    <div><strong>Tiến độ:</strong> ${task.progress}%</div>
+                    <div><strong>Tổng kinh phí:</strong> ${budgetStr}</div>
+                </div>
+                ${detailLink}
+            `;
+            renderTienTrinhTab(task);
+            renderDocumentsTab(task);
+            setMissionDetailFooterVisibility(task);
+            document.getElementById('taskDetailModal').classList.add('active');
+        }
+
+        function renderDocumentsTab(task) {
+            const container = document.getElementById('documentsContent');
+            if (!container) return;
+            const isCapVien = task.source_type === 'cap_vien' && task.source_id;
+            const missionId = task.id;
+            if (isCapVien) {
+                container.innerHTML = '<div class="doc-section"><h4>Hồ sơ nội bộ SCI</h4><p style="color:#666;margin:10px 0;">Hệ thống theo dõi từng loại tài liệu theo giai đoạn (đăng ký → thực hiện → nghiệm thu → sau nghiệm thu), mỗi giai đoạn có checklist riêng và trạng thái đã nộp/chưa nộp.</p><a href="theo-doi-de-tai-cap-vien-chi-tiet.html?id=' + task.source_id + '" class="btn btn-primary">Xem trang tiến trình đề tài cấp Viện</a></div>';
+                return;
+            }
+            if (!missionId) {
+                container.innerHTML = '<p style="color:#666;">Đề tài này chưa có ID. Lưu đề tài trước khi quản lý hồ sơ.</p>';
+                return;
+            }
+            container.innerHTML = '<div class="doc-section"><h4>Hồ sơ nộp cơ quan ngoài</h4><p style="color:#666;margin:10px 0;font-size:0.9rem;">Mẫu do Bộ/ĐHQG quy định. Hệ thống chỉ lưu trữ file đã nộp (upload file + ghi chú ngày nộp).</p><div id="hoSoNgoaiList" class="ho-so-list"></div><div id="hoSoNgoaiForm" class="ho-so-form"><h5 style="margin-bottom:12px;">Nộp hồ sơ mới</h5><form id="formHoSoNgoai" onsubmit="return submitHoSoNgoai(event)"><div class="form-group"><label>File (PDF, Word, Excel)</label><input type="file" id="hoSoNgoaiFile" accept=".pdf,.doc,.docx,.xls,.xlsx" required></div><div class="form-group"><label>Ngày nộp</label><input type="date" id="hoSoNgoaiDate"></div><div class="form-group"><label>Ghi chú</label><textarea id="hoSoNgoaiNote" rows="2" placeholder="VD: Nộp Bộ KHCN, số công văn..."></textarea></div><button type="submit" class="btn btn-primary">Nộp hồ sơ</button></form></div></div>';
+            loadHoSoNgoai(missionId);
+        }
+
+        function loadHoSoNgoai(missionId) {
+            const listEl = document.getElementById('hoSoNgoaiList');
+            if (!listEl) return;
+            const token = localStorage.getItem('token');
+            const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+            fetch(apiBase + '/api/missions/' + missionId + '/ho-so-ngoai', { headers })
+                .then(function(r) {
+                    return r.json().then(function(data) {
+                        if (!r.ok) throw new Error((data && data.message) || 'Lỗi tải danh sách hồ sơ.');
+                        return data;
+                    });
+                })
+                .then(data => {
+                    const files = data.files || [];
+                    if (files.length === 0) {
+                        listEl.innerHTML = '<p style="color:#999;font-size:0.9rem;">Chưa có hồ sơ nào được nộp.</p>';
+                        return;
+                    }
+                    let html = '<table class="ho-so-table"><thead><tr><th>File</th><th>Ngày nộp</th><th>Ghi chú</th><th></th></tr></thead><tbody>';
+                    files.forEach(f => {
+                        const subDate = f.submission_date ? formatDate(f.submission_date) : '—';
+                        const note = (f.note || '').trim() ? escapeHtml(f.note) : '—';
+                        const safeName = (f.original_name || 'file').replace(/"/g, '');
+                        const dlLink = '<button type="button" class="btn-dl" style="font-size:12px;padding:4px 10px;cursor:pointer;border:1px solid #667eea;background:#667eea;color:white;border-radius:6px;" onclick="downloadHoSoNgoai(' + missionId + ',' + f.id + ',\'' + safeName.replace(/'/g, "\\'") + '\')">Tải</button>';
+                        html += '<tr><td>' + escapeHtml(f.original_name || '—') + '</td><td>' + subDate + '</td><td>' + note + '</td><td>' + dlLink + '</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                    listEl.innerHTML = html;
+                })
+                .catch(function(err) { listEl.innerHTML = '<p style="color:#c00;">' + escapeHtml(err.message || 'Lỗi tải danh sách hồ sơ.') + '</p>'; });
+        }
+
+        function submitHoSoNgoai(e) {
+            e.preventDefault();
+            if (!currentTask || !currentTask.id) return false;
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Vui lòng đăng nhập để nộp hồ sơ.');
+                return false;
+            }
+            const fileInput = document.getElementById('hoSoNgoaiFile');
+            if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+                alert('Vui lòng chọn file.');
+                return false;
+            }
+            const fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+            const dateVal = document.getElementById('hoSoNgoaiDate').value;
+            if (dateVal) fd.append('submission_date', dateVal);
+            const noteVal = document.getElementById('hoSoNgoaiNote').value.trim();
+            if (noteVal) fd.append('note', noteVal);
+            const btn = e.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Đang nộp...'; }
+            fetch(apiBase + '/api/missions/' + currentTask.id + '/ho-so-ngoai', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: fd
+            })
+                .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+                .then(res => {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Nộp hồ sơ'; }
+                    if (res.ok) {
+                        fileInput.value = '';
+                        document.getElementById('hoSoNgoaiDate').value = '';
+                        document.getElementById('hoSoNgoaiNote').value = '';
+                        loadHoSoNgoai(currentTask.id);
+                        alert(res.data.message || 'Đã lưu hồ sơ.');
+                    } else {
+                        alert(res.data.message || 'Nộp hồ sơ thất bại.');
+                    }
+                })
+                .catch(() => {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Nộp hồ sơ'; }
+                    alert('Lỗi kết nối.');
+                });
+            return false;
+        }
+
+        function downloadHoSoNgoai(missionId, fileId, filename) {
+            const token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập để tải file.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/ho-so-ngoai/' + fileId + '/download', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+                .then(r => {
+                    if (!r.ok) throw new Error('Lỗi tải file');
+                    return r.blob();
+                })
+                .then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = filename || 'download';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                })
+                .catch(() => alert('Lỗi tải file. Kiểm tra đăng nhập.'));
+        }
+
+        function renderTienTrinhTab(task) {
+            const container = document.getElementById('taskTienTrinhContent');
+            if (!container) return;
+            const isCapVien = task.source_type === 'cap_vien' && task.source_id;
+            const missionId = task.id;
+            let url, label;
+            if (isCapVien) {
+                url = 'theo-doi-de-tai-cap-vien-chi-tiet.html?id=' + task.source_id;
+                label = 'Xem trang tiến trình đề tài cấp Viện';
+            } else if (missionId || task.code) {
+                var parts = [];
+                if (missionId) parts.push('id=' + missionId);
+                if (task.code) parts.push('code=' + encodeURIComponent(task.code));
+                url = 'theo-doi-de-tai-ngoai-vien-chi-tiet.html?' + parts.join('&');
+                label = 'Xem trang tiến trình đề tài';
+            } else {
+                container.innerHTML = '<p style="color:#666;">Đề tài này chưa có ID. Vui lòng lưu đề tài trước khi xem tiến trình.</p>';
+                return;
+            }
+            container.innerHTML = '<p style="margin-bottom:1.5rem;color:#555;">Nhấn vào nút bên dưới để mở trang theo dõi toàn bộ tiến trình với các bước đầy đủ (xanh = hoàn thành, cam = đang thực hiện, xám = chưa đến).</p><a href="' + url + '" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;font-size:16px;">📋 ' + label + ' →</a>';
+        }
+
+        function closeTaskDetailModal() {
+            document.getElementById('taskDetailModal').classList.remove('active');
+            currentTask = null;
+            setMissionDetailFooterVisibility(null);
+        }
+
+        function closeEditTaskModal() {
+            document.getElementById('editTaskModal').classList.remove('active');
+            document.getElementById('editTaskMsg').style.display = 'none';
+        }
+
+        function editTask() {
+            if (!currentTask) return;
+            if (!isAdmin) {
+                alert('Chỉ Admin mới có quyền chỉnh sửa đề tài. Vui lòng đăng nhập bằng tài khoản Admin.');
+                return;
+            }
+            if (!currentTask.id) {
+                alert('Đề tài này không thể chỉnh sửa (thiếu ID).');
+                return;
+            }
+            document.getElementById('edit-code').value = currentTask.code || '';
+            document.getElementById('edit-title').value = currentTask.name || '';
+            document.getElementById('edit-principal').value = currentTask.leader || '';
+            document.getElementById('edit-principal-hoc-vi').value = currentTask.principal_hoc_vi || '';
+            document.getElementById('edit-principal-don-vi').value = currentTask.principal_don_vi || '';
+            document.getElementById('edit-principal-orcid').value = currentTask.principal_orcid || '';
+            document.getElementById('edit-level').value = currentTask.level || 'institute';
+            document.getElementById('edit-status').value = currentTask.status || 'planning';
+            document.getElementById('edit-progress').value = currentTask.progress != null ? currentTask.progress : 0;
+            document.getElementById('edit-start-date').value = currentTask.startDate || '';
+            document.getElementById('edit-end-date').value = currentTask.endDate || '';
+            document.getElementById('edit-budget').value = currentTask.budget != null ? currentTask.budget : '';
+            document.getElementById('editTaskMsg').style.display = 'none';
+            var capVienNote = document.getElementById('editTaskCapVienNote');
+            if (capVienNote) capVienNote.style.display = (currentTask.source_type === 'cap_vien') ? 'block' : 'none';
+            document.getElementById('editTaskModal').classList.add('active');
+        }
+
+        function saveEditTask() {
+            if (!currentTask || !currentTask.id) return;
+            var token = localStorage.getItem('token');
+            if (!token) {
+                alert('Vui lòng đăng nhập (Admin) để chỉnh sửa.');
+                return;
+            }
+            var code = document.getElementById('edit-code').value.trim();
+            var title = document.getElementById('edit-title').value.trim();
+            if (!code || !title) {
+                var msgEl = document.getElementById('editTaskMsg');
+                msgEl.textContent = 'Mã đề tài và Tên đề tài không được để trống.';
+                msgEl.style.background = '#f8d7da';
+                msgEl.style.color = '#721c24';
+                msgEl.style.display = 'block';
+                return;
+            }
+            var payload = {
+                code: code,
+                title: title,
+                principal: document.getElementById('edit-principal').value.trim() || null,
+                principal_hoc_vi: document.getElementById('edit-principal-hoc-vi').value.trim() || null,
+                principal_don_vi: document.getElementById('edit-principal-don-vi').value.trim() || null,
+                principal_orcid: document.getElementById('edit-principal-orcid').value.trim() || null,
+                level: document.getElementById('edit-level').value,
+                status: document.getElementById('edit-status').value,
+                progress: parseInt(document.getElementById('edit-progress').value, 10) || 0,
+                start_date: document.getElementById('edit-start-date').value || null,
+                end_date: document.getElementById('edit-end-date').value || null,
+                budget: document.getElementById('edit-budget').value ? parseFloat(document.getElementById('edit-budget').value) : null
+            };
+            var btn = document.getElementById('btn-save-edit-task');
+            btn.disabled = true;
+            var msgEl = document.getElementById('editTaskMsg');
+            msgEl.style.display = 'none';
+            fetch(apiBase + '/api/admin/missions/' + currentTask.id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(payload)
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }).catch(function() { return { ok: false, data: {} }; }); })
+                .then(function(res) {
+                    btn.disabled = false;
+                    msgEl.style.display = 'block';
+                    if (res.ok) {
+                        msgEl.textContent = 'Đã cập nhật đề tài thành công.';
+                        msgEl.style.background = '#d4edda';
+                        msgEl.style.color = '#155724';
+                        loadStats();
+                        loadMissions();
+                        var task = tasks.find(function(t) { return t.id === currentTask.id; });
+                        if (task) {
+                            task.code = payload.code;
+                            task.name = payload.title;
+                            task.leader = payload.principal || '—';
+                            task.level = payload.level;
+                            task.status = payload.status;
+                            task.progress = payload.progress;
+                            task.startDate = payload.start_date;
+                            task.endDate = payload.end_date;
+                            task.budget = payload.budget;
+                            document.getElementById('taskDetailTitle').textContent = payload.title;
+                            var budgetStr = payload.budget != null ? formatCurrency(payload.budget) : '—';
+                            document.getElementById('taskOverviewContent').innerHTML = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;"><div><strong>Mã đề tài:</strong> ' + escapeHtml(payload.code) + '</div><div><strong>Cấp:</strong> ' + getLevelText(payload.level) + '</div><div><strong>Chủ nhiệm:</strong> ' + escapeHtml(payload.principal || '—') + '</div><div><strong>Trạng thái:</strong> <span class="status-badge status-' + payload.status + '">' + getStatusText(payload.status) + '</span></div><div><strong>Thời gian:</strong> ' + (payload.start_date && payload.end_date ? (formatDate(payload.start_date) + ' - ' + formatDate(payload.end_date)) : '—') + '</div><div><strong>Tiến độ:</strong> ' + payload.progress + '%</div><div><strong>Tổng kinh phí:</strong> ' + budgetStr + '</div></div>';
+                        }
+                        setTimeout(closeEditTaskModal, 1500);
+                    } else {
+                        msgEl.textContent = res.data.message || 'Cập nhật thất bại.';
+                        msgEl.style.background = '#f8d7da';
+                        msgEl.style.color = '#721c24';
+                    }
+                })
+                .catch(function() {
+                    btn.disabled = false;
+                    msgEl.style.display = 'block';
+                    msgEl.textContent = 'Lỗi kết nối. Kiểm tra máy chủ.';
+                    msgEl.style.background = '#f8d7da';
+                    msgEl.style.color = '#721c24';
+                });
+        }
+
+        function switchTab(event, tabId) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function updateProgress() { alert('Chức năng cập nhật tiến độ đang được phát triển...'); }
+        function exportTask() { alert('Chức năng xuất báo cáo đang được phát triển...'); }
+
+        window.addEventListener('load', () => {
+            if (!enforceInstituteAccess()) return;
+            var token = localStorage.getItem('token');
+            try { currentUser = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) { currentUser = {}; }
+            isAdmin = (currentUser.role || '').toLowerCase() === 'admin';
+            updateHeaderGreeting();
+            loadStats();
+            loadMissions();
+            document.getElementById('btn-save-edit-task')?.addEventListener('click', saveEditTask);
+            document.getElementById('btnAddTaskStep0Next')?.addEventListener('click', onAddTaskStep0Next);
+            document.getElementById('btnSubmitLuongB')?.addEventListener('click', submitLuongB);
+            var exportImportSection = document.getElementById('export-import-section');
+            if (exportImportSection) exportImportSection.style.display = isAdmin ? '' : 'none';
+            var btnEditTask = document.getElementById('btn-edit-task');
+            if (btnEditTask) btnEditTask.style.display = isAdmin ? '' : 'none';
+            var btnTpl = document.getElementById('btn-export-template');
+            if (btnTpl) btnTpl.href = apiBase + '/api/missions/export-template';
+            document.getElementById('btn-export-excel')?.addEventListener('click', function() {
+                if (!token) { alert('Vui lòng đăng nhập (Admin) để export số liệu.'); return; }
+                fetch(apiBase + '/api/missions/export-excel', { headers: { 'Authorization': 'Bearer ' + token } })
+                    .then(function(r) {
+                        if (!r.ok) {
+                            return r.json().catch(function() { return {}; }).then(function(d) {
+                                var msg = d.message || r.statusText;
+                                if (r.status === 401) msg = 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
+                                else if (r.status === 403) msg = 'Chỉ Admin mới có quyền export. Kiểm tra quyền tài khoản.';
+                                throw new Error(msg);
+                            });
+                        }
+                        return r.arrayBuffer();
+                    })
+                    .then(function(buf) {
+                        if (buf instanceof ArrayBuffer) {
+                            var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                            var a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = 'so_lieu_nhiem_vu_khcn_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+                            a.click();
+                            URL.revokeObjectURL(a.href);
+                        }
+                    })
+                    .catch(function(e) { alert('Export thất bại: ' + (e.message || 'Kiểm tra đăng nhập Admin hoặc kết nối máy chủ.')); });
+            });
+            document.getElementById('btn-export-csv')?.addEventListener('click', function() {
+                if (!token) { alert('Vui lòng đăng nhập (Admin) để export số liệu.'); return; }
+                fetch(apiBase + '/api/missions/export', { headers: { 'Authorization': 'Bearer ' + token } })
+                    .then(function(r) {
+                        if (!r.ok) throw new Error(r.statusText);
+                        return r.text();
+                    })
+                    .then(function(csv) {
+                        var blob = new Blob(['\uFEFF' + csv.replace(/^\uFEFF/, '')], { type: 'text/csv;charset=utf-8' });
+                        var a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = 'so_lieu_nhiem_vu_khcn_' + new Date().toISOString().slice(0, 10) + '.csv';
+                        a.click();
+                        URL.revokeObjectURL(a.href);
+                    })
+                    .catch(function() { alert('Export thất bại. Kiểm tra đăng nhập Admin hoặc kết nối máy chủ.'); });
+            });
+            document.getElementById('btn-import')?.addEventListener('click', function() {
+                var fileInput = document.getElementById('importFile');
+                var msgEl = document.getElementById('import-msg');
+                if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+                    if (msgEl) { msgEl.textContent = 'Chọn file CSV hoặc Excel (.xlsx) để import.'; msgEl.style.color = '#c00'; }
+                    return;
+                }
+                if (!token) { alert('Vui lòng đăng nhập (Admin) để import.'); return; }
+                var fd = new FormData();
+                fd.append('file', fileInput.files[0]);
+                if (msgEl) { msgEl.textContent = 'Đang import...'; msgEl.style.color = '#666'; }
+                fetch(apiBase + '/api/admin/missions/import', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: fd
+                })
+                    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }).catch(function() { return { ok: false, data: {} }; }); })
+                    .then(function(res) {
+                        if (msgEl) {
+                            msgEl.textContent = res.ok ? (res.data.message || 'Import xong.') : (res.data.message || 'Import thất bại.');
+                            msgEl.style.color = res.ok ? '#0a0' : '#c00';
+                        }
+                        if (res.ok) {
+                            loadStats();
+                            loadMissions();
+                            if (fileInput) fileInput.value = '';
+                        }
+                    })
+                    .catch(function() {
+                        if (msgEl) { msgEl.textContent = 'Lỗi kết nối.'; msgEl.style.color = '#c00'; }
+                    });
+            });
+            function uploadTemplate(type, fileInputId, msgSpanId) {
+                var inp = document.getElementById(fileInputId);
+                var msg = document.getElementById(msgSpanId);
+                if (!inp || !inp.files || !inp.files[0]) {
+                    if (msg) { msg.textContent = 'Chọn file trước.'; msg.style.color = '#c00'; }
+                    return;
+                }
+                if (!token) { alert('Vui lòng đăng nhập Admin.'); return; }
+                var fd = new FormData();
+                fd.append('file', inp.files[0]);
+                fd.append('template_type', type);
+                if (msg) { msg.textContent = 'Đang upload...'; msg.style.color = '#666'; }
+                fetch(apiBase + '/api/admin/missions-templates', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: fd
+                })
+                    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                    .then(function(res) {
+                        if (msg) {
+                            msg.textContent = res.ok ? (res.data.message || 'Đã upload.') : (res.data.message || 'Thất bại.');
+                            msg.style.color = res.ok ? '#0a0' : '#c00';
+                        }
+                        if (res.ok && inp) inp.value = '';
+                    })
+                    .catch(function() { if (msg) { msg.textContent = 'Lỗi kết nối.'; msg.style.color = '#c00'; } });
+            }
+            document.getElementById('btn-upload-template-thuyet-minh')?.addEventListener('click', function() {
+                uploadTemplate('thuyet_minh_chi_tiet', 'template-thuyet-minh', 'template-thuyet-minh-msg');
+            });
+            document.getElementById('btn-upload-template-van-ban')?.addEventListener('click', function() {
+                uploadTemplate('van_ban_xin_phep_vien_truong', 'template-van-ban-xin-phep', 'template-van-ban-msg');
+            });
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) e.target.classList.remove('active');
+        });
+
+        let searchTimeout;
+        document.getElementById('searchInput')?.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(loadMissions, 300);
+        });
+        document.getElementById('levelFilter')?.addEventListener('change', loadMissions);
+        document.getElementById('statusFilter')?.addEventListener('change', loadMissions);
+        document.getElementById('yearFilter')?.addEventListener('change', loadMissions);
+    </script>
+</body>
+</html>

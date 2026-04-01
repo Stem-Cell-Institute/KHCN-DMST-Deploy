@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Tài chính KHCN - Viện Tế bào gốc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .breadcrumb {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .breadcrumb a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+        }
+
+        .menu-section {
+            padding: 20px;
+        }
+
+        .menu-title {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .menu-item {
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .menu-item:hover {
+            background: #f0f0f0;
+        }
+
+        .menu-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .page-title {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary { background: #667eea; color: white; }
+        .btn-success { background: #6bcf7f; color: white; }
+        .btn-warning { background: #ffd93d; color: #333; }
+        .btn-danger { background: #ff4757; color: white; }
+        .btn-info { background: #6bceff; color: #333; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .stat-progress {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .stat-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+
+        .budget-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .budget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .budget-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .budget-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .budget-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .breakdown-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .breakdown-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .breakdown-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .breakdown-percent {
+            font-size: 11px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f8f9fa;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            font-size: 14px;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-approved { background: #e8f5e9; color: #388e3c; }
+        .status-pending { background: #fff3e0; color: #f57c00; }
+        .status-paid { background: #e3f2fd; color: #1976d2; }
+        .status-overdue { background: #ffebee; color: #c62828; }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-warning { background: #fff3e0; color: #f57c00; }
+        .alert-info { background: #e3f2fd; color: #1976d2; }
+
+        .filter-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💰 Quản lý Tài chính KHCN</h1>
+        <div class="breadcrumb">
+            <a href="index.html">🏠 Trang chủ</a> / Tài chính KHCN
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="menu-section">
+                <div class="menu-title">Quản lý tài chính</div>
+                <div class="menu-item active" onclick="showSection('overview')">
+                    <span>📊</span>
+                    <span>Tổng quan</span>
+                </div>
+                <div class="menu-item" onclick="showSection('budget')">
+                    <span>💼</span>
+                    <span>Ngân sách & Dự toán</span>
+                </div>
+                <div class="menu-item" onclick="showSection('advance')">
+                    <span>💸</span>
+                    <span>Tạm ứng</span>
+                </div>
+                <div class="menu-item" onclick="showSection('settlement')">
+                    <span>📝</span>
+                    <span>Thanh quyết toán</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Nguồn kinh phí</div>
+                <div class="menu-item" onclick="filterBySource('state')">
+                    <span>🏛️</span>
+                    <span>Ngân sách Nhà nước</span>
+                </div>
+                <div class="menu-item" onclick="filterBySource('university')">
+                    <span>🎓</span>
+                    <span>Ngân sách ĐHQG</span>
+                </div>
+                <div class="menu-item" onclick="filterBySource('institute')">
+                    <span>🔬</span>
+                    <span>Ngân sách Viện</span>
+                </div>
+                <div class="menu-item" onclick="filterBySource('cooperation')">
+                    <span>🤝</span>
+                    <span>Hợp tác</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Báo cáo</div>
+                <div class="menu-item" onclick="showSection('reports')">
+                    <span>📈</span>
+                    <span>Báo cáo tài chính</span>
+                </div>
+                <div class="menu-item" onclick="showSection('analytics')">
+                    <span>📊</span>
+                    <span>Phân tích chi tiêu</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="overview-section">
+                <h2 class="page-title">Tổng quan Tài chính KHCN</h2>
+
+                <div class="alert alert-info">
+                    <span>ℹ️</span>
+                    <div>
+                        <strong>Thông báo:</strong> Có 5 nhiệm vụ KHCN cần quyết toán trong tháng này.
+                        <a href="#" style="color: #1976d2; text-decoration: underline;">Xem danh sách</a>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Tổng ngân sách năm 2025</div>
+                        <div class="stat-value">45 tỷ</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-fill" style="width: 100%"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-label">Đã giải ngân</div>
+                        <div class="stat-value">35 tỷ</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-fill" style="width: 78%"></div>
+                        </div>
+                        <small style="color: #6bcf7f; font-size: 12px; margin-top: 5px; display: block;">78% kế hoạch</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-label">Còn lại</div>
+                        <div class="stat-value">10 tỷ</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-fill" style="width: 22%"></div>
+                        </div>
+                        <small style="color: #999; font-size: 12px; margin-top: 5px; display: block;">22% ngân sách</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-label">Đã quyết toán</div>
+                        <div class="stat-value">28 tỷ</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-fill" style="width: 62%"></div>
+                        </div>
+                        <small style="color: #667eea; font-size: 12px; margin-top: 5px; display: block;">62% đã giải ngân</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-label">Chờ quyết toán</div>
+                        <div class="stat-value">7 tỷ</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-fill" style="width: 16%"></div>
+                        </div>
+                        <small style="color: #ffd93d; font-size: 12px; margin-top: 5px; display: block;">23 nhiệm vụ</small>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-label">Phí quản lý thu được</div>
+                        <div class="stat-value">1.2 tỷ</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-fill" style="width: 100%"></div>
+                        </div>
+                        <small style="color: #6bcf7f; font-size: 12px; margin-top: 5px; display: block;">3.4% tổng kinh phí</small>
+                    </div>
+                </div>
+
+                <div class="budget-card">
+                    <div class="budget-header">
+                        <h3 class="budget-title">Phân bổ ngân sách theo nguồn</h3>
+                        <div class="budget-amount">45 tỷ VNĐ</div>
+                    </div>
+                    <div class="budget-breakdown">
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">Ngân sách Nhà nước</div>
+                            <div class="breakdown-value">18 tỷ</div>
+                            <div class="breakdown-percent">40% tổng ngân sách</div>
+                        </div>
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">Ngân sách ĐHQG</div>
+                            <div class="breakdown-value">15 tỷ</div>
+                            <div class="breakdown-percent">33.3% tổng ngân sách</div>
+                        </div>
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">Ngân sách Viện</div>
+                            <div class="breakdown-value">8 tỷ</div>
+                            <div class="breakdown-percent">17.8% tổng ngân sách</div>
+                        </div>
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">Hợp tác & Nguồn khác</div>
+                            <div class="breakdown-value">4 tỷ</div>
+                            <div class="breakdown-percent">8.9% tổng ngân sách</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="budget-card">
+                    <div class="budget-header">
+                        <h3 class="budget-title">Phân bổ chi tiêu theo hạng mục</h3>
+                        <div class="budget-amount">35 tỷ VNĐ</div>
+                    </div>
+                    <div class="budget-breakdown">
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">Thiết bị & Máy móc</div>
+                            <div class="breakdown-value">15 tỷ</div>
+                            <div class="breakdown-percent">42.9% đã chi</div>
+                        </div>
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">Vật tư & Hóa chất</div>
+                            <div class="breakdown-value">8 tỷ</div>
+                            <div class="breakdown-percent">22.9% đã chi</div>
+                        </div>
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">Nhân công</div>
+                            <div class="breakdown-value">9 tỷ</div>
+                            <div class="breakdown-percent">25.7% đã chi</div>
+                        </div>
+                        <div class="breakdown-item">
+                            <div class="breakdown-label">Khác</div>
+                            <div class="breakdown-value">3 tỷ</div>
+                            <div class="breakdown-percent">8.5% đã chi</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 20px; color: #333;">Xu hướng giải ngân 12 tháng gần nhất</h3>
+                    <div style="height: 300px; display: flex; align-items: flex-end; justify-content: space-around; gap: 10px;">
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 45%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">2.1 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T1</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 52%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">2.5 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T2</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 68%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">3.2 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T3</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 75%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">3.5 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T4</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 82%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">3.8 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T5</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 88%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">4.1 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T6</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 60%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">2.8 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T7</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 72%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">3.4 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T8</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 78%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">3.6 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T9</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 85%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">4.0 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T10</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 90%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">4.2 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T11</div>
+                        </div>
+                        <div style="flex: 1; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); height: 95%; border-radius: 4px 4px 0 0; position: relative;">
+                            <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 12px; font-weight: 600;">4.5 tỷ</div>
+                            <div style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #999;">T12</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-bar">
+                    <h3 style="margin-bottom: 15px;">Tìm kiếm giao dịch</h3>
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label>Từ khóa</label>
+                            <input type="text" placeholder="Mã nhiệm vụ, chủ nhiệm...">
+                        </div>
+                        <div class="form-group">
+                            <label>Loại giao dịch</label>
+                            <select>
+                                <option value="">Tất cả</option>
+                                <option value="advance">Tạm ứng</option>
+                                <option value="payment">Thanh toán</option>
+                                <option value="settlement">Quyết toán</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Trạng thái</label>
+                            <select>
+                                <option value="">Tất cả</option>
+                                <option value="approved">Đã duyệt</option>
+                                <option value="pending">Chờ duyệt</option>
+                                <option value="paid">Đã chi</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Thời gian</label>
+                            <select>
+                                <option value="">Tất cả</option>
+                                <option value="2025">Năm 2025</option>
+                                <option value="2024">Năm 2024</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mã giao dịch</th>
+                                <th>Nhiệm vụ KHCN</th>
+                                <th>Loại</th>
+                                <th>Số tiền</th>
+                                <th>Ngày</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>TC-2025-001</strong></td>
+                                <td>NV-2025-001 - Nghiên cứu ứng dụng tế bào gốc...</td>
+                                <td>Tạm ứng</td>
+                                <td><strong>500,000,000 VNĐ</strong></td>
+                                <td>15/01/2025</td>
+                                <td><span class="status-badge status-paid">Đã chi</span></td>
+                                <td><button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">Chi tiết</button></td>
+                            </tr>
+                            <tr>
+                                <td><strong>TC-2025-002</strong></td>
+                                <td>NV-2024-056 - Xây dựng ngân hàng tế bào gốc...</td>
+                                <td>Quyết toán</td>
+                                <td><strong>1,350,000,000 VNĐ</strong></td>
+                                <td>20/01/2025</td>
+                                <td><span class="status-badge status-pending">Chờ duyệt</span></td>
+                                <td><button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">Chi tiết</button></td>
+                            </tr>
+                            <tr>
+                                <td><strong>TC-2025-003</strong></td>
+                                <td>NV-2025-002 - Phát triển công nghệ nuôi cấy...</td>
+                                <td>Tạm ứng</td>
+                                <td><strong>750,000,000 VNĐ</strong></td>
+                                <td>25/01/2025</td>
+                                <td><span class="status-badge status-approved">Đã duyệt</span></td>
+                                <td><button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">Chi tiết</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSection(section) {
+            console.log('Showing section:', section);
+        }
+
+        function filterBySource(source) {
+            console.log('Filter by source:', source);
+        }
+    </script>
+</body>
+</html>

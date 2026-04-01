@@ -1,0 +1,21 @@
+{
+  "name": "sci-khcn-publications",
+  "version": "1.0.0",
+  "description": "SCI-KHCN — Publication Management Backend",
+  "type": "module",
+  "main": "src/app.js",
+  "scripts": {
+    "dev":   "node --watch src/app.js",
+    "start": "node src/app.js",
+    "db:init": "node -e \"import('./src/db/index.js').then(m=>m.initDB()).then(()=>process.exit(0))\""
+  },
+  "dependencies": {
+    "express":                   "^4.19.2",
+    "cors":                      "^2.8.5",
+    "helmet":                    "^7.1.0",
+    "express-rate-limit":        "^7.3.1",
+    "better-sqlite3":            "^11.0.0",
+    "@neondatabase/serverless":  "^0.9.4"
+  },
+  "engines": { "node": ">=20" }
+}

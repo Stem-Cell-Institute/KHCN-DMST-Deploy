@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký đặt lịch thiết bị CRD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .auth-page { max-width: 520px; margin: 2.5rem auto; padding: 0 1rem; }
+        .auth-card {
+            background: var(--white);
+            padding: 2.25rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px var(--shadow);
+        }
+        .auth-card h2 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem; }
+        .auth-card .note {
+            font-size: 0.88rem; color: var(--gray); margin-bottom: 1.25rem;
+            padding: 0.85rem 1rem; background: rgba(102, 126, 234, 0.1); border-radius: 8px; line-height: 1.55;
+        }
+        .form-group { margin-bottom: 1.15rem; }
+        .form-group label { display: block; font-weight: 500; color: var(--dark); margin-bottom: 0.4rem; }
+        .form-group input {
+            width: 100%; padding: 0.75rem 1rem; border: 2px solid #dee2e6; border-radius: 8px;
+            font-size: 1rem; transition: border-color 0.2s; box-sizing: border-box;
+        }
+        .form-group input:focus { outline: none; border-color: var(--primary); }
+        .form-group input.error { border-color: #dc3545; }
+        .form-group .hint { font-size: 0.85rem; color: var(--gray); margin-top: 0.35rem; }
+        .btn-block { width: 100%; padding: 1rem; font-size: 1.05rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: var(--white); }
+        .btn-primary:hover { opacity: 0.95; }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .auth-footer { text-align: center; margin-top: 1.35rem; color: var(--gray); font-size: 0.95rem; }
+        .auth-footer a { color: var(--primary); font-weight: 500; }
+        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .msg.error { background: #f8d7da; color: #721c24; display: block; }
+        .msg.success { background: #d4edda; color: #155724; display: block; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo"><img src="images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc" style="height:72px;width:auto;display:block;"></a>
+                <div class="header-text">
+                    <h1>Đăng ký — Đặt lịch thiết bị CRD</h1>
+                    <p>Dành cho sinh viên, khách học tập và cộng tác ngoài Viện (email bất kỳ, trừ @sci.edu.vn).</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container nav-auth">
+            <a href="index.html">🏠 Trang chủ</a>
+            <span class="nav-divider"></span>
+            <a href="crd-booking-v2.html">📅 Đặt lịch CRD</a>
+            <a href="dang-nhap.html?returnUrl=crd-booking-v2.html">🔐 Đăng nhập</a>
+            <div id="auth-status"></div>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="auth-page">
+            <div class="auth-card">
+                <h2>Tạo tài khoản đặt lịch</h2>
+                <p class="note">
+                    Tài khoản này <strong>chỉ</strong> dùng để đăng nhập module <strong>CRD Lab Booking</strong> (xem lịch, đặt thiết bị, thương lượng lịch).
+                    <strong>Không</strong> truy cập được Nhiệm vụ KHCN, Hội đồng đạo đức SCI-ACE và các module nội bộ khác.
+                    Cán bộ / nghiên cứu viên có email <strong>@sci.edu.vn</strong> vui lòng đăng ký tại <a href="dang-ky.html">trang Đăng ký chính</a>.
+                </p>
+                <div id="msg" class="msg"></div>
+                <form id="form-crd-reg" action="/api/crd/public/register" method="POST">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="vd: ten@gmail.com" required autocomplete="email">
+                        <span class="hint">Không dùng email @sci.edu.vn tại đây.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Mật khẩu</label>
+                        <input type="password" id="password" name="password" placeholder="Ít nhất 6 ký tự" required minlength="6" autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="password2">Xác nhận mật khẩu</label>
+                        <input type="password" id="password2" name="password2" placeholder="Nhập lại mật khẩu" required minlength="6" autocomplete="new-password">
+                        <span class="hint" id="pass2-hint"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="fullname">Họ và tên</label>
+                        <input type="text" id="fullname" name="fullname" placeholder="Họ và tên đầy đủ" required autocomplete="name">
+                    </div>
+                    <button type="submit" class="btn-block btn-primary" id="btn-submit">Đăng ký &amp; vào đặt lịch</button>
+                </form>
+                <p class="auth-footer">Đã có tài khoản? <a href="dang-nhap.html?returnUrl=crd-booking-v2.html">Đăng nhập</a></p>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2026 Viện Tế bào gốc — CRD Lab Booking</p>
+            </div>
+        </div>
+    </footer>
+    <script>
+        (function() {
+            var SCI = '@sci.edu.vn';
+            var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000'))
+                ? 'http://localhost:3000' : '';
+            var emailEl = document.getElementById('email');
+            var pass2El = document.getElementById('password2');
+            var pass2Hint = document.getElementById('pass2-hint');
+            var form = document.getElementById('form-crd-reg');
+            var msgEl = document.getElementById('msg');
+            var btn = document.getElementById('btn-submit');
+
+            function showMsg(text, type) {
+                msgEl.textContent = text;
+                msgEl.className = 'msg ' + (type === 'error' ? 'error' : 'success');
+            }
+            function clearMsg() {
+                msgEl.className = 'msg';
+                msgEl.textContent = '';
+            }
+
+            emailEl.addEventListener('blur', function() {
+                var v = this.value.trim().toLowerCase();
+                if (!v) return;
+                if (v.endsWith(SCI)) {
+                    this.classList.add('error');
+                } else {
+                    this.classList.remove('error');
+                }
+            });
+
+            pass2El.addEventListener('input', function() {
+                var p1 = document.getElementById('password').value;
+                if (this.value && p1 !== this.value) {
+                    pass2Hint.textContent = 'Mật khẩu không trùng khớp.';
+                    pass2Hint.style.color = '#dc3545';
+                    this.classList.add('error');
+                } else {
+                    pass2Hint.textContent = '';
+                    this.classList.remove('error');
+                }
+            });
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                clearMsg();
+                var email = emailEl.value.trim().toLowerCase();
+                if (email.endsWith(SCI)) {
+                    showMsg('Email @sci.edu.vn vui lòng đăng ký tại trang Đăng ký chính (dang-ky.html).', 'error');
+                    return;
+                }
+                if (document.getElementById('password').value !== pass2El.value) {
+                    showMsg('Mật khẩu xác nhận không trùng khớp.', 'error');
+                    return;
+                }
+                btn.disabled = true;
+                try {
+                    var res = await fetch(apiBase + '/api/crd/public/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({
+                            email: email,
+                            password: document.getElementById('password').value,
+                            fullname: document.getElementById('fullname').value.trim()
+                        })
+                    });
+                    var data = await res.json().catch(function() { return {}; });
+                    if (res.ok && data.token) {
+                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('user', JSON.stringify(data.user || {}));
+                        try { localStorage.removeItem('crd_user'); } catch (x) {}
+                        showMsg('Đăng ký thành công. Đang mở trang đặt lịch…', 'success');
+                        setTimeout(function() { window.location.href = 'crd-booking-v2.html'; }, 600);
+                    } else {
+                        showMsg(data.message || 'Đăng ký thất bại.', 'error');
+                        btn.disabled = false;
+                    }
+                } catch (err) {
+                    showMsg('Không thể kết nối máy chủ. Hãy chạy node server.js và thử lại.', 'error');
+                    btn.disabled = false;
+                }
+            });
+        })();
+    </script>
+    <script src="js/auth-status.js"></script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Khen thưởng & Đánh giá - Viện Tế bào gốc</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 40px; }
+        .header h1 { font-size: 24px; }
+        .breadcrumb { font-size: 14px; opacity: 0.9; }
+        .breadcrumb a { color: white; text-decoration: none; }
+        .main-container { display: flex; height: calc(100vh - 80px); }
+        .sidebar { width: 280px; background: white; border-right: 1px solid #e0e0e0; overflow-y: auto; }
+        .menu-section { padding: 20px; }
+        .menu-title { font-size: 12px; color: #999; text-transform: uppercase; font-weight: 600; margin-bottom: 15px; }
+        .menu-item { padding: 12px 15px; margin-bottom: 5px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: all 0.3s; }
+        .menu-item:hover { background: #f0f0f0; }
+        .menu-item.active { background: #667eea; color: white; }
+        .content-area { flex: 1; padding: 30px; overflow-y: auto; }
+        .page-title { font-size: 28px; color: #333; margin-bottom: 30px; }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #667eea; }
+        .stat-label { font-size: 12px; color: #999; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-value { font-size: 36px; font-weight: bold; color: #333; }
+        .award-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .award-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; }
+        .award-icon { font-size: 48px; margin-bottom: 15px; }
+        .award-name { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 8px; }
+        .award-winner { font-size: 14px; color: #666; margin-bottom: 5px; }
+        .award-year { font-size: 12px; color: #999; }
+        .evaluation-table { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 30px; }
+        .eval-row { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #e0e0e0; align-items: center; }
+        .eval-row:last-child { border-bottom: none; }
+        .eval-name { font-weight: 600; color: #333; }
+        .eval-score { font-size: 24px; font-weight: bold; color: #667eea; }
+        .eval-rank { padding: 5px 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .rank-gold { background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); color: #333; }
+        .rank-silver { background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%); color: #333; }
+        .rank-bronze { background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%); color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏆 Quản lý Khen thưởng & Đánh giá</h1>
+        <div class="breadcrumb"><a href="index.html">🏠 Trang chủ</a> / Khen thưởng & Đánh giá</div>
+    </div>
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="menu-section">
+                <div class="menu-title">Quản lý khen thưởng</div>
+                <div class="menu-item active"><span>📊</span><span>Tổng quan</span></div>
+                <div class="menu-item"><span>🏅</span><span>Giải thưởng</span></div>
+                <div class="menu-item"><span>⭐</span><span>Thi đua</span></div>
+            </div>
+            <div class="menu-section">
+                <div class="menu-title">Đánh giá</div>
+                <div class="menu-item"><span>📈</span><span>Đánh giá KHCN</span></div>
+                <div class="menu-item"><span>💯</span><span>Tính điểm KHCN</span></div>
+                <div class="menu-item"><span>⏰</span><span>Giờ chuẩn</span></div>
+            </div>
+            <div class="menu-section">
+                <div class="menu-title">Vi phạm</div>
+                <div class="menu-item"><span>⚠️</span><span>Xử lý vi phạm</span></div>
+            </div>
+        </div>
+        <div class="content-area">
+            <h2 class="page-title">Tổng quan Khen thưởng & Đánh giá</h2>
+            <div class="stats-row">
+                <div class="stat-box"><div class="stat-label">Khen thưởng năm nay</div><div class="stat-value">45</div></div>
+                <div class="stat-box"><div class="stat-label">Giải thưởng</div><div class="stat-value">12</div></div>
+                <div class="stat-box"><div class="stat-label">Cá nhân xuất sắc</div><div class="stat-value">28</div></div>
+                <div class="stat-box"><div class="stat-label">Vi phạm</div><div class="stat-value">2</div></div>
+            </div>
+            <h3 style="margin: 30px 0 20px;">Giải thưởng năm 2024</h3>
+            <div class="award-grid">
+                <div class="award-card">
+                    <div class="award-icon">🏆</div>
+                    <div class="award-name">Giải thưởng KHCN xuất sắc cấp Nhà nước</div>
+                    <div class="award-winner">PGS.TS. Nguyễn Văn A</div>
+                    <div class="award-year">Năm 2024</div>
+                </div>
+                <div class="award-card">
+                    <div class="award-icon">🥇</div>
+                    <div class="award-name">Giải Nhất KHCN trẻ ĐHQG TP.HCM</div>
+                    <div class="award-winner">TS. Trần Thị B</div>
+                    <div class="award-year">Năm 2024</div>
+                </div>
+                <div class="award-card">
+                    <div class="award-icon">🌟</div>
+                    <div class="award-name">Nhà khoa học trẻ tiêu biểu</div>
+                    <div class="award-winner">TS. Lê Văn C</div>
+                    <div class="award-year">Năm 2024</div>
+                </div>
+            </div>
+            <div class="evaluation-table">
+                <h3 style="margin-bottom: 20px;">Xếp hạng đánh giá KHCN năm 2024</h3>
+                <div class="eval-row">
+                    <div>
+                        <div class="eval-name">PGS.TS. Nguyễn Văn A</div>
+                        <div style="font-size: 12px; color: #999;">45 công bố • 1,234 trích dẫn • H-index: 18</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="eval-score">950</div>
+                        <span class="eval-rank rank-gold">🥇 Hạng 1</span>
+                    </div>
+                </div>
+                <div class="eval-row">
+                    <div>
+                        <div class="eval-name">PGS.TS. Trần Thị B</div>
+                        <div style="font-size: 12px; color: #999;">38 công bố • 987 trích dẫn • H-index: 15</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="eval-score">820</div>
+                        <span class="eval-rank rank-silver">🥈 Hạng 2</span>
+                    </div>
+                </div>
+                <div class="eval-row">
+                    <div>
+                        <div class="eval-name">PGS.TS. Lê Văn C</div>
+                        <div style="font-size: 12px; color: #999;">34 công bố • 856 trích dẫn • H-index: 14</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="eval-score">765</div>
+                        <span class="eval-rank rank-bronze">🥉 Hạng 3</span>
+                    </div>
+                </div>
+                <div class="eval-row">
+                    <div>
+                        <div class="eval-name">TS. Phạm Thị D</div>
+                        <div style="font-size: 12px; color: #999;">28 công bố • 645 trích dẫn • H-index: 12</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="eval-score">685</div>
+                        <span class="eval-rank">Hạng 4</span>
+                    </div>
+                </div>
+                <div class="eval-row">
+                    <div>
+                        <div class="eval-name">TS. Hoàng Văn E</div>
+                        <div style="font-size: 12px; color: #999;">25 công bố • 534 trích dẫn • H-index: 11</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="eval-score">620</div>
+                        <span class="eval-rank">Hạng 5</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

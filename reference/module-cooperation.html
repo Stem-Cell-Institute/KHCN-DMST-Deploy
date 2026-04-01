@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Hợp tác - Viện Tế bào gốc</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 40px; }
+        .header h1 { font-size: 24px; }
+        .breadcrumb { font-size: 14px; opacity: 0.9; }
+        .breadcrumb a { color: white; text-decoration: none; }
+        .main-container { display: flex; height: calc(100vh - 80px); }
+        .sidebar { width: 280px; background: white; border-right: 1px solid #e0e0e0; overflow-y: auto; }
+        .menu-section { padding: 20px; }
+        .menu-title { font-size: 12px; color: #999; text-transform: uppercase; font-weight: 600; margin-bottom: 15px; }
+        .menu-item { padding: 12px 15px; margin-bottom: 5px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: all 0.3s; }
+        .menu-item:hover { background: #f0f0f0; }
+        .menu-item.active { background: #667eea; color: white; }
+        .menu-item .badge { margin-left: auto; background: #ff4757; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+        .content-area { flex: 1; padding: 30px; overflow-y: auto; }
+        .page-title { font-size: 28px; color: #333; margin-bottom: 30px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #667eea; }
+        .stat-label { font-size: 12px; color: #999; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-value { font-size: 36px; font-weight: bold; color: #333; }
+        .stat-change { font-size: 12px; margin-top: 5px; color: #6bcf7f; }
+        .partner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .partner-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s; cursor: pointer; }
+        .partner-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+        .partner-header { display: flex; gap: 20px; margin-bottom: 20px; }
+        .partner-logo { width: 80px; height: 80px; border-radius: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 32px; color: white; }
+        .partner-name { font-size: 18px; font-weight: 600; color: #333; margin-bottom: 5px; }
+        .partner-type { font-size: 13px; color: #999; }
+        .partner-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; }
+        .info-item { text-align: center; }
+        .info-value { font-size: 20px; font-weight: bold; color: #667eea; }
+        .info-label { font-size: 11px; color: #999; margin-top: 3px; }
+        .type-badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
+        .badge-international { background: #e3f2fd; color: #1976d2; }
+        .badge-domestic { background: #e8f5e9; color: #388e3c; }
+        .badge-enterprise { background: #fff3e0; color: #f57c00; }
+        .badge-local { background: #fce4ec; color: #c2185b; }
+        @media (max-width: 768px) {
+            .main-container { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; }
+            .partner-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🤝 Quản lý Hợp tác</h1>
+            <div class="breadcrumb"><a href="index.html">🏠 Trang chủ</a> / Hợp tác</div>
+        </div>
+    </div>
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="menu-section">
+                <div class="menu-title">Quản lý hợp tác</div>
+                <div class="menu-item active"><span>📊</span><span>Tổng quan</span></div>
+                <div class="menu-item"><span>➕</span><span>Thêm đối tác mới</span></div>
+                <div class="menu-item"><span>📁</span><span>Danh sách đối tác</span><span class="badge">67</span></div>
+            </div>
+            <div class="menu-section">
+                <div class="menu-title">Theo loại</div>
+                <div class="menu-item"><span>🌍</span><span>Quốc tế</span><span class="badge">34</span></div>
+                <div class="menu-item"><span>🇻🇳</span><span>Trong nước</span><span class="badge">23</span></div>
+                <div class="menu-item"><span>🏢</span><span>Doanh nghiệp</span><span class="badge">23</span></div>
+                <div class="menu-item"><span>🏛️</span><span>Địa phương</span><span class="badge">10</span></div>
+            </div>
+            <div class="menu-section">
+                <div class="menu-title">Hợp đồng & MOU</div>
+                <div class="menu-item"><span>📄</span><span>MOU đang hiệu lực</span><span class="badge">45</span></div>
+                <div class="menu-item"><span>📝</span><span>Dự án hợp tác</span><span class="badge">28</span></div>
+                <div class="menu-item"><span>⏰</span><span>Sắp hết hạn</span><span class="badge">5</span></div>
+            </div>
+        </div>
+        <div class="content-area">
+            <h2 class="page-title">Tổng quan Hợp tác</h2>
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-label">Tổng số đối tác</div>
+                    <div class="stat-value">67</div>
+                    <div class="stat-change">↗ +8 đối tác mới</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Đối tác quốc tế</div>
+                    <div class="stat-value">34</div>
+                    <div class="stat-change">↗ 20 quốc gia</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">MOU hiệu lực</div>
+                    <div class="stat-value">45</div>
+                    <div class="stat-change">↗ +6 MOU mới</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Dự án hợp tác</div>
+                    <div class="stat-value">28</div>
+                    <div class="stat-change">↗ 18 đang thực hiện</div>
+                </div>
+            </div>
+            <h3 style="margin: 30px 0 20px;">Đối tác nổi bật</h3>
+            <div class="partner-grid">
+                <div class="partner-card">
+                    <div class="partner-header">
+                        <div class="partner-logo">🏛️</div>
+                        <div style="flex: 1;">
+                            <div class="partner-name">Harvard Medical School</div>
+                            <div class="partner-type">Hoa Kỳ</div>
+                            <span class="type-badge badge-international">Quốc tế</span>
+                        </div>
+                    </div>
+                    <div class="partner-info">
+                        <div class="info-item"><div class="info-value">5</div><div class="info-label">Dự án</div></div>
+                        <div class="info-item"><div class="info-value">12</div><div class="info-label">Công bố</div></div>
+                        <div class="info-item"><div class="info-value">2018</div><div class="info-label">Từ năm</div></div>
+                    </div>
+                </div>
+                <div class="partner-card">
+                    <div class="partner-header">
+                        <div class="partner-logo">🔬</div>
+                        <div style="flex: 1;">
+                            <div class="partner-name">Đại học Quốc gia Singapore</div>
+                            <div class="partner-type">Singapore</div>
+                            <span class="type-badge badge-international">Quốc tế</span>
+                        </div>
+                    </div>
+                    <div class="partner-info">
+                        <div class="info-item"><div class="info-value">4</div><div class="info-label">Dự án</div></div>
+                        <div class="info-item"><div class="info-value">8</div><div class="info-label">Công bố</div></div>
+                        <div class="info-item"><div class="info-value">2020</div><div class="info-label">Từ năm</div></div>
+                    </div>
+                </div>
+                <div class="partner-card">
+                    <div class="partner-header">
+                        <div class="partner-logo">🏢</div>
+                        <div style="flex: 1;">
+                            <div class="partner-name">Vinmec Healthcare System</div>
+                            <div class="partner-type">Việt Nam</div>
+                            <span class="type-badge badge-enterprise">Doanh nghiệp</span>
+                        </div>
+                    </div>
+                    <div class="partner-info">
+                        <div class="info-item"><div class="info-value">6</div><div class="info-label">Dự án</div></div>
+                        <div class="info-item"><div class="info-value">15</div><div class="info-label">Bệnh nhân</div></div>
+                        <div class="info-item"><div class="info-value">2019</div><div class="info-label">Từ năm</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

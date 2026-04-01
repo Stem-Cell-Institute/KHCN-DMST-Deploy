@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Công bố Khoa học - Viện Tế bào gốc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .breadcrumb {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .breadcrumb a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+        }
+
+        .menu-section {
+            padding: 20px;
+        }
+
+        .menu-title {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .menu-item {
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .menu-item:hover {
+            background: #f0f0f0;
+        }
+
+        .menu-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .menu-item .badge {
+            margin-left: auto;
+            background: #ff4757;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            color: #333;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary { background: #667eea; color: white; }
+        .btn-success { background: #6bcf7f; color: white; }
+        .btn-warning { background: #ffd93d; color: #333; }
+        .btn-info { background: #6bceff; color: #333; }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .stat-change.up { color: #6bcf7f; }
+
+        .publication-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .pub-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+            border-top: 4px solid transparent;
+        }
+
+        .pub-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .pub-card.isi { border-top-color: #667eea; }
+        .pub-card.scopus { border-top-color: #6bcf7f; }
+        .pub-card.conference { border-top-color: #ffd93d; }
+        .pub-card.book { border-top-color: #ff4757; }
+
+        .pub-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .pub-authors {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .pub-journal {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .pub-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .pub-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-q1 { background: #e3f2fd; color: #1976d2; }
+        .badge-q2 { background: #e8f5e9; color: #388e3c; }
+        .badge-q3 { background: #fff3e0; color: #f57c00; }
+        .badge-q4 { background: #fce4ec; color: #c2185b; }
+        .badge-isi { background: #f3e5f5; color: #7b1fa2; }
+        .badge-scopus { background: #e0f2f1; color: #00796b; }
+
+        .pub-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 13px;
+        }
+
+        .filter-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .form-group-full {
+            grid-column: 1 / -1;
+        }
+
+        .tab-container {
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .ranking-table {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }
+
+        .ranking-table h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .rank-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .rank-item:last-child {
+            border-bottom: none;
+        }
+
+        .rank-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .rank-info {
+            flex: 1;
+        }
+
+        .rank-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .rank-detail {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .rank-score {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+
+            .publication-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>📄 Quản lý Công bố Khoa học</h1>
+            <div class="breadcrumb">
+                <a href="index.html">🏠 Trang chủ</a> / Công bố Khoa học
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="menu-section">
+                <div class="menu-title">Quản lý công bố</div>
+                <div class="menu-item active" onclick="showSection('overview')">
+                    <span>📊</span>
+                    <span>Tổng quan</span>
+                </div>
+                <div class="menu-item" onclick="showSection('add')">
+                    <span>➕</span>
+                    <span>Thêm công bố mới</span>
+                </div>
+                <div class="menu-item" onclick="showSection('all')">
+                    <span>📚</span>
+                    <span>Tất cả công bố</span>
+                    <span class="badge">324</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Theo loại</div>
+                <div class="menu-item" onclick="filterByType('journal')">
+                    <span>📰</span>
+                    <span>Bài báo tạp chí</span>
+                    <span class="badge">245</span>
+                </div>
+                <div class="menu-item" onclick="filterByType('conference')">
+                    <span>🎤</span>
+                    <span>Hội nghị/Hội thảo</span>
+                    <span class="badge">56</span>
+                </div>
+                <div class="menu-item" onclick="filterByType('book')">
+                    <span>📖</span>
+                    <span>Sách/Chuyên khảo</span>
+                    <span class="badge">15</span>
+                </div>
+                <div class="menu-item" onclick="filterByType('textbook')">
+                    <span>📚</span>
+                    <span>Giáo trình</span>
+                    <span class="badge">8</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Theo chỉ số</div>
+                <div class="menu-item" onclick="filterByIndex('isi')">
+                    <span>⭐</span>
+                    <span>ISI/WoS</span>
+                    <span class="badge">156</span>
+                </div>
+                <div class="menu-item" onclick="filterByIndex('scopus')">
+                    <span>🌟</span>
+                    <span>Scopus</span>
+                    <span class="badge">89</span>
+                </div>
+                <div class="menu-item" onclick="filterByQuartile('q1')">
+                    <span>🏆</span>
+                    <span>Q1</span>
+                    <span class="badge">45</span>
+                </div>
+                <div class="menu-item" onclick="filterByQuartile('q2')">
+                    <span>🥈</span>
+                    <span>Q2</span>
+                    <span class="badge">62</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Báo cáo</div>
+                <div class="menu-item" onclick="showSection('statistics')">
+                    <span>📈</span>
+                    <span>Thống kê công bố</span>
+                </div>
+                <div class="menu-item" onclick="showSection('ranking')">
+                    <span>🏅</span>
+                    <span>Xếp hạng tác giả</span>
+                </div>
+                <div class="menu-item" onclick="showSection('points')">
+                    <span>💯</span>
+                    <span>Tính điểm KHCN</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="overview-section">
+                <div class="page-header">
+                    <h2 class="page-title">Tổng quan Công bố Khoa học</h2>
+                    <button class="btn btn-primary" onclick="openAddPublicationModal()">
+                        ➕ Thêm công bố mới
+                    </button>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-label">Tổng số công bố</div>
+                        <div class="stat-value">324</div>
+                        <div class="stat-change up">↗ +45 năm nay</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Bài báo ISI/Scopus</div>
+                        <div class="stat-value">156</div>
+                        <div class="stat-change up">↗ +23 bài mới</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Bài báo Q1</div>
+                        <div class="stat-value">45</div>
+                        <div class="stat-change up">↗ +12 bài</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Hội nghị quốc tế</div>
+                        <div class="stat-value">56</div>
+                        <div class="stat-change up">↗ +8 bài</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Impact Factor TB</div>
+                        <div class="stat-value">4.2</div>
+                        <div class="stat-change up">↗ +0.3 điểm</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Số trích dẫn</div>
+                        <div class="stat-value">1,234</div>
+                        <div class="stat-change up">↗ +156 lượt</div>
+                    </div>
+                </div>
+
+                <div class="filter-bar">
+                    <h3 style="margin-bottom: 15px;">Tìm kiếm & Lọc công bố</h3>
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label>Tìm kiếm</label>
+                            <input type="text" placeholder="Tên bài báo, tác giả, tạp chí..." id="searchInput">
+                        </div>
+                        <div class="form-group">
+                            <label>Loại công bố</label>
+                            <select id="typeFilter">
+                                <option value="">Tất cả</option>
+                                <option value="journal">Bài báo tạp chí</option>
+                                <option value="conference">Hội nghị</option>
+                                <option value="book">Sách</option>
+                                <option value="textbook">Giáo trình</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Chỉ số</label>
+                            <select id="indexFilter">
+                                <option value="">Tất cả</option>
+                                <option value="isi">ISI/WoS</option>
+                                <option value="scopus">Scopus</option>
+                                <option value="q1">Q1</option>
+                                <option value="q2">Q2</option>
+                                <option value="q3">Q3</option>
+                                <option value="q4">Q4</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Năm</label>
+                            <select id="yearFilter">
+                                <option value="">Tất cả</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="margin: 30px 0 20px;">Công bố nổi bật</h3>
+                <div class="publication-grid" id="publicationsGrid"></div>
+
+                <div class="ranking-table">
+                    <h3>Top 10 Tác giả có nhiều công bố nhất</h3>
+                    <div id="authorRanking"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Publication Modal -->
+    <div id="addPublicationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Thêm Công bố Khoa học mới</h2>
+                <button class="close-btn" onclick="closeAddPublicationModal()">&times;</button>
+            </div>
+
+            <div class="tab-container">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab(event, 'pub-basic')">Thông tin cơ bản</button>
+                    <button class="tab" onclick="switchTab(event, 'pub-authors')">Tác giả</button>
+                    <button class="tab" onclick="switchTab(event, 'pub-metrics')">Chỉ số</button>
+                </div>
+
+                <div id="pub-basic" class="tab-content active">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Loại công bố *</label>
+                            <select required>
+                                <option value="">Chọn loại...</option>
+                                <option value="journal">Bài báo tạp chí</option>
+                                <option value="conference">Hội nghị/Hội thảo</option>
+                                <option value="book">Sách/Chuyên khảo</option>
+                                <option value="textbook">Giáo trình</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Năm xuất bản *</label>
+                            <input type="number" min="2000" max="2025" required>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Tên bài báo/Sách *</label>
+                            <input type="text" placeholder="Nhập tên đầy đủ" required>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Tên tạp chí/Hội nghị *</label>
+                            <input type="text" placeholder="VD: Nature, Science..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Volume</label>
+                            <input type="text" placeholder="VD: 25">
+                        </div>
+                        <div class="form-group">
+                            <label>Issue</label>
+                            <input type="text" placeholder="VD: 3">
+                        </div>
+                        <div class="form-group">
+                            <label>Số trang</label>
+                            <input type="text" placeholder="VD: 123-135">
+                        </div>
+                        <div class="form-group">
+                            <label>DOI</label>
+                            <input type="text" placeholder="10.xxxx/xxxxx">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="pub-authors" class="tab-content">
+                    <div class="form-grid">
+                        <div class="form-group form-group-full">
+                            <label>Tác giả chính (corresponding author) *</label>
+                            <select required>
+                                <option value="">Chọn tác giả...</option>
+                                <option value="1">TS. Nguyễn Văn A</option>
+                                <option value="2">PGS.TS. Trần Thị B</option>
+                                <option value="3">TS. Lê Văn C</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Đồng tác giả</label>
+                            <textarea placeholder="Nhập danh sách đồng tác giả (theo thứ tự, mỗi người một dòng)" rows="4"></textarea>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Đơn vị công tác</label>
+                            <input type="text" value="Viện Tế bào gốc, Trường ĐHKHTN, ĐHQG TP.HCM">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="pub-metrics" class="tab-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>ISI/WoS</label>
+                            <select>
+                                <option value="">Không</option>
+                                <option value="yes">Có</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Scopus</label>
+                            <select>
+                                <option value="">Không</option>
+                                <option value="yes">Có</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Quartile (Q)</label>
+                            <select>
+                                <option value="">Chọn...</option>
+                                <option value="q1">Q1</option>
+                                <option value="q2">Q2</option>
+                                <option value="q3">Q3</option>
+                                <option value="q4">Q4</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Impact Factor</label>
+                            <input type="number" step="0.01" placeholder="VD: 5.2">
+                        </div>
+                        <div class="form-group">
+                            <label>Số lượt trích dẫn</label>
+                            <input type="number" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Điểm KHCN</label>
+                            <input type="number" step="0.1" placeholder="Tự động tính">
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Link bài báo</label>
+                            <input type="url" placeholder="https://...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-warning" onclick="closeAddPublicationModal()">Hủy</button>
+                <button class="btn btn-success" onclick="savePublication()">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data
+        const publications = [
+            {
+                id: 1,
+                title: 'Mesenchymal stem cell-derived exosomes promote cardiac repair after myocardial infarction',
+                authors: ['Nguyen Van A', 'Tran Thi B', 'Le Van C'],
+                journal: 'Nature Medicine',
+                year: 2024,
+                volume: '30',
+                issue: '5',
+                pages: '1234-1245',
+                type: 'isi',
+                quartile: 'q1',
+                impactFactor: 58.7,
+                citations: 156,
+                doi: '10.1038/s41591-024-xxxxx'
+            },
+            {
+                id: 2,
+                title: 'Novel approach for large-scale expansion of human mesenchymal stem cells',
+                authors: ['Tran Thi B', 'Pham Thi D'],
+                journal: 'Stem Cell Research & Therapy',
+                year: 2024,
+                volume: '15',
+                issue: '2',
+                pages: '345-358',
+                type: 'scopus',
+                quartile: 'q1',
+                impactFactor: 7.5,
+                citations: 45,
+                doi: '10.1186/s13287-024-xxxxx'
+            },
+            {
+                id: 3,
+                title: 'Application of stem cells in regenerative medicine: Current status and future perspectives',
+                authors: ['Le Van C', 'Nguyen Van A', 'Hoang Van E'],
+                journal: 'Cell Transplantation',
+                year: 2023,
+                volume: '32',
+                issue: '8',
+                pages: '567-589',
+                type: 'isi',
+                quartile: 'q2',
+                impactFactor: 4.2,
+                citations: 78,
+                doi: '10.1177/09636897231xxxxx'
+            }
+        ];
+
+        const topAuthors = [
+            { name: 'TS. Nguyễn Văn A', publications: 45, citations: 1234, hIndex: 18 },
+            { name: 'PGS.TS. Trần Thị B', publications: 38, citations: 987, hIndex: 15 },
+            { name: 'PGS.TS. Lê Văn C', publications: 34, citations: 856, hIndex: 14 },
+            { name: 'TS. Phạm Thị D', publications: 28, citations: 645, hIndex: 12 },
+            { name: 'TS. Hoàng Văn E', publications: 25, citations: 534, hIndex: 11 },
+            { name: 'ThS. Vũ Thị F', publications: 22, citations: 456, hIndex: 10 },
+            { name: 'TS. Đỗ Văn G', publications: 19, citations: 389, hIndex: 9 },
+            { name: 'ThS. Bùi Thị H', publications: 16, citations: 312, hIndex: 8 },
+            { name: 'TS. Trương Văn I', publications: 14, citations: 267, hIndex: 7 },
+            { name: 'ThS. Lý Thị K', publications: 12, citations: 198, hIndex: 6 }
+        ];
+
+        function renderPublications() {
+            const grid = document.getElementById('publicationsGrid');
+            grid.innerHTML = publications.map(pub => `
+                <div class="pub-card ${pub.type}" onclick="openPublicationDetail(${pub.id})">
+                    <div class="pub-title">${pub.title}</div>
+                    <div class="pub-authors">${pub.authors.join(', ')}</div>
+                    <div class="pub-journal">${pub.journal}, ${pub.year}</div>
+                    
+                    <div class="pub-info-item">
+                        <span>Volume/Issue:</span>
+                        <strong>${pub.volume}(${pub.issue})</strong>
+                    </div>
+                    <div class="pub-info-item">
+                        <span>Pages:</span>
+                        <strong>${pub.pages}</strong>
+                    </div>
+                    <div class="pub-info-item">
+                        <span>Impact Factor:</span>
+                        <strong style="color: #667eea;">${pub.impactFactor}</strong>
+                    </div>
+                    <div class="pub-info-item">
+                        <span>Citations:</span>
+                        <strong style="color: #6bcf7f;">${pub.citations}</strong>
+                    </div>
+                    
+                    <div class="pub-meta">
+                        <span class="pub-badge badge-${pub.type}">${pub.type.toUpperCase()}</span>
+                        <span class="pub-badge badge-${pub.quartile}">${pub.quartile.toUpperCase()}</span>
+                        <span class="pub-badge" style="background: #e0e0e0; color: #666;">IF: ${pub.impactFactor}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderAuthorRanking() {
+            const ranking = document.getElementById('authorRanking');
+            ranking.innerHTML = topAuthors.map((author, index) => `
+                <div class="rank-item">
+                    <div class="rank-number">${index + 1}</div>
+                    <div class="rank-info">
+                        <div class="rank-name">${author.name}</div>
+                        <div class="rank-detail">${author.publications} công bố • ${author.citations} trích dẫn • H-index: ${author.hIndex}</div>
+                    </div>
+                    <div class="rank-score">${author.publications}</div>
+                </div>
+            `).join('');
+        }
+
+        function showSection(section) {
+            console.log('Showing section:', section);
+        }
+
+        function filterByType(type) {
+            console.log('Filter by type:', type);
+        }
+
+        function filterByIndex(index) {
+            console.log('Filter by index:', index);
+        }
+
+        function filterByQuartile(quartile) {
+            console.log('Filter by quartile:', quartile);
+        }
+
+        function openAddPublicationModal() {
+            document.getElementById('addPublicationModal').classList.add('active');
+        }
+
+        function closeAddPublicationModal() {
+            document.getElementById('addPublicationModal').classList.remove('active');
+        }
+
+        function savePublication() {
+            alert('Đã lưu công bố khoa học!');
+            closeAddPublicationModal();
+        }
+
+        function openPublicationDetail(id) {
+            alert('Xem chi tiết công bố ID: ' + id);
+        }
+
+        function switchTab(event, tabId) {
+            const modal = event.target.closest('.modal-content');
+            modal.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            modal.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            modal.querySelector('#' + tabId).classList.add('active');
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            renderPublications();
+            renderAuthorRanking();
+        });
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>

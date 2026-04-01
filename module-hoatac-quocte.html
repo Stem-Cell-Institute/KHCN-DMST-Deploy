@@ -1,0 +1,2280 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hợp tác Quốc tế — Viện Tế bào gốc</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:#0f172a;--ink-soft:#334155;--ink-muted:#64748b;
+  --bg:#dfe7f2;--card:#ffffff;
+  --border:#b8c5d6;--border-subtle:#e2e8f0;--border-field:#94a3b8;
+  --accent:#2563eb;--accent-light:#e8f0fe;
+  --green:#059669;--green-light:#ecfdf5;
+  --amber:#d97706;--amber-light:#fffbeb;
+  --red:#dc2626;--red-light:#fef2f2;
+  --purple:#7c3aed;--purple-light:#f5f3ff;
+  --shadow:0 1px 2px rgba(15,23,42,.08),0 4px 16px rgba(15,23,42,.07);
+  --shadow-lg:0 10px 28px rgba(15,23,42,.14);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+.topbar{background:var(--card);border-bottom:2px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.back-btn{display:flex;align-items:center;gap:6px;color:var(--ink-soft);font-size:13px;cursor:pointer;padding:6px 12px;border-radius:6px;border:1px solid var(--border);text-decoration:none;transition:all .2s}
+.back-btn:hover{background:var(--bg);color:var(--ink)}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.user-chip{display:flex;align-items:center;gap:8px;font-size:13px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.layout{display:flex;height:calc(100vh - 60px)}
+.sidebar{width:256px;background:#f7f9fc;border-right:2px solid var(--border);overflow-y:auto;flex-shrink:0;padding:20px 0;box-shadow:inset -1px 0 0 var(--border-subtle)}
+.nav-label{font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--ink);text-transform:uppercase;padding:16px 20px 8px;display:flex;align-items:center;gap:8px}
+.nav-label::before{content:'';width:4px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;margin:2px 8px;border-radius:8px;cursor:pointer;font-size:13.5px;color:var(--ink-soft);font-weight:500;transition:all .2s;border:1px solid transparent;border-left:3px solid transparent}
+.nav-item:hover{background:#eef2f9;color:var(--ink);border-color:var(--border-subtle)}
+.nav-item.active{background:var(--accent-light);color:#1d4ed8;border-left-color:var(--accent);border-color:#bfdbfe;font-weight:600}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;min-width:20px;text-align:center}
+.nav-badge.red{background:var(--red)}
+.nav-badge.amber{background:var(--amber)}
+.nav-badge.blue{background:var(--accent)}
+.nav-badge.green{background:var(--green)}
+.nav-divider{height:1px;background:var(--border);margin:10px 16px}
+.hidden{display:none!important}
+.main{flex:1;overflow-y:auto}
+.panel{display:none;padding:32px;min-height:100%}
+.panel.active{display:block}
+.page-header{margin-bottom:28px;padding-bottom:18px;border-bottom:2px solid var(--border-subtle)}
+.page-header h1{font-size:24px;font-weight:800;color:var(--ink);margin-bottom:6px}
+.page-header p{font-size:14px;color:var(--ink-soft)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.stat-card{background:var(--card);border-radius:12px;padding:20px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.stat-card .num{font-size:28px;font-weight:800;line-height:1;margin-bottom:4px}
+.stat-card .lbl{font-size:12px;color:var(--ink-soft);font-weight:500}
+.stat-card.amber .num{color:var(--amber)}
+.stat-card.blue .num{color:var(--accent)}
+.stat-card.green .num{color:var(--green)}
+.stat-card.red .num{color:var(--red)}
+.card{background:var(--card);border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:22px;overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:2px solid var(--border-subtle);background:linear-gradient(180deg,#fafbfd 0%,#fff 100%);display:flex;align-items:center;justify-content:space-between}
+.card-header h2{font-size:15px;font-weight:700;color:var(--ink)}
+.card-body{padding:20px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:11px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#475569;background:#e8ecf4;border-bottom:2px solid var(--border)}
+td{padding:11px 14px;border-bottom:1px solid var(--border-subtle);color:var(--ink-soft);vertical-align:middle}
+tbody tr:nth-child(even) td{background:#f4f7fb}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#eef2f9!important}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.badge-amber{background:var(--amber-light);color:var(--amber)}
+.badge-blue{background:var(--accent-light);color:var(--accent)}
+.badge-green{background:var(--green-light);color:var(--green)}
+.badge-red{background:var(--red-light);color:var(--red)}
+.badge-purple{background:var(--purple-light);color:var(--purple)}
+.badge-gray{background:#f1f5f9;color:#64748b}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#047857}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{background:#b91c1c}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-outline{background:#fff;color:var(--ink-soft);border:1px solid var(--border-field)}
+.btn-outline:hover{background:var(--bg);border-color:var(--border)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+label{font-size:12px;font-weight:600;color:var(--ink-soft)}
+input,select,textarea{padding:9px 12px;border:1px solid var(--border-field);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink);transition:border-color .2s,box-shadow .2s;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.18)}
+input::placeholder,textarea::placeholder{color:#64748b;opacity:1}
+textarea{resize:vertical;min-height:80px}
+.form-actions{display:flex;gap:10px;margin-top:20px}
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px}
+.alert.info{background:var(--accent-light);color:#1e40af;border:1px solid #bfdbfe}
+.alert.success{background:var(--green-light);color:var(--green)}
+.alert.warning{background:var(--amber-light);color:var(--amber)}
+.alert.error{background:var(--red-light);color:var(--red)}
+.empty-state{text-align:center;padding:48px 24px;color:var(--ink-muted);font-size:14px}
+.empty-state .icon{font-size:40px;display:block;margin-bottom:12px}
+.stepper{display:flex;align-items:center;margin:16px 0 24px}
+.step{display:flex;align-items:center;gap:6px;flex:1}
+.step:last-child{flex:0}
+.step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;border:2px solid var(--border);background:#fff;color:var(--ink-muted)}
+.step-dot.done{background:var(--green);border-color:var(--green);color:#fff}
+.step-dot.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.step-line{flex:1;height:2px;background:var(--border);margin:0 4px}
+.step-line.done{background:var(--green)}
+.step-text{font-size:11px;color:var(--ink-muted);white-space:nowrap;font-weight:500}
+.step-text.active{color:var(--accent);font-weight:700}
+.step-text.done{color:var(--green)}
+.timeline{padding-left:20px;border-left:2px solid var(--border);margin-top:12px}
+.tl-item{position:relative;margin-bottom:14px;padding-left:16px}
+.tl-item::before{content:'';position:absolute;left:-9px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid #fff;box-shadow:0 0 0 2px var(--accent)}
+.tl-meta{font-size:11px;color:var(--ink-muted)}
+.tl-action{font-size:13px;font-weight:600;color:var(--ink)}
+.tl-note{font-size:12px;color:var(--ink-soft);margin-top:3px;background:#f8fafc;padding:5px 10px;border-radius:5px;border-left:3px solid var(--border)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.hidden{display:none}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:2}
+.modal-header h3{font-size:16px;font-weight:700}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-muted);padding:2px 8px;border-radius:6px;line-height:1}
+.modal-close:hover{background:var(--bg)}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.detail-grid{display:grid;grid-template-columns:150px 1fr;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:13px;box-shadow:0 1px 2px rgba(15,23,42,.06)}
+.dk{padding:8px 12px;background:#e8ecf4;border-bottom:1px solid var(--border-subtle);font-weight:600;font-size:12px;color:#475569}
+.dv{padding:8px 12px;border-bottom:1px solid var(--border-subtle);color:var(--ink)}
+.detail-grid .dk:last-of-type,.detail-grid .dv:last-of-type{border-bottom:none}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:20px;padding-bottom:0;background:#f1f5f9;border-radius:8px 8px 0 0;padding:6px 6px 0}
+.tab{padding:10px 18px;font-size:13px;font-weight:600;color:var(--ink-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;border-radius:8px 8px 0 0}
+.tab.active{color:#1d4ed8;border-bottom-color:var(--accent);background:var(--card);box-shadow:0 -1px 0 var(--card)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.loading{display:flex;align-items:center;gap:8px;color:var(--ink-muted);font-size:13px;padding:24px}
+.spin{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sending-overlay{position:fixed;inset:0;background:rgba(15,23,42,.48);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);cursor:wait}
+.sending-overlay.hidden{display:none!important}
+.sending-overlay-box{background:var(--card);padding:26px 34px;border-radius:14px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;align-items:center;gap:14px;font-weight:600;font-size:15px;color:var(--ink);border:1px solid var(--border-subtle);min-width:200px;text-align:center}
+.sending-overlay .spin{width:28px;height:28px}
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:10px}
+.toast{background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.2);animation:slideIn .3s ease;max-width:380px}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+.role-banner{padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.role-banner.admin-role{background:var(--red-light);color:var(--red)}
+.role-banner.phong-role{background:var(--accent-light);color:var(--accent)}
+.role-banner.vt-role{background:var(--purple-light);color:var(--purple)}
+@media(max-width:900px){.sidebar{display:none}.stats-grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}}
+.dash-coop-chart{margin-top:18px;padding-top:16px;border-top:1px solid var(--border-subtle)}
+.dash-coop-chart h3{font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:12px}
+.coop-chart{display:flex;align-items:flex-end;gap:5px;height:150px;padding:8px 4px 0;border-bottom:2px solid var(--border-subtle)}
+.coop-bar-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.coop-bar{width:100%;max-width:32px;min-height:2px;background:linear-gradient(180deg,#3b82f6,#1d4ed8);border-radius:4px 4px 0 0;transition:height .25s ease}
+.coop-bar-lbl{font-size:10px;color:var(--ink-muted);text-align:center;line-height:1.15;white-space:nowrap}
+.coop-bar-val{font-size:10px;font-weight:700;color:var(--accent)}
+.dash-meta-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.dash-meta-row small{font-size:12px;color:var(--ink-muted)}
+.dr-sent-section{border:1px solid var(--border);box-shadow:var(--shadow);overflow:visible}
+.dr-sent-header{background:linear-gradient(180deg,#e8f0fe 0%,#fff 55%)!important;border-bottom:3px solid var(--accent)!important}
+.dr-sent-title{font-size:1.35rem;font-weight:800;color:var(--ink);letter-spacing:-.02em;line-height:1.3;margin:0}
+@media(max-width:900px){.dr-sent-title{font-size:1.2rem}}
+/* Nhấp nháy dòng mới: thực hiện bằng JS (pulseDoanRaRowFlash) — Edge không vẽ ổn inset-shadow quá lớn trên td */
+</style>
+</head>
+<body>
+<div id="access-denied" style="display:none;max-width:760px;margin:48px auto;padding:0 16px;">
+  <div style="background:#fff3f3;border:1px solid #f5c2c7;color:#842029;border-radius:10px;padding:16px 18px;">
+    <strong>Không có quyền truy cập</strong>
+    <p style="margin:8px 0 0;">Module này chỉ dành cho người dùng trong viện (<code>@sci.edu.vn</code>).</p>
+    <p style="margin:10px 0 0;"><a href="dang-nhap.html?returnUrl=module-hoatac-quocte.html">Đăng nhập</a> hoặc <a href="index.html">về Trang chủ</a>.</p>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <a href="index.html" class="back-btn">← Trang chủ</a>
+    <span style="color:var(--border)">|</span>
+    <span style="font-size:15px;font-weight:700">Hợp tác Quốc tế</span>
+  </div>
+  <div class="topbar-right">
+    <div class="user-chip">
+      <div class="avatar" id="top-avatar">?</div>
+      <div>
+        <div id="top-name" style="font-weight:600;font-size:13px">Đang tải...</div>
+        <div id="top-role" style="font-size:11px;color:var(--ink-muted)"></div>
+      </div>
+    </div>
+    <button class="btn btn-outline btn-sm" id="btn-admin" style="display:none;background:var(--red-light);color:var(--red);border-color:var(--red)" onclick="window.location.href='admin-hoatac-quocte.html'">Quản trị</button>
+    <button class="btn btn-outline btn-sm" onclick="doLogout()">Đăng xuất</button>
+  </div>
+</div>
+
+<div class="layout">
+<nav class="sidebar">
+  <div class="nav-label">Của tôi</div>
+  <div class="nav-item active" onclick="gotoPanel(this,'de-xuat-cua-toi')">Đề xuất đã gửi<span class="nav-badge blue hidden" id="bdg-cua-toi">0</span></div>
+
+  <div class="nav-divider"></div>
+  <div class="nav-label">Gửi đề xuất mới</div>
+  <div class="nav-item" onclick="gotoPanel(this,'gui-doan-ra')">Đăng ký Đoàn ra</div>
+  <div class="nav-item" onclick="gotoPanel(this,'gui-doan-vao')">Đăng ký Đoàn vào</div>
+  <div class="nav-item" onclick="gotoPanel(this,'gui-mou')">Đề xuất Thỏa thuận</div>
+  <div class="nav-item" onclick="gotoPanel(this,'gui-ytnn')">Đề tài YTNN</div>
+
+  <div class="nav-divider mgr-block hidden"></div>
+  <div class="nav-label mgr-block hidden">Quản lý &amp; Duyệt</div>
+  <div class="nav-item mgr-dash hidden" onclick="gotoPanel(this,'dashboard')">Dashboard</div>
+  <div class="nav-item mgr hidden" onclick="gotoPanel(this,'cho-phong-xu-ly')">Chờ Phòng thẩm định<span class="nav-badge amber hidden" id="bdg-phong">0</span></div>
+  <div class="nav-item vt-only hidden" onclick="gotoPanel(this,'cho-vt-duyet')">Chờ Viện trưởng duyệt<span class="nav-badge red hidden" id="bdg-vt">0</span></div>
+  <div class="nav-item mgr hidden" onclick="gotoPanel(this,'tat-ca')">Tất cả đề xuất<span class="nav-badge green hidden" id="bdg-tat-ca">0</span></div>
+
+  <div class="nav-divider"></div>
+  <div class="nav-label">Thông tin</div>
+  <div class="nav-item" onclick="gotoPanel(this,'su-kien')">Sự kiện QT<span class="nav-badge blue hidden" id="bdg-sk">0</span></div>
+  <div class="nav-item" onclick="gotoPanel(this,'doi-tac')">Đối tác</div>
+  <div class="nav-item" onclick="gotoPanel(this,'thoa-thuan')">Thỏa thuận</div>
+</nav>
+
+<main class="main">
+
+<!-- DASHBOARD — chỉ Quản trị viện / Phòng KHCN / Viện trưởng -->
+<div class="panel" id="panel-dashboard">
+  <div class="page-header"><h1>Dashboard</h1><p>Giám sát tổng thể đề xuất Hợp tác quốc tế (toàn Viện)</p></div>
+  <div id="dashboard-wrap"><div class="loading"><div class="spin"></div>Đang tải...</div></div>
+</div>
+
+<!-- ĐỀ XUẤT CỦA TÔI -->
+<div class="panel active" id="panel-de-xuat-cua-toi">
+  <div class="page-header"><h1>Đề xuất của tôi</h1><p>Toàn bộ đề xuất bạn đã gửi — theo dõi tiến trình từng bước</p></div>
+  <div id="role-banner-wrap"></div>
+  <div id="cua-toi-wrap"><div class="loading"><div class="spin"></div>Đang tải...</div></div>
+</div>
+
+<!-- GUI ĐOÀN RA -->
+<div class="panel" id="panel-gui-doan-ra">
+  <div class="page-header"><h1>Đăng ký Đoàn ra</h1><p>Gửi đề xuất công tác nước ngoài lên Phòng KHCN&QHĐN thẩm định và trình Viện trưởng phê duyệt</p></div>
+  <div class="card">
+    <div class="card-header"><h2>Thông tin Đoàn ra</h2></div>
+    <div class="card-body">
+      <div class="alert info">Quy trình: <strong>Bạn gửi</strong> → Phòng KHCN thẩm định → Viện trưởng phê duyệt. Bạn nhận email ở mỗi bước.</div>
+      <div id="msg-doan-ra" class="alert hidden"></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Quốc gia / Địa điểm *</label><input id="dr-quoc-gia" placeholder="VD: Nhật Bản, Tokyo"></div>
+        <div class="form-group"><label>Mục đích chuyến đi</label><input id="dr-muc-dich" placeholder="VD: Tham dự Hội nghị ISSCR 2025"></div>
+        <div class="form-group"><label>Ngày đi *</label><input id="dr-ngay-di" type="date"></div>
+        <div class="form-group"><label>Ngày về *</label><input id="dr-ngay-ve" type="date"></div>
+        <div class="form-group full"><label>Thành viên đoàn (mỗi người một dòng) *</label><textarea id="dr-thanh-vien" rows="3" placeholder="Nguyễn Văn A — GS.TS&#10;Trần Thị B — ThS"></textarea></div>
+        <div class="form-group"><label>Nguồn kinh phí</label><input id="dr-kinh-phi" placeholder="VD: Kinh phí đề tài, Tự túc"></div>
+        <div class="form-group"><label>Dự toán (VND)</label><input id="dr-du-toan" type="number" min="0" step="1" placeholder="VD: 25 000 000"></div>
+        <div class="form-group full"><label>Ghi chú</label><textarea id="dr-ghi-chu" rows="2"></textarea></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="submitDoanRa()">Gửi đề xuất Đoàn ra</button></div>
+    </div>
+  </div>
+  <div class="card dr-sent-section" id="dr-sent-section">
+    <div class="card-header dr-sent-header"><h2 class="dr-sent-title">Đề xuất Đoàn ra đã gửi</h2></div>
+    <table><thead><tr><th>Mã</th><th>Quốc gia / Mục đích</th><th>Ngày đi</th><th>Ngày về</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody id="dr-tbody"><tr><td colspan="6"><div class="loading"><div class="spin"></div>Đang tải...</div></td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- GUI ĐOÀN VÀO -->
+<div class="panel" id="panel-gui-doan-vao">
+  <div class="page-header"><h1>Đăng ký Đoàn vào</h1><p>Đề xuất tiếp nhận đoàn khách quốc tế — Phòng KHCN thẩm định, Viện trưởng phê duyệt chủ trương</p></div>
+  <div class="card">
+    <div class="card-header"><h2>Thông tin Đoàn vào</h2></div>
+    <div class="card-body">
+      <div class="alert info">Quy trình: <strong>Bạn gửi</strong> → Phòng KHCN thẩm định → Viện trưởng phê duyệt. Bạn nhận email ở mỗi bước.</div>
+      <div id="msg-doan-vao" class="alert hidden"></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Đơn vị đề xuất tiếp nhận *</label><input id="dv-don-vi" placeholder="VD: Phòng Thí nghiệm Tế bào gốc"></div>
+        <div class="form-group"><label>Mục đích chuyến thăm</label><input id="dv-muc-dich" placeholder="VD: Ký kết hợp tác, Trao đổi học thuật"></div>
+        <div class="form-group"><label>Ngày đến *</label><input id="dv-ngay-den" type="date"></div>
+        <div class="form-group"><label>Ngày rời đi</label><input id="dv-ngay-roi" type="date"></div>
+        <div class="form-group full"><label>Thành phần đoàn khách *</label><textarea id="dv-thanh-phan" rows="3" placeholder="Tên, chức vụ, đơn vị từng thành viên..."></textarea></div>
+        <div class="form-group full"><label>Nội dung làm việc dự kiến</label><textarea id="dv-noi-dung" rows="2"></textarea></div>
+        <div class="form-group"><label>Kinh phí đón tiếp</label><input id="dv-kinh-phi" placeholder="VD: Kinh phí Viện"></div>
+        <div class="form-group"><label>Hỗ trợ visa / Nhập cảnh</label><input id="dv-visa" placeholder="VD: Cần hỗ trợ thủ tục visa"></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="submitDoanVao()">Gửi đề xuất Đoàn vào</button></div>
+    </div>
+  </div>
+  <div class="card dr-sent-section" id="dv-sent-section">
+    <div class="card-header dr-sent-header"><h2 class="dr-sent-title">Đề xuất Đoàn vào đã gửi</h2></div>
+    <table><thead><tr><th>Mã</th><th>Đơn vị / Mục đích</th><th>Ngày đến</th><th>Ngày rời</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody id="dv-tbody"><tr><td colspan="6"><div class="loading"><div class="spin"></div>Đang tải...</div></td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- GUI MOU -->
+<div class="panel" id="panel-gui-mou">
+  <div class="page-header"><h1>Đề xuất Thỏa thuận hợp tác</h1><p>Đề xuất ký kết MOU, MOA, Hợp đồng KHCN với đối tác trong và ngoài nước</p></div>
+  <div class="card">
+    <div class="card-header"><h2>Thông tin Thỏa thuận</h2></div>
+    <div class="card-body">
+      <div class="alert info">Quy trình: <strong>Bạn gửi</strong> → Phòng KHCN thẩm định → Viện trưởng phê duyệt. Bạn nhận email ở mỗi bước. Dưới đây là các đề xuất Thỏa thuận đã gửi — bấm <strong>Xem</strong> để theo dõi tiến trình.</div>
+      <div id="msg-mou" class="alert hidden"></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Loại thỏa thuận *</label>
+          <select id="mou-loai"><option value="">— Chọn loại —</option><option value="MOU">MOU (Biên bản ghi nhớ)</option><option value="MOA">MOA (Thỏa thuận hợp tác)</option><option value="HD_KHCN">Hợp đồng KHCN</option><option value="LOI">LOI (Thư cam kết)</option></select></div>
+        <div class="form-group"><label>Tên đối tác *</label><input id="mou-doi-tac" placeholder="VD: Đại học Tokyo"></div>
+        <div class="form-group"><label>Quốc gia</label><input id="mou-quoc-gia" placeholder="VD: Nhật Bản"></div>
+        <div class="form-group"><label>Thời hạn (năm)</label><input id="mou-thoi-han" type="number" placeholder="VD: 3"></div>
+        <div class="form-group"><label>Giá trị tài chính</label><input id="mou-gia-tri" placeholder="VD: 50,000 USD"></div>
+        <div class="form-group"><label>Đơn vị đề xuất</label><input id="mou-don-vi" placeholder="VD: Phòng Lab Tế bào gốc"></div>
+        <div class="form-group full"><label>Nội dung hợp tác *</label><textarea id="mou-noi-dung" rows="3" placeholder="Mô tả các hoạt động hợp tác dự kiến..."></textarea></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="submitMOU()">Gửi đề xuất Thỏa thuận</button></div>
+    </div>
+  </div>
+  <div class="card dr-sent-section" id="mou-sent-section">
+    <div class="card-header dr-sent-header"><h2 class="dr-sent-title">Đề xuất Thỏa thuận đã gửi</h2></div>
+    <table><thead><tr><th>Mã</th><th>Loại / Đối tác</th><th>Quốc gia</th><th>Đơn vị đề xuất</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody id="mou-tbody"><tr><td colspan="6"><div class="loading"><div class="spin"></div>Đang tải...</div></td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- GUI YTNN -->
+<div class="panel" id="panel-gui-ytnn">
+  <div class="page-header"><h1>Đề tài có yếu tố nước ngoài (YTNN)</h1><p>Tiếp nhận tài trợ / hợp tác nghiên cứu từ tổ chức quốc tế — Chương VII Quy chế KHCN-ĐMST SCI 2026</p></div>
+  <!-- Bảng «đã gửi» đặt trên form để luôn thấy sau khi gửi (form có nhiều tab, dễ đẩy khối dưới ra ngoài màn hình) -->
+  <div class="card dr-sent-section" id="yt-sent-section">
+    <div class="card-header dr-sent-header"><h2 class="dr-sent-title">Đề xuất YTNN đã gửi</h2></div>
+    <div class="card-body" style="padding-top:0">
+    <table><thead><tr><th>Mã</th><th>Tên đề tài / Đối tác</th><th>Chủ nhiệm</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody id="yt-tbody"><tr><td colspan="5"><div class="loading"><div class="spin"></div>Đang tải...</div></td></tr></tbody></table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>Thông tin Đề tài YTNN</h2></div>
+    <div class="card-body">
+      <div class="alert info">Quy trình: <strong>Bạn gửi</strong> → Phòng KHCN thẩm định → Viện trưởng phê duyệt. Sau phê duyệt có thể tải Tờ trình Word (khi Admin đã cấu hình mẫu). Bạn nhận email ở mỗi bước.</div>
+      <div id="msg-ytnn" class="alert hidden"></div>
+      <div class="tabs">
+        <div class="tab active" onclick="swTab(this,'ytnn-t1')">1. Thông tin đề tài</div>
+        <div class="tab" onclick="swTab(this,'ytnn-t2')">2. Đối tác</div>
+        <div class="tab" onclick="swTab(this,'ytnn-t3')">3. Chủ nhiệm & Kinh phí</div>
+      </div>
+      <div class="tab-panel active" id="ytnn-t1">
+        <div class="form-grid">
+          <div class="form-group full"><label>Tên đề tài *</label><input id="yt-ten" placeholder="Tên đầy đủ của đề tài nghiên cứu"></div>
+          <div class="form-group"><label>Hình thức hợp tác</label><select id="yt-hinh-thuc"><option value="">— Chọn —</option><option>Nghiên cứu hợp tác</option><option>Tài trợ nghiên cứu</option><option>Trao đổi nhà khoa học</option><option>Đào tạo nghiên cứu sinh</option></select></div>
+          <div class="form-group"><label>Loại hình</label><select id="yt-loai-hinh"><option value="">— Chọn —</option><option>Tài trợ trong nước</option><option>Tài trợ quốc tế</option><option>Hợp tác song phương</option></select></div>
+          <div class="form-group"><label>Ngày bắt đầu</label><input id="yt-ngay-bd" type="date"></div>
+          <div class="form-group"><label>Ngày kết thúc</label><input id="yt-ngay-kt" type="date"></div>
+          <div class="form-group full"><label>Mô tả đề tài</label><textarea id="yt-mo-ta" rows="3" placeholder="Mục tiêu và nội dung nghiên cứu..."></textarea></div>
+        </div>
+      </div>
+      <div class="tab-panel" id="ytnn-t2">
+        <div class="form-grid">
+          <div class="form-group"><label>Tên tổ chức đối tác</label><input id="yt-doi-tac-ten" placeholder="VD: NIH, Wellcome Trust"></div>
+          <div class="form-group"><label>Quốc gia đối tác</label><input id="yt-doi-tac-qg" placeholder="VD: Hoa Kỳ"></div>
+          <div class="form-group"><label>Người đại diện</label><input id="yt-dai-dien" placeholder="Họ tên, chức danh"></div>
+          <div class="form-group"><label>Website</label><input id="yt-website" type="url" placeholder="https://..."></div>
+        </div>
+      </div>
+      <div class="tab-panel" id="ytnn-t3">
+        <div class="form-grid">
+          <div class="form-group"><label>Chủ nhiệm đề tài</label><input id="yt-chu-nhiem" placeholder="Họ tên"></div>
+          <div class="form-group"><label>Học hàm / Học vị</label><input id="yt-hoc-vi" placeholder="VD: GS.TS, PGS.TS"></div>
+          <div class="form-group"><label>Đơn vị</label><input id="yt-don-vi" placeholder="Phòng/Lab thuộc Viện"></div>
+          <div class="form-group"><label>Kinh phí</label><input id="yt-kinh-phi" type="number" placeholder="Giá trị số"></div>
+          <div class="form-group"><label>Đơn vị tiền tệ</label><select id="yt-tien-te"><option value="VNĐ">VNĐ</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="JPY">JPY</option></select></div>
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:20px"><button class="btn btn-primary" onclick="submitYTNN()">Gửi đề xuất Đề tài YTNN</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHỜ PHÒNG XỬ LÝ -->
+<div class="panel" id="panel-cho-phong-xu-ly">
+  <div class="page-header"><h1>Chờ Phòng KHCN&QHĐN thẩm định</h1><p>Các đề xuất cần Phòng KHCN xem xét và xử lý</p></div>
+  <div id="phong-wrap"><div class="loading"><div class="spin"></div>Đang tải...</div></div>
+</div>
+
+<!-- CHỜ VT DUYỆT -->
+<div class="panel" id="panel-cho-vt-duyet">
+  <div class="page-header"><h1>Chờ Viện trưởng phê duyệt</h1><p>Các đề xuất đã được Phòng KHCN thẩm định, trình Viện trưởng</p></div>
+  <div id="vt-wrap"><div class="loading"><div class="spin"></div>Đang tải...</div></div>
+</div>
+
+<!-- TẤT CẢ ĐỀ XUẤT -->
+<div class="panel" id="panel-tat-ca">
+  <div class="page-header"><h1>Tất cả đề xuất</h1><p>Danh sách toàn bộ đề xuất trong hệ thống</p></div>
+  <div class="card" style="margin-bottom:16px"><div class="card-body" style="padding:12px 16px;display:flex;gap:12px;flex-wrap:wrap">
+    <select id="fil-loai" style="width:170px" onchange="loadTatCa()"><option value="">Tất cả loại</option><option value="doan_ra">Đoàn ra</option><option value="doan_vao">Đoàn vào</option><option value="mou">MOU</option><option value="ytnn">YTNN</option></select>
+        <select id="fil-status" style="width:200px" onchange="loadTatCa()"><option value="">Tất cả trạng thái</option><option value="cho_phong_duyet">Chờ Phòng KHCN</option><option value="yeu_cau_bo_sung">Yêu cầu bổ sung</option><option value="cho_vt_duyet">Chờ Viện trưởng</option><option value="da_duyet">Đã phê duyệt</option><option value="tu_choi">Không phê duyệt</option><option value="ket_thuc_boi_nguoi_nop">Đã kết thúc (người gửi)</option></select>
+    <button class="btn btn-outline btn-sm" onclick="loadTatCa()">Làm mới</button>
+  </div></div>
+  <div id="tatca-wrap"><div class="loading"><div class="spin"></div>Đang tải...</div></div>
+</div>
+
+<!-- SỰ KIỆN -->
+<div class="panel" id="panel-su-kien">
+  <div class="page-header"><h1>Sự kiện Quốc tế</h1><p>Hội nghị, hội thảo, sự kiện khoa học quốc tế</p></div>
+  <div class="card mgr hidden" id="card-tao-sk">
+    <div class="card-header"><h2>Tạo sự kiện mới</h2></div>
+    <div class="card-body">
+      <div id="msg-sk" class="alert hidden"></div>
+      <div class="form-grid">
+        <div class="form-group full"><label>Tiêu đề *</label><input id="sk-tieu-de"></div>
+        <div class="form-group"><label>Loại</label><select id="sk-loai"><option value="hoi_thao">Hội thảo</option><option value="hoi_nghi">Hội nghị</option><option value="workshop">Workshop</option></select></div>
+        <div class="form-group"><label>Quốc gia</label><input id="sk-quoc-gia"></div>
+        <div class="form-group"><label>Địa điểm</label><input id="sk-dia-diem"></div>
+        <div class="form-group"><label>Đơn vị tổ chức</label><input id="sk-don-vi"></div>
+        <div class="form-group"><label>Ngày bắt đầu *</label><input id="sk-ngay-bd" type="date"></div>
+        <div class="form-group"><label>Ngày kết thúc</label><input id="sk-ngay-kt" type="date"></div>
+        <div class="form-group"><label>Hạn đăng ký</label><input id="sk-han-dk" type="date"></div>
+        <div class="form-group"><label>Kinh phí tham dự</label><input id="sk-kinh-phi" placeholder="VD: 500 USD"></div>
+        <div class="form-group"><label>Link sự kiện</label><input id="sk-link" type="url"></div>
+        <div class="form-group full"><label>Mô tả</label><textarea id="sk-mo-ta" rows="2"></textarea></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="submitSuKien()">Tạo sự kiện</button></div>
+    </div>
+  </div>
+  <div id="sk-list"><div class="loading"><div class="spin"></div>Đang tải...</div></div>
+</div>
+
+<!-- ĐỐI TÁC -->
+<div class="panel" id="panel-doi-tac">
+  <div class="page-header"><h1>Đối tác Quốc tế</h1><p>Các tổ chức đã và đang hợp tác với Viện</p></div>
+  <div id="doitac-wrap"><div class="loading"><div class="spin"></div>Đang tải...</div></div>
+</div>
+
+<!-- THỎA THUẬN -->
+<div class="panel" id="panel-thoa-thuan">
+  <div class="page-header"><h1>Thỏa thuận hợp tác</h1><p>MOU, MOA, Hợp đồng KHCN đang hiệu lực</p></div>
+  <div class="card mgr hidden">
+    <div class="card-header"><h2>Thêm thỏa thuận đã ký</h2></div>
+    <div class="card-body">
+      <div id="msg-tt" class="alert hidden"></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Tên thỏa thuận *</label><input id="tt-ten"></div>
+        <div class="form-group"><label>Đối tác *</label><input id="tt-doi-tac"></div>
+        <div class="form-group"><label>Loại *</label><select id="tt-loai"><option value="MOU">MOU</option><option value="MOA">MOA</option><option value="HD_KHCN">HĐ KHCN</option><option value="LOI">LOI</option></select></div>
+        <div class="form-group"><label>Quốc gia</label><input id="tt-quoc-gia"></div>
+        <div class="form-group"><label>Hết hạn</label><input id="tt-het-han" type="date"></div>
+        <div class="form-group"><label>Trạng thái</label><select id="tt-trang-thai"><option value="hieu_luc">Hiệu lực</option><option value="sap_het_han">Sắp hết hạn</option><option value="het_han">Hết hạn</option></select></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="submitTT()">Thêm</button></div>
+    </div>
+  </div>
+  <div id="tt-wrap"><div class="loading"><div class="spin"></div>Đang tải...</div></div>
+</div>
+
+</main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay hidden" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><h3 id="modal-title">Chi tiết</h3><div id="modal-ma" style="font-size:12px;color:var(--ink-muted);margin-top:2px"></div></div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"><div class="loading"><div class="spin"></div>Đang tải...</div></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<div id="sending-overlay" class="sending-overlay hidden" aria-hidden="true">
+  <div class="sending-overlay-box" role="status">
+    <div class="spin" aria-hidden="true"></div>
+    <span>Đang gửi…</span>
+  </div>
+</div>
+
+<script src="js/system-access.js"></script>
+<script>
+// ============================================================
+// CONFIG & STATE
+// ============================================================
+var API = (window.location.protocol==='file:' || (window.location.port&&window.location.port!=='3000'))
+  ? 'http://localhost:3000' : (window.location.origin||'');
+
+var ME = null; // thông tin user hiện tại
+var IS_MANAGER = false;
+var IS_VT = false;
+var IS_ADMIN = false;
+
+var STATUS_LABEL = {
+  cho_phong_duyet:'Chờ Phòng KHCN',cho_phan_loai:'Chờ Phòng KHCN phân loại',
+  yeu_cau_bo_sung:'Yêu cầu bổ sung',ket_thuc_boi_nguoi_nop:'Đã kết thúc (người gửi)',
+  cho_vt_duyet:'Chờ Viện trưởng',
+  cho_vt_phe_duyet:'Chờ Viện trưởng',da_duyet:'Đã phê duyệt',
+  da_phe_duyet:'Đã phê duyệt',tu_choi:'Không phê duyệt',
+  khong_phe_duyet:'Không phê duyệt',hoan_thanh:'Hoàn thành',
+  // legacy compat
+  dang_tham_dinh:'Chờ Phòng KHCN',cho_ky_duyet:'Chờ Viện trưởng',cho_tham_dinh:'Chờ Phòng KHCN',
+};
+var STATUS_CLASS = {
+  cho_phong_duyet:'badge-amber',cho_phan_loai:'badge-amber',
+  yeu_cau_bo_sung:'badge-purple',cho_vt_duyet:'badge-blue',cho_vt_phe_duyet:'badge-blue',
+  da_duyet:'badge-green',da_phe_duyet:'badge-green',
+  tu_choi:'badge-red',khong_phe_duyet:'badge-red',hoan_thanh:'badge-green',
+  dang_tham_dinh:'badge-amber',cho_ky_duyet:'badge-blue',cho_tham_dinh:'badge-amber',
+};
+var LOAI_LABEL = {doan_ra:'Đoàn ra',doan_vao:'Đoàn vào',mou:'MOU',ytnn:'YTNN'};
+
+// ============================================================
+// AUTH
+// ============================================================
+const INSTITUTE_DOMAIN = '@sci.edu.vn';
+function getToken() { return localStorage.getItem('token'); }
+
+function isInstituteEmail(email) {
+  if (typeof hasInstituteModuleAccess === 'function') return hasInstituteModuleAccess(email);
+  return String(email || '').toLowerCase().trim().endsWith(INSTITUTE_DOMAIN);
+}
+
+function showInstituteAccessDenied() {
+  var denied = document.getElementById('access-denied');
+  if (denied) denied.style.display = 'block';
+  document.querySelectorAll('.topbar, .layout').forEach(function(el) {
+    el.style.display = 'none';
+  });
+}
+
+function doLogout() {
+  localStorage.removeItem('token');
+  window.location.href = 'dang-nhap.html';
+}
+
+// Hàm fetch với auth - KHÔNG auto-logout khi lỗi, chỉ trả về null
+async function apiFetch(path, opts) {
+  opts = opts || {};
+  var token = getToken();
+  var headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  try {
+    var r = await fetch(API + path, Object.assign({}, opts, {headers: headers}));
+    if (r.status === 401) {
+      doLogout();
+      return null;
+    }
+    var data = await r.json().catch(function(){return {};});
+    return {ok: r.ok, status: r.status, data: data};
+  } catch(e) {
+    console.warn('API error:', path, e.message);
+    return null;
+  }
+}
+
+async function apiGet(path) {
+  var r = await apiFetch(path);
+  return r ? r.data : null;
+}
+async function apiPost(path, body) { return apiFetch(path,{method:'POST',body:JSON.stringify(body)}); }
+async function apiPut(path, body) { return apiFetch(path,{method:'PUT',body:JSON.stringify(body)}); }
+async function apiDel(path) { return apiFetch(path,{method:'DELETE'}); }
+
+// ============================================================
+// INIT - Auth check đúng cách
+// ============================================================
+async function init() {
+  // 1. Kiểm tra token
+  var token = getToken();
+  if (!token) {
+    window.location.href = 'dang-nhap.html';
+    return;
+  }
+
+  // 2. Gọi /api/me - nếu 401 thì logout, các lỗi khác thì dùng JWT payload
+  try {
+    var r = await fetch(API + '/api/me', {headers:{'Authorization':'Bearer '+token}});
+    if (r.status === 401) { doLogout(); return; }
+    if (r.ok) {
+      ME = await r.json();
+    } else {
+      // Server có vấn đề nhưng token vẫn hợp lệ - parse JWT để lấy info
+      try {
+        var payload = JSON.parse(atob(token.split('.')[1]));
+        ME = {id:payload.id, email:payload.email, fullname:payload.fullname, role:payload.role};
+      } catch(e) { ME = {email:'', fullname:'Người dùng', role:'researcher'}; }
+    }
+  } catch(e) {
+    // Network error - parse JWT
+    try {
+      var payload = JSON.parse(atob(token.split('.')[1]));
+      ME = {id:payload.id, email:payload.email, fullname:payload.fullname, role:payload.role};
+    } catch(e2) { ME = {email:'', fullname:'Người dùng', role:'researcher'}; }
+  }
+
+  if (!isInstituteEmail(ME && ME.email)) {
+    showInstituteAccessDenied();
+    return;
+  }
+
+  // 3. Hiển thị thông tin user
+  var role = (ME.role||'').toLowerCase();
+  document.getElementById('top-name').textContent = ME.fullname || ME.email || 'Người dùng';
+  document.getElementById('top-role').textContent = roleLabel(role);
+  document.getElementById('top-avatar').textContent = (ME.fullname||ME.email||'?').charAt(0).toUpperCase();
+
+  // 4. Check quyền từ server
+  var perm = await apiGet('/api/cooperation/can-approve');
+  IS_ADMIN = role === 'admin';
+  if (IS_ADMIN) {
+    var btnAdmin = document.getElementById('btn-admin');
+    if (btnAdmin) btnAdmin.style.display = 'inline-flex';
+  }
+  IS_MANAGER = IS_ADMIN || role === 'phong_khcn' || (perm && perm.can_approve_phong);
+  IS_VT = IS_ADMIN || (perm && perm.can_approve_vt);
+
+  // 5. Hiện nav theo quyền
+  if (IS_ADMIN || IS_MANAGER || IS_VT) {
+    document.querySelectorAll('.mgr-block').forEach(function(el){el.classList.remove('hidden');});
+    document.querySelectorAll('.mgr-dash').forEach(function(el){el.classList.remove('hidden');});
+  }
+  if (IS_MANAGER || IS_ADMIN) {
+    document.querySelectorAll('.mgr').forEach(function(el){el.classList.remove('hidden');});
+  }
+  if (IS_VT || IS_ADMIN) {
+    document.querySelectorAll('.vt-only').forEach(function(el){el.classList.remove('hidden');});
+  }
+
+  // 6. Role banner
+  showRoleBanner(role);
+
+  // 7. Badge sidebar (không gồm Dashboard chi tiết)
+  loadSidebarBadges();
+
+  // 8. Load panel hiện tại
+  loadCuaToi();
+  loadDoanRaList();
+  loadDoanVaoList();
+  loadMouList();
+  loadYtnnList();
+  loadSuKien();
+}
+
+function roleLabel(r) {
+  var m = {admin:'Quản trị viên',phong_khcn:'Phòng KHCN&QHĐN',vien_truong:'Viện trưởng',researcher:'Nghiên cứu viên',chu_tich:'Chủ tịch HĐ',thu_ky:'Thư ký HĐ'};
+  return m[r] || r;
+}
+
+function showRoleBanner(role) {
+  var wrap = document.getElementById('role-banner-wrap');
+  if (!wrap) return;
+  var html = '';
+  if (IS_ADMIN) html = '<div class="role-banner admin-role">Bạn đang đăng nhập với quyền <strong>Admin</strong> — Toàn quyền xem, sửa, phê duyệt tất cả đề xuất.</div>';
+  else if (IS_VT) html = '<div class="role-banner vt-role">Bạn đang đăng nhập với quyền <strong>Viện trưởng</strong> — Xem và phê duyệt đề xuất đã qua thẩm định.</div>';
+  else if (IS_MANAGER) html = '<div class="role-banner phong-role">Bạn đang đăng nhập với quyền <strong>Phòng KHCN&QHĐN</strong> — Thẩm định và trình duyệt các đề xuất.</div>';
+  wrap.innerHTML = html;
+}
+
+// ============================================================
+// SIDEBAR BADGES (mọi user — không phải Dashboard chi tiết)
+// ============================================================
+async function loadSidebarBadges() {
+  var d = await apiGet('/api/cooperation/sidebar-badges');
+  if (!d) return;
+  setBadge('bdg-phong', d.cho_phong_duyet);
+  setBadge('bdg-vt', d.cho_vt_duyet);
+  setBadge('bdg-sk', d.su_kien_sap_dien_ra);
+  setBadge('bdg-cua-toi', d.de_xuat_cua_toi);
+  setBadge('bdg-tat-ca', d.tat_ca_tong != null ? d.tat_ca_tong : 0);
+}
+
+function dashFmtMonth(ym) {
+  var p = String(ym || '').split('-');
+  if (p.length < 2) return ym || '—';
+  return 'T' + parseInt(p[1], 10) + '/' + String(p[0]).slice(2);
+}
+
+// Dashboard đầy đủ — chỉ Quản trị / P.KHCN / Viện trưởng (API trả 403 nếu không đủ quyền)
+async function loadDashboardPage() {
+  var wrap = document.getElementById('dashboard-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loading"><div class="spin"></div>Đang tải...</div>';
+  var r = await apiFetch('/api/cooperation/dashboard-stats');
+  if (!r || !r.ok) {
+    wrap.innerHTML = '<div class="card"><div class="card-body"><div class="alert error">' + esc((r && r.data && r.data.message) || 'Không có quyền xem Dashboard.') + '</div></div></div>';
+    return;
+  }
+  var d = r.data;
+  var bl = d.by_loai || {};
+  var bs = d.by_status || {};
+  var ser = Array.isArray(d.series_12m) ? d.series_12m : [];
+  var maxV = 1;
+  for (var i = 0; i < ser.length; i++) if (ser[i].total > maxV) maxV = ser[i].total;
+  var gen = d.generated_at ? new Date(d.generated_at).toLocaleString('vi-VN') : '—';
+  var chartHtml = ser.map(function(row) {
+    var h = maxV ? Math.round((row.total / maxV) * 100) : 0;
+    if (row.total > 0 && h < 8) h = 8;
+    return '<div class="coop-bar-col"><div class="coop-bar-val">' + row.total + '</div><div class="coop-bar" style="height:' + h + '%"></div><div class="coop-bar-lbl">' + dashFmtMonth(row.month) + '</div></div>';
+  }).join('');
+  wrap.innerHTML =
+    '<div class="dash-meta-row"><small>Dữ liệu cập nhật: <strong>' + esc(gen) + '</strong></small><button type="button" class="btn btn-outline btn-sm" onclick="loadDashboardPage()">Làm mới</button></div>'
+    + '<div class="stats-grid">'
+    + '<div class="stat-card blue"><div class="num">' + (d.tat_ca_tong != null ? d.tat_ca_tong : '—') + '</div><div class="lbl">Tổng đề xuất</div></div>'
+    + '<div class="stat-card amber"><div class="num">' + (d.cho_phong_duyet != null ? d.cho_phong_duyet : '—') + '</div><div class="lbl">Chờ Phòng KHCN</div></div>'
+    + '<div class="stat-card red"><div class="num">' + (d.cho_vt_duyet != null ? d.cho_vt_duyet : '—') + '</div><div class="lbl">Chờ Viện trưởng</div></div>'
+    + '<div class="stat-card green"><div class="num">' + (d.su_kien_sap_dien_ra != null ? d.su_kien_sap_dien_ra : '—') + '</div><div class="lbl">Sự kiện sắp diễn ra</div></div>'
+    + '</div>'
+    + '<div class="stats-grid" style="margin-top:16px">'
+    + '<div class="stat-card"><div class="num" style="color:var(--accent)">' + (bl.doan_ra != null ? bl.doan_ra : 0) + '</div><div class="lbl">Đoàn ra</div></div>'
+    + '<div class="stat-card"><div class="num" style="color:var(--accent)">' + (bl.doan_vao != null ? bl.doan_vao : 0) + '</div><div class="lbl">Đoàn vào</div></div>'
+    + '<div class="stat-card"><div class="num" style="color:var(--accent)">' + (bl.mou != null ? bl.mou : 0) + '</div><div class="lbl">Thỏa thuận (MOU…)</div></div>'
+    + '<div class="stat-card"><div class="num" style="color:var(--accent)">' + (bl.ytnn != null ? bl.ytnn : 0) + '</div><div class="lbl">Đề tài YTNN</div></div>'
+    + '</div>'
+    + '<div class="stats-grid" style="margin-top:16px">'
+    + '<div class="stat-card amber"><div class="num">' + (bs.dang_xu_ly != null ? bs.dang_xu_ly : 0) + '</div><div class="lbl">Đang xử lý</div></div>'
+    + '<div class="stat-card green"><div class="num">' + (bs.da_phe_duyet != null ? bs.da_phe_duyet : 0) + '</div><div class="lbl">Đã phê duyệt</div></div>'
+    + '<div class="stat-card red"><div class="num">' + (bs.tu_choi != null ? bs.tu_choi : 0) + '</div><div class="lbl">Từ chối</div></div>'
+    + '<div class="stat-card"><div class="num">' + (bs.ket_thuc != null ? bs.ket_thuc : 0) + '</div><div class="lbl">Kết thúc / đóng</div></div>'
+    + '</div>'
+    + (d.mou_hieu_luc != null ? '<div class="alert info" style="margin-top:16px">Thỏa thuận đang hiệu lực (hồ sơ): <strong>' + d.mou_hieu_luc + '</strong></div>' : '')
+    + '<div class="card dash-coop-chart" style="margin-top:20px"><div class="card-body">'
+    + '<h3>Số đề xuất mới theo tháng (12 tháng gần nhất)</h3>'
+    + '<div class="coop-chart">' + (chartHtml || '<span style="font-size:13px;color:var(--ink-muted)">Chưa có dữ liệu theo tháng</span>') + '</div>'
+    + '</div></div>';
+}
+function setBadge(id, n) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = n;
+  if (n > 0) el.classList.remove('hidden'); else el.classList.add('hidden');
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function gotoPanel(navEl, panelId) {
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  navEl.classList.add('active');
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+  var panel = document.getElementById('panel-'+panelId);
+  if (panel) panel.classList.add('active');
+  if (panelId==='cho-phong-xu-ly') loadChoPhong();
+  if (panelId==='cho-vt-duyet') loadChoVT();
+  if (panelId==='tat-ca') loadTatCa();
+  if (panelId==='doi-tac') loadDoiTac();
+  if (panelId==='thoa-thuan') loadThoaThuan();
+  if (panelId==='su-kien') loadSuKien();
+  if (panelId==='gui-doan-vao') loadDoanVaoList();
+  if (panelId==='gui-mou') loadMouList();
+  if (panelId==='gui-ytnn') loadYtnnList();
+  if (panelId==='dashboard') loadDashboardPage();
+}
+
+// ============================================================
+// ĐỀ XUẤT CỦA TÔI
+// ============================================================
+async function loadCuaToi() {
+  var el = document.getElementById('cua-toi-wrap');
+  if (!el) return;
+  el.innerHTML = '<div class="loading"><div class="spin"></div>Đang tải...</div>';
+  var d = await apiGet('/api/cooperation/de-xuat-cua-toi');
+  if (!d || !d.list) { el.innerHTML='<div class="empty-state">Không tải được dữ liệu</div>'; return; }
+  var list = d.list;
+  if (!list.length) {
+    el.innerHTML='<div class="card"><div class="card-body"><div class="empty-state">Bạn chưa gửi đề xuất nào.<br><small>Dùng menu bên trái để gửi đề xuất mới.</small></div></div></div>';
+    return;
+  }
+  el.innerHTML = '<div class="card"><div class="card-header"><h2>Đề xuất đã gửi ('+list.length+')</h2></div>'
+    +'<table><thead><tr><th>Mã</th><th>Loại</th><th>Nội dung</th><th>Trạng thái</th><th>Ngày gửi</th><th></th></tr></thead><tbody>'
+    +list.map(function(it){
+      var lk = it.loai || it.source;
+      var sl = STATUS_LABEL[it.status]||it.status;
+      var sc = STATUS_CLASS[it.status]||'badge-gray';
+      var title = buildTitle(lk, it);
+      return '<tr><td><code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px">'+(it.ma_de_xuat||'—')+'</code></td>'
+        +'<td>'+(LOAI_LABEL[lk]||lk)+'</td>'
+        +'<td><div style="font-weight:600;font-size:13px;color:var(--ink)">'+esc(title)+'</div>'
+        +(it.note_phong?'<div style="font-size:11px;color:var(--amber);margin-top:2px">Phòng KHCN: '+esc(it.note_phong)+'</div>':'')
+        +(it.note_vt?'<div style="font-size:11px;color:var(--purple);margin-top:2px">Viện trưởng: '+esc(it.note_vt)+'</div>':'')
+        +'</td>'
+        +'<td><span class="badge '+sc+'">'+sl+'</span></td>'
+        +'<td style="font-size:12px">'+(it.created_at||it.ngay_gui||'—')+'</td>'
+        +'<td><button class="btn btn-outline btn-sm" onclick="openModal(\''+lk+'\','+it.id+')">Xem</button></td></tr>';
+    }).join('')
+    +'</tbody></table></div>';
+}
+
+function buildTitle(loai, r) {
+  if (loai==='doan_ra') return 'Đoàn ra — '+(r.quoc_gia||r.title||'—');
+  if (loai==='doan_vao') return 'Đoàn vào — '+(r.don_vi_de_xuat||r.title||'—');
+  if (loai==='mou') return 'MOU — '+(r.ten_doi_tac||r.title||'—');
+  if (loai==='ytnn') return 'YTNN — '+(r.ten||r.title||'—');
+  return r.title||'—';
+}
+
+// ============================================================
+// DANH SÁCH ĐOÀN RA
+// ============================================================
+/** Nhấp nháy bằng JS — Edge không render ổn CSS inset-shadow lớn trên td; !important thắng hover của bảng */
+function pulseDoanRaRowFlash(tr) {
+  if (!tr) return;
+  var tds = tr.querySelectorAll('td');
+  if (!tds.length) return;
+  var reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var pulses = reduce ? 3 : 7;
+  var gapMs = reduce ? 420 : 260;
+  var onRgb = 'rgb(147, 197, 253)';
+  var onBorder = 'inset 0 0 0 3px #1d4ed8';
+  var step = 0;
+  function clearCells() {
+    for (var j = 0; j < tds.length; j++) {
+      tds[j].style.removeProperty('background-color');
+      tds[j].style.removeProperty('box-shadow');
+    }
+  }
+  function tick() {
+    if (step >= pulses) {
+      clearCells();
+      return;
+    }
+    var on = (step % 2) === 0;
+    for (var i = 0; i < tds.length; i++) {
+      if (on) {
+        tds[i].style.setProperty('background-color', onRgb, 'important');
+        tds[i].style.setProperty('box-shadow', onBorder, 'important');
+      } else {
+        tds[i].style.removeProperty('background-color');
+        tds[i].style.removeProperty('box-shadow');
+      }
+    }
+    step++;
+    setTimeout(tick, gapMs);
+  }
+  tick();
+}
+
+function findDrTbodyRowById(id) {
+  var sid = String(id);
+  var tr = document.querySelector('#dr-tbody tr[data-dr-id="'+sid+'"]');
+  if (tr) return tr;
+  var rows = document.querySelectorAll('#dr-tbody tr[data-dr-id]');
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].getAttribute('data-dr-id')) === sid) return rows[i];
+  }
+  return null;
+}
+
+async function loadDoanRaList(highlightId, highlightMa, flashNewestIfNoMatch) {
+  var tbody = document.getElementById('dr-tbody');
+  if (!tbody) return;
+  var d = await apiGet('/api/cooperation/doan-ra');
+  var list = (d&&d.list)||[];
+  if (!list.length) { tbody.innerHTML='<tr><td colspan="6"><div class="empty-state">Chưa có đề xuất nào</div></td></tr>'; return; }
+  var hi = highlightId != null && highlightId !== '' ? parseInt(highlightId, 10) : NaN;
+  if (isNaN(hi)) hi = null;
+  var maHi = (highlightMa && String(highlightMa).trim()) || '';
+  tbody.innerHTML = list.map(function(r){
+    var sl = STATUS_LABEL[r.status]||r.status;
+    var sc = STATUS_CLASS[r.status]||'badge-gray';
+    return '<tr data-dr-id="'+r.id+'"><td><code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px">'+(r.ma_de_xuat||'—')+'</code></td>'
+      +'<td><b>'+esc(r.quoc_gia||'—')+'</b>'+(r.muc_dich?'<br><small style="color:var(--ink-muted)">'+esc(r.muc_dich)+'</small>':'')+'</td>'
+      +'<td style="font-size:12px">'+fmtDate(r.ngay_di)+'</td>'
+      +'<td style="font-size:12px">'+fmtDate(r.ngay_ve)+'</td>'
+      +'<td><span class="badge '+sc+'">'+sl+'</span></td>'
+      +'<td><button class="btn btn-outline btn-sm" onclick="openModal(\'doan_ra\','+r.id+')">Xem</button></td></tr>';
+  }).join('');
+  var targetRowId = null;
+  if (hi != null) targetRowId = hi;
+  else if (maHi) {
+    var found = list.find(function(r){ return (r.ma_de_xuat||'') === maHi; });
+    if (found) targetRowId = found.id;
+  }
+  /* Bản ghi mới luôn đứng đầu (ORDER BY created_at DESC): dùng khi không khớp id/ma (thiếu trường trong JSON, API cũ, v.v.) */
+  if (targetRowId == null && list.length && (flashNewestIfNoMatch || maHi)) targetRowId = list[0].id;
+  if (targetRowId != null) {
+    setTimeout(function(){
+      var tr = findDrTbodyRowById(targetRowId);
+      if (!tr) {
+        var sec = document.getElementById('dr-sent-section');
+        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function(){
+        pulseDoanRaRowFlash(tr);
+      }, 450);
+    }, 80);
+  }
+}
+
+function findDvTbodyRowById(id) {
+  var sid = String(id);
+  var tr = document.querySelector('#dv-tbody tr[data-dv-id="' + sid + '"]');
+  if (tr) return tr;
+  var rows = document.querySelectorAll('#dv-tbody tr[data-dv-id]');
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].getAttribute('data-dv-id')) === sid) return rows[i];
+  }
+  return null;
+}
+
+async function loadDoanVaoList(highlightId, highlightMa, flashNewestIfNoMatch) {
+  var tbody = document.getElementById('dv-tbody');
+  if (!tbody) return;
+  var d = await apiGet('/api/cooperation/doan-vao');
+  var list = (d && d.list) || [];
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">Chưa có đề xuất nào</div></td></tr>';
+    return;
+  }
+  var hi = highlightId != null && highlightId !== '' ? parseInt(highlightId, 10) : NaN;
+  if (isNaN(hi)) hi = null;
+  var maHi = (highlightMa && String(highlightMa).trim()) || '';
+  tbody.innerHTML = list.map(function (r) {
+    var sl = STATUS_LABEL[r.status] || r.status;
+    var sc = STATUS_CLASS[r.status] || 'badge-gray';
+    return '<tr data-dv-id="' + r.id + '"><td><code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px">' + (r.ma_de_xuat || '—') + '</code></td>'
+      + '<td><b>' + esc(r.don_vi_de_xuat || '—') + '</b>' + (r.muc_dich ? '<br><small style="color:var(--ink-muted)">' + esc(r.muc_dich) + '</small>' : '') + '</td>'
+      + '<td style="font-size:12px">' + fmtDate(r.ngay_den) + '</td>'
+      + '<td style="font-size:12px">' + fmtDate(r.ngay_roi_di) + '</td>'
+      + '<td><span class="badge ' + sc + '">' + sl + '</span></td>'
+      + '<td><button class="btn btn-outline btn-sm" onclick="openModal(\'doan_vao\',' + r.id + ')">Xem</button></td></tr>';
+  }).join('');
+  var targetRowId = null;
+  if (hi != null) targetRowId = hi;
+  else if (maHi) {
+    var found = list.find(function (r) { return (r.ma_de_xuat || '') === maHi; });
+    if (found) targetRowId = found.id;
+  }
+  if (targetRowId == null && list.length && (flashNewestIfNoMatch || maHi)) targetRowId = list[0].id;
+  if (targetRowId != null) {
+    setTimeout(function () {
+      var tr = findDvTbodyRowById(targetRowId);
+      if (!tr) {
+        var sec = document.getElementById('dv-sent-section');
+        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function () {
+        pulseDoanRaRowFlash(tr);
+      }, 450);
+    }, 80);
+  }
+}
+
+function findMouTbodyRowById(id) {
+  var sid = String(id);
+  var tr = document.querySelector('#mou-tbody tr[data-mou-id="' + sid + '"]');
+  if (tr) return tr;
+  var rows = document.querySelectorAll('#mou-tbody tr[data-mou-id]');
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].getAttribute('data-mou-id')) === sid) return rows[i];
+  }
+  return null;
+}
+
+async function loadMouList(highlightId, highlightMa, flashNewestIfNoMatch) {
+  var tbody = document.getElementById('mou-tbody');
+  if (!tbody) return;
+  var d = await apiGet('/api/cooperation/mou');
+  var list = (d && d.list) || [];
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">Chưa có đề xuất Thỏa thuận nào</div></td></tr>';
+    return;
+  }
+  var hi = highlightId != null && highlightId !== '' ? parseInt(highlightId, 10) : NaN;
+  if (isNaN(hi)) hi = null;
+  var maHi = (highlightMa && String(highlightMa).trim()) || '';
+  tbody.innerHTML = list.map(function (r) {
+    var sl = STATUS_LABEL[r.status] || r.status;
+    var sc = STATUS_CLASS[r.status] || 'badge-gray';
+    var loai = r.loai_thoa_thuan || '—';
+    return '<tr data-mou-id="' + r.id + '"><td><code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px">' + (r.ma_de_xuat || '—') + '</code></td>'
+      + '<td><b>' + esc(loai) + '</b><br><small style="color:var(--ink-muted)">' + esc(r.ten_doi_tac || '—') + '</small></td>'
+      + '<td style="font-size:12px">' + esc(r.quoc_gia || '—') + '</td>'
+      + '<td style="font-size:12px">' + esc(r.don_vi_de_xuat || '—') + '</td>'
+      + '<td><span class="badge ' + sc + '">' + sl + '</span></td>'
+      + '<td><button class="btn btn-outline btn-sm" onclick="openModal(\'mou\',' + r.id + ')">Xem</button></td></tr>';
+  }).join('');
+  var targetRowId = null;
+  if (hi != null) targetRowId = hi;
+  else if (maHi) {
+    var found = list.find(function (r) { return (r.ma_de_xuat || '') === maHi; });
+    if (found) targetRowId = found.id;
+  }
+  if (targetRowId == null && list.length && (flashNewestIfNoMatch || maHi)) targetRowId = list[0].id;
+  if (targetRowId != null) {
+    setTimeout(function () {
+      var tr = findMouTbodyRowById(targetRowId);
+      if (!tr) {
+        var sec = document.getElementById('mou-sent-section');
+        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function () {
+        pulseDoanRaRowFlash(tr);
+      }, 450);
+    }, 80);
+  }
+}
+
+function findYtTbodyRowById(id) {
+  var sid = String(id);
+  var tr = document.querySelector('#yt-tbody tr[data-yt-id="' + sid + '"]');
+  if (tr) return tr;
+  var rows = document.querySelectorAll('#yt-tbody tr[data-yt-id]');
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].getAttribute('data-yt-id')) === sid) return rows[i];
+  }
+  return null;
+}
+
+function scrollYtnnSentIntoView() {
+  var sec = document.getElementById('yt-sent-section');
+  if (sec) try { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { sec.scrollIntoView(true); }
+}
+
+async function loadYtnnList(highlightId, highlightMa, flashNewestIfNoMatch) {
+  var tbody = document.getElementById('yt-tbody');
+  if (!tbody) return;
+  if (highlightId != null || highlightMa || flashNewestIfNoMatch) scrollYtnnSentIntoView();
+  var d = await apiGet('/api/cooperation/ytnn?t=' + Date.now());
+  var list = (d && d.list) || [];
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Chưa có đề xuất YTNN nào</div></td></tr>';
+    return;
+  }
+  var hi = highlightId != null && highlightId !== '' ? parseInt(highlightId, 10) : NaN;
+  if (isNaN(hi)) hi = null;
+  var maHi = (highlightMa && String(highlightMa).trim()) || '';
+  tbody.innerHTML = list.map(function (r) {
+    var sl = STATUS_LABEL[r.status] || r.status;
+    var sc = STATUS_CLASS[r.status] || 'badge-gray';
+    return '<tr data-yt-id="' + r.id + '"><td><code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px">' + (r.ma_de_xuat || '—') + '</code></td>'
+      + '<td><b>' + esc(r.ten || '—') + '</b>' + (r.doi_tac_ten ? '<br><small style="color:var(--ink-muted)">' + esc(r.doi_tac_ten) + '</small>' : '') + '</td>'
+      + '<td style="font-size:12px">' + esc(r.chu_nhiem_ten || '—') + '</td>'
+      + '<td><span class="badge ' + sc + '">' + sl + '</span></td>'
+      + '<td><button class="btn btn-outline btn-sm" onclick="openModal(\'ytnn\',' + r.id + ')">Xem</button></td></tr>';
+  }).join('');
+  var targetRowId = null;
+  if (hi != null) targetRowId = hi;
+  else if (maHi) {
+    var found = list.find(function (r) { return (r.ma_de_xuat || '') === maHi; });
+    if (found) targetRowId = found.id;
+  }
+  if (targetRowId == null && list.length && (flashNewestIfNoMatch || maHi)) targetRowId = list[0].id;
+  if (targetRowId != null) {
+    setTimeout(function () {
+      var tr = findYtTbodyRowById(targetRowId);
+      if (!tr) {
+        var sec = document.getElementById('yt-sent-section');
+        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function () {
+        pulseDoanRaRowFlash(tr);
+      }, 450);
+    }, 80);
+  }
+}
+
+// ============================================================
+// DANH SÁCH CHỜ PHÒNG
+// ============================================================
+async function loadChoPhong() {
+  var el = document.getElementById('phong-wrap');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Đang tải...</div>';
+  var d = await apiGet('/api/cooperation/cho-phong-xu-ly');
+  if (!d||!d.list) { el.innerHTML='<div class="empty-state">Lỗi tải dữ liệu</div>'; return; }
+  renderPendingList(el, d.list);
+  setBadge('bdg-phong', d.tong||0);
+}
+
+async function loadChoVT() {
+  var el = document.getElementById('vt-wrap');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Đang tải...</div>';
+  var d = await apiGet('/api/cooperation/cho-vt-duyet');
+  if (!d||!d.list) { el.innerHTML='<div class="empty-state">Lỗi tải dữ liệu</div>'; return; }
+  renderPendingList(el, d.list);
+  setBadge('bdg-vt', d.tong||0);
+}
+
+function renderPendingList(el, list) {
+  if (!list.length) { el.innerHTML='<div class="card"><div class="card-body"><div class="empty-state">Không có đề xuất nào cần xử lý</div></div></div>'; return; }
+  el.innerHTML='<div class="card"><div class="card-header"><h2>Danh sách chờ xử lý ('+list.length+')</h2></div>'
+    +'<table><thead><tr><th>Mã</th><th>Loại</th><th>Người gửi</th><th>Nội dung</th><th>Trạng thái</th><th>Ngày gửi</th><th></th></tr></thead><tbody>'
+    +list.map(function(it){
+      var sl = STATUS_LABEL[it.status]||it.status;
+      var sc = STATUS_CLASS[it.status]||'badge-gray';
+      return '<tr><td><code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px">'+(it.ma_de_xuat||'—')+'</code></td>'
+        +'<td>'+(LOAI_LABEL[it.loai]||it.loai)+'</td>'
+        +'<td style="font-size:12px">'+esc(it.submitted_by_name||'—')+'</td>'
+        +'<td style="font-size:13px">'+esc(it.title||'—')+'</td>'
+        +'<td><span class="badge '+sc+'">'+sl+'</span></td>'
+        +'<td style="font-size:12px;white-space:nowrap">'+(it.created_at||'—')+'</td>'
+        +'<td><button class="btn btn-primary btn-sm" onclick="openModal(\''+it.loai+'\','+it.id+')">Xem & Xử lý</button></td></tr>';
+    }).join('')
+    +'</tbody></table></div>';
+}
+
+// ============================================================
+// TẤT CẢ ĐỀ XUẤT
+// ============================================================
+async function loadTatCa() {
+  var el = document.getElementById('tatca-wrap');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Đang tải...</div>';
+  var loai = document.getElementById('fil-loai').value;
+  var status = document.getElementById('fil-status').value;
+  var url = '/api/cooperation/tat-ca-de-xuat?';
+  if (loai) url+='loai='+loai+'&';
+  if (status) url+='status='+status+'&';
+  var d = await apiGet(url);
+  if (!d||!d.list) { el.innerHTML='<div class="empty-state">Lỗi tải dữ liệu</div>'; return; }
+  if (!d.list.length) { el.innerHTML='<div class="empty-state">Không tìm thấy đề xuất nào</div>'; return; }
+  var thTail = IS_ADMIN ? '<th>Xem</th><th>Xóa</th>' : '<th></th>';
+  el.innerHTML='<div class="card"><div class="card-header"><h2>Tổng: '+d.tong+' đề xuất</h2></div>'
+    +'<table><thead><tr><th>Mã</th><th>Loại</th><th>Người gửi</th><th>Nội dung</th><th>Trạng thái</th><th>Ngày gửi</th>'+thTail+'</tr></thead><tbody>'
+    +d.list.map(function(it){
+      var sl = STATUS_LABEL[it.status]||it.status;
+      var sc = STATUS_CLASS[it.status]||'badge-gray';
+      var rowEnd = '<td><button class="btn btn-outline btn-sm" onclick="openModal(\''+it.loai+'\','+it.id+')">Xem</button></td>';
+      if (IS_ADMIN) {
+        rowEnd += '<td><button type="button" class="btn btn-red btn-sm" onclick="adminDelFromList(\''+it.loai+'\','+it.id+')">Xóa</button></td>';
+      }
+      return '<tr><td><code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px">'+(it.ma_de_xuat||'—')+'</code></td>'
+        +'<td>'+(LOAI_LABEL[it.loai]||it.loai)+'</td>'
+        +'<td style="font-size:12px">'+esc(it.submitted_by_name||'—')+'</td>'
+        +'<td>'+esc(it.title||'—')+'</td>'
+        +'<td><span class="badge '+sc+'">'+sl+'</span></td>'
+        +'<td style="font-size:12px">'+(it.created_at||'—')+'</td>'
+        +rowEnd+'</tr>';
+    }).join('')+'</tbody></table></div>';
+}
+
+// ============================================================
+// MODAL CHI TIẾT & DUYỆT
+// ============================================================
+async function openModal(loai, id) {
+  window._currentDoanRaModalId = id;
+  window._currentCoopModalLoai = loai;
+  window._currentCoopModalId = id;
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('modal-body').innerHTML='<div class="loading"><div class="spin"></div>Đang tải...</div>';
+  document.getElementById('modal-footer').innerHTML='';
+  var path = '/api/cooperation/chi-tiet/'+encodeURIComponent(loai)+'/'+encodeURIComponent(id);
+  var fr = await apiFetch(path);
+  var payload = fr ? fr.data : null;
+  if (!payload || !payload.data) {
+    var msg = (payload && payload.message) ? esc(payload.message) : 'Không tải được dữ liệu';
+    document.getElementById('modal-body').innerHTML='<div class="empty-state">'+msg+'</div>';
+    return;
+  }
+  var r = payload.data;
+  var loaiTitle = {doan_ra:'Đoàn ra',doan_vao:'Đoàn vào',mou:'MOU / Thỏa thuận',ytnn:'Đề tài YTNN'};
+  document.getElementById('modal-title').textContent = loaiTitle[loai]||loai;
+  document.getElementById('modal-ma').textContent = r.ma_de_xuat||'';
+
+  // Stepper — Đoàn ra: quy trình chuẩn 3 bước (Nộp→Phòng→VT→Kết quả); các loại khác giữ mô hình cũ
+  var steps, curStep = 0, isDone;
+  if (loai === 'ytnn') {
+    steps = [
+      {l:'1. Phòng KHCN thẩm định', ss:['cho_phong_duyet','cho_phan_loai','dang_tham_dinh']},
+      {l:'2. Viện trưởng phê duyệt', ss:['cho_vt_duyet','cho_vt_phe_duyet']},
+      {l:'3. Bổ sung / Kết quả', ss:['yeu_cau_bo_sung','da_duyet','da_phe_duyet','tu_choi','khong_phe_duyet','ket_thuc_boi_nguoi_nop']}
+    ];
+    for (var iy=0;iy<steps.length;iy++) { if (steps[iy].ss.indexOf(r.status)>=0) curStep=iy; }
+    isDone = ['da_duyet','da_phe_duyet','tu_choi','khong_phe_duyet','ket_thuc_boi_nguoi_nop'].indexOf(r.status)>=0;
+  } else if (loai === 'doan_ra') {
+    steps = [
+      {l:'1. Phòng KHCN thẩm định', ss:['cho_phong_duyet']},
+      {l:'2. Viện trưởng phê duyệt', ss:['cho_vt_duyet']},
+      {l:'3. Bổ sung / Kết quả', ss:['yeu_cau_bo_sung','da_duyet','tu_choi','ket_thuc_boi_nguoi_nop']}
+    ];
+    for (var si=0;si<steps.length;si++) { if (steps[si].ss.indexOf(r.status)>=0) curStep=si; }
+    isDone = ['da_duyet','tu_choi','ket_thuc_boi_nguoi_nop'].indexOf(r.status)>=0;
+  } else if (loai === 'doan_vao') {
+    steps = [
+      {l:'1. Phòng KHCN thẩm định', ss:['cho_phong_duyet','cho_tham_dinh']},
+      {l:'2. Viện trưởng phê duyệt', ss:['cho_vt_duyet','cho_ky_duyet']},
+      {l:'3. Bổ sung / Kết quả', ss:['yeu_cau_bo_sung','da_duyet','tu_choi','ket_thuc_boi_nguoi_nop']}
+    ];
+    for (var si2=0;si2<steps.length;si2++) { if (steps[si2].ss.indexOf(r.status)>=0) curStep=si2; }
+    isDone = ['da_duyet','tu_choi','ket_thuc_boi_nguoi_nop'].indexOf(r.status)>=0;
+  } else if (loai === 'mou') {
+    steps = [
+      {l:'1. Phòng KHCN thẩm định', ss:['cho_phong_duyet','dang_tham_dinh']},
+      {l:'2. Viện trưởng phê duyệt', ss:['cho_vt_duyet']},
+      {l:'3. Bổ sung / Kết quả', ss:['yeu_cau_bo_sung','da_duyet','tu_choi','ket_thuc_boi_nguoi_nop']}
+    ];
+    for (var sim=0;sim<steps.length;sim++) { if (steps[sim].ss.indexOf(r.status)>=0) curStep=sim; }
+    isDone = ['da_duyet','tu_choi','ket_thuc_boi_nguoi_nop'].indexOf(r.status)>=0;
+  } else {
+    steps = [{l:'Gửi đề xuất',ss:['cho_phong_duyet','dang_tham_dinh','cho_tham_dinh']},{l:'Phòng KHCN',ss:['yeu_cau_bo_sung','cho_vt_duyet','cho_ky_duyet']},{l:'Viện trưởng',ss:['da_duyet','tu_choi']}];
+    for (var j=0;j<steps.length;j++) { if (steps[j].ss.indexOf(r.status)>=0) curStep=j; }
+    isDone = ['da_duyet','tu_choi','da_phe_duyet','khong_phe_duyet','hoan_thanh'].indexOf(r.status)>=0;
+  }
+  var stepHtml = '<div class="stepper">';
+  for (var i=0;i<steps.length;i++) {
+    var cls = (i<curStep||(isDone&&i<=curStep)) ? 'done' : i===curStep ? 'active' : '';
+    var txtCls = cls;
+    stepHtml += '<div class="step"><div class="step-dot '+cls+'">'+(cls==='done'?'✓':i+1)+'</div>'
+      +'<div class="step-text '+txtCls+'" style="margin-left:5px">'+steps[i].l+'</div></div>';
+    if (i<steps.length-1) stepHtml += '<div class="step-line '+(i<curStep?'done':'')+'"></div>';
+  }
+  stepHtml += '</div>';
+
+  // Detail fields
+  var sl = STATUS_LABEL[r.status]||r.status;
+  var sc = STATUS_CLASS[r.status]||'badge-gray';
+  var rows = [['Mã đề xuất','<code>'+(r.ma_de_xuat||'—')+'</code>'],['Trạng thái','<span class="badge '+sc+'">'+sl+'</span>'],['Người gửi',esc((r.submitted_by_name||'')+' <'+(r.submitted_by_email||'')+'>')]];
+  if (loai==='doan_ra') rows=rows.concat([['Quốc gia',esc(r.quoc_gia)],['Mục đích',esc(r.muc_dich)],['Ngày đi',fmtDate(r.ngay_di)],['Ngày về',fmtDate(r.ngay_ve)],['Thành viên',(r.thanh_vien||'—').replace(/\n/g,'<br>')],['Nguồn KP',esc(r.nguon_kinh_phi)],['Dự toán (VND)',r.du_toan?r.du_toan+' VND':'—']]);
+  if (loai==='doan_vao') rows=rows.concat([['Đơn vị',esc(r.don_vi_de_xuat)],['Mục đích',esc(r.muc_dich)],['Ngày đến',fmtDate(r.ngay_den)],['Ngày rời',fmtDate(r.ngay_roi_di)],['Thành phần',(r.thanh_phan_doan||'—').replace(/\n/g,'<br>')],['Nội dung LV',esc(r.noi_dung_lam_viec)],['Kinh phí đón tiếp',esc(r.kinh_phi_nguon)],['Hỗ trợ visa',esc(r.ho_tro_visa)]]);
+  if (loai==='mou') rows=rows.concat([['Loại TT',esc(r.loai_thoa_thuan)],['Đối tác',esc(r.ten_doi_tac)],['Quốc gia',esc(r.quoc_gia)],['Thời hạn',r.thoi_han_nam?r.thoi_han_nam+' năm':'—'],['Giá trị TC',esc(r.gia_tri_tai_chinh)],['Đơn vị đề xuất',esc(r.don_vi_de_xuat)],['Nội dung',(r.noi_dung_hop_tac||'—').replace(/\n/g,'<br>')]]);
+  if (loai==='ytnn') rows=rows.concat([['Tên đề tài',esc(r.ten)],['Đối tác',esc(r.doi_tac_ten)],['Quốc gia ĐT',esc(r.doi_tac_quoc_gia)],['Hình thức',esc(r.hinh_thuc_hop_tac)],['Chủ nhiệm',esc(r.chu_nhiem_ten)],['Kinh phí',r.kinh_phi?(r.kinh_phi+' '+(r.don_vi_tien_te||'VNĐ')):'—'],['Thời gian',fmtDate(r.ngay_bat_dau)+' → '+fmtDate(r.ngay_ket_thuc)]]);
+  if (r.note_phong) rows.push(['<span style="color:var(--amber)">Ý kiến Phòng KHCN</span>','<span style="color:var(--amber)">'+esc(r.note_phong)+'</span>']);
+  if (r.note_vt) rows.push(['<span style="color:var(--purple)">Ý kiến Viện trưởng</span>','<span style="color:var(--purple)">'+esc(r.note_vt)+'</span>']);
+
+  var detailHtml = '<div class="detail-grid">'+rows.map(function(rv){return '<div class="dk">'+rv[0]+'</div><div class="dv">'+rv[1]+'</div>';}).join('')+'</div>';
+
+  var isOwner = ME && (r.submitted_by_email||'').trim().toLowerCase() === (ME.email||'').trim().toLowerCase();
+  var ownerEditHtml = buildOwnerEditBlock(loai, r, isOwner);
+
+  // History
+  var hist = payload.history||[];
+  var histHtml = '<div style="margin-top:20px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-muted);margin-bottom:10px">LỊCH SỬ THAO TÁC</div>';
+  if (!hist.length) histHtml += '<div style="color:var(--ink-muted);font-size:13px">Chưa có lịch sử</div>';
+  else histHtml += '<div class="timeline">'+hist.map(function(h){
+    return '<div class="tl-item"><div class="tl-meta">'+(h.performed_at||'')+'  ·  '+(h.performed_by_name||'Hệ thống')+(h.performed_by_role?' ('+h.performed_by_role+')':'')+'</div>'
+      +'<div class="tl-action">'+(h.action_label||h.action)+'</div>'
+      +(h.note?'<div class="tl-note">'+esc(h.note)+'</div>':'')+'</div>';
+  }).join('')+'</div>';
+  histHtml += '</div>';
+
+  var vanBanHtml = '';
+  if (loai === 'doan_ra') {
+    var hasVB = !!r.has_van_ban_word;
+    var approved = (r.status === 'da_duyet');
+    var isOwnerDr = ME && (r.submitted_by_email||'').trim().toLowerCase() === (ME.email||'').trim().toLowerCase();
+    var canDownloadVB = approved && hasVB && (IS_ADMIN || IS_MANAGER || IS_VT || isOwnerDr);
+    var hasTpl = !!r.has_to_trinh_template;
+    vanBanHtml = '';
+    if (IS_ADMIN) {
+      vanBanHtml += '<div style="margin-top:20px;padding:14px;border:1px dashed var(--accent);border-radius:8px;background:#f0f9ff">'
+        + '<div style="font-size:12px;font-weight:700;margin-bottom:4px"><span style="color:var(--accent)">[1]</span> Mẫu Tờ trình <span style="font-weight:800">Đoàn ra</span> (một file .docx)</div>'
+        + '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">Chỉ dùng cho loại đề xuất <strong>Đoàn ra</strong>. Đây là <strong>khung mẫu</strong> (placeholder <code>{…}</code>) để máy chủ ghép dữ liệu sau khi phê duyệt — <strong>khác</strong> mẫu Đoàn vào.</p>'
+        + '<p style="font-size:12px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">Thay chữ trong Word bằng <em>placeholder</em> (ví dụ <code>{quoc_gia}</code>). Lưu <strong>.docx</strong> rồi bấm <strong>Lưu mẫu Đoàn ra</strong>.</p>'
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
+        + '<input type="file" id="to-trinh-template-file-dr" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px"/>'
+        + '<button type="button" class="btn btn-outline btn-sm" onclick="uploadToTrinhTemplateDoanRa()">Lưu mẫu Đoàn ra</button>';
+      if (hasTpl) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="downloadToTrinhTemplateDoanRa()" title="File .docx mẫu trên máy chủ — chưa ghép dữ liệu đề xuất này">Tải mẫu .docx gốc (chưa merge)</button>';
+      vanBanHtml += '</div>'
+        + '<p style="font-size:11px;color:#b45309;margin:8px 0 0;line-height:1.5"><strong>Admin:</strong> Nút <em>Tải mẫu .docx gốc</em> chỉ tải <strong>khung mẫu</strong>. Bản <strong>đã ghép dữ liệu</strong> — dùng nút xanh <strong>«Tải văn bản Word»</strong> ở khối [2] bên dưới.</p>'
+        + '<details style="margin-top:8px;font-size:12px"><summary>Danh sách placeholder (Đoàn ra)</summary><ul style="margin:8px 0 0 18px;line-height:1.65">'
+        + '<li><code>{ma_so}</code> / <code>{ma_de_xuat}</code> — Mã đề xuất</li><li><code>{ngay_to_trinh}</code> / <code>{ngay_lap}</code> — Ngày tờ trình</li>'
+        + '<li><code>{tieu_de_to_trinh}</code> — Dòng v/v (mặc định mục đích)</li><li><code>{quoc_gia}</code> / <code>{quoc_gia_dia_diem}</code></li><li><code>{muc_dich}</code> — Mục đích</li>'
+        + '<li><code>{ngay_di}</code>, <code>{ngay_ve}</code>, <code>{tong_thoi_gian}</code> / <code>{so_ngay}</code></li>'
+        + '<li><code>{nguon_kinh_phi}</code>, <code>{du_toan}</code> / <code>{du_toan_vnd}</code> (alias mẫu cũ: <code>{du_toan_usd}</code>)</li>'
+        + '<li><code>{noi_dung_bo_sung}</code> / <code>{ghi_chu}</code></li>'
+        + '<li><code>{nguoi_nhan_to_trinh}</code>, <code>{can_cu_trinh_bay}</code> (mặc định)</li>'
+        + '<li><code>{trang_thai_phe_duyet}</code>, <code>{ngay_phe_duyet}</code> / <code>{ngay_duyet}</code>, <code>{nguoi_phe_duyet}</code> / <code>{ten_vien_truong}</code></li>'
+        + '<li><code>{nguoi_de_xuat}</code>, <code>{chuc_vu_de_xuat}</code>, <code>{tp_hcm_ngay}</code> / <code>{thanh_pho_ngay}</code></li>'
+        + '<li><code>{danh_sach_thanh_vien}</code> — Một khối văn bản (toàn bộ danh sách thành viên)</li>'
+        + '<li><strong>Bảng Word:</strong> Trên <strong>một hàng dữ liệu</strong> (không để trống): <code>{#thanh_vien}</code> · <code>{stt}</code> · <code>{ho_ten}</code> · <code>{chuc_vu}</code> · <code>{/thanh_vien}</code> (hoặc <code>{#thanh_phan}</code> … <code>{/thanh_phan}</code>). Mỗi dòng trong form là một người; tách họ tên và chức vụ bằng <code>|</code> hoặc <code> — </code>. Thêm alias: <code>{hoTen}</code>, <code>{chucVu}</code>.</li>'
+        + '</ul></details></div>';
+    }
+    vanBanHtml += '<div style="margin-top:20px;padding:16px;border:1px solid var(--border);border-radius:8px;background:#f8fafc">'
+      + '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-muted);margin-bottom:4px"><span style="color:#64748b">'+(IS_ADMIN?'[2] ':'')+'</span>Văn bản Word đã merge — <span style="font-weight:800">đề xuất này</span></div>';
+    if (IS_ADMIN) {
+      vanBanHtml += '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">File <strong>đã điền dữ liệu</strong> cho mã <code>'+esc(r.ma_de_xuat||'—')+'</code>. Hệ thống <strong>tự tạo</strong> sau khi Viện trưởng phê duyệt từ <strong>mẫu Đoàn ra</strong> [1]. Sau khi Admin <strong>Lưu mẫu</strong> [1] mới, bản tự sinh và file khi <strong>Tải văn bản Word</strong> sẽ <strong>tự ghép lại</strong> theo mẫu mới (không áp dụng nếu đã thay bằng file tải tay trong mục Tùy chọn bên dưới).</p>';
+    }
+    if (IS_ADMIN || IS_MANAGER || IS_VT) {
+      if (!IS_ADMIN) {
+        vanBanHtml += '<p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px;line-height:1.5">Sau khi <strong>Viện trưởng phê duyệt</strong>, hệ thống <strong>tự sinh file Word</strong> từ mẫu <strong>Đoàn ra</strong> [1] (nếu đã có mẫu <code>.docx</code>).</p>';
+      }
+    }
+    vanBanHtml += '<div style="margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#ecfdf5;border:1px solid #a7f3d0;font-size:12px;line-height:1.55">';
+    if (!approved) {
+      vanBanHtml += '<strong>Nút tải file:</strong> nằm <em>trong khối này</em> (nút xanh <strong>«Tải văn bản Word»</strong>). <span style="color:#b45309">Hiện trạng thái chưa phê duyệt — chưa có nút tải.</span>';
+    } else if (!hasVB) {
+      vanBanHtml += '<strong>Nút tải file:</strong> nằm <em>trong khối này</em> (nút xanh <strong>«Tải văn bản Word»</strong>). ';
+      if (!hasTpl) {
+        vanBanHtml += '<span style="color:#b45309">Chưa có <strong>mẫu Tờ trình Đoàn ra</strong> (.docx) — Admin cần <strong>Lưu mẫu Đoàn ra</strong> [1] một lần.</span>';
+      } else {
+        vanBanHtml += '<span style="color:#b45309">Chưa thấy file — thử <strong>đóng và mở lại</strong> chi tiết; nếu vẫn không có, Admin bấm <strong>Sinh từ mẫu</strong> hoặc <strong>Tải lên thủ công</strong>.</span>';
+      }
+    } else if (canDownloadVB) {
+      vanBanHtml += '<strong>Tải về:</strong> dùng nút xanh <strong>«Tải văn bản Word»</strong> ngay bên dưới.';
+    } else {
+      vanBanHtml += '<strong>Nút tải:</strong> Chỉ khi bạn là người gửi, Phòng KHCN, Viện trưởng hoặc Admin. <span style="color:#b45309">Tài khoản hiện tại không có quyền tải.</span>';
+    }
+    vanBanHtml += '</div>';
+    if (canDownloadVB) {
+      var fnArg = escapeJsSq(r.van_ban_word_original_name || 'van-ban-doan-ra.docx');
+      vanBanHtml += '<div style="margin-bottom:14px"><button type="button" class="btn btn-green" style="font-size:14px;padding:10px 18px" onclick="downloadVanBanDoanRa('+id+',\''+fnArg+'\')">Tải văn bản Word</button></div>';
+    }
+    if (approved && IS_ADMIN) {
+      vanBanHtml += '<details style="margin-top:10px;margin-bottom:10px;border:1px dashed var(--border);border-radius:8px;padding:8px 10px;background:#fff">'
+        + '<summary style="font-size:12px;font-weight:700;cursor:pointer;user-select:none;color:var(--ink-soft)">Tùy chọn: thay thế bản Word của đề xuất này</summary>'
+        + '<p style="font-size:11px;color:var(--ink-muted);margin:10px 0 8px;line-height:1.5">Chỉ dùng khi cần <strong>sửa tay</strong> hoặc <strong>sinh lại</strong> từ mẫu Đoàn ra [1].</p>'
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+        + '<input type="file" id="van-ban-word-file-dr" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px;max-width:100%"/>'
+        + '<button type="button" class="btn btn-primary btn-sm" onclick="uploadVanBanDoanRa('+id+')">Tải file đã chỉnh (thay bản đang lưu)</button>';
+      if (hasTpl) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="sinhToTrinhWordDoanRa('+id+')">Sinh lại từ mẫu Đoàn ra [1]</button>';
+      if (hasVB) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="deleteVanBanDoanRa('+id+')">Xóa bản đã lưu</button>';
+      vanBanHtml += '</div></details>';
+    }
+    if (hasVB && r.van_ban_word_uploaded_at) {
+      vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted);margin-bottom:8px">Đã lưu: <strong>'+esc(r.van_ban_word_original_name||'—')+'</strong> · '+esc(r.van_ban_word_uploaded_at)+'</div>';
+    }
+    if (approved && !hasVB && !IS_ADMIN) {
+      if (!hasTpl) {
+        vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted)">Chưa có mẫu Tờ trình Đoàn ra (.docx) — cần Admin <strong>Lưu mẫu Đoàn ra</strong> [1] một lần.</div>';
+      } else {
+        vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted)">Nếu vẫn chưa có file, hãy đóng và mở lại chi tiết đề xuất.</div>';
+      }
+    }
+    vanBanHtml += '</div>';
+  } else if (loai === 'doan_vao') {
+    var hasVBdv = !!r.has_van_ban_word;
+    var approvedDv = (r.status === 'da_duyet');
+    var isOwnerDv = ME && (r.submitted_by_email||'').trim().toLowerCase() === (ME.email||'').trim().toLowerCase();
+    var canDownloadVBdv = approvedDv && hasVBdv && (IS_ADMIN || IS_MANAGER || IS_VT || isOwnerDv);
+    var hasTplDv = !!r.has_to_trinh_template;
+    vanBanHtml = '';
+    if (IS_ADMIN) {
+      vanBanHtml += '<div style="margin-top:20px;padding:14px;border:1px dashed var(--accent);border-radius:8px;background:#f0f9ff">'
+        + '<div style="font-size:12px;font-weight:700;margin-bottom:4px"><span style="color:var(--accent)">[1]</span> Mẫu Tờ trình <span style="font-weight:800">Đoàn vào</span> (một file .docx)</div>'
+        + '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">Chỉ dùng cho loại đề xuất <strong>Đoàn vào</strong>. Đây là <strong>khung mẫu</strong> (placeholder <code>{…}</code>) để máy chủ ghép dữ liệu sau khi phê duyệt — <strong>khác</strong> mẫu Đoàn ra.</p>'
+        + '<p style="font-size:12px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">Thay chữ trong Word bằng <em>placeholder</em> (ví dụ <code>{don_vi_de_xuat}</code>). Lưu <strong>.docx</strong> rồi bấm <strong>Lưu mẫu Đoàn vào</strong>.</p>'
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
+        + '<input type="file" id="to-trinh-template-file-dv" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px"/>'
+        + '<button type="button" class="btn btn-outline btn-sm" onclick="uploadToTrinhTemplateDoanVao()">Lưu mẫu Đoàn vào</button>';
+      if (hasTplDv) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="downloadToTrinhTemplateDoanVao()" title="File .docx mẫu trên máy chủ — chưa ghép dữ liệu đề xuất này">Tải mẫu .docx gốc (chưa merge)</button>';
+      vanBanHtml += '</div>'
+        + '<p style="font-size:11px;color:#b45309;margin:8px 0 0;line-height:1.5"><strong>Admin:</strong> Nút <em>Tải mẫu .docx gốc</em> chỉ tải <strong>khung mẫu</strong>. Bản <strong>đã ghép dữ liệu</strong> — dùng nút xanh <strong>«Tải văn bản Word»</strong> ở khối [2] bên dưới.</p>'
+        + '<details style="margin-top:8px;font-size:12px"><summary>Danh sách placeholder (Đoàn vào)</summary><ul style="margin:8px 0 0 18px;line-height:1.65">'
+        + '<li><code>{ma_so}</code> / <code>{ma_de_xuat}</code> — Mã đề xuất</li><li><code>{don_vi_de_xuat}</code> / <code>{quoc_gia}</code> — Đơn vị đề xuất</li>'
+        + '<li><code>{muc_dich}</code>, <code>{tieu_de_to_trinh}</code></li>'
+        + '<li><code>{ngay_den}</code>, <code>{ngay_roi_di}</code> (alias <code>{ngay_di}</code>, <code>{ngay_ve}</code>)</li>'
+        + '<li><code>{tong_thoi_gian}</code> / <code>{so_ngay}</code></li>'
+        + '<li><code>{nguon_kinh_phi}</code>, <code>{du_toan}</code> / <code>{du_toan_vnd}</code></li>'
+        + '<li><code>{ho_tro_visa}</code>, <code>{noi_dung_lam_viec}</code>, <code>{noi_dung_bo_sung}</code> / <code>{ghi_chu}</code></li>'
+        + '<li><code>{trang_thai_phe_duyet}</code>, <code>{ngay_phe_duyet}</code>, <code>{nguoi_phe_duyet}</code>, <code>{nguoi_de_xuat}</code>, <code>{tp_hcm_ngay}</code></li>'
+        + '<li><code>{danh_sach_thanh_vien}</code> — Một khối văn bản</li>'
+        + '<li><strong>Bảng Word:</strong> Trên <strong>một hàng dữ liệu</strong> (không để trống): <code>{#thanh_vien}</code> · <code>{stt}</code> · <code>{ho_ten}</code> · <code>{chuc_vu}</code> · <code>{/thanh_vien}</code> (hoặc <code>{#thanh_phan}</code> … <code>{/thanh_phan}</code>). Mỗi dòng trong form là một người; tách họ tên và chức vụ bằng <code>|</code> hoặc <code> — </code>. Thêm alias: <code>{hoTen}</code>, <code>{chucVu}</code>.</li>'
+        + '</ul></details></div>';
+    }
+    vanBanHtml += '<div style="margin-top:20px;padding:16px;border:1px solid var(--border);border-radius:8px;background:#f8fafc">'
+      + '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-muted);margin-bottom:4px"><span style="color:#64748b">'+(IS_ADMIN?'[2] ':'')+'</span>Văn bản Word đã merge — <span style="font-weight:800">đề xuất này</span></div>';
+    if (IS_ADMIN) {
+      vanBanHtml += '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">File <strong>đã điền dữ liệu</strong> cho mã <code>'+esc(r.ma_de_xuat||'—')+'</code>. Hệ thống <strong>tự tạo</strong> sau khi Viện trưởng phê duyệt từ <strong>mẫu Đoàn vào</strong> [1]. Sau khi Admin <strong>Lưu mẫu</strong> [1] mới, bản tự sinh và file khi <strong>Tải văn bản Word</strong> sẽ <strong>tự ghép lại</strong> theo mẫu mới (không áp dụng nếu đã thay bằng file tải tay trong mục Tùy chọn bên dưới).</p>';
+    }
+    if (IS_ADMIN || IS_MANAGER || IS_VT) {
+      if (!IS_ADMIN) {
+        vanBanHtml += '<p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px;line-height:1.5">Sau khi <strong>Viện trưởng phê duyệt</strong>, hệ thống <strong>tự sinh file Word</strong> từ mẫu <strong>Đoàn vào</strong> [1] (nếu đã có mẫu <code>.docx</code>).</p>';
+      }
+    }
+    vanBanHtml += '<div style="margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#ecfdf5;border:1px solid #a7f3d0;font-size:12px;line-height:1.55">';
+    if (!approvedDv) {
+      vanBanHtml += '<strong>Nút tải file:</strong> nằm <em>trong khối này</em> (nút xanh <strong>«Tải văn bản Word»</strong>). <span style="color:#b45309">Hiện trạng thái chưa phê duyệt — chưa có nút tải.</span>';
+    } else if (!hasVBdv) {
+      vanBanHtml += '<strong>Nút tải file:</strong> nằm <em>trong khối này</em> (nút xanh <strong>«Tải văn bản Word»</strong>). ';
+      if (!hasTplDv) {
+        vanBanHtml += '<span style="color:#b45309">Chưa có <strong>mẫu Tờ trình Đoàn vào</strong> (.docx) — Admin cần <strong>Lưu mẫu Đoàn vào</strong> [1] một lần.</span>';
+      } else {
+        vanBanHtml += '<span style="color:#b45309">Chưa thấy file — thử <strong>đóng và mở lại</strong> chi tiết; nếu vẫn không có, Admin bấm <strong>Sinh từ mẫu</strong> hoặc <strong>Tải lên thủ công</strong>.</span>';
+      }
+    } else if (canDownloadVBdv) {
+      vanBanHtml += '<strong>Tải về:</strong> dùng nút xanh <strong>«Tải văn bản Word»</strong> ngay bên dưới.';
+    } else {
+      vanBanHtml += '<strong>Nút tải:</strong> Chỉ khi bạn là người gửi, Phòng KHCN, Viện trưởng hoặc Admin. <span style="color:#b45309">Tài khoản hiện tại không có quyền tải.</span>';
+    }
+    vanBanHtml += '</div>';
+    if (canDownloadVBdv) {
+      var fnArgDv = escapeJsSq(r.van_ban_word_original_name || 'van-ban-doan-vao.docx');
+      vanBanHtml += '<div style="margin-bottom:14px"><button type="button" class="btn btn-green" style="font-size:14px;padding:10px 18px" onclick="downloadVanBanDoanVao('+id+',\''+fnArgDv+'\')">Tải văn bản Word</button></div>';
+    }
+    if (approvedDv && IS_ADMIN) {
+      vanBanHtml += '<details style="margin-top:10px;margin-bottom:10px;border:1px dashed var(--border);border-radius:8px;padding:8px 10px;background:#fff">'
+        + '<summary style="font-size:12px;font-weight:700;cursor:pointer;user-select:none;color:var(--ink-soft)">Tùy chọn: thay thế bản Word của đề xuất này</summary>'
+        + '<p style="font-size:11px;color:var(--ink-muted);margin:10px 0 8px;line-height:1.5">Chỉ dùng khi cần <strong>sửa tay</strong> hoặc <strong>sinh lại</strong> từ mẫu Đoàn vào [1].</p>'
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+        + '<input type="file" id="van-ban-word-file-dv" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px;max-width:100%"/>'
+        + '<button type="button" class="btn btn-primary btn-sm" onclick="uploadVanBanDoanVao('+id+')">Tải file đã chỉnh (thay bản đang lưu)</button>';
+      if (hasTplDv) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="sinhToTrinhWordDoanVao('+id+')">Sinh lại từ mẫu Đoàn vào [1]</button>';
+      if (hasVBdv) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="deleteVanBanDoanVao('+id+')">Xóa bản đã lưu</button>';
+      vanBanHtml += '</div></details>';
+    }
+    if (hasVBdv && r.van_ban_word_uploaded_at) {
+      vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted);margin-bottom:8px">Đã lưu: <strong>'+esc(r.van_ban_word_original_name||'—')+'</strong> · '+esc(r.van_ban_word_uploaded_at)+'</div>';
+    }
+    if (approvedDv && !hasVBdv && !IS_ADMIN) {
+      if (!hasTplDv) {
+        vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted)">Chưa có mẫu Tờ trình Đoàn vào (.docx) — cần Admin <strong>Lưu mẫu Đoàn vào</strong> [1] một lần.</div>';
+      } else {
+        vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted)">Nếu vẫn chưa có file, hãy đóng và mở lại chi tiết đề xuất.</div>';
+      }
+    }
+    vanBanHtml += '</div>';
+  } else if (loai === 'mou') {
+    var hasVBm = !!r.has_van_ban_word;
+    var approvedM = (r.status === 'da_duyet');
+    var isOwnerM = ME && (r.submitted_by_email||'').trim().toLowerCase() === (ME.email||'').trim().toLowerCase();
+    var canDownloadVBm = approvedM && hasVBm && (IS_ADMIN || IS_MANAGER || IS_VT || isOwnerM);
+    var hasTplM = !!r.has_to_trinh_template;
+    vanBanHtml = '';
+    if (IS_ADMIN) {
+      vanBanHtml += '<div style="margin-top:20px;padding:14px;border:1px dashed var(--accent);border-radius:8px;background:#f0f9ff">'
+        + '<div style="font-size:12px;font-weight:700;margin-bottom:4px"><span style="color:var(--accent)">[1]</span> Mẫu Tờ trình <span style="font-weight:800">Đề xuất Thỏa thuận / MOU</span> (một file .docx)</div>'
+        + '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">Chỉ dùng cho loại đề xuất <strong>Thỏa thuận (MOU)</strong>. Đây là <strong>khung mẫu</strong> (placeholder <code>{…}</code>) để máy chủ ghép dữ liệu sau khi phê duyệt — <strong>khác</strong> mẫu Đoàn ra / Đoàn vào.</p>'
+        + '<p style="font-size:12px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">Thay chữ trong Word bằng <em>placeholder</em> (ví dụ <code>{ten_doi_tac}</code>). Lưu <strong>.docx</strong> rồi bấm <strong>Lưu mẫu Đề xuất TT</strong>.</p>'
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
+        + '<input type="file" id="to-trinh-template-file-mou" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px"/>'
+        + '<button type="button" class="btn btn-outline btn-sm" onclick="uploadToTrinhTemplateMou()">Lưu mẫu Đề xuất TT</button>';
+      if (hasTplM) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="downloadToTrinhTemplateMou()" title="File .docx mẫu trên máy chủ — chưa ghép dữ liệu đề xuất này">Tải mẫu .docx gốc (chưa merge)</button>';
+      vanBanHtml += '</div>'
+        + '<p style="font-size:11px;color:#b45309;margin:8px 0 0;line-height:1.5"><strong>Admin:</strong> Nút <em>Tải mẫu .docx gốc</em> chỉ tải <strong>khung mẫu</strong>. Bản <strong>đã ghép dữ liệu</strong> — dùng nút xanh <strong>«Tải văn bản Word»</strong> ở khối [2] bên dưới.</p>'
+        + '<details style="margin-top:8px;font-size:12px"><summary>Danh sách placeholder (Đề xuất Thỏa thuận)</summary><ul style="margin:8px 0 0 18px;line-height:1.65">'
+        + '<li><code>{ma_so}</code> / <code>{ma_de_xuat}</code> — Mã đề xuất</li><li><code>{ngay_to_trinh}</code> / <code>{ngay_lap}</code> — Ngày tờ trình</li>'
+        + '<li><code>{tieu_de_to_trinh}</code> — Dòng v/v (mặc định: loại TT + đối tác)</li>'
+        + '<li><code>{loai_thoa_thuan}</code>, <code>{ten_doi_tac}</code>, <code>{quoc_gia}</code> / <code>{quoc_gia_dia_diem}</code></li>'
+        + '<li><code>{thoi_han_nam}</code>, <code>{gia_tri_tai_chinh}</code>, <code>{don_vi_de_xuat}</code></li>'
+        + '<li><code>{noi_dung_hop_tac}</code>, <code>{noi_dung_bo_sung}</code> / <code>{ghi_chu}</code></li>'
+        + '<li><code>{trang_thai_phe_duyet}</code>, <code>{ngay_phe_duyet}</code> / <code>{ngay_duyet}</code>, <code>{nguoi_phe_duyet}</code> / <code>{ten_vien_truong}</code></li>'
+        + '<li><code>{nguoi_de_xuat}</code>, <code>{chuc_vu_de_xuat}</code>, <code>{tp_hcm_ngay}</code> / <code>{thanh_pho_ngay}</code></li>'
+        + '<li><code>{nguoi_nhan_to_trinh}</code>, <code>{can_cu_trinh_bay}</code> (mặc định)</li>'
+        + '</ul></details></div>';
+    }
+    vanBanHtml += '<div style="margin-top:20px;padding:16px;border:1px solid var(--border);border-radius:8px;background:#f8fafc">'
+      + '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-muted);margin-bottom:4px"><span style="color:#64748b">'+(IS_ADMIN?'[2] ':'')+'</span>Văn bản Word đã merge — <span style="font-weight:800">đề xuất này</span></div>';
+    if (IS_ADMIN) {
+      vanBanHtml += '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">File <strong>đã điền dữ liệu</strong> cho mã <code>'+esc(r.ma_de_xuat||'—')+'</code>. Hệ thống <strong>tự tạo</strong> sau khi Viện trưởng phê duyệt từ <strong>mẫu Đề xuất TT</strong> [1]. Sau khi Admin <strong>Lưu mẫu</strong> [1] mới, bản tự sinh và file khi <strong>Tải văn bản Word</strong> sẽ <strong>tự ghép lại</strong> theo mẫu mới (không áp dụng nếu đã thay bằng file tải tay trong mục Tùy chọn bên dưới).</p>';
+    }
+    if (IS_ADMIN || IS_MANAGER || IS_VT) {
+      if (!IS_ADMIN) {
+        vanBanHtml += '<p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px;line-height:1.5">Sau khi <strong>Viện trưởng phê duyệt</strong>, hệ thống <strong>tự sinh file Word</strong> từ mẫu <strong>Đề xuất Thỏa thuận</strong> [1] (nếu đã có mẫu <code>.docx</code>).</p>';
+      }
+    }
+    vanBanHtml += '<div style="margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#ecfdf5;border:1px solid #a7f3d0;font-size:12px;line-height:1.55">';
+    if (!approvedM) {
+      vanBanHtml += '<strong>Nút tải file:</strong> nằm <em>trong khối này</em> (nút xanh <strong>«Tải văn bản Word»</strong>). <span style="color:#b45309">Hiện trạng thái chưa phê duyệt — chưa có nút tải.</span>';
+    } else if (!hasVBm) {
+      vanBanHtml += '<strong>Nút tải file:</strong> nằm <em>trong khối này</em> (nút xanh <strong>«Tải văn bản Word»</strong>). ';
+      if (!hasTplM) {
+        vanBanHtml += '<span style="color:#b45309">Chưa có <strong>mẫu Tờ trình Đề xuất TT</strong> (.docx) — Admin cần <strong>Lưu mẫu Đề xuất TT</strong> [1] một lần.</span>';
+      } else {
+        vanBanHtml += '<span style="color:#b45309">Chưa thấy file — thử <strong>đóng và mở lại</strong> chi tiết; nếu vẫn không có, Admin bấm <strong>Sinh từ mẫu</strong> hoặc <strong>Tải lên thủ công</strong>.</span>';
+      }
+    } else if (canDownloadVBm) {
+      vanBanHtml += '<strong>Tải về:</strong> dùng nút xanh <strong>«Tải văn bản Word»</strong> ngay bên dưới.';
+    } else {
+      vanBanHtml += '<strong>Nút tải:</strong> Chỉ khi bạn là người gửi, Phòng KHCN, Viện trưởng hoặc Admin. <span style="color:#b45309">Tài khoản hiện tại không có quyền tải.</span>';
+    }
+    vanBanHtml += '</div>';
+    if (canDownloadVBm) {
+      var fnArgM = escapeJsSq(r.van_ban_word_original_name || 'van-ban-mou.docx');
+      vanBanHtml += '<div style="margin-bottom:14px"><button type="button" class="btn btn-green" style="font-size:14px;padding:10px 18px" onclick="downloadVanBanMou('+id+',\''+fnArgM+'\')">Tải văn bản Word</button></div>';
+    }
+    if (approvedM && IS_ADMIN) {
+      vanBanHtml += '<details style="margin-top:10px;margin-bottom:10px;border:1px dashed var(--border);border-radius:8px;padding:8px 10px;background:#fff">'
+        + '<summary style="font-size:12px;font-weight:700;cursor:pointer;user-select:none;color:var(--ink-soft)">Tùy chọn: thay thế bản Word của đề xuất này</summary>'
+        + '<p style="font-size:11px;color:var(--ink-muted);margin:10px 0 8px;line-height:1.5">Chỉ dùng khi cần <strong>sửa tay</strong> hoặc <strong>sinh lại</strong> từ mẫu Đề xuất TT [1].</p>'
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+        + '<input type="file" id="van-ban-word-file-mou" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px;max-width:100%"/>'
+        + '<button type="button" class="btn btn-primary btn-sm" onclick="uploadVanBanMou('+id+')">Tải file đã chỉnh (thay bản đang lưu)</button>';
+      if (hasTplM) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="sinhToTrinhWordMou('+id+')">Sinh lại từ mẫu Đề xuất TT [1]</button>';
+      if (hasVBm) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="deleteVanBanMou('+id+')">Xóa bản đã lưu</button>';
+      vanBanHtml += '</div></details>';
+    }
+    if (hasVBm && r.van_ban_word_uploaded_at) {
+      vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted);margin-bottom:8px">Đã lưu: <strong>'+esc(r.van_ban_word_original_name||'—')+'</strong> · '+esc(r.van_ban_word_uploaded_at)+'</div>';
+    }
+    if (approvedM && !hasVBm && !IS_ADMIN) {
+      if (!hasTplM) {
+        vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted)">Chưa có mẫu Tờ trình Đề xuất TT (.docx) — cần Admin <strong>Lưu mẫu Đề xuất TT</strong> [1] một lần.</div>';
+      } else {
+        vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted)">Nếu vẫn chưa có file, hãy đóng và mở lại chi tiết đề xuất.</div>';
+      }
+    }
+    vanBanHtml += '</div>';
+  } else if (loai === 'ytnn') {
+    var hasVByt = !!r.has_van_ban_word;
+    var approvedYt = (r.status === 'da_duyet' || r.status === 'da_phe_duyet');
+    var isOwnerYt = ME && (r.submitted_by_email||'').trim().toLowerCase() === (ME.email||'').trim().toLowerCase();
+    var canDownloadVByt = approvedYt && hasVByt && (IS_ADMIN || IS_MANAGER || IS_VT || isOwnerYt);
+    var hasTplYt = !!r.has_to_trinh_template;
+    vanBanHtml = '';
+    if (IS_ADMIN) {
+      vanBanHtml += '<div style="margin-top:20px;padding:14px;border:1px dashed var(--accent);border-radius:8px;background:#f0f9ff">'
+        + '<div style="font-size:12px;font-weight:700;margin-bottom:4px"><span style="color:var(--accent)">[1]</span> Mẫu Tờ trình <span style="font-weight:800">Đề tài YTNN</span> (một file .docx)</div>'
+        + '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">Chỉ dùng cho loại đề xuất <strong>Đề tài YTNN</strong>. Có thể sao chép cấu trúc placeholder từ mẫu MOU (ví dụ <code>{ma_so}</code>, <code>{ten_de_tai}</code>, <code>{ten_doi_tac}</code>, <code>{quoc_gia}</code>…).</p>'
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
+        + '<input type="file" id="to-trinh-template-file-yt" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px"/>'
+        + '<button type="button" class="btn btn-outline btn-sm" onclick="uploadToTrinhTemplateYtnn()">Lưu mẫu YTNN</button>';
+      if (hasTplYt) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="downloadToTrinhTemplateYtnn()" title="File .docx mẫu trên máy chủ — chưa ghép dữ liệu đề xuất này">Tải mẫu .docx gốc (chưa merge)</button>';
+      vanBanHtml += '</div>'
+        + '<p style="font-size:11px;color:#b45309;margin:8px 0 0;line-height:1.5"><strong>Admin:</strong> Nút <em>Tải mẫu .docx gốc</em> chỉ tải <strong>khung mẫu</strong>. Bản <strong>đã ghép dữ liệu</strong> — dùng nút xanh <strong>«Tải văn bản Word»</strong> ở khối [2] bên dưới.</p>'
+        + '<details style="margin-top:8px;font-size:12px"><summary>Danh sách placeholder (YTNN)</summary><ul style="margin:8px 0 0 18px;line-height:1.65">'
+        + '<li><code>{ma_so}</code>, <code>{ten_de_tai}</code>, <code>{ten_doi_tac}</code>, <code>{quoc_gia}</code>, <code>{loai_hinh}</code>, <code>{mo_ta}</code>, <code>{gia_tri_tai_chinh}</code>, <code>{chu_nhiem}</code>…</li>'
+        + '<li><code>{tieu_de_to_trinh}</code>, <code>{can_cu_trinh_bay}</code>, <code>{nguoi_phe_duyet}</code>, <code>{ngay_phe_duyet}</code> (tương tự mẫu MOU)</li>'
+        + '</ul></details></div>';
+    }
+    vanBanHtml += '<div style="margin-top:20px;padding:16px;border:1px solid var(--border);border-radius:8px;background:#f8fafc">'
+      + '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-muted);margin-bottom:4px"><span style="color:#64748b">'+(IS_ADMIN?'[2] ':'')+'</span>Văn bản Word đã merge — <span style="font-weight:800">đề xuất này</span></div>';
+    if (IS_ADMIN) {
+      vanBanHtml += '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">File <strong>đã điền dữ liệu</strong> cho mã <code>'+esc(r.ma_de_xuat||'—')+'</code>. Hệ thống <strong>tự tạo</strong> sau khi Viện trưởng phê duyệt từ <strong>mẫu YTNN</strong> [1].</p>';
+    }
+    if (IS_ADMIN || IS_MANAGER || IS_VT) {
+      if (!IS_ADMIN) {
+        vanBanHtml += '<p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px;line-height:1.5">Sau khi <strong>Viện trưởng phê duyệt</strong>, hệ thống <strong>tự sinh file Word</strong> từ mẫu <strong>YTNN</strong> [1] (nếu đã có mẫu <code>.docx</code>).</p>';
+      }
+    }
+    vanBanHtml += '<div style="margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#ecfdf5;border:1px solid #a7f3d0;font-size:12px;line-height:1.55">';
+    if (!approvedYt) {
+      vanBanHtml += '<strong>Nút tải file:</strong> nằm <em>trong khối này</em> (nút xanh <strong>«Tải văn bản Word»</strong>). <span style="color:#b45309">Hiện trạng thái chưa phê duyệt — chưa có nút tải.</span>';
+    } else if (!hasVByt) {
+      vanBanHtml += '<strong>Nút tải file:</strong> nằm <em>trong khối này</em> (nút xanh <strong>«Tải văn bản Word»</strong>). ';
+      if (!hasTplYt) {
+        vanBanHtml += '<span style="color:#b45309">Chưa có <strong>mẫu Tờ trình YTNN</strong> (.docx) — Admin cần <strong>Lưu mẫu YTNN</strong> [1] một lần.</span>';
+      } else {
+        vanBanHtml += '<span style="color:#b45309">Chưa thấy file — thử <strong>đóng và mở lại</strong> chi tiết; nếu vẫn không có, Admin bấm <strong>Sinh từ mẫu</strong> hoặc <strong>Tải lên thủ công</strong>.</span>';
+      }
+    } else if (canDownloadVByt) {
+      vanBanHtml += '<strong>Tải về:</strong> dùng nút xanh <strong>«Tải văn bản Word»</strong> ngay bên dưới.';
+    } else {
+      vanBanHtml += '<strong>Nút tải:</strong> Chỉ khi bạn là người gửi, Phòng KHCN, Viện trưởng hoặc Admin. <span style="color:#b45309">Tài khoản hiện tại không có quyền tải.</span>';
+    }
+    vanBanHtml += '</div>';
+    if (canDownloadVByt) {
+      var fnArgYt = escapeJsSq(r.van_ban_word_original_name || 'van-ban-ytnn.docx');
+      vanBanHtml += '<div style="margin-bottom:14px"><button type="button" class="btn btn-green" style="font-size:14px;padding:10px 18px" onclick="downloadVanBanYtnn('+id+',\''+fnArgYt+'\')">Tải văn bản Word</button></div>';
+    }
+    if (approvedYt && IS_ADMIN) {
+      vanBanHtml += '<details style="margin-top:10px;margin-bottom:10px;border:1px dashed var(--border);border-radius:8px;padding:8px 10px;background:#fff">'
+        + '<summary style="font-size:12px;font-weight:700;cursor:pointer;user-select:none;color:var(--ink-soft)">Tùy chọn: thay thế bản Word của đề xuất này</summary>'
+        + '<p style="font-size:11px;color:var(--ink-muted);margin:10px 0 8px;line-height:1.5">Chỉ dùng khi cần <strong>sửa tay</strong> hoặc <strong>sinh lại</strong> từ mẫu YTNN [1].</p>'
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+        + '<input type="file" id="van-ban-word-file-yt" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px;max-width:100%"/>'
+        + '<button type="button" class="btn btn-primary btn-sm" onclick="uploadVanBanYtnn('+id+')">Tải file đã chỉnh (thay bản đang lưu)</button>';
+      if (hasTplYt) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="sinhToTrinhWordYtnn('+id+')">Sinh lại từ mẫu YTNN [1]</button>';
+      if (hasVByt) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="deleteVanBanYtnn('+id+')">Xóa bản đã lưu</button>';
+      vanBanHtml += '</div></details>';
+    }
+    if (hasVByt && r.van_ban_word_uploaded_at) {
+      vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted);margin-bottom:8px">Đã lưu: <strong>'+esc(r.van_ban_word_original_name||'—')+'</strong> · '+esc(r.van_ban_word_uploaded_at)+'</div>';
+    }
+    if (approvedYt && !hasVByt && !IS_ADMIN) {
+      if (!hasTplYt) {
+        vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted)">Chưa có mẫu Tờ trình YTNN (.docx) — cần Admin <strong>Lưu mẫu YTNN</strong> [1] một lần.</div>';
+      } else {
+        vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted)">Nếu vẫn chưa có file, hãy đóng và mở lại chi tiết đề xuất.</div>';
+      }
+    }
+    vanBanHtml += '</div>';
+  }
+
+  document.getElementById('modal-body').innerHTML = stepHtml + ownerEditHtml
+    + '<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-muted);margin-bottom:10px">THÔNG TIN ĐỀ XUẤT</div>'+detailHtml+'</div>'
+    + histHtml
+    + vanBanHtml;
+
+  // Action buttons
+  buildModalActions(loai, id, r.status, payload.is_manager, isOwner, r);
+}
+
+function buildOwnerEditBlock(loai, r, isOwner) {
+  if (!isOwner || !r || r.status !== 'yeu_cau_bo_sung') return '';
+  var box = '<div style="margin:0 0 18px;padding:14px;border:1px solid #f59e0b;border-radius:8px;background:#fffbeb"><div style="font-size:12px;font-weight:700;margin-bottom:10px;color:#b45309">Chỉnh sửa sau yêu cầu bổ sung — lưu nội dung, sau đó <strong>Nộp lại hồ sơ</strong> để Phòng KHCN thẩm định lại; hoặc <strong>Kết thúc đề xuất</strong> nếu không tiếp tục.</div>';
+  if (loai === 'doan_ra') {
+    box += '<div class="detail-grid" style="margin-top:8px">'
+      +'<div class="dk">Mục đích</div><div class="dv"><input id="oe-dr-md" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.muc_dich||'')+'"/></div>'
+      +'<div class="dk">Quốc gia / Địa điểm</div><div class="dv"><input id="oe-dr-qg" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.quoc_gia||'')+'"/></div>'
+      +'<div class="dk">Ngày đi</div><div class="dv"><input id="oe-dr-nd" type="date" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr((r.ngay_di||'').slice(0,10))+'"/></div>'
+      +'<div class="dk">Ngày về</div><div class="dv"><input id="oe-dr-nv" type="date" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr((r.ngay_ve||'').slice(0,10))+'"/></div>'
+      +'<div class="dk">Thành viên đoàn</div><div class="dv"><textarea id="oe-dr-tv" rows="3" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit">'+esc(r.thanh_vien||'')+'</textarea></div>'
+      +'<div class="dk">Nguồn kinh phí</div><div class="dv"><input id="oe-dr-kp" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.nguon_kinh_phi||'')+'"/></div>'
+      +'<div class="dk">Dự toán (VND)</div><div class="dv"><input id="oe-dr-dt" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.du_toan!=null?String(r.du_toan):'')+'"/></div>'
+      +'</div>';
+  } else if (loai === 'doan_vao') {
+    box += '<div class="detail-grid" style="margin-top:8px">'
+      +'<div class="dk">Mục đích</div><div class="dv"><input id="oe-dv-md" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.muc_dich||'')+'"/></div>'
+      +'<div class="dk">Đơn vị đề xuất</div><div class="dv"><input id="oe-dv-dv" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.don_vi_de_xuat||'')+'"/></div>'
+      +'<div class="dk">Ngày đến</div><div class="dv"><input id="oe-dv-nd" type="date" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr((r.ngay_den||'').slice(0,10))+'"/></div>'
+      +'<div class="dk">Ngày rời</div><div class="dv"><input id="oe-dv-nr" type="date" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr((r.ngay_roi_di||'').slice(0,10))+'"/></div>'
+      +'<div class="dk">Thành phần đoàn</div><div class="dv"><textarea id="oe-dv-tp" rows="3" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit">'+esc(r.thanh_phan_doan||'')+'</textarea></div>'
+      +'<div class="dk">Nội dung làm việc</div><div class="dv"><textarea id="oe-dv-ndlv" rows="2" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit">'+esc(r.noi_dung_lam_viec||'')+'</textarea></div>'
+      +'<div class="dk">Kinh phí đón tiếp</div><div class="dv"><input id="oe-dv-kp" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.kinh_phi_nguon||'')+'"/></div>'
+      +'<div class="dk">Hỗ trợ visa</div><div class="dv"><input id="oe-dv-vs" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.ho_tro_visa||'')+'"/></div>'
+      +'</div>';
+  } else if (loai === 'mou') {
+    box += '<div class="detail-grid" style="margin-top:8px">'
+      +'<div class="dk">Loại thỏa thuận</div><div class="dv"><input id="oe-mou-l" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.loai_thoa_thuan||'')+'"/></div>'
+      +'<div class="dk">Tên đối tác</div><div class="dv"><input id="oe-mou-dt" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.ten_doi_tac||'')+'"/></div>'
+      +'<div class="dk">Quốc gia</div><div class="dv"><input id="oe-mou-qg" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.quoc_gia||'')+'"/></div>'
+      +'<div class="dk">Thời hạn (năm)</div><div class="dv"><input id="oe-mou-th" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.thoi_han_nam!=null?String(r.thoi_han_nam):'')+'"/></div>'
+      +'<div class="dk">Giá trị tài chính</div><div class="dv"><input id="oe-mou-gt" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.gia_tri_tai_chinh||'')+'"/></div>'
+      +'<div class="dk">Đơn vị đề xuất</div><div class="dv"><input id="oe-mou-dvdx" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.don_vi_de_xuat||'')+'"/></div>'
+      +'<div class="dk">Nội dung hợp tác</div><div class="dv"><textarea id="oe-mou-nd" rows="4" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit">'+esc(r.noi_dung_hop_tac||'')+'</textarea></div>'
+      +'</div>';
+  } else if (loai === 'ytnn') {
+    box += '<div class="detail-grid" style="margin-top:8px">'
+      +'<div class="dk">Tên đề tài</div><div class="dv"><input id="oe-yt-ten" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.ten||'')+'"/></div>'
+      +'<div class="dk">Mô tả</div><div class="dv"><textarea id="oe-yt-mt" rows="2" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit">'+esc(r.mo_ta||'')+'</textarea></div>'
+      +'<div class="dk">Đối tác</div><div class="dv"><input id="oe-yt-dt" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.doi_tac_ten||'')+'"/></div>'
+      +'<div class="dk">Quốc gia ĐT</div><div class="dv"><input id="oe-yt-qg" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.doi_tac_quoc_gia||'')+'"/></div>'
+      +'<div class="dk">Chủ nhiệm</div><div class="dv"><input id="oe-yt-cn" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.chu_nhiem_ten||'')+'"/></div>'
+      +'<div class="dk">Kinh phí</div><div class="dv"><input id="oe-yt-kp" type="text" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px" value="'+escAttr(r.kinh_phi!=null?String(r.kinh_phi):'')+'"/></div>'
+      +'</div>';
+  }
+  box += '</div>';
+  return box;
+}
+function escAttr(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+function buildModalActions(loai, id, status, isManagerFlag, isOwner, row) {
+  row = row || {};
+  var footer = document.getElementById('modal-footer');
+  var pendingPhong = ['cho_phong_duyet','cho_phan_loai','dang_tham_dinh','cho_tham_dinh'];
+  var pendingVT = ['cho_vt_duyet','cho_vt_phe_duyet','cho_ky_duyet'];
+  if (loai === 'doan_ra') {
+    pendingPhong = ['cho_phong_duyet'];
+    pendingVT = ['cho_vt_duyet'];
+  } else if (loai === 'doan_vao') {
+    pendingPhong = ['cho_phong_duyet','cho_tham_dinh'];
+    pendingVT = ['cho_vt_duyet','cho_ky_duyet'];
+  } else if (loai === 'mou') {
+    pendingPhong = ['cho_phong_duyet','dang_tham_dinh'];
+    pendingVT = ['cho_vt_duyet'];
+  } else if (loai === 'ytnn') {
+    pendingPhong = ['cho_phan_loai','cho_phong_duyet','dang_tham_dinh'];
+    pendingVT = ['cho_vt_duyet','cho_vt_phe_duyet'];
+  }
+  var html = '';
+
+  if ((IS_MANAGER||IS_ADMIN) && pendingPhong.indexOf(status)>=0) {
+    html += '<div style="flex:1;min-width:200px"><textarea id="note-action" placeholder="Ghi chú / Ý kiến thẩm định..." style="width:100%;height:56px;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;resize:none"></textarea></div>';
+    var ep = {doan_ra:'doan-ra',doan_vao:'doan-vao',mou:'mou',ytnn:'ytnn'}[loai];
+    html += '<button class="btn btn-green btn-sm" onclick="doThamDinh(\''+ep+'\','+id+',\'duyet_len_vt\')">Trình Viện trưởng</button>';
+    html += '<button class="btn btn-amber btn-sm" onclick="doThamDinh(\''+ep+'\','+id+',\'yeu_cau_bo_sung\')">Yêu cầu bổ sung</button>';
+    html += '<button class="btn btn-red btn-sm" onclick="doThamDinh(\''+ep+'\','+id+',\'tu_choi\')">Từ chối</button>';
+  } else if ((IS_VT||IS_ADMIN) && pendingVT.indexOf(status)>=0) {
+    html += '<div style="flex:1;min-width:200px"><textarea id="note-action" placeholder="Ý kiến Viện trưởng..." style="width:100%;height:56px;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;resize:none"></textarea></div>';
+    var ep = {doan_ra:'doan-ra',doan_vao:'doan-vao',mou:'mou',ytnn:'ytnn'}[loai];
+    var okAction = 'da_duyet';
+    var noAction = 'tu_choi';
+    html += '<button class="btn btn-green btn-sm" onclick="doPheDuyet(\''+ep+'\','+id+',\''+okAction+'\')">Phê duyệt</button>';
+    html += '<button class="btn btn-amber btn-sm" onclick="doPheDuyet(\''+ep+'\','+id+',\'yeu_cau_bo_sung\')">Yêu cầu bổ sung</button>';
+    html += '<button class="btn btn-red btn-sm" onclick="doPheDuyet(\''+ep+'\','+id+',\''+noAction+'\')">Không phê duyệt</button>';
+  }
+
+  if (isOwner && status === 'yeu_cau_bo_sung') {
+    html += '<div style="width:100%;padding-top:8px;border-top:1px dashed var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center">'
+      +'<span style="font-size:11px;font-weight:700;color:var(--amber)">Người gửi:</span>'
+      +'<button type="button" class="btn btn-primary btn-sm" onclick="saveOwnerEdit(\''+loai+'\','+id+')">Lưu chỉnh sửa</button>'
+      +'<button type="button" class="btn btn-green btn-sm" onclick="nopLaiDeXuat(\''+loai+'\','+id+')">Nộp lại hồ sơ</button>'
+      +'<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--red);color:var(--red)" onclick="ketThucDeXuat(\''+loai+'\','+id+')">⏹ Kết thúc đề xuất</button>'
+      +'</div>';
+  }
+
+  if (IS_ADMIN) {
+    html += '<div style="width:100%;padding-top:10px;border-top:1px dashed var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      +'<span style="font-size:11px;color:var(--red);font-weight:700">ADMIN:</span>'
+      +'<select id="admin-st" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px">'
+      +'<option value="">— Đổi trạng thái —</option>'
+      +'<option value="cho_phong_duyet">Chờ Phòng KHCN</option><option value="cho_phan_loai">Chờ phân loại (YTNN)</option><option value="yeu_cau_bo_sung">Yêu cầu bổ sung</option>'
+      +'<option value="cho_vt_duyet">Chờ Viện trưởng</option><option value="da_duyet">Đã phê duyệt</option><option value="tu_choi">Không phê duyệt</option>'
+      +'<option value="ket_thuc_boi_nguoi_nop">Đã kết thúc (người gửi)</option>'
+      +'</select>'
+      +'<button class="btn btn-sm" style="background:var(--red-light);color:var(--red);border:1px solid var(--red)" onclick="adminSt(\''+loai+'\','+id+')">Cập nhật</button>'
+      +'<button class="btn btn-sm" style="background:var(--red-light);color:var(--red);border:1px solid var(--red)" onclick="adminDel(\''+loai+'\','+id+')">Xóa</button>'
+      +'</div>';
+  }
+
+  footer.innerHTML = html;
+}
+
+function getNote() { var el=document.getElementById('note-action'); return el?el.value:''; }
+
+async function uploadVanBanDoanRa(id) {
+  var inp = document.getElementById('van-ban-word-file-dr');
+  if (!inp || !inp.files || !inp.files[0]) { toast('Chọn file .doc hoặc .docx','error'); return; }
+  var fd = new FormData();
+  fd.append('file', inp.files[0]);
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/doan-ra/' + id + '/van-ban-word', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+    var d = await res.json().catch(function(){ return {}; });
+    if (res.ok) { toast(d.message || 'Đã lưu văn bản Word', 'success'); inp.value = ''; openModal('doan_ra', id); }
+    else toast(d.message || 'Lỗi upload', 'error');
+  } catch (e) { toast('Lỗi mạng', 'error'); }
+}
+async function deleteVanBanDoanRa(id) {
+  if (!confirm('Xóa file văn bản Word đã lưu?')) return;
+  var r = await apiDel('/api/admin/cooperation/doan-ra/' + id + '/van-ban-word');
+  if (r && r.ok) { toast('Đã xóa file', 'success'); openModal('doan_ra', id); }
+  else toast((r && r.data && r.data.message) || 'Lỗi', 'error');
+}
+async function downloadVanBanDoanRa(id, filename) {
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/cooperation/doan-ra/' + id + '/van-ban-word', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) { var err = await res.json().catch(function(){ return {}; }); toast(err.message || 'Không tải được', 'error'); return; }
+    var blob = await res.blob();
+    var cd = res.headers.get('Content-Disposition');
+    var name = (filename && String(filename).trim()) || 'van-ban-doan-ra.docx';
+    if (cd) {
+      var m = cd.match(/filename\*=UTF-8''([^;]+)|filename="([^"]+)"|filename=([^;\s]+)/i);
+      var raw = m ? (m[1] || m[2] || m[3]) : '';
+      if (raw) { try { name = decodeURIComponent(raw.replace(/^"+|"+$/g, '')); } catch (e2) { name = raw; } }
+    }
+    var a = document.createElement('a');
+    var url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = name;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+      try { document.body.removeChild(a); } catch (e3) {}
+      URL.revokeObjectURL(url);
+    }, 250);
+    toast('Đang tải file…', 'success');
+  } catch (e) { toast('Lỗi tải file', 'error'); }
+}
+
+async function uploadToTrinhTemplateDoanRa() {
+  var inp = document.getElementById('to-trinh-template-file-dr');
+  if (!inp || !inp.files || !inp.files[0]) { toast('Chọn file .docx (mẫu Tờ trình Đoàn ra)', 'error'); return; }
+  var fd = new FormData();
+  fd.append('file', inp.files[0]);
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/doan-ra/to-trinh-template', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+    var d = await res.json().catch(function(){ return {}; });
+    if (res.ok) { toast(d.message || 'Đã lưu mẫu', 'success'); inp.value = ''; if (window._currentCoopModalLoai === 'doan_ra' && window._currentCoopModalId) openModal('doan_ra', window._currentCoopModalId); }
+    else toast(d.message || 'Lỗi upload', 'error');
+  } catch (e) { toast('Lỗi mạng', 'error'); }
+}
+async function downloadToTrinhTemplateDoanRa() {
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/doan-ra/to-trinh-template', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) { var err = await res.json().catch(function(){ return {}; }); toast(err.message || 'Không tải được', 'error'); return; }
+    var blob = await res.blob();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'mau-to-trinh-doan-ra.docx';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) { toast('Lỗi tải file', 'error'); }
+}
+async function sinhToTrinhWordDoanRa(id) {
+  if (!confirm('Sinh file Word từ mẫu và dữ liệu đề xuất? File đã lưu trước (nếu có) sẽ được thay thế.')) return;
+  var r = await apiPost('/api/admin/cooperation/doan-ra/' + id + '/sinh-to-trinh-word', {});
+  if (r && r.ok) { toast(r.data.message || 'Đã sinh file', 'success'); openModal('doan_ra', id); }
+  else toast((r && r.data && r.data.message) || 'Lỗi ghép Word', 'error');
+}
+
+async function uploadVanBanDoanVao(id) {
+  var inp = document.getElementById('van-ban-word-file-dv');
+  if (!inp || !inp.files || !inp.files[0]) { toast('Chọn file .doc hoặc .docx','error'); return; }
+  var fd = new FormData();
+  fd.append('file', inp.files[0]);
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/doan-vao/' + id + '/van-ban-word', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+    var d = await res.json().catch(function(){ return {}; });
+    if (res.ok) { toast(d.message || 'Đã lưu văn bản Word', 'success'); inp.value = ''; openModal('doan_vao', id); }
+    else toast(d.message || 'Lỗi upload', 'error');
+  } catch (e) { toast('Lỗi mạng', 'error'); }
+}
+async function deleteVanBanDoanVao(id) {
+  if (!confirm('Xóa file văn bản Word đã lưu?')) return;
+  var r = await apiDel('/api/admin/cooperation/doan-vao/' + id + '/van-ban-word');
+  if (r && r.ok) { toast('Đã xóa file', 'success'); openModal('doan_vao', id); }
+  else toast((r && r.data && r.data.message) || 'Lỗi', 'error');
+}
+async function downloadVanBanDoanVao(id, filename) {
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/cooperation/doan-vao/' + id + '/van-ban-word', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) { var err = await res.json().catch(function(){ return {}; }); toast(err.message || 'Không tải được', 'error'); return; }
+    var blob = await res.blob();
+    var cd = res.headers.get('Content-Disposition');
+    var name = (filename && String(filename).trim()) || 'van-ban-doan-vao.docx';
+    if (cd) {
+      var m = cd.match(/filename\*=UTF-8''([^;]+)|filename="([^"]+)"|filename=([^;\s]+)/i);
+      var raw = m ? (m[1] || m[2] || m[3]) : '';
+      if (raw) { try { name = decodeURIComponent(raw.replace(/^"+|"+$/g, '')); } catch (e2) { name = raw; } }
+    }
+    var a = document.createElement('a');
+    var url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = name;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+      try { document.body.removeChild(a); } catch (e3) {}
+      URL.revokeObjectURL(url);
+    }, 250);
+    toast('Đang tải file…', 'success');
+  } catch (e) { toast('Lỗi tải file', 'error'); }
+}
+async function uploadToTrinhTemplateDoanVao() {
+  var inp = document.getElementById('to-trinh-template-file-dv');
+  if (!inp || !inp.files || !inp.files[0]) { toast('Chọn file .docx (mẫu Tờ trình Đoàn vào)', 'error'); return; }
+  var fd = new FormData();
+  fd.append('file', inp.files[0]);
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/doan-vao/to-trinh-template', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+    var d = await res.json().catch(function(){ return {}; });
+    if (res.ok) { toast(d.message || 'Đã lưu mẫu', 'success'); inp.value = ''; if (window._currentCoopModalLoai === 'doan_vao' && window._currentCoopModalId) openModal('doan_vao', window._currentCoopModalId); }
+    else toast(d.message || 'Lỗi upload', 'error');
+  } catch (e) { toast('Lỗi mạng', 'error'); }
+}
+async function downloadToTrinhTemplateDoanVao() {
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/doan-vao/to-trinh-template', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) { var err = await res.json().catch(function(){ return {}; }); toast(err.message || 'Không tải được', 'error'); return; }
+    var blob = await res.blob();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'mau-to-trinh-doan-vao.docx';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) { toast('Lỗi tải file', 'error'); }
+}
+async function sinhToTrinhWordDoanVao(id) {
+  if (!confirm('Sinh file Word từ mẫu và dữ liệu đề xuất? File đã lưu trước (nếu có) sẽ được thay thế.')) return;
+  var r = await apiPost('/api/admin/cooperation/doan-vao/' + id + '/sinh-to-trinh-word', {});
+  if (r && r.ok) { toast(r.data.message || 'Đã sinh file', 'success'); openModal('doan_vao', id); }
+  else toast((r && r.data && r.data.message) || 'Lỗi ghép Word', 'error');
+}
+
+async function uploadVanBanMou(id) {
+  var inp = document.getElementById('van-ban-word-file-mou');
+  if (!inp || !inp.files || !inp.files[0]) { toast('Chọn file .doc hoặc .docx','error'); return; }
+  var fd = new FormData();
+  fd.append('file', inp.files[0]);
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/mou/' + id + '/van-ban-word', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+    var d = await res.json().catch(function(){ return {}; });
+    if (res.ok) { toast(d.message || 'Đã lưu văn bản Word', 'success'); inp.value = ''; openModal('mou', id); }
+    else toast(d.message || 'Lỗi upload', 'error');
+  } catch (e) { toast('Lỗi mạng', 'error'); }
+}
+async function deleteVanBanMou(id) {
+  if (!confirm('Xóa file văn bản Word đã lưu?')) return;
+  var r = await apiDel('/api/admin/cooperation/mou/' + id + '/van-ban-word');
+  if (r && r.ok) { toast('Đã xóa file', 'success'); openModal('mou', id); }
+  else toast((r && r.data && r.data.message) || 'Lỗi', 'error');
+}
+async function downloadVanBanMou(id, filename) {
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/cooperation/mou/' + id + '/van-ban-word', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) { var err = await res.json().catch(function(){ return {}; }); toast(err.message || 'Không tải được', 'error'); return; }
+    var blob = await res.blob();
+    var cd = res.headers.get('Content-Disposition');
+    var name = (filename && String(filename).trim()) || 'van-ban-mou.docx';
+    if (cd) {
+      var m = cd.match(/filename\*=UTF-8''([^;]+)|filename="([^"]+)"|filename=([^;\s]+)/i);
+      var raw = m ? (m[1] || m[2] || m[3]) : '';
+      if (raw) { try { name = decodeURIComponent(raw.replace(/^"+|"+$/g, '')); } catch (e2) { name = raw; } }
+    }
+    var a = document.createElement('a');
+    var url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = name;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+      try { document.body.removeChild(a); } catch (e3) {}
+      URL.revokeObjectURL(url);
+    }, 250);
+    toast('Đang tải file…', 'success');
+  } catch (e) { toast('Lỗi tải file', 'error'); }
+}
+async function uploadToTrinhTemplateMou() {
+  var inp = document.getElementById('to-trinh-template-file-mou');
+  if (!inp || !inp.files || !inp.files[0]) { toast('Chọn file .docx (mẫu Tờ trình Đề xuất Thỏa thuận)', 'error'); return; }
+  var fd = new FormData();
+  fd.append('file', inp.files[0]);
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/mou/to-trinh-template', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+    var d = await res.json().catch(function(){ return {}; });
+    if (res.ok) { toast(d.message || 'Đã lưu mẫu', 'success'); inp.value = ''; if (window._currentCoopModalLoai === 'mou' && window._currentCoopModalId) openModal('mou', window._currentCoopModalId); }
+    else toast(d.message || 'Lỗi upload', 'error');
+  } catch (e) { toast('Lỗi mạng', 'error'); }
+}
+async function downloadToTrinhTemplateMou() {
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/mou/to-trinh-template', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) { var err = await res.json().catch(function(){ return {}; }); toast(err.message || 'Không tải được', 'error'); return; }
+    var blob = await res.blob();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'mau-to-trinh-mou.docx';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) { toast('Lỗi tải file', 'error'); }
+}
+async function sinhToTrinhWordMou(id) {
+  if (!confirm('Sinh file Word từ mẫu và dữ liệu đề xuất? File đã lưu trước (nếu có) sẽ được thay thế.')) return;
+  var r = await apiPost('/api/admin/cooperation/mou/' + id + '/sinh-to-trinh-word', {});
+  if (r && r.ok) { toast(r.data.message || 'Đã sinh file', 'success'); openModal('mou', id); }
+  else toast((r && r.data && r.data.message) || 'Lỗi ghép Word', 'error');
+}
+
+async function uploadVanBanYtnn(id) {
+  var inp = document.getElementById('van-ban-word-file-yt');
+  if (!inp || !inp.files || !inp.files[0]) { toast('Chọn file .doc hoặc .docx','error'); return; }
+  var fd = new FormData();
+  fd.append('file', inp.files[0]);
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/ytnn/' + id + '/van-ban-word', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+    var d = await res.json().catch(function(){ return {}; });
+    if (res.ok) { toast(d.message || 'Đã lưu văn bản Word', 'success'); inp.value = ''; openModal('ytnn', id); }
+    else toast(d.message || 'Lỗi upload', 'error');
+  } catch (e) { toast('Lỗi mạng', 'error'); }
+}
+async function deleteVanBanYtnn(id) {
+  if (!confirm('Xóa file văn bản Word đã lưu?')) return;
+  var r = await apiDel('/api/admin/cooperation/ytnn/' + id + '/van-ban-word');
+  if (r && r.ok) { toast('Đã xóa file', 'success'); openModal('ytnn', id); }
+  else toast((r && r.data && r.data.message) || 'Lỗi', 'error');
+}
+async function downloadVanBanYtnn(id, filename) {
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/cooperation/ytnn/' + id + '/van-ban-word', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) { var err = await res.json().catch(function(){ return {}; }); toast(err.message || 'Không tải được', 'error'); return; }
+    var blob = await res.blob();
+    var cd = res.headers.get('Content-Disposition');
+    var name = (filename && String(filename).trim()) || 'van-ban-ytnn.docx';
+    if (cd) {
+      var m = cd.match(/filename\*=UTF-8''([^;]+)|filename="([^"]+)"|filename=([^;\s]+)/i);
+      var raw = m ? (m[1] || m[2] || m[3]) : '';
+      if (raw) { try { name = decodeURIComponent(raw.replace(/^"+|"+$/g, '')); } catch (e2) { name = raw; } }
+    }
+    var a = document.createElement('a');
+    var url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = name;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+      try { document.body.removeChild(a); } catch (e3) {}
+      URL.revokeObjectURL(url);
+    }, 250);
+    toast('Đang tải file…', 'success');
+  } catch (e) { toast('Lỗi tải file', 'error'); }
+}
+async function uploadToTrinhTemplateYtnn() {
+  var inp = document.getElementById('to-trinh-template-file-yt');
+  if (!inp || !inp.files || !inp.files[0]) { toast('Chọn file .docx (mẫu Tờ trình Đề tài YTNN)', 'error'); return; }
+  var fd = new FormData();
+  fd.append('file', inp.files[0]);
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/ytnn/to-trinh-template', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+    var d = await res.json().catch(function(){ return {}; });
+    if (res.ok) { toast(d.message || 'Đã lưu mẫu', 'success'); inp.value = ''; if (window._currentCoopModalLoai === 'ytnn' && window._currentCoopModalId) openModal('ytnn', window._currentCoopModalId); }
+    else toast(d.message || 'Lỗi upload', 'error');
+  } catch (e) { toast('Lỗi mạng', 'error'); }
+}
+async function downloadToTrinhTemplateYtnn() {
+  var token = getToken();
+  try {
+    var res = await fetch(API + '/api/admin/cooperation/ytnn/to-trinh-template', { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) { var err = await res.json().catch(function(){ return {}; }); toast(err.message || 'Không tải được', 'error'); return; }
+    var blob = await res.blob();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'mau-to-trinh-ytnn.docx';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) { toast('Lỗi tải file', 'error'); }
+}
+async function sinhToTrinhWordYtnn(id) {
+  if (!confirm('Sinh file Word từ mẫu và dữ liệu đề xuất? File đã lưu trước (nếu có) sẽ được thay thế.')) return;
+  var r = await apiPost('/api/admin/cooperation/ytnn/' + id + '/sinh-to-trinh-word', {});
+  if (r && r.ok) { toast(r.data.message || 'Đã sinh file', 'success'); openModal('ytnn', id); }
+  else toast((r && r.data && r.data.message) || 'Lỗi ghép Word', 'error');
+}
+
+async function doThamDinh(ep, id, action) {
+  var r = await apiPut('/api/cooperation/'+ep+'/'+id+'/tham-dinh', {action:action, note:getNote()});
+  if (r&&r.ok) { toast(r.data.message||'Đã xử lý','success'); closeModal(); refreshAll(); }
+  else toast((r&&r.data&&r.data.message)||'Lỗi xử lý','error');
+}
+async function doPheDuyet(ep, id, action) {
+  var r = await apiPut('/api/cooperation/'+ep+'/'+id+'/phe-duyet', {action:action, note:getNote()});
+  if (r&&r.ok) { toast(r.data.message||'Đã phê duyệt','success'); closeModal(); refreshAll(); }
+  else toast((r&&r.data&&r.data.message)||'Lỗi xử lý','error');
+}
+
+function oeVal(id) { var el = document.getElementById(id); return el ? (el.value || '').trim() : ''; }
+function oeTxt(id) { var el = document.getElementById(id); return el ? (el.value || '') : ''; }
+
+async function saveOwnerEdit(loai, id) {
+  var ep = {doan_ra:'doan-ra',doan_vao:'doan-vao',mou:'mou',ytnn:'ytnn'}[loai];
+  var body = {};
+  if (loai === 'doan_ra') {
+    body = { muc_dich: oeTxt('oe-dr-md'), quoc_gia: oeVal('oe-dr-qg'), ngay_di: oeVal('oe-dr-nd'), ngay_ve: oeVal('oe-dr-nv'), thanh_vien: oeTxt('oe-dr-tv'), nguon_kinh_phi: oeTxt('oe-dr-kp'), du_toan: oeVal('oe-dr-dt') };
+  } else if (loai === 'doan_vao') {
+    body = { muc_dich: oeTxt('oe-dv-md'), don_vi_de_xuat: oeVal('oe-dv-dv'), ngay_den: oeVal('oe-dv-nd'), ngay_roi_di: oeVal('oe-dv-nr'), thanh_phan_doan: oeTxt('oe-dv-tp'), noi_dung_lam_viec: oeTxt('oe-dv-ndlv'), kinh_phi_nguon: oeTxt('oe-dv-kp'), ho_tro_visa: oeTxt('oe-dv-vs') };
+  } else if (loai === 'mou') {
+    body = { loai_thoa_thuan: oeTxt('oe-mou-l'), ten_doi_tac: oeVal('oe-mou-dt'), quoc_gia: oeTxt('oe-mou-qg'), thoi_han_nam: oeVal('oe-mou-th'), gia_tri_tai_chinh: oeTxt('oe-mou-gt'), don_vi_de_xuat: oeTxt('oe-mou-dvdx'), noi_dung_hop_tac: oeTxt('oe-mou-nd') };
+  } else if (loai === 'ytnn') {
+    body = { ten: oeVal('oe-yt-ten'), mo_ta: oeTxt('oe-yt-mt'), doi_tac_ten: oeTxt('oe-yt-dt'), doi_tac_quoc_gia: oeTxt('oe-yt-qg'), chu_nhiem_ten: oeTxt('oe-yt-cn'), kinh_phi: oeVal('oe-yt-kp') };
+  }
+  var r = await apiPut('/api/cooperation/' + ep + '/' + id + '/cap-nhat-boi-nguoi-nop', body);
+  if (r && r.ok) { toast(r.data.message || 'Đã lưu', 'success'); openModal(loai, id); refreshAll(); }
+  else toast((r && r.data && r.data.message) || 'Lỗi lưu', 'error');
+}
+
+async function nopLaiDeXuat(loai, id) {
+  if (!confirm('Nộp lại hồ sơ cho Phòng KHCN thẩm định, sau đó trình Viện trưởng?')) return;
+  var ep = {doan_ra:'doan-ra',doan_vao:'doan-vao',mou:'mou',ytnn:'ytnn'}[loai];
+  var r = await apiPost('/api/cooperation/' + ep + '/' + id + '/nop-lai', {});
+  if (r && r.ok) { toast(r.data.message || 'Đã nộp lại', 'success'); closeModal(); refreshAll(); }
+  else toast((r && r.data && r.data.message) || 'Lỗi', 'error');
+}
+
+async function ketThucDeXuat(loai, id) {
+  if (!confirm('Kết thúc đề xuất này? Hồ sơ được lưu lại; Phòng KHCN và Viện trưởng sẽ nhận email thông báo. Chỉ Admin mới có thể xóa bản ghi.')) return;
+  var ep = {doan_ra:'doan-ra',doan_vao:'doan-vao',mou:'mou',ytnn:'ytnn'}[loai];
+  var r = await apiPost('/api/cooperation/' + ep + '/' + id + '/ket-thuc', {});
+  if (r && r.ok) { toast(r.data.message || 'Đã kết thúc', 'success'); closeModal(); refreshAll(); }
+  else toast((r && r.data && r.data.message) || 'Lỗi', 'error');
+}
+async function adminSt(loai, id) {
+  var st = document.getElementById('admin-st').value;
+  if (!st) { toast('Chọn trạng thái','error'); return; }
+  var ep = {doan_ra:'doan-ra',doan_vao:'doan-vao',mou:'mou',ytnn:'ytnn'}[loai];
+  var r = await apiPut('/api/admin/cooperation/'+ep+'/'+id, {status:st});
+  if (r&&r.ok) { toast('Đã cập nhật trạng thái','success'); closeModal(); refreshAll(); }
+  else toast((r&&r.data&&r.data.message)||'Lỗi','error');
+}
+async function adminDel(loai, id) {
+  if (!confirm('Xóa đề xuất này? Không thể hoàn tác!')) return;
+  var ep = {doan_ra:'doan-ra',doan_vao:'doan-vao',mou:'mou',ytnn:'ytnn'}[loai];
+  var r = await apiDel('/api/admin/cooperation/'+ep+'/'+id);
+  if (r&&r.ok) { toast('Đã xóa','success'); closeModal(); refreshAll(); }
+  else toast('Lỗi xóa','error');
+}
+
+async function adminDelFromList(loai, id) {
+  if (!IS_ADMIN) return;
+  if (!confirm('Xóa đề xuất này khỏi hệ thống? Không thể hoàn tác!')) return;
+  var ep = {doan_ra:'doan-ra',doan_vao:'doan-vao',mou:'mou',ytnn:'ytnn'}[loai];
+  if (!ep) { toast('Loại đề xuất không hợp lệ','error'); return; }
+  var r = await apiDel('/api/admin/cooperation/'+ep+'/'+id);
+  if (r&&r.ok) { toast('Đã xóa đề xuất','success'); refreshAll(); }
+  else toast((r&&r.data&&r.data.message)||'Lỗi xóa','error');
+}
+
+function refreshAll() {
+  loadCuaToi(); loadDoanRaList(); loadDoanVaoList(); loadMouList(); loadYtnnList(); loadSidebarBadges();
+  var pd = document.getElementById('panel-dashboard');
+  if (pd && pd.classList.contains('active') && (IS_ADMIN || IS_MANAGER || IS_VT)) loadDashboardPage();
+  if (IS_MANAGER||IS_ADMIN) { loadChoPhong(); }
+  if (IS_VT||IS_ADMIN) { loadChoVT(); }
+  if (IS_ADMIN) loadTatCa();
+}
+
+function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+document.getElementById('modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+
+// ============================================================
+// SUBMIT FORMS
+// ============================================================
+function v(id) { var el=document.getElementById(id); return el?(el.value||'').trim():''; }
+function showMsg(id,txt,isErr) { var el=document.getElementById(id); if(!el)return; el.textContent=txt; el.className='alert '+(isErr?'error':'success'); }
+
+function showSendingOverlay() {
+  var el = document.getElementById('sending-overlay');
+  if (!el) return;
+  el.classList.remove('hidden');
+  el.setAttribute('aria-hidden','false');
+}
+function hideSendingOverlay() {
+  var el = document.getElementById('sending-overlay');
+  if (!el) return;
+  el.classList.add('hidden');
+  el.setAttribute('aria-hidden','true');
+}
+
+async function submitDoanRa() {
+  if (!v('dr-quoc-gia')||!v('dr-ngay-di')||!v('dr-ngay-ve')||!v('dr-thanh-vien')) { showMsg('msg-doan-ra','Vui lòng điền đủ: Quốc gia, Ngày đi, Ngày về, Thành viên đoàn.',true); return; }
+  showSendingOverlay();
+  var r;
+  try {
+    r = await apiPost('/api/cooperation/doan-ra/submit',{muc_dich:v('dr-muc-dich'),quoc_gia:v('dr-quoc-gia'),ngay_di:v('dr-ngay-di'),ngay_ve:v('dr-ngay-ve'),thanh_vien:v('dr-thanh-vien'),nguon_kinh_phi:v('dr-kinh-phi'),du_toan:v('dr-du-toan'),ghi_chu:v('dr-ghi-chu')});
+  } finally {
+    hideSendingOverlay();
+  }
+  if (r&&r.ok) { toast('Đã gửi! Mã: '+(r.data.ma_de_xuat||''),'success'); showMsg('msg-doan-ra','Đã gửi thành công! Mã: '+(r.data.ma_de_xuat||''),false); await loadDoanRaList(r.data && r.data.id, r.data && r.data.ma_de_xuat, true); loadCuaToi(); }
+  else showMsg('msg-doan-ra',(r&&r.data&&r.data.message)||'Gửi thất bại. Kiểm tra email nhận thông báo đã được cấu hình.',true);
+}
+
+async function submitDoanVao() {
+  if (!v('dv-don-vi')||!v('dv-ngay-den')||!v('dv-thanh-phan')) { showMsg('msg-doan-vao','Vui lòng điền đủ: Đơn vị đề xuất, Ngày đến, Thành phần đoàn.',true); return; }
+  showSendingOverlay();
+  var r;
+  try {
+    r = await apiPost('/api/cooperation/doan-vao/submit',{muc_dich:v('dv-muc-dich'),don_vi_de_xuat:v('dv-don-vi'),ngay_den:v('dv-ngay-den'),ngay_roi_di:v('dv-ngay-roi'),thanh_phan_doan:v('dv-thanh-phan'),noi_dung_lam_viec:v('dv-noi-dung'),kinh_phi_nguon:v('dv-kinh-phi'),ho_tro_visa:v('dv-visa')});
+  } finally {
+    hideSendingOverlay();
+  }
+  if (r&&r.ok) { toast('Đã gửi Đoàn vào! Mã: '+(r.data.ma_de_xuat||''),'success'); showMsg('msg-doan-vao','Đã gửi thành công! Mã: '+(r.data.ma_de_xuat||''),false); await loadDoanVaoList(r.data && r.data.id, r.data && r.data.ma_de_xuat, true); loadCuaToi(); }
+  else showMsg('msg-doan-vao',(r&&r.data&&r.data.message)||'Gửi thất bại.',true);
+}
+
+async function submitMOU() {
+  if (!v('mou-loai')||!v('mou-doi-tac')||!v('mou-noi-dung')) { showMsg('msg-mou','Vui lòng điền: Loại thỏa thuận, Tên đối tác, Nội dung hợp tác.',true); return; }
+  showSendingOverlay();
+  var r;
+  try {
+    r = await apiPost('/api/cooperation/mou/submit',{loai_thoa_thuan:v('mou-loai'),ten_doi_tac:v('mou-doi-tac'),quoc_gia:v('mou-quoc-gia'),thoi_han_nam:v('mou-thoi-han'),gia_tri_tai_chinh:v('mou-gia-tri'),don_vi_de_xuat:v('mou-don-vi'),noi_dung_hop_tac:v('mou-noi-dung')});
+  } finally {
+    hideSendingOverlay();
+  }
+  if (r&&r.ok) { toast('Đã gửi MOU! Mã: '+(r.data.ma_de_xuat||''),'success'); showMsg('msg-mou','Đã gửi thành công! Mã: '+(r.data.ma_de_xuat||''),false); await loadMouList(r.data && r.data.id, r.data && r.data.ma_de_xuat, true); loadCuaToi(); }
+  else showMsg('msg-mou',(r&&r.data&&r.data.message)||'Gửi thất bại.',true);
+}
+
+async function submitYTNN() {
+  if (!v('yt-ten')) { showMsg('msg-ytnn','Vui lòng nhập Tên đề tài.',true); return; }
+  showSendingOverlay();
+  var r;
+  try {
+    r = await apiPost('/api/cooperation/ytnn/submit',{ten:v('yt-ten'),mo_ta:v('yt-mo-ta'),hinh_thuc_hop_tac:v('yt-hinh-thuc'),loai_hinh:v('yt-loai-hinh'),ngay_bat_dau:v('yt-ngay-bd'),ngay_ket_thuc:v('yt-ngay-kt'),doi_tac_ten:v('yt-doi-tac-ten'),doi_tac_quoc_gia:v('yt-doi-tac-qg'),doi_tac_nguoi_dai_dien:v('yt-dai-dien'),doi_tac_website:v('yt-website'),chu_nhiem_ten:v('yt-chu-nhiem'),chu_nhiem_hoc_vi:v('yt-hoc-vi'),chu_nhiem_don_vi:v('yt-don-vi'),kinh_phi:v('yt-kinh-phi'),don_vi_tien_te:v('yt-tien-te')});
+  } finally {
+    hideSendingOverlay();
+  }
+  if (r&&r.ok) {
+    var m = (r.data && r.data.ma_de_xuat) || '';
+    toast('Đã gửi YTNN! Mã: ' + m, 'success');
+    showMsg('msg-ytnn', 'Đã gửi thành công! Mã: ' + m, false);
+    scrollYtnnSentIntoView();
+    await loadYtnnList(r.data && r.data.id, r.data && r.data.ma_de_xuat, true);
+    loadCuaToi();
+  }
+  else showMsg('msg-ytnn',(r&&r.data&&r.data.message)||'Gửi thất bại.',true);
+}
+
+// ============================================================
+// SỰ KIỆN
+// ============================================================
+async function submitSuKien() {
+  if (!v('sk-tieu-de')||!v('sk-ngay-bd')) { showMsg('msg-sk','Vui lòng điền Tiêu đề và Ngày bắt đầu.',true); return; }
+  showSendingOverlay();
+  var r;
+  try {
+    r = await apiPost('/api/cooperation/su-kien',{tieu_de:v('sk-tieu-de'),mo_ta:v('sk-mo-ta'),loai_su_kien:v('sk-loai'),quoc_gia:v('sk-quoc-gia'),dia_diem:v('sk-dia-diem'),don_vi_to_chuc:v('sk-don-vi'),ngay_bat_dau:v('sk-ngay-bd'),ngay_ket_thuc:v('sk-ngay-kt'),han_dang_ky:v('sk-han-dk'),kinh_phi_tham_du:v('sk-kinh-phi'),link_su_kien:v('sk-link')});
+  } finally {
+    hideSendingOverlay();
+  }
+  if (r&&r.ok) { toast('Đã tạo sự kiện!','success'); loadSuKien(); }
+  else showMsg('msg-sk',(r&&r.data&&r.data.message)||'Lỗi tạo sự kiện.',true);
+}
+
+async function loadSuKien() {
+  var el=document.getElementById('sk-list');
+  if (!el) return;
+  el.innerHTML='<div class="loading"><div class="spin"></div>Đang tải...</div>';
+  var d = await apiGet('/api/cooperation/su-kien');
+  var list=(d&&d.list)||[];
+  if (!list.length) { el.innerHTML='<div class="empty-state">Chưa có sự kiện nào</div>'; return; }
+  // Hiện form tạo mới cho manager
+  if (IS_MANAGER||IS_ADMIN) document.getElementById('card-tao-sk').classList.remove('hidden');
+  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px">'
+    +list.map(function(sk){
+      var stl = {sap_dien_ra:'badge-blue',dang_dien_ra:'badge-green',da_ket_thuc:'badge-gray'}[sk.status]||'badge-gray';
+      var stlb = {sap_dien_ra:'Sắp diễn ra',dang_dien_ra:'Đang diễn ra',da_ket_thuc:'Đã kết thúc'}[sk.status]||sk.status;
+      return '<div class="card" style="margin:0"><div class="card-body">'
+        +'<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="badge '+stl+'">'+stlb+'</span></div>'
+        +'<div style="font-weight:700;font-size:14px;color:var(--ink);margin-bottom:6px">'+esc(sk.tieu_de)+'</div>'
+        +'<div style="font-size:12px;color:var(--ink-soft)">'
+        +(sk.quoc_gia?'<div>'+esc(sk.quoc_gia)+(sk.dia_diem?', '+esc(sk.dia_diem):'')+'</div>':'')
+        +'<div>'+fmtDate(sk.ngay_bat_dau)+(sk.ngay_ket_thuc?' → '+fmtDate(sk.ngay_ket_thuc):'')+'</div>'
+        +(sk.han_dang_ky?'<div>⏰ Hạn ĐK: '+fmtDate(sk.han_dang_ky)+'</div>':'')
+        +(sk.kinh_phi_tham_du?'<div>'+esc(sk.kinh_phi_tham_du)+'</div>':'')
+        +(sk.don_vi_to_chuc?'<div>'+esc(sk.don_vi_to_chuc)+'</div>':'')
+        +'</div>'
+        +(sk.mo_ta?'<div style="font-size:12px;color:var(--ink-muted);margin-top:8px;border-top:1px solid var(--border);padding-top:8px">'+esc(sk.mo_ta)+'</div>':'')
+        +(sk.link_su_kien?'<a href="'+sk.link_su_kien+'" target="_blank" style="display:inline-block;margin-top:8px;font-size:12px;color:var(--accent)">Xem chi tiết</a>':'')
+        +'</div></div>';
+    }).join('')+'</div>';
+  setBadge('bdg-sk', list.filter(function(s){return s.status==='sap_dien_ra';}).length);
+}
+
+// ============================================================
+// ĐỐI TÁC & THỎA THUẬN
+// ============================================================
+async function loadDoiTac() {
+  var el=document.getElementById('doitac-wrap');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Đang tải...</div>';
+  var d = await apiGet('/api/cooperation/doi-tac');
+  if (!d||!d.partners) { el.innerHTML='<div class="empty-state">Lỗi tải dữ liệu</div>'; return; }
+  var s=d.stats||{};
+  el.innerHTML='<div class="stats-grid" style="margin-bottom:20px">'
+    +'<div class="stat-card blue"><div class="num">'+(d.partners.length)+'</div><div class="lbl">Tổng đối tác</div></div>'
+    +'<div class="stat-card green"><div class="num">'+(s.quoc_te||0)+'</div><div class="lbl">Quốc tế</div></div>'
+    +'<div class="stat-card amber"><div class="num">'+(s.trong_nuoc||0)+'</div><div class="lbl">Trong nước</div></div>'
+    +'<div class="stat-card"><div class="num">'+(s.so_quoc_gia||0)+'</div><div class="lbl">Quốc gia</div></div>'
+    +'</div><div class="card"><table><thead><tr><th>Đối tác</th><th>Quốc gia</th><th>Thỏa thuận</th><th>Đề xuất MOU</th><th>Đề tài</th></tr></thead><tbody>'
+    +d.partners.map(function(p){return '<tr><td><b>'+esc(p.name)+'</b></td><td>'+esc(p.country||'—')+'</td><td style="text-align:center">'+p.agreements.length+'</td><td style="text-align:center">'+p.proposals.length+'</td><td style="text-align:center">'+p.projectCount+'</td></tr>';}).join('')
+    +'</tbody></table></div>';
+}
+
+async function loadThoaThuan() {
+  var el=document.getElementById('tt-wrap');
+  el.innerHTML='<div class="loading"><div class="spin"></div>Đang tải...</div>';
+  var d = await apiGet('/api/cooperation/thoa-thuan');
+  var list=(d&&d.list)||[];
+  var ttl={hieu_luc:'badge-green',sap_het_han:'badge-amber',het_han:'badge-red',dang_tham_dinh:'badge-blue'};
+  var ttlb={hieu_luc:'Hiệu lực',sap_het_han:'Sắp hết hạn',het_han:'Hết hạn',dang_tham_dinh:'Đang thẩm định'};
+  if (IS_MANAGER||IS_ADMIN) document.querySelectorAll('.mgr').forEach(function(el){el.classList.remove('hidden');});
+  el.innerHTML='<div class="card"><table><thead><tr><th>Tên</th><th>Đối tác</th><th>Loại</th><th>Quốc gia</th><th>Hết hạn</th><th>Trạng thái</th></tr></thead><tbody>'
+    +(list.length?list.map(function(t){return '<tr><td><b>'+esc(t.ten)+'</b></td><td>'+esc(t.doi_tac)+'</td><td><span class="badge badge-blue">'+t.loai+'</span></td><td>'+esc(t.quoc_gia||'—')+'</td><td style="font-size:12px">'+fmtDate(t.het_han)+'</td><td><span class="badge '+(ttl[t.trang_thai]||'badge-gray')+'">'+(ttlb[t.trang_thai]||t.trang_thai)+'</span></td></tr>';}).join(''):'<tr><td colspan="6"><div class="empty-state">Chưa có thỏa thuận nào</div></td></tr>')
+    +'</tbody></table></div>';
+}
+
+async function submitTT() {
+  if (!v('tt-ten')||!v('tt-doi-tac')||!v('tt-loai')) { showMsg('msg-tt','Thiếu thông tin bắt buộc.',true); return; }
+  var r = await apiPost('/api/cooperation/thoa-thuan',{ten:v('tt-ten'),doi_tac:v('tt-doi-tac'),loai:v('tt-loai'),quoc_gia:v('tt-quoc-gia'),het_han:v('tt-het-han'),trang_thai:v('tt-trang-thai')});
+  if (r&&r.ok) { toast('Đã thêm!','success'); loadThoaThuan(); }
+  else showMsg('msg-tt',(r&&r.data&&r.data.message)||'Lỗi.'+true);
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function fmtDate(s) { if (!s) return '—'; var d=String(s).slice(0,10).split('-'); return d.length===3?d[2]+'/'+d[1]+'/'+d[0]:s; }
+function esc(s) { return (s||'—').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/** Chuỗi JS trong onclick="...'...'..." (dùng nháy đơn bao quanh) */
+function escapeJsSq(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, ' '); }
+function swTab(el, tid) {
+  var p = el.closest('.card-body')||el.closest('.panel');
+  p.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  p.querySelectorAll('.tab-panel').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  var tp=document.getElementById(tid); if(tp) tp.classList.add('active');
+}
+function toast(msg, type) {
+  var c=document.getElementById('toast-container');
+  var el=document.createElement('div');
+  el.className='toast '+(type==='success'?'success':type==='error'?'error':'');
+  el.textContent=msg;
+  c.appendChild(el);
+  setTimeout(function(){el.remove();},4000);
+}
+
+// ============================================================
+// START
+// ============================================================
+init();
+</script>
+</body>
+</html>

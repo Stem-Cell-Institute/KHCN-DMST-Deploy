@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiến trình đề tài - Đề tài ngoài Viện</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body.content-page-timeline { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        .timeline-page { max-width: 900px; margin: 0 auto; padding: 30px; }
+        .task-header { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .task-code { font-family: monospace; font-size: 14px; color: #667eea; font-weight: 600; margin-bottom: 10px; }
+        .task-title { font-size: 24px; font-weight: 600; color: #333; margin-bottom: 15px; }
+        .task-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0; }
+        .meta-item { display: flex; flex-direction: column; gap: 5px; }
+        .meta-label { font-size: 12px; color: #999; text-transform: uppercase; }
+        .meta-value { font-size: 15px; color: #333; font-weight: 600; }
+        .phase-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; border-radius: 8px; margin: 30px 0 15px; font-weight: 600; }
+        .phase-header:first-of-type { margin-top: 0; }
+        .stage-card { background: white; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; border-left: 5px solid #e0e0e0; transition: all 0.3s; }
+        .stage-card.completed { border-left-color: #4caf50 !important; }
+        .stage-card.active { border-left-color: #ff9800 !important; box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3); }
+        .stage-card.pending { border-left-color: #e0e0e0 !important; }
+        .stage-header { padding: 18px 22px; display: flex; align-items: center; gap: 15px; }
+        .stage-card.completed .stage-header { background: #f1f8f4; }
+        .stage-card.active .stage-header { background: #fff8e1; }
+        .stage-card.pending .stage-header { background: #fafafa; }
+        .stage-card.step-clickable { cursor: pointer; }
+        .stage-card.step-clickable:hover .stage-header { background: #e8f5e9 !important; }
+        .stage-card.active.step-clickable:hover .stage-header { background: #ffe0b2 !important; }
+        .stage-icon { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .stage-card.completed .stage-icon { background: #4caf50; color: white; }
+        .stage-card.active .stage-icon { background: #ff9800; color: white; }
+        .stage-card.pending .stage-icon { background: #e0e0e0; color: #999; }
+        .stage-info { flex: 1; }
+        .stage-info h3 { font-size: 16px; color: #333; margin: 0 0 4px 0; }
+        .stage-subtitle { font-size: 13px; color: #666; }
+        .stage-badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-done { background: #e8f5e9; color: #388e3c; }
+        .badge-current { background: #fff3e0; color: #e65100; }
+        .badge-pending { background: #f5f5f5; color: #999; }
+        .empty-state { padding: 3rem 2rem; text-align: center; color: #666; }
+        .progress-bar { width: 100%; height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px; transition: width 0.5s; }
+        .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; margin-bottom: 20px; }
+        .btn-back:hover { background: #764ba2; }
+        .stage-expand { max-height: 0; overflow: hidden; transition: max-height 0.35s ease-out; }
+        .stage-card.expanded .stage-expand { max-height: 2500px; transition: max-height 0.4s ease-in; }
+        .stage-expand-inner { padding: 20px 22px 22px; background: #f8fdf9; border-top: 1px solid #e0e0e0; }
+        .stage-expand-inner .detail-row { margin-bottom: 0.75rem; }
+        .stage-expand-inner .detail-label { font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 2px; }
+        .stage-expand-inner .detail-value { font-size: 14px; color: #333; }
+        .stage-expand-inner .files-list { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0; }
+        .stage-expand-inner .file-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: white; border-radius: 8px; margin-bottom: 8px; font-size: 13px; border: 1px solid #e8e8e8; }
+        .stage-expand-inner .file-item a { color: #1565c0; text-decoration: none; }
+        .stage-expand-inner .file-item a:hover { text-decoration: underline; }
+        .stage-expand-toggle { margin-left: auto; font-size: 12px; color: #666; flex-shrink: 0; }
+        .btn-step2 { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; }
+        .btn-step2.btn-approve { background: #4caf50; color: white; }
+        .btn-step2.btn-approve:hover { background: #43a047; }
+        .btn-step2.btn-supplement { background: #ff9800; color: white; }
+        .btn-step2.btn-supplement:hover { background: #f57c00; }
+        .btn-step2.btn-reject { background: #f44336; color: white; }
+        .btn-step2.btn-reject:hover { background: #e53935; }
+        .stage-card.expanded .stage-expand-toggle::before { content: '▼ Thu gọn'; }
+        .stage-card:not(.expanded) .stage-expand-toggle::before { content: '▶ Xem chi tiết'; }
+        .substep-done { color: #4caf50; font-weight: 600; }
+        .substep-active { color: #1976d2; font-weight: 600; }
+        .substep-pending { color: #999; }
+        .buoc4-branch-panel { flex: 1; min-width: 280px; padding: 16px; border-radius: 8px; border: 1px solid #e0e0e0; background: #fff; transition: opacity 0.3s; }
+        .buoc4-branch-panel.branch-active { opacity: 1; pointer-events: auto; border-color: #1976d2; box-shadow: 0 0 0 2px rgba(25,118,210,0.2); }
+        .buoc4-branch-panel.branch-inactive { opacity: 0.45; pointer-events: none; background: #fafafa; }
+        .buoc4-two-branches { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; }
+        .btn-reset-buoc4 { margin-top: 24px; padding-top: 20px; border-top: 1px solid #e0e0e0; }
+        .btn-reset-buoc4 button { background: #f5f5f5; color: #757575; border: 1px solid #e0e0e0; padding: 8px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+        .btn-reset-buoc4 button:hover { background: #eeeeee; color: #616161; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.hidden { display: none; }
+        .modal-reset { background: white; border-radius: 12px; max-width: 480px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+        .modal-reset .modal-header { padding: 16px 20px; border-bottom: 1px solid #e0e0e0; font-weight: 600; font-size: 16px; }
+        .modal-reset .modal-body { padding: 20px; }
+        .modal-reset .modal-footer { padding: 16px 20px; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; justify-content: flex-end; }
+    </style>
+</head>
+<body class="content-page-timeline">
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="de-tai-cap-vien.html" class="logo"><img src="images/logo-vien-te-bao-goc.png" alt="Logo" style="height:72px;width:auto;display:block;"></a>
+                <div class="header-text">
+                    <h1>Tiến trình đề tài</h1>
+                    <p>Đề tài ngoài Viện — Cấp Bộ / ĐHQG / Nhà nước</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">Trang chủ</a>
+            <a href="quan-ly-de-tai-co-so.html">Nhiệm vụ KHCN</a>
+            <a href="de-tai-cap-vien.html">Đề tài cấp Viện</a>
+            <a href="dang-nhap.html">Đăng nhập</a>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="timeline-page">
+            <a href="quan-ly-de-tai-co-so.html" class="btn-back">← Quay lại Nhiệm vụ KHCN</a>
+            <div id="content-area">
+                <div class="empty-state">Đang tải tiến trình...</div>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <p>2026 Viện Tế bào gốc — Đề tài ngoài Viện</p>
+        </div>
+    </footer>
+
+    <div id="modal-reset-overlay" class="modal-overlay hidden">
+        <div class="modal-reset" onclick="event.stopPropagation()">
+            <div class="modal-header">Chuyển lại Bước 3 &amp; đổi nhánh</div>
+            <div class="modal-body">
+                <div id="modal-reset-nhanh-badge" style="margin-bottom:12px;"></div>
+                <div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;">Nhánh mới</label>
+                    <label style="display:block;margin:4px 0;"><input type="radio" name="modal_nhanh_moi" value="A"> Nhánh A — Bộ GD/ĐHQG/Trường</label>
+                    <label style="display:block;margin:4px 0;"><input type="radio" name="modal_nhanh_moi" value="B"> Nhánh B — Nhà nước/NAFOSTED</label>
+                </div>
+                <div id="modal-reset-cap-a" style="margin-bottom:12px;display:none;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Cấp đề tài mới</label>
+                    <select id="modal_cap_moi_a" style="width:100%;padding:8px;"><option value="ministry">Bộ GD&amp;ĐT</option><option value="university">ĐHQG-HCM</option><option value="school">Trường ĐHKHTN</option></select>
+                </div>
+                <div id="modal-reset-cap-b" style="margin-bottom:12px;display:none;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Cấp đề tài mới</label>
+                    <select id="modal_cap_moi_b" style="width:100%;padding:8px;"><option value="national">Nhà nước</option><option value="nafosted">NAFOSTED</option><option value="bo_nganh_khac">Bộ ngành khác</option><option value="nhiem_vu_bo_gd">Nhiệm vụ Bộ GD không phải đề tài</option></select>
+                </div>
+                <div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Lý do thay đổi * (tối thiểu 20 ký tự)</label>
+                    <textarea id="modal_ly_do" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;" placeholder="Nhập lý do..."></textarea>
+                    <span id="modal_ly_do_hint" style="font-size:12px;color:#999;"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="window.closeResetModal()" style="padding:8px 16px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;">Hủy</button>
+                <button type="button" id="modal_reset_confirm_btn" disabled style="padding:8px 16px;border:none;border-radius:6px;background:#9e9e9e;color:white;cursor:not-allowed;">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
+        var id = (function() {
+            var m = /[?&]id=(\d+)/.exec(window.location.search);
+            return m ? parseInt(m[1], 10) : 0;
+        })();
+        var code = (function() {
+            var m = /[?&]code=([^&]+)/.exec(window.location.search);
+            return m ? decodeURIComponent(m[1]) : '';
+        })();
+        var contentEl = document.getElementById('content-area');
+
+        var STATUS_LABELS = {
+            planning: 'Lập kế hoạch / Chuẩn bị thuyết minh',
+            cho_vien_xet_chon: 'Phòng KHCN kiểm tra & xác nhận nội bộ',
+            cho_ct_hd_xet_duyet: 'Chủ tịch HĐ KHCN xét duyệt',
+            xet_chon_phe_duyet: 'Xét chọn & phê duyệt',
+            buoc4a: 'Xét chọn & phê duyệt (Nhánh A)',
+            buoc4b: 'Xét chọn & phê duyệt (Nhánh B)',
+            cho_bo_tham_dinh: 'Xét chọn & phê duyệt',
+            cho_ngoai_xet_chon: 'Xét chọn & phê duyệt',
+            cho_phe_duyet_ngoai: 'Xét chọn & phê duyệt',
+            cho_phe_duyet_chinh_thuc: 'Chờ phê duyệt chính thức & hoàn chỉnh thuyết minh',
+            da_phe_duyet: 'Chờ phê duyệt chính thức & hoàn chỉnh thuyết minh',
+            approved: 'Chờ phê duyệt chính thức & hoàn chỉnh thuyết minh',
+            cho_ky_hop_dong: 'Ký hợp đồng',
+            khong_duoc_phe_duyet: 'Không được phê duyệt',
+            dung_khong_dat_dot: 'Dừng — không đạt đợt này',
+            dang_thuc_hien: 'Đang thực hiện (báo cáo 6 tháng/lần)',
+            ongoing: 'Đang thực hiện',
+            xin_dieu_chinh: 'Xin điều chỉnh nội dung',
+            cho_nghiem_thu_co_so: 'Chờ nghiệm thu cơ sở (Viện)',
+            nghiem_thu_trung_gian: 'Nghiệm thu cơ sở tại Viện',
+            review: 'Nghiệm thu',
+            cho_nghiem_thu_bo_nn: 'Chờ nghiệm thu cấp Bộ/Nhà nước',
+            nghiem_thu_tong_ket: 'Nghiệm thu cấp Bộ/NN',
+            hoan_thien_sau_nghiem_thu: 'Hoàn thiện sau nghiệm thu',
+            thanh_ly_hop_dong: 'Thanh lý hợp đồng',
+            hoan_thanh: 'Hoàn thành',
+            completed: 'Hoàn thành'
+        };
+
+        var BUOC4_STATUSES = ['buoc4a','buoc4b','cho_bo_tham_dinh','cho_ngoai_xet_chon','cho_phe_duyet_ngoai'];
+        var NHANH_A_LEVELS = ['ministry', 'university', 'school'];
+        var BUOC5_STATUSES = ['da_phe_duyet','approved','cho_phe_duyet_chinh_thuc'];
+        var ORDER = ['planning','cho_vien_xet_chon','cho_ct_hd_xet_duyet','xet_chon_phe_duyet','cho_phe_duyet_chinh_thuc','cho_ky_hop_dong','khong_duoc_phe_duyet','dung_khong_dat_dot','dang_thuc_hien','ongoing','xin_dieu_chinh','cho_nghiem_thu_co_so','nghiem_thu_trung_gian','review','cho_nghiem_thu_bo_nn','nghiem_thu_tong_ket','hoan_thien_sau_nghiem_thu','thanh_ly_hop_dong','hoan_thanh','completed'];
+
+        var PHASES = [
+            { label: 'Giai đoạn 1 — Trước hợp đồng', keys: ['planning','cho_vien_xet_chon','cho_ct_hd_xet_duyet','xet_chon_phe_duyet','cho_phe_duyet_chinh_thuc','cho_ky_hop_dong','khong_duoc_phe_duyet'] },
+            { label: 'Giai đoạn 2 — Thực hiện & nghiệm thu', keys: ['dang_thuc_hien','ongoing','xin_dieu_chinh','cho_nghiem_thu_co_so','nghiem_thu_trung_gian','review','cho_nghiem_thu_bo_nn','nghiem_thu_tong_ket','hoan_thien_sau_nghiem_thu','thanh_ly_hop_dong','hoan_thanh','completed'] }
+        ];
+
+        var LEVEL_LABELS = { national: 'Cấp Nhà nước', ministry: 'Cấp Bộ', university: 'Cấp ĐHQG', institute: 'Cấp Viện', school: 'Trường ĐHKHTN', nafosted: 'NAFOSTED', bo_nganh_khac: 'Bộ ngành khác', nhiem_vu_bo_gd: 'Nhiệm vụ Bộ GD không phải đề tài' };
+
+        function formatDate(s) {
+            if (!s) return '—';
+            var d = new Date(s);
+            return (d.getDate() + '').padStart(2,'0') + '/' + ((d.getMonth()+1)+'').padStart(2,'0') + '/' + d.getFullYear();
+        }
+        function formatDateTime(s) {
+            if (!s) return '—';
+            var d = new Date(s);
+            return (d.getDate() + '').padStart(2,'0') + '/' + ((d.getMonth()+1)+'').padStart(2,'0') + '/' + d.getFullYear() + ' ' + (d.getHours() + '').padStart(2,'0') + ':' + (d.getMinutes() + '').padStart(2,'0');
+        }
+
+        function formatCurrency(n) {
+            if (n == null) return '—';
+            return new Intl.NumberFormat('vi-VN').format(n) + ' VNĐ';
+        }
+
+        function loadMission() {
+            if (!id && !code) {
+                contentEl.innerHTML = '<div class="empty-state">Thiếu ID hoặc mã đề tài. Vui lòng truy cập từ trang Nhiệm vụ KHCN.</div>';
+                return;
+            }
+            var url = id ? (apiBase + '/api/missions/' + id + (code ? '?code=' + encodeURIComponent(code) : '')) : (apiBase + '/api/missions/by-code/' + encodeURIComponent(code));
+            fetch(url)
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (!res.ok && res.data && res.data.message && res.data.message.includes('Không tìm thấy') && code && id) {
+                        return fetch(apiBase + '/api/missions/by-code/' + encodeURIComponent(code))
+                            .then(function(r2) { return r2.json().then(function(d) { return { ok: r2.ok, data: d }; }); });
+                    }
+                    return res;
+                })
+                .then(function(res) {
+                    if (res.data && res.data.message && res.data.message.includes('Không tìm thấy')) {
+                        contentEl.innerHTML = '<div class="empty-state">Không tìm thấy đề tài.</div>';
+                        return;
+                    }
+                    if (res.data && res.data.id) {
+                        renderTimeline(res.data);
+                    } else {
+                        contentEl.innerHTML = '<div class="empty-state">Lỗi tải dữ liệu. Kiểm tra kết nối máy chủ.</div>';
+                    }
+                })
+                .catch(function() {
+                    contentEl.innerHTML = '<div class="empty-state">Lỗi tải dữ liệu. Kiểm tra kết nối máy chủ.</div>';
+                });
+        }
+
+        function renderTimeline(m) {
+            var status = m.status || 'planning';
+            var statusMap = { approved: 'da_phe_duyet', ongoing: 'dang_thuc_hien', review: 'nghiem_thu_trung_gian', completed: 'hoan_thanh' };
+            if (statusMap[status]) status = statusMap[status];
+            var statusForStep = status;
+            if (BUOC4_STATUSES.indexOf(status) >= 0) statusForStep = 'xet_chon_phe_duyet';
+            if (BUOC5_STATUSES.indexOf(status) >= 0) statusForStep = 'cho_phe_duyet_chinh_thuc';
+            var idx = ORDER.indexOf(statusForStep);
+
+            var html = '<div class="task-header">';
+            html += '<div class="task-code">' + (m.code || '—') + '</div>';
+            html += '<div class="task-title">' + (m.title || '—') + '</div>';
+            html += '<div class="task-meta">';
+            html += '<div class="meta-item"><span class="meta-label">Chủ nhiệm</span><span class="meta-value">' + (m.principal || '—') + '</span></div>';
+            html += '<div class="meta-item"><span class="meta-label">Cấp</span><span class="meta-value">' + (LEVEL_LABELS[m.level] || m.level) + '</span></div>';
+            var nhanhMeta = m.nhanh || (NHANH_A_LEVELS.indexOf((m.level || '').toLowerCase()) >= 0 ? 'A' : 'B');
+            html += '<div class="meta-item"><span class="meta-label">Nhánh</span><span class="meta-value">' + (nhanhMeta === 'A' ? 'A — Bộ GD/ĐHQG/Trường' : 'B — Nhà nước/NAFOSTED') + '</span></div>';
+            html += '<div class="meta-item"><span class="meta-label">Trạng thái</span><span class="meta-value">' + (STATUS_LABELS[status] || status) + '</span></div>';
+            html += '<div class="meta-item"><span class="meta-label">Thời gian</span><span class="meta-value">' + formatDate(m.start_date) + ' — ' + formatDate(m.end_date) + '</span></div>';
+            html += '<div class="meta-item"><span class="meta-label">Tiến độ</span><span class="meta-value">' + (m.progress != null ? m.progress : 0) + '%</span></div>';
+            html += '<div class="meta-item"><span class="meta-label">Kinh phí</span><span class="meta-value">' + formatCurrency(m.budget || m.approved_budget) + '</span></div>';
+            html += '</div>';
+            html += '<div class="progress-bar"><div class="progress-fill" style="width:' + Math.min(100, m.progress || 0) + '%">' + (m.progress || 0) + '%</div></div>';
+            html += '</div>';
+
+            var stepNum = 0;
+            PHASES.forEach(function(ph) {
+                html += '<div class="phase-header">' + ph.label + '</div>';
+                ph.keys.forEach(function(key) {
+                    stepNum++;
+                    var label = 'Bước ' + stepNum + ': ' + (STATUS_LABELS[key] || key);
+                    var stepIdx = ORDER.indexOf(key);
+                    var isCurrent = key === statusForStep;
+                    var isPast = idx >= 0 && stepIdx >= 0 && stepIdx < idx && key !== 'khong_duoc_phe_duyet';
+                    var isReject = key === 'khong_duoc_phe_duyet' && status === 'khong_duoc_phe_duyet';
+                    var isDone = ['hoan_thanh','completed'].includes(status) && stepIdx >= 0 && stepIdx < ORDER.indexOf('hoan_thanh');
+                    var cls = 'stage-card';
+                    if (isCurrent || isReject) cls += ' active';
+                    else if (isPast || isDone) cls += ' completed';
+                    else cls += ' pending';
+                    if (key === 'planning' || key === 'cho_vien_xet_chon' || key === 'cho_ct_hd_xet_duyet' || key === 'xet_chon_phe_duyet' || key === 'cho_phe_duyet_chinh_thuc' || key === 'cho_ky_hop_dong') cls += ' step-clickable';
+                    if (key === 'cho_ct_hd_xet_duyet' && ((m.buoc3_ket_qua || '') && (status === 'cho_ct_hd_xet_duyet' || BUOC4_STATUSES.indexOf(status) >= 0) || ((m.lan_phan_nhanh || 1) > 1 && status === 'cho_ct_hd_xet_duyet') || window._buoc3ForceExpand)) cls += ' expanded';
+                    if (key === 'xet_chon_phe_duyet' && BUOC4_STATUSES.indexOf(status) >= 0) cls += ' expanded';
+                    var icon = (isCurrent || isReject) ? '▶' : (isPast || isDone ? '✓' : '○');
+                    var badge = (isCurrent || isReject) ? '<span class="stage-badge badge-current">Đang thực hiện</span>' : (isPast || isDone ? '<span class="stage-badge badge-done">Hoàn thành</span>' : (key === 'xet_chon_phe_duyet' && status === 'cho_ct_hd_xet_duyet' && (m.lan_phan_nhanh || 1) > 1 ? '<span class="stage-badge badge-pending">Chờ — chưa phân nhánh</span>' : '<span class="stage-badge badge-pending">Chưa đến</span>'));
+                    var clickAttr = (key === 'planning' || key === 'cho_vien_xet_chon' || key === 'cho_ct_hd_xet_duyet' || key === 'xet_chon_phe_duyet' || key === 'cho_phe_duyet_chinh_thuc' || key === 'cho_ky_hop_dong') ? ' onclick="window.toggleStepExpand(\'' + key + '\', this, ' + m.id + ')" role="button" tabindex="0"' : '';
+                    html += '<div class="' + cls + '" data-step="' + key + '"' + clickAttr + '><div class="stage-header">';
+                    html += '<div class="stage-icon">' + icon + '</div>';
+                    html += '<div class="stage-info"><h3>' + label + '</h3><div class="stage-subtitle">' + badge + '</div></div>';
+                    if (key === 'planning' || key === 'cho_vien_xet_chon' || key === 'cho_ct_hd_xet_duyet' || key === 'xet_chon_phe_duyet' || key === 'cho_phe_duyet_chinh_thuc' || key === 'cho_ky_hop_dong') html += '<span class="stage-expand-toggle"></span>';
+                    html += '</div>';
+                    if (key === 'cho_vien_xet_chon') {
+                        html += '<div class="stage-expand"><div class="stage-expand-inner" onclick="event.stopPropagation()">';
+                        html += '<p style="margin:0 0 8px 0;font-weight:600;color:#333;">Phòng KHCN&amp;QHĐN</p>';
+                        html += '<p style="margin:0 0 12px 0;font-size:13px;color:#e65100;font-weight:500;">Lưu ý: Sau Bước 3 (CT HĐ xét duyệt), đề tài sẽ chuyển sang Bước 4 theo nhánh: <strong>Nhánh A</strong> (Bộ GD/ĐHQG/Trường) hoặc <strong>Nhánh B</strong> (Nhà nước/NAFOSTED) — xác định theo cấp đề tài.</p>';
+                        html += '<p style="margin:0 0 16px 0;font-size:14px;color:#444;line-height:1.6;">Phòng KHCN&amp;QHĐN kiểm tra điều kiện CN (Điều 9, 10), tính phù hợp với định hướng Viện, và xác nhận hồ sơ trước khi chuyển lên CT HĐ xét duyệt.</p>';
+                        html += '<div style="margin-top:16px;padding:12px;background:#e8f5e9;border-radius:8px;border-left:4px solid #4caf50;">';
+                        html += '<p style="margin:0 0 6px 0;font-weight:600;color:#2e7d32;">→ Hồ sơ hợp lệ</p>';
+                        html += '<p style="margin:0;font-size:13px;color:#444;line-height:1.5;">Phòng KHCN xác nhận, bấm nút chuyển sang Bước 3 (Chờ CT HĐ KHCN xét duyệt). Hệ thống gửi email cho Chủ nhiệm và Chủ tịch Hội đồng KHCN cùng thành viên Hội đồng.</p>';
+                        html += '</div>';
+                        html += '<div style="margin-top:12px;padding:12px;background:#fff3e0;border-radius:8px;border-left:4px solid #ff9800;">';
+                        html += '<p style="margin:0 0 6px 0;font-weight:600;color:#e65100;">→ Hồ sơ thiếu hoặc CN vi phạm điều kiện</p>';
+                        html += '<p style="margin:0;font-size:13px;color:#444;line-height:1.5;">(VD: đang chủ nhiệm quá số đề tài cho phép) — Bấm nút yêu cầu bổ sung hoặc từ chối. Hệ thống gửi email cho Chủ nhiệm và thành viên Hội đồng. Hồ sơ vẫn ở bước 2.</p>';
+                        html += '</div>';
+                        if (m.status === 'cho_vien_xet_chon') {
+                            var userStr = localStorage.getItem('user') || '{}';
+                            var user = {};
+                            try { user = JSON.parse(userStr); } catch(e) {}
+                            var role = (user.role || '').toLowerCase();
+                            var canAct = (role === 'admin' || role === 'thu_ky');
+                            if (canAct) {
+                                html += '<div class="step2-actions" style="margin-top:20px;padding-top:16px;border-top:1px solid #e0e0e0;display:flex;flex-wrap:wrap;gap:10px;">';
+                                html += '<button type="button" class="btn-step2 btn-approve" onclick="event.stopPropagation();window.step2Approve(' + m.id + ')">✓ Chuyển sang bước 3</button>';
+                                html += '<button type="button" class="btn-step2 btn-supplement" onclick="event.stopPropagation();window.step2RequestSupplement(' + m.id + ')">📝 Yêu cầu bổ sung</button>';
+                                html += '<button type="button" class="btn-step2 btn-reject" onclick="event.stopPropagation();window.step2Reject(' + m.id + ')">✗ Từ chối</button>';
+                                html += '</div>';
+                            }
+                        }
+                        html += '</div></div>';
+                    }
+                    if (key === 'cho_ct_hd_xet_duyet') {
+                        html += '<div class="stage-expand"><div class="stage-expand-inner" onclick="event.stopPropagation()">';
+                        html += '<p style="margin:0 0 8px 0;font-weight:600;color:#333;">Bước 3 — CT HĐ KHCN xét duyệt thuyết minh</p>';
+                        var buoc3TrangThai = m.buoc3_trang_thai || '';
+                        var buoc3KetQua = m.buoc3_ket_qua || '';
+                        var nhanh = m.nhanh || '';
+                        var lanPhanNhanh = m.lan_phan_nhanh || 1;
+                        var lastReset = (m.lich_su_doi_nhanh || [])[0];
+                        if (lanPhanNhanh > 1 && lastReset) {
+                            var nhanhMoiLabel = lastReset.nhanh_moi === 'A' ? 'Nhánh A — Bộ GD/ĐHQG/Trường' : 'Nhánh B — Nhà nước/NAFOSTED';
+                            html += '<div style="margin-bottom:16px;padding:14px;background:#fff3e0;border-radius:8px;border-left:4px solid #ff9800;">';
+                            html += '<p style="margin:0 0 6px 0;font-weight:600;color:#e65100;">⚠ Xét duyệt lại — đã reset từ Bước 4</p>';
+                            html += '<p style="margin:0 0 6px 0;font-size:13px;">Nhánh mới: ' + nhanhMoiLabel + '</p>';
+                            html += '<p style="margin:0 0 6px 0;font-size:13px;">Lý do: ' + (lastReset.ly_do || '').replace(/</g,'&lt;') + '</p>';
+                            html += '<p style="margin:0;font-size:13px;">Reset bởi: ' + (lastReset.reset_boi || '—') + ' lúc ' + formatDateTime(lastReset.reset_luc) + '</p>';
+                            html += '</div>';
+                            var lichSu = m.lich_su_buoc3 || [];
+                            if (lichSu.length > 0) {
+                                html += '<details style="margin-bottom:16px;">';
+                                html += '<summary style="cursor:pointer;font-weight:600;padding:8px 0;">Xem phiếu nhận xét lần trước</summary>';
+                                lichSu.forEach(function(ls, idx) {
+                                    var kqLabel = (ls.ket_qua === 'dong_y' ? 'Đồng ý' : ls.ket_qua === 'dong_y_co_dieu_kien' ? 'Đồng ý có điều kiện' : ls.ket_qua === 'khong_dong_y' ? 'Không đồng ý' : ls.ket_qua || '—');
+                                    html += '<div style="margin-top:12px;padding:12px;background:#f8f9fa;border-radius:8px;font-size:13px;">';
+                                    html += '<div style="font-weight:600;">Lần ' + (ls.lan_xet || idx + 1) + ' — ' + kqLabel + '</div>';
+                                    html += '<div style="font-size:12px;color:#666;margin-top:4px;">' + (ls.nguoi_xet || '—') + ' · ' + formatDate(ls.ngay_xet) + '</div>';
+                                    if (ls.nhan_xet_json) try { var nx = JSON.parse(ls.nhan_xet_json); html += '<div style="margin-top:8px;">' + (nx.khoa_hoc ? '<p><strong>Khoa học:</strong> ' + (nx.khoa_hoc || '').replace(/</g,'&lt;') + '</p>' : '') + (nx.kha_thi ? '<p><strong>Khả thi:</strong> ' + (nx.kha_thi || '').replace(/</g,'&lt;') + '</p>' : '') + '</div>'; } catch(e) {}
+                                    html += '</div>';
+                                });
+                                html += '</details>';
+                            }
+                        }
+                        if (buoc3TrangThai === 'cho_xet_duyet') {
+                            var userStr = localStorage.getItem('user') || '{}';
+                            var user = {};
+                            try { user = JSON.parse(userStr); } catch(e) {}
+                            var role = (user.role || '').toLowerCase();
+                            var isCtHd = (role === 'admin' || role === 'chu_tich');
+                            if (isCtHd) {
+                                html += '<p style="margin:0 0 12px 0;font-size:14px;color:#444;">Chủ tịch Hội đồng vào trang xét duyệt để điền phiếu nhận xét.</p>';
+                                html += '<a href="ct-hd-xet-duyet-de-tai.html?id=' + m.id + '" class="btn-step2 btn-approve" style="display:inline-block;text-decoration:none;">Vào xét duyệt</a>';
+                            } else {
+                                html += '<p style="margin:0;font-size:14px;color:#666;">Đang chờ CT HĐ KHCN xét duyệt.</p>';
+                            }
+                        }
+                        if (buoc3KetQua) {
+                            html += '<div style="margin-top:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;"><strong>Phiếu nhận xét CT HĐ:</strong>';
+                            if (buoc3TrangThai === 'da_xet_duyet' || buoc3TrangThai === 'hoan_thanh') html += '<button type="button" class="btn-step2 btn-approve" style="font-size:12px;padding:6px 12px;" onclick="event.stopPropagation();window.step3ExportPhieuPDF(' + m.id + ')">Xuất phiếu nhận xét PDF</button>';
+                            html += '</div>';
+                            html += '<div style="padding:12px;background:#f8f9fa;border-radius:8px;margin-bottom:12px;font-size:13px;">';
+                            html += '<p style="margin:0 0 8px 0;"><strong>Kết luận:</strong> ' + (buoc3KetQua === 'dong_y' ? 'Đồng ý' : buoc3KetQua === 'dong_y_co_dieu_kien' ? 'Đồng ý có điều kiện' : buoc3KetQua === 'khong_dong_y' ? 'Không đồng ý' : buoc3KetQua) + '</p>';
+                            if (m.buoc3_ngay_phan_hoi) html += '<p style="margin:0 0 8px 0;font-size:12px;color:#666;">Ngày xét: ' + formatDate(m.buoc3_ngay_phan_hoi) + '</p>';
+                            html += '<p style="margin:0 0 6px 0;"><strong>Đánh giá tính khoa học & tính mới:</strong></p><p style="margin:0 0 12px 0;white-space:pre-wrap;">' + (m.buoc3_nhan_xet_khoa_hoc || '—').replace(/</g,'&lt;') + '</p>';
+                            html += '<p style="margin:0 0 6px 0;"><strong>Đánh giá tính khả thi:</strong></p><p style="margin:0 0 12px 0;white-space:pre-wrap;">' + (m.buoc3_nhan_xet_kha_thi || '—').replace(/</g,'&lt;') + '</p>';
+                            html += '<p style="margin:0 0 6px 0;"><strong>Phù hợp định hướng KH&amp;CN Viện:</strong></p><p style="margin:0 0 12px 0;white-space:pre-wrap;">' + (m.buoc3_nhan_xet_dinh_huong || '—').replace(/</g,'&lt;') + '</p>';
+                            html += '<p style="margin:0 0 6px 0;"><strong>Năng lực chủ nhiệm:</strong></p><p style="margin:0 0 12px 0;white-space:pre-wrap;">' + (m.buoc3_nhan_xet_nang_luc || '—').replace(/</g,'&lt;') + '</p>';
+                            if (m.buoc3_dieu_kien) html += '<p style="margin:0 0 6px 0;"><strong>Điều kiện cụ thể:</strong></p><p style="margin:0 0 12px 0;white-space:pre-wrap;">' + (m.buoc3_dieu_kien || '').replace(/</g,'&lt;') + '</p>';
+                            if (m.buoc3_ly_do_tu_choi) html += '<p style="margin:0 0 6px 0;color:#c00;"><strong>Lý do từ chối:</strong></p><p style="margin:0 0 12px 0;white-space:pre-wrap;color:#c00;">' + (m.buoc3_ly_do_tu_choi || '').replace(/</g,'&lt;') + '</p>';
+                            html += '</div>';
+                            var lichSu = m.lich_su_buoc3 || [];
+                            if (lichSu.length > 0) {
+                                html += '<div style="margin-top:16px;"><strong>Lịch sử hành động Bước 3:</strong></div>';
+                                html += '<div style="margin-top:8px;">';
+                                lichSu.forEach(function(ls, idx) {
+                                    var kqLabel = (ls.ket_qua === 'dong_y' ? 'Đồng ý' : ls.ket_qua === 'dong_y_co_dieu_kien' ? 'Đồng ý có điều kiện' : ls.ket_qua === 'khong_dong_y' ? 'Không đồng ý' : ls.ket_qua || '—');
+                                    html += '<div style="padding:10px 12px;background:#fff;border-left:4px solid #667eea;border-radius:6px;margin-bottom:8px;font-size:13px;">';
+                                    html += '<div style="font-weight:600;">Lần xét ' + (ls.lan_xet || idx + 1) + ' — ' + kqLabel + '</div>';
+                                    html += '<div style="font-size:12px;color:#666;margin-top:4px;">' + (ls.nguoi_xet || '—') + ' · ' + formatDate(ls.ngay_xet) + '</div>';
+                                    if (ls.ly_do_tu_choi) html += '<div style="margin-top:6px;color:#c00;">' + (ls.ly_do_tu_choi || '').replace(/</g,'&lt;') + '</div>';
+                                    html += '</div>';
+                                });
+                                html += '</div>';
+                            }
+                            if (buoc3TrangThai === 'da_xet_duyet') {
+                                var userStr = localStorage.getItem('user') || '{}';
+                                var user = {};
+                                try { user = JSON.parse(userStr); } catch(e) {}
+                                var role = (user.role || '').toLowerCase();
+                                var canConfirm = (role === 'admin' || role === 'thu_ky');
+                                if (canConfirm && (buoc3KetQua === 'dong_y' || buoc3KetQua === 'dong_y_co_dieu_kien')) {
+                                    var nhanhComputed = nhanh || (NHANH_A_LEVELS.indexOf((m.level || '').toLowerCase()) >= 0 ? 'A' : 'B');
+                                    var nhanhLabel = nhanhComputed === 'A' ? 'Nhánh A — Bộ GD/ĐHQG/Trường' : 'Nhánh B — Nhà nước/NAFOSTED';
+                                    html += '<div style="margin:16px 0;padding:14px;background:#e3f2fd;border-radius:8px;border-left:4px solid #1976d2;">';
+                                    html += '<p style="margin:0 0 8px 0;font-weight:600;color:#0d47a1;">Phân nhánh Bước 4</p>';
+                                    html += '<p style="margin:0 0 6px 0;font-size:13px;color:#333;">Đề tài thuộc <strong>' + nhanhLabel + '</strong> (xác định theo cấp đề tài khi tạo).</p>';
+                                    html += '<p style="margin:0;font-size:12px;color:#666;">Nhánh A: Bộ GD&amp;ĐT, ĐHQG-HCM, Trường ĐHKHTN — Nhánh B: Bộ KH&amp;CN, NAFOSTED, Bộ ngành khác</p>';
+                                    html += '</div>';
+                                    html += '<div class="step2-actions" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">';
+                                    if (nhanhComputed === 'A') {
+                                        html += '<button type="button" class="btn-step2 btn-approve" onclick="event.stopPropagation();window.step3Confirm4A(' + m.id + ')">Chuyển sang Bước 4 (Nhánh A)</button>';
+                                    } else {
+                                        html += '<button type="button" class="btn-step2 btn-approve" onclick="event.stopPropagation();window.step3Confirm4B(' + m.id + ')">Chuyển sang Bước 4 (Nhánh B)</button>';
+                                    }
+                                    html += '</div>';
+                                } else if (canConfirm && buoc3KetQua === 'khong_dong_y') {
+                                    var lanXet = m.buoc3_lan_xet_thu || 1;
+                                    html += '<div class="step2-actions" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;">';
+                                    if (lanXet < 2) html += '<button type="button" class="btn-step2 btn-supplement" onclick="event.stopPropagation();window.step3RequestRevision(' + m.id + ')">Yêu cầu CN chỉnh sửa và nộp lại</button>';
+                                    html += '<button type="button" class="btn-step2 btn-reject" onclick="event.stopPropagation();window.step3StopMission(' + m.id + ')">Dừng hồ sơ đợt này</button>';
+                                    html += '</div>';
+                                }
+                            }
+                        }
+                        html += '</div></div>';
+                    }
+                    if (key === 'xet_chon_phe_duyet') {
+                        var nhanh = m.nhanh || (NHANH_A_LEVELS.indexOf((m.level || '').toLowerCase()) >= 0 ? 'A' : 'B');
+                        var nhanhLabel = nhanh === 'A' ? 'Nhánh A — Bộ GD/ĐHQG/Trường' : 'Nhánh B — Nhà nước/NAFOSTED';
+                        var b4a = m.buoc4a || {};
+                        var b4b = m.buoc4b || {};
+                        var buoc4ChoPhanNhanh = status === 'cho_ct_hd_xet_duyet' && (m.lan_phan_nhanh || 1) > 1;
+                        html += '<div class="stage-expand"><div class="stage-expand-inner" onclick="event.stopPropagation()">';
+                        html += '<p style="margin:0 0 8px 0;font-weight:600;color:#333;">Bước 4 — Xét chọn &amp; phê duyệt</p>';
+                        if (buoc4ChoPhanNhanh) {
+                            html += '<div style="padding:20px;background:#f5f5f5;border-radius:8px;border:1px solid #e0e0e0;color:#666;">';
+                            html += '<p style="margin:0;">Bước 3 cần hoàn thành lại trước khi phân nhánh.</p>';
+                            html += '<p style="margin:8px 0 0 0;font-weight:600;color:#333;">Nhánh mới sẽ là: ' + nhanhLabel + '</p>';
+                            html += '</div>';
+                        } else {
+                        html += '<div class="buoc4-two-branches">';
+                        (function() {
+                        var s1Done = (b4a.hop_trang_thai || '') === 'da_len_lich';
+                        var s2Done = !!b4a.hd_ket_luan && ['thong_qua','thong_qua_co_chinh_sua'].indexOf(b4a.hd_ket_luan) >= 0;
+                        var s3Done = (b4a.trang_thai || '') === 'da_gui_bo';
+                        var s4Done = (b4a.ket_qua_bo || '') === 'lot';
+                        var s2Active = s1Done && !s2Done && b4a.hd_ket_luan !== 'khong_thong_qua';
+                        var s3Active = s2Done && (b4a.thuyet_minh_chinh_sua_ok || b4a.hd_ket_luan === 'thong_qua') && !s3Done;
+                        var s4Active = s3Done && !s4Done;
+                        var isActiveA = nhanh === 'A';
+                        html += '<div class="buoc4-branch-panel ' + (isActiveA ? 'branch-active' : 'branch-inactive') + '">';
+                        html += '<div style="padding:10px 12px;background:#e3f2fd;border-radius:6px;border-left:4px solid #1976d2;margin-bottom:12px;">';
+                        html += '<span style="font-weight:600;color:#1565c0;">Nhánh A — Bộ GD/ĐHQG/Trường</span>';
+                        html += '<p style="margin:6px 0 0 0;font-size:12px;color:#555;">Lên lịch họp HĐ → Kết quả họp → Gửi Bộ → Kết quả Bộ</p>';
+                        html += '</div>';
+                            html += '<div class="buoc4-substeps" style="display:flex;gap:12px;margin:12px 0;flex-wrap:wrap;align-items:center;">';
+                            html += '<span class="' + (s1Done ? 'substep-done' : 'substep-active') + '">① Lên lịch họp</span>';
+                            html += '<span style="color:#ccc;">─</span>';
+                            html += '<span class="' + (s2Done ? 'substep-done' : (s2Active ? 'substep-active' : 'substep-pending')) + '">② Kết quả họp</span>';
+                            html += '<span style="color:#ccc;">─</span>';
+                            html += '<span class="' + (s3Done ? 'substep-done' : (s3Active ? 'substep-active' : 'substep-pending')) + '">③ Gửi Bộ</span>';
+                            html += '<span style="color:#ccc;">─</span>';
+                            html += '<span class="' + (s4Done ? 'substep-done' : (s4Active ? 'substep-active' : 'substep-pending')) + '">④ Kết quả Bộ</span>';
+                            html += '</div>';
+                            html += '<div id="buoc4a-content-' + m.id + '" data-mission-id="' + m.id + '" data-nhanh="A">';
+                            if (!s1Done) {
+                                html += '<div class="buoc4a-sub1-form" style="margin-top:16px;padding:16px;background:#fff;border-radius:8px;border:1px solid #e0e0e0;">';
+                                html += '<h4 style="margin:0 0 16px 0;font-size:15px;">Sub-bước 1: Lên lịch họp HĐ chuyên ngành</h4>';
+                                html += '<form id="formBuoc4aLenLich-' + m.id + '" onsubmit="return window.submitBuoc4aLenLich(event, ' + m.id + ')">';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ngày &amp; giờ họp *</label><input type="datetime-local" name="hop_ngay" required style="width:100%;max-width:280px;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;">Hình thức *</label><label style="margin-right:16px;"><input type="radio" name="hop_hinh_thuc" value="offline" required> Offline</label><label style="margin-right:16px;"><input type="radio" name="hop_hinh_thuc" value="online"> Online</label><label><input type="radio" name="hop_hinh_thuc" value="hybrid"> Hybrid</label></div>';
+                                html += '<div id="buoc4a-dia-diem-' + m.id + '" style="margin-bottom:12px;display:none;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Địa điểm *</label><input type="text" name="hop_dia_diem" placeholder="Phòng họp..." style="width:100%;max-width:400px;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>';
+                                html += '<div id="buoc4a-link-' + m.id + '" style="margin-bottom:12px;display:none;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Link họp *</label><input type="url" name="hop_link" placeholder="https://..." style="width:100%;max-width:400px;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Thành phần Hội đồng *</label><div id="buoc4a-thanh-phan-' + m.id + '" class="buoc4a-thanh-phan-list">Đang tải...</div></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ghi chú</label><textarea name="ghi_chu" rows="2" style="width:100%;max-width:500px;padding:8px;border:1px solid #ddd;border-radius:6px;"></textarea></div>';
+                                html += '<button type="submit" class="btn-step2 btn-approve">Gửi lịch &amp; thông báo →</button></form></div>';
+                            } else {
+                                html += '<div class="buoc4a-sub1-summary" style="margin-top:16px;padding:16px;background:#e8f5e9;border-radius:8px;border-left:4px solid #4caf50;">';
+                                html += '<h4 style="margin:0 0 12px 0;font-size:14px;">① Đã lên lịch họp</h4>';
+                                html += '<p style="margin:0 0 6px 0;"><strong>Ngày giờ:</strong> ' + (b4a.hop_ngay ? formatDateTime(b4a.hop_ngay) : '—') + '</p>';
+                                html += '<p style="margin:0 0 6px 0;"><strong>Hình thức:</strong> ' + (b4a.hop_hinh_thuc === 'offline' ? 'Offline' : b4a.hop_hinh_thuc === 'online' ? 'Online' : b4a.hop_hinh_thuc || '—') + '</p>';
+                                if (b4a.hop_dia_diem) html += '<p style="margin:0 0 6px 0;"><strong>Địa điểm:</strong> ' + (b4a.hop_dia_diem || '').replace(/</g,'&lt;') + '</p>';
+                                if (b4a.hop_link) html += '<p style="margin:0 0 6px 0;"><strong>Link:</strong> <a href="' + (b4a.hop_link || '').replace(/"/g,'&quot;') + '" target="_blank" rel="noopener">' + (b4a.hop_link || '').replace(/</g,'&lt;') + '</a></p>';
+                                var hopDate = b4a.hop_ngay ? new Date(b4a.hop_ngay) : null;
+                                var canChinhLich = hopDate && (hopDate.getTime() - Date.now() > 60*60*1000);
+                                if (canChinhLich) html += '<button type="button" class="btn-step2 btn-supplement" style="margin-top:10px;" onclick="event.stopPropagation();window.buoc4aChinhLich(' + m.id + ')">Chỉnh lịch</button>';
+                                html += '</div>';
+                                if (!s2Done && !b4a.hd_ket_luan) html += '<p style="margin-top:12px;font-size:14px;color:#1976d2;">→ Tiếp theo: Nhập kết quả họp HĐ (Sub-bước 2)</p>';
+                            }
+                            if (s2Active) {
+                                html += '<div class="buoc4a-sub2-form" style="margin-top:16px;padding:16px;background:#fff;border-radius:8px;border:1px solid #e0e0e0;">';
+                                html += '<h4 style="margin:0 0 16px 0;font-size:15px;">Sub-bước 2: Kết quả họp HĐ chuyên ngành</h4>';
+                                html += '<form id="formBuoc4aKetQuaHop-' + m.id + '" onsubmit="return window.submitBuoc4aKetQuaHop(event, ' + m.id + ')">';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ngày họp thực tế *</label><input type="date" name="ngay_hop_thuc_te" value="' + (b4a.hop_ngay ? (b4a.hop_ngay + '').split('T')[0] : '') + '" required style="width:100%;max-width:200px;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;">Kết luận của HĐ *</label>';
+                                html += '<label style="display:block;margin:4px 0;"><input type="radio" name="ket_luan" value="thong_qua" required onchange="document.getElementById(\'buoc4a-chinh-sua-' + m.id + '\').style.display=\'none\';document.getElementById(\'buoc4a-ly-do-' + m.id + '\').style.display=\'none\'"> Thông qua</label>';
+                                html += '<label style="display:block;margin:4px 0;"><input type="radio" name="ket_luan" value="thong_qua_co_chinh_sua" onchange="document.getElementById(\'buoc4a-chinh-sua-' + m.id + '\').style.display=\'block\';document.getElementById(\'buoc4a-ly-do-' + m.id + '\').style.display=\'none\'"> Thông qua — yêu cầu chỉnh sửa thuyết minh</label>';
+                                html += '<div id="buoc4a-chinh-sua-' + m.id + '" style="margin-left:24px;display:none;"><label style="display:block;margin:4px 0;">Nội dung cần chỉnh sửa *</label><textarea name="noi_dung_chinh_sua" rows="3" style="width:100%;padding:8px;"></textarea><label style="display:block;margin:4px 0;">Hạn CN nộp lại *</label><input type="date" name="han_chinh_sua" style="padding:8px;"></div>';
+                                html += '<label style="display:block;margin:4px 0;"><input type="radio" name="ket_luan" value="khong_thong_qua" onchange="document.getElementById(\'buoc4a-ly-do-' + m.id + '\').style.display=\'block\';document.getElementById(\'buoc4a-chinh-sua-' + m.id + '\').style.display=\'none\'"> Không thông qua</label>';
+                                html += '<div id="buoc4a-ly-do-' + m.id + '" style="margin-left:24px;display:none;"><label style="display:block;margin:4px 0;">Lý do *</label><textarea name="ly_do" rows="2" style="width:100%;padding:8px;"></textarea></div></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Nhận xét tổng hợp</label><textarea name="nhan_xet" rows="2" style="width:100%;padding:8px;"></textarea></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Biên bản họp HĐ *</label><div id="buoc4a-bien-ban-upload-' + m.id + '">Upload PDF → <input type="file" id="bienBanFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc4a_bien_ban\',\'bien_ban_file_id\')"><input type="hidden" name="bien_ban_file_id" id="bien_ban_file_id-' + m.id + '"></div></div>';
+                                html += '<button type="submit" class="btn-step2 btn-approve">Lưu kết quả họp →</button></form></div>';
+                            }
+                            if (s2Done && s3Active) {
+                                html += '<div class="buoc4a-sub3-form" style="margin-top:16px;padding:16px;background:#fff;border-radius:8px;border:1px solid #e0e0e0;">';
+                                html += '<h4 style="margin:0 0 16px 0;font-size:15px;">Sub-bước 3: Lập danh mục &amp; gửi lên Bộ</h4>';
+                                html += '<form id="formBuoc4aGuiBo-' + m.id + '" onsubmit="return window.submitBuoc4aGuiBo(event, ' + m.id + ')">';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Cơ quan nhận *</label><select name="co_quan_nhan" required style="width:100%;max-width:300px;padding:8px;"><option value="">— Chọn —</option><option value="Bộ GD&amp;ĐT">Bộ GD&amp;ĐT</option><option value="ĐHQG-HCM">ĐHQG-HCM</option><option value="Trường ĐHKHTN">Trường ĐHKHTN</option></select></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">File danh mục đề xuất *</label><div>Upload PDF/DOCX → <input type="file" id="danhMucFile-' + m.id + '" accept=".pdf,.doc,.docx" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc4a_danh_muc\',\'danh_muc_file_id\')"><input type="hidden" name="danh_muc_file_id" id="danh_muc_file_id-' + m.id + '"></div></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ngày gửi *</label><input type="date" name="ngay_gui" value="' + new Date().toISOString().split('T')[0] + '" required style="width:100%;max-width:200px;padding:8px;"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Hình thức gửi</label><label style="margin-right:12px;"><input type="radio" name="hinh_thuc_gui" value="truc_tiep"> Trực tiếp</label><label style="margin-right:12px;"><input type="radio" name="hinh_thuc_gui" value="email"> Email</label><label><input type="radio" name="hinh_thuc_gui" value="he_thong_bo"> Hệ thống Bộ</label></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Người nhận tại Bộ</label><input type="text" name="nguoi_nhan" style="width:100%;max-width:300px;padding:8px;"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ghi chú</label><textarea name="ghi_chu" rows="2" style="width:100%;padding:8px;"></textarea></div>';
+                                html += '<button type="submit" class="btn-step2 btn-approve">Xác nhận đã gửi lên Bộ →</button></form></div>';
+                            }
+                            if (s2Done && s3Done && s4Active) {
+                                html += '<div class="buoc4a-sub4-form" style="margin-top:16px;padding:16px;background:#fff;border-radius:8px;border:1px solid #e0e0e0;">';
+                                html += '<h4 style="margin:0 0 16px 0;font-size:15px;">Sub-bước 4: Kết quả thẩm định từ Bộ</h4>';
+                                html += '<form id="formBuoc4aKetQuaBo-' + m.id + '" onsubmit="return window.submitBuoc4aKetQuaBo(event, ' + m.id + ')">';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ngày nhận kết quả *</label><input type="date" name="ngay_nhan" required style="width:100%;max-width:200px;padding:8px;"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;">Kết quả *</label>';
+                                html += '<label style="display:block;margin:4px 0;"><input type="radio" name="ket_qua" value="lot" required onchange="document.getElementById(\'buoc4a-bo-yc-' + m.id + '\').style.display=\'none\';document.getElementById(\'buoc4a-bo-lydo-' + m.id + '\').style.display=\'none\'"> Lọt danh mục → chuyển Bước 5</label>';
+                                html += '<label style="display:block;margin:4px 0;"><input type="radio" name="ket_qua" value="yeu_cau_chinh_sua" onchange="document.getElementById(\'buoc4a-bo-yc-' + m.id + '\').style.display=\'block\';document.getElementById(\'buoc4a-bo-lydo-' + m.id + '\').style.display=\'none\'"> Bộ yêu cầu chỉnh sửa thuyết minh</label>';
+                                html += '<div id="buoc4a-bo-yc-' + m.id + '" style="margin-left:24px;display:none;"><label>Nội dung Bộ yêu cầu *</label><textarea name="noi_dung_yc" rows="2" style="width:100%;padding:8px;"></textarea><label>Hạn nộp lại *</label><input type="date" name="han_yc" style="padding:8px;"></div>';
+                                html += '<label style="display:block;margin:4px 0;"><input type="radio" name="ket_qua" value="khong_lot" onchange="document.getElementById(\'buoc4a-bo-lydo-' + m.id + '\').style.display=\'block\';document.getElementById(\'buoc4a-bo-yc-' + m.id + '\').style.display=\'none\'"> Không lọt danh mục</label>';
+                                html += '<div id="buoc4a-bo-lydo-' + m.id + '" style="margin-left:24px;display:none;"><label>Lý do (nếu biết)</label><textarea name="ly_do" rows="2" style="width:100%;padding:8px;"></textarea></div></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Biên bản / văn bản Bộ</label><input type="file" id="vanBanBoFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc4a_van_ban_bo\',\'van_ban_file_id\')"><input type="hidden" name="van_ban_file_id" id="van_ban_file_id-' + m.id + '"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ghi chú</label><textarea name="ghi_chu" rows="2" style="width:100%;padding:8px;"></textarea></div>';
+                                html += '<button type="submit" class="btn-step2 btn-approve">Lưu kết quả thẩm định →</button></form></div>';
+                            }
+                            if (s4Done && (b4a.ket_qua_bo || '') === 'lot') {
+                                html += '<div style="margin-top:16px;padding:16px;background:#e8f5e9;border-radius:8px;border-left:4px solid #4caf50;">';
+                                html += '<p style="margin:0 0 12px 0;font-weight:600;color:#2e7d32;">Đề tài lọt danh mục thẩm định</p>';
+                                html += '<button type="button" class="btn-step2 btn-approve" onclick="event.stopPropagation();window.buoc4aChuyenBuoc5(' + m.id + ')">Chuyển sang Bước 5 →</button></div>';
+                            }
+                            if (s4Done && (b4a.ket_qua_bo || '') === 'khong_lot') {
+                                html += '<div style="margin-top:16px;padding:16px;background:#ffebee;border-radius:8px;border-left:4px solid #f44336;"><p style="margin:0;font-weight:600;color:#c62828;">Không lọt danh mục đợt này</p></div>';
+                            }
+                            html += '</div>';
+                        html += '</div>';
+                        })();
+                        (function() {
+                            var sb1Done = (b4b.trang_thai || '') === 'da_nop';
+                            var sb2Done = sb1Done;
+                            var sb3Done = !!b4b.ket_qua;
+                            var sb3Active = sb1Done && !sb3Done;
+                            var isActiveB = nhanh === 'B';
+                            html += '<div class="buoc4-branch-panel ' + (isActiveB ? 'branch-active' : 'branch-inactive') + '">';
+                            html += '<div style="padding:10px 12px;background:#f3e5f5;border-radius:6px;border-left:4px solid #7b1fa2;margin-bottom:12px;">';
+                            html += '<span style="font-weight:600;color:#6a1b9a;">Nhánh B — Nhà nước/NAFOSTED</span>';
+                            html += '<p style="margin:6px 0 0 0;font-size:12px;color:#555;">Chuẩn bị &amp; nộp hồ sơ → Chờ xét chọn → Nhận kết quả</p>';
+                            html += '</div>';
+                            html += '<div class="buoc4-substeps" style="display:flex;gap:12px;margin:12px 0;flex-wrap:wrap;align-items:center;">';
+                            html += '<span class="' + (sb1Done ? 'substep-done' : 'substep-active') + '">① Chuẩn bị &amp; nộp hồ sơ</span><span style="color:#ccc;">─</span>';
+                            html += '<span class="' + (sb2Done ? 'substep-done' : 'substep-pending') + '">② Chờ xét chọn</span><span style="color:#ccc;">─</span>';
+                            html += '<span class="' + (sb3Done ? 'substep-done' : (sb3Active ? 'substep-active' : 'substep-pending')) + '">③ Nhận kết quả</span>';
+                            html += '</div>';
+                            html += '<div id="buoc4b-content-' + m.id + '">';
+                            if (!sb1Done) {
+                                html += '<div style="margin-top:16px;padding:16px;background:#fff;border-radius:8px;border:1px solid #e0e0e0;">';
+                                html += '<h4 style="margin:0 0 16px 0;font-size:15px;">Sub-bước 1: Chuẩn bị &amp; nộp hồ sơ ra cơ quan ngoài</h4>';
+                                html += '<form id="formBuoc4bNopHoSo-' + m.id + '" onsubmit="return window.submitBuoc4bNopHoSo(event, ' + m.id + ')">';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Cơ quan nhận *</label><select name="co_quan_nhan" required style="width:100%;max-width:300px;padding:8px;"><option value="">— Chọn —</option><option value="Bộ KH&amp;CN">Bộ KH&amp;CN</option><option value="Quỹ NAFOSTED">Quỹ NAFOSTED</option><option value="Bộ ngành khác">Bộ ngành khác</option></select></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Hạn nộp hồ sơ *</label><input type="date" name="han_nop" required style="width:100%;max-width:200px;padding:8px;"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ngày nộp thực tế *</label><input type="date" name="ngay_nop_thuc_te" required style="width:100%;max-width:200px;padding:8px;"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Hình thức nộp</label><select name="hinh_thuc_nop" style="width:100%;max-width:200px;padding:8px;"><option value="truc_tiep">Trực tiếp</option><option value="online">Online</option><option value="buu_dien">Bưu điện</option></select></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Mã hồ sơ (nếu có)</label><input type="text" name="ma_ho_so" style="width:100%;max-width:200px;padding:8px;"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ghi chú</label><textarea name="ghi_chu" rows="2" style="width:100%;padding:8px;"></textarea></div>';
+                                html += '<button type="submit" class="btn-step2 btn-approve">Xác nhận đã nộp hồ sơ →</button></form></div>';
+                            } else if (sb3Active) {
+                                html += '<div style="margin-top:16px;padding:16px;background:#fff;border-radius:8px;border:1px solid #e0e0e0;">';
+                                html += '<h4 style="margin:0 0 16px 0;font-size:15px;">Sub-bước 3: Nhận kết quả từ cơ quan ngoài</h4>';
+                                html += '<form id="formBuoc4bKetQua-' + m.id + '" onsubmit="return window.submitBuoc4bKetQua(event, ' + m.id + ')">';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;">Kết quả *</label>';
+                                html += '<label style="display:block;margin:4px 0;"><input type="radio" name="ket_qua" value="duoc_tuyen_chon" required> Được tuyển chọn → chuyển Bước 5</label>';
+                                html += '<label style="display:block;margin:4px 0;"><input type="radio" name="ket_qua" value="yeu_cau_chinh_sua"> Cơ quan yêu cầu chỉnh sửa</label>';
+                                html += '<label style="display:block;margin:4px 0;"><input type="radio" name="ket_qua" value="khong_duoc"> Không được tuyển chọn</label></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Nội dung yêu cầu (nếu có)</label><textarea name="noi_dung_yc" rows="2" style="width:100%;padding:8px;"></textarea></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Hạn nộp lại (nếu có)</label><input type="date" name="han_yc" style="padding:8px;"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Lý do (nếu không được)</label><textarea name="ly_do" rows="2" style="width:100%;padding:8px;"></textarea></div>';
+                                html += '<button type="submit" class="btn-step2 btn-approve">Lưu kết quả →</button></form></div>';
+                            } else if (sb3Done && (b4b.ket_qua || '') === 'duoc_tuyen_chon') {
+                                html += '<div style="margin-top:16px;padding:16px;background:#e8f5e9;border-radius:8px;border-left:4px solid #4caf50;"><p style="margin:0;font-weight:600;color:#2e7d32;">Đề tài được tuyển chọn — chuyển Bước 5</p></div>';
+                            }
+                            html += '</div>';
+                        html += '</div>';
+                        })();
+                        html += '</div>';
+                        var canShowReset = false;
+                        try {
+                            var userStr = localStorage.getItem('user') || '{}';
+                            var user = JSON.parse(userStr);
+                            var role = (user.role || '').toLowerCase();
+                            canShowReset = (role === 'admin' || role === 'phong_khcn' || role === 'thu_ky') && BUOC4_STATUSES.indexOf(status) >= 0 && !(m.buoc5 && (m.buoc5.trang_thai || '') === 'hoan_thanh');
+                        } catch(e) {}
+                        if (canShowReset) {
+                            html += '<div class="btn-reset-buoc4"><button type="button" onclick="event.stopPropagation();window.openResetModal(' + m.id + ',\'' + (nhanh || 'A') + '\',\'' + (m.level || '').replace(/\'/g, '\\\'') + '\')">⚠ Chuyển lại Bước 3 &amp; đổi nhánh</button></div>';
+                        }
+                        }
+                        html += '</div></div>';
+                    }
+                    if (key === 'cho_phe_duyet_chinh_thuc') {
+                        var b5 = m.buoc5 || {};
+                        var b5Done = (b5.trang_thai || '') === 'hoan_thanh';
+                        var b4a = m.buoc4a || {};
+                        var b4b = m.buoc4b || {};
+                        var boYeuCau = (b4a.bo_noi_dung_yc || b4a.noi_dung_chinh_sua || b4b.noi_dung_yc || '').trim();
+                        var tmLs = m.buoc5_thuyet_minh_ls || [];
+                        var hasTmUpload = tmLs.length > 0;
+                        html += '<div class="stage-expand"><div class="stage-expand-inner" onclick="event.stopPropagation()">';
+                        html += '<p style="margin:0 0 8px 0;font-weight:600;color:#333;">Bước 5 — Chờ phê duyệt chính thức &amp; hoàn chỉnh thuyết minh</p>';
+                        html += '<p style="margin:0 0 12px 0;font-size:13px;color:#666;">Sau khi lọt danh mục (Nhánh A) hoặc được tuyển chọn (Nhánh B), hoàn chỉnh thuyết minh theo biên bản thẩm định rồi nhập QĐ phê duyệt.</p>';
+                        html += '<div class="buoc4-substeps" style="display:flex;gap:12px;margin:16px 0;flex-wrap:wrap;align-items:center;">';
+                        html += '<span class="' + (b5Done ? 'substep-done' : (hasTmUpload ? 'substep-done' : 'substep-active')) + '">① Hoàn chỉnh thuyết minh</span><span style="color:#ccc;">─</span>';
+                        html += '<span class="' + (b5Done ? 'substep-done' : 'substep-active') + '">② Nhận QĐ phê duyệt</span>';
+                        html += '</div>';
+                        if (!b5Done) {
+                            html += '<div style="margin-top:16px;padding:16px;background:#f8f9fa;border-radius:8px;border:1px solid #e0e0e0;">';
+                            html += '<h4 style="margin:0 0 12px 0;font-size:15px;">Sub-bước 1: Hoàn chỉnh thuyết minh theo yêu cầu cơ quan</h4>';
+                            if (boYeuCau) html += '<div style="margin-bottom:12px;padding:10px;background:#fff3e0;border-radius:6px;font-size:13px;"><strong>Yêu cầu chỉnh sửa từ biên bản thẩm định:</strong><p style="margin:6px 0 0 0;white-space:pre-wrap;">' + (boYeuCau || '').replace(/</g,'&lt;') + '</p></div>';
+                            html += '<form id="formBuoc5UploadTM-' + m.id + '" onsubmit="return window.submitBuoc5UploadTM(event, ' + m.id + ')" style="margin-bottom:16px;">';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Upload thuyết minh hoàn chỉnh *</label><input type="file" id="tmHoanChinhFile-' + m.id + '" accept=".pdf,.doc,.docx" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc5_thuyet_minh\',\'tm_file_id\')"><input type="hidden" name="file_id" id="tm_file_id-' + m.id + '"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Phiên bản</label><input type="text" name="phien_ban" placeholder="VD: v2.1" style="width:100%;max-width:120px;padding:8px;"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ghi chú thay đổi</label><textarea name="ghi_chu_thay_doi" rows="2" style="width:100%;padding:8px;"></textarea></div>';
+                            html += '<button type="submit" class="btn-step2 btn-supplement" style="margin-bottom:0;">Lưu thuyết minh hoàn chỉnh</button></form>';
+                            if (tmLs.length > 0) {
+                                html += '<div style="margin-top:12px;"><strong>Lịch sử phiên bản:</strong></div>';
+                                tmLs.forEach(function(tm, i) {
+                                    html += '<div style="padding:8px 10px;background:#fff;border-radius:6px;margin-top:6px;font-size:13px;">' + (tm.phien_ban || 'v' + (i+1)) + ' — ' + formatDate(tm.created_at) + (tm.ghi_chu ? ' — ' + (tm.ghi_chu || '').replace(/</g,'&lt;') : '') + '</div>';
+                                });
+                            }
+                            html += '</div>';
+                            html += '<div style="margin-top:16px;padding:16px;background:#fff;border-radius:8px;border:1px solid #e0e0e0;">';
+                            html += '<h4 style="margin:0 0 16px 0;font-size:15px;">Sub-bước 2: Nhận Quyết định phê duyệt chính thức</h4>';
+                            html += '<form id="formBuoc5NhanQD-' + m.id + '" onsubmit="return window.submitBuoc5NhanQD(event, ' + m.id + ')">';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Số QĐ phê duyệt *</label><input type="text" name="so_qd" placeholder="VD: 1234/QĐ-BGDĐT" required style="width:100%;max-width:300px;padding:8px;"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ngày ký QĐ *</label><input type="date" name="ngay_ky" required style="width:100%;max-width:200px;padding:8px;"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Cơ quan ký *</label><input type="text" name="co_quan_ky" required style="width:100%;max-width:300px;padding:8px;"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Upload file QĐ *</label><input type="file" id="qdFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc5_qd_phe_duyet\',\'qd_file_id\')"><input type="hidden" name="file_id" id="qd_file_id-' + m.id + '"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Mã đề tài chính thức</label><input type="text" name="ma_de_tai_chinh_thuc" style="width:100%;max-width:200px;padding:8px;"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Tổng kinh phí được duyệt (triệu đồng) *</label><input type="number" name="kinh_phi" step="0.01" required style="width:100%;max-width:150px;padding:8px;"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Thời gian thực hiện *</label><input type="date" name="thoi_gian_bd" required style="padding:8px;margin-right:8px;"> đến <input type="date" name="thoi_gian_kt" required style="padding:8px;"></div>';
+                            html += '<button type="submit" class="btn-step2 btn-approve">Xác nhận đã có QĐ phê duyệt →</button></form></div>';
+                        } else {
+                            html += '<div style="margin-top:16px;padding:16px;background:#e8f5e9;border-radius:8px;border-left:4px solid #4caf50;"><p style="margin:0;font-weight:600;color:#2e7d32;">Đã có QĐ phê duyệt — chuyển Bước 6</p></div>';
+                        }
+                        html += '</div></div>';
+                    }
+                    if (key === 'cho_ky_hop_dong') {
+                        var b6 = m.buoc6 || {};
+                        var b6Done = !!b6.so_hd_ngoai;
+                        html += '<div class="stage-expand"><div class="stage-expand-inner" onclick="event.stopPropagation()">';
+                        html += '<p style="margin:0 0 8px 0;font-weight:600;color:#333;">Bước 6 — Ký hợp đồng thực hiện</p>';
+                        if (m.buoc5 && m.buoc5.so_qd) html += '<p style="margin:0 0 12px 0;font-size:13px;color:#666;">QĐ phê duyệt: ' + (m.buoc5.so_qd || '').replace(/</g,'&lt;') + ' — ' + formatDate(m.buoc5.ngay_ky_qd) + '</p>';
+                        if (!b6Done) {
+                            html += '<form id="formBuoc6KyHD-' + m.id + '" onsubmit="return window.submitBuoc6KyHD(event, ' + m.id + ')" style="margin-top:16px;">';
+                            html += '<h4 style="margin:0 0 12px 0;font-size:14px;">Hợp đồng với cơ quan ngoài</h4>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Số hợp đồng *</label><input type="text" name="so_hd_ngoai" required style="width:100%;max-width:250px;padding:8px;"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ngày ký *</label><input type="date" name="ngay_ky_ngoai" required style="width:100%;max-width:200px;padding:8px;"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Giá trị hợp đồng (triệu đồng) *</label><input type="number" name="gia_tri_hd" step="0.01" required style="width:100%;max-width:150px;padding:8px;"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Upload hợp đồng *</label><input type="file" id="hdNgoaiFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc6_hd_ngoai\',\'file_hd_ngoai_id\')"><input type="hidden" name="file_hd_ngoai_id" id="file_hd_ngoai_id-' + m.id + '"></div>';
+                            html += '<h4 style="margin:16px 0 12px 0;font-size:14px;">Hợp đồng nội bộ Viện – CN</h4>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Số hợp đồng nội bộ *</label><input type="text" name="so_hd_noi_bo" required style="width:100%;max-width:250px;padding:8px;"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ngày ký nội bộ *</label><input type="date" name="ngay_ky_noi_bo" required style="width:100%;max-width:200px;padding:8px;"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Upload hợp đồng nội bộ *</label><input type="file" id="hdNoiBoFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc6_hd_noi_bo\',\'file_hd_noi_bo_id\')"><input type="hidden" name="file_hd_noi_bo_id" id="file_hd_noi_bo_id-' + m.id + '"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Phí quản lý (triệu đồng, mặc định 3%)</label><input type="number" name="phi_quan_ly" step="0.01" placeholder="Tự tính" style="width:100%;max-width:150px;padding:8px;"></div>';
+                            html += '<button type="submit" class="btn-step2 btn-approve">Xác nhận đã ký hợp đồng →</button></form>';
+                        } else {
+                            html += '<div style="margin-top:16px;padding:16px;background:#e8f5e9;border-radius:8px;border-left:4px solid #4caf50;"><p style="margin:0;font-weight:600;color:#2e7d32;">Đã ký hợp đồng — Đề tài bắt đầu thực hiện</p></div>';
+                        }
+                        html += '</div></div>';
+                    }
+                    if (key === 'planning') {
+                        var ngayNop = m.created_at ? formatDate(m.created_at) : '—';
+                        var tenDeTai = (m.title || '—').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                        var chuNhiem = (m.principal || '—').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                        var mucTieu = (m.objectives || '—').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                        html += '<div class="stage-expand"><div class="stage-expand-inner" onclick="event.stopPropagation()">';
+                        html += '<div class="detail-row"><div class="detail-label">Ngày nộp đề xuất</div><div class="detail-value">' + ngayNop + '</div></div>';
+                        html += '<div class="detail-row"><div class="detail-label">Tên đề tài</div><div class="detail-value">' + tenDeTai + '</div></div>';
+                        html += '<div class="detail-row"><div class="detail-label">Chủ nhiệm</div><div class="detail-value">' + chuNhiem + '</div></div>';
+                        html += '<div class="detail-row"><div class="detail-label">Mục tiêu nghiên cứu</div><div class="detail-value" style="white-space:pre-wrap;">' + mucTieu + '</div></div>';
+                        html += '<div class="files-list"><div class="detail-label" style="margin-bottom:8px;">Hồ sơ đăng ký</div><div class="planning-files-list" data-mission-id="' + m.id + '">Đang tải...</div></div>';
+                        html += '</div></div>';
+                    }
+                    html += '</div>';
+                });
+            });
+
+            var lichSuDoiNhanh = m.lich_su_doi_nhanh || [];
+            if (lichSuDoiNhanh.length > 0) {
+                html += '<div class="phase-header" style="margin-top:30px;">Lịch sử</div>';
+                html += '<div class="stage-card" style="border-left-color:#9c27b0;"><div class="stage-header"><div class="stage-icon" style="background:#9c27b0;color:white;">↻</div><div class="stage-info" style="flex:1;"><p style="margin:0 0 8px 0;font-weight:600;color:#333;">Đổi nhánh &amp; reset</p><p style="margin:0;font-size:13px;color:#666;">' + lichSuDoiNhanh.length + ' lần đổi nhánh</p></div></div>';
+                html += '<div class="stage-expand" style="max-height:2000px;"><div class="stage-expand-inner" style="padding:20px 22px;">';
+                lichSuDoiNhanh.forEach(function(d, i) {
+                    var capCuLabel = LEVEL_LABELS[d.cap_cu] || d.cap_cu || '—';
+                    var capMoiLabel = LEVEL_LABELS[d.cap_moi] || d.cap_moi || '—';
+                    html += '<div style="margin-bottom:16px;padding:14px;background:#f8f9fa;border-radius:8px;border-left:4px solid #9c27b0;">';
+                    html += '<div style="font-weight:600;margin-bottom:6px;">' + formatDateTime(d.reset_luc) + ' — ' + (d.reset_boi || '—') + '</div>';
+                    html += '<div style="font-size:13px;margin-bottom:4px;">Đổi nhánh ' + (d.nhanh_cu || '') + ' → ' + (d.nhanh_moi || '') + '</div>';
+                    html += '<div style="font-size:13px;margin-bottom:4px;">Cấp: ' + capCuLabel + ' → ' + capMoiLabel + '</div>';
+                    html += '<div style="font-size:13px;margin-bottom:8px;">Lý do: ' + (d.ly_do || '').replace(/</g,'&lt;') + '</div>';
+                    html += '<details><summary style="cursor:pointer;font-size:12px;color:#666;">▶ Xem snapshot Bước 4 lúc reset</summary>';
+                    html += '<pre style="margin-top:8px;padding:10px;background:#fff;border-radius:6px;font-size:11px;max-height:200px;overflow:auto;white-space:pre-wrap;">' + (d.buoc4_snapshot ? (d.buoc4_snapshot || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').substring(0,2000) + (d.buoc4_snapshot.length > 2000 ? '...' : '') : '—') + '</pre></details>';
+                    html += '</div>';
+                });
+                html += '</div></div></div>';
+            }
+            html += '<div class="phase-header" style="margin-top:30px;">Hồ sơ nộp cơ quan ngoài</div>';
+            html += '<div class="stage-card completed" style="border-left-color:#4caf50;"><div class="stage-header"><div class="stage-icon" style="background:#4caf50;color:white;">📁</div><div class="stage-info" style="flex:1;"><p style="margin:0 0 8px 0;color:#666;font-size:14px;">Mẫu do Bộ/ĐHQG quy định. Hệ thống chỉ lưu trữ file đã nộp.</p>';
+            html += '<div id="hoSoNgoaiListTimeline"></div>';
+            html += '<div id="hoSoNgoaiFormTimeline" style="margin-top:15px;padding-top:15px;border-top:1px solid #e0e0e0;"><h5 style="margin-bottom:10px;font-size:14px;">Nộp hồ sơ mới</h5>';
+            html += '<form id="formHoSoNgoaiTimeline" onsubmit="return window.submitHoSoNgoaiTimeline(event)"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;"><div><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">File (PDF, Word, Excel)</label><input type="file" id="hoSoNgoaiFileTimeline" accept=".pdf,.doc,.docx,.xls,.xlsx" required style="width:100%;padding:8px;"></div><div><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Ngày nộp</label><input type="date" id="hoSoNgoaiDateTimeline" style="width:100%;padding:8px;"></div></div><div style="margin-bottom:12px;"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Ghi chú</label><textarea id="hoSoNgoaiNoteTimeline" rows="2" placeholder="VD: Nộp Bộ KHCN, số công văn..." style="width:100%;padding:8px;border:1px solid #e0e0e0;border-radius:6px;"></textarea></div><button type="submit" class="btn-back" style="margin:0;">Nộp hồ sơ</button></form></div></div></div>';
+
+            contentEl.innerHTML = html;
+            window._missionIdForHoSo = m.id;
+            window._missionData = m;
+            loadHoSoNgoaiTimeline(m.id);
+            if (window._buoc3ForceExpand) window._buoc3ForceExpand = false;
+        }
+
+        function loadHoSoNgoaiTimeline(missionId) {
+            var listEl = document.getElementById('hoSoNgoaiListTimeline');
+            if (!listEl) return;
+            fetch(apiBase + '/api/missions/' + missionId + '/ho-so-ngoai')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var files = data.files || [];
+                    if (files.length === 0) {
+                        listEl.innerHTML = '<p style="color:#999;font-size:13px;">Chưa có hồ sơ nào được nộp.</p>';
+                        return;
+                    }
+                    var html = '<table style="width:100%;font-size:13px;border-collapse:collapse;"><thead><tr style="background:#f8f9fa;"><th style="padding:10px;text-align:left;">File</th><th style="padding:10px;">Ngày nộp</th><th style="padding:10px;">Ghi chú</th><th style="padding:10px;"></th></tr></thead><tbody>';
+                    files.forEach(function(f) {
+                        var subDate = f.submission_date ? formatDate(f.submission_date) : '—';
+                        var note = (f.note || '').trim() ? (f.note || '').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '—';
+                        var safeName = (f.original_name || 'file').replace(/"/g, '');
+                        html += '<tr style="border-bottom:1px solid #eee;"><td style="padding:10px;">' + (f.original_name || '—').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</td><td style="padding:10px;">' + subDate + '</td><td style="padding:10px;">' + note + '</td><td style="padding:10px;"><button type="button" onclick="window.downloadHoSoNgoaiTimeline(' + missionId + ',' + f.id + ',\'' + safeName.replace(/'/g, "\\'") + '\')" style="font-size:12px;padding:4px 10px;cursor:pointer;border:none;background:#667eea;color:white;border-radius:6px;">Tải</button></td></tr>';
+                    });
+                    html += '</tbody></table>';
+                    listEl.innerHTML = html;
+                })
+                .catch(function() { listEl.innerHTML = '<p style="color:#c00;font-size:13px;">Lỗi tải danh sách hồ sơ.</p>'; });
+        }
+
+        window.submitHoSoNgoaiTimeline = function(e) {
+            e.preventDefault();
+            var missionId = window._missionIdForHoSo || id || 0;
+            if (!missionId) { alert('Thiếu thông tin đề tài.'); return false; }
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập để nộp hồ sơ.'); return false; }
+            var fileInput = document.getElementById('hoSoNgoaiFileTimeline');
+            if (!fileInput || !fileInput.files || !fileInput.files[0]) { alert('Vui lòng chọn file.'); return false; }
+            var fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+            var dateVal = document.getElementById('hoSoNgoaiDateTimeline').value;
+            if (dateVal) fd.append('submission_date', dateVal);
+            var noteVal = (document.getElementById('hoSoNgoaiNoteTimeline') || {}).value.trim();
+            if (noteVal) fd.append('note', noteVal);
+            var btn = e.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Đang nộp...'; }
+            fetch(apiBase + '/api/missions/' + missionId + '/ho-so-ngoai', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: fd
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Nộp hồ sơ'; }
+                    if (res.ok) {
+                        fileInput.value = '';
+                        var dEl = document.getElementById('hoSoNgoaiDateTimeline'); if (dEl) dEl.value = '';
+                        var nEl = document.getElementById('hoSoNgoaiNoteTimeline'); if (nEl) nEl.value = '';
+                        loadHoSoNgoaiTimeline(missionId);
+                        alert(res.data.message || 'Đã lưu hồ sơ.');
+                    } else {
+                        alert(res.data.message || 'Nộp hồ sơ thất bại.');
+                    }
+                })
+                .catch(function() {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Nộp hồ sơ'; }
+                    alert('Lỗi kết nối.');
+                });
+            return false;
+        };
+
+        window.loadBuoc4aContent = function(missionId) {
+            var thanhPhanEl = document.getElementById('buoc4a-thanh-phan-' + missionId);
+            if (!thanhPhanEl) return;
+            var token = localStorage.getItem('token');
+            if (!token) {
+                thanhPhanEl.innerHTML = '<p style="color:#c00;font-size:13px;">Vui lòng đăng nhập (Phòng KHCN) để lên lịch họp.</p>';
+                return;
+            }
+            fetch(apiBase + '/api/users/council', { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var users = data.council || data.users || data || [];
+                    if (users.length === 0) {
+                        thanhPhanEl.innerHTML = '<p style="color:#999;font-size:13px;">Chưa có thành viên Hội đồng. Liên hệ Admin.</p>';
+                        return;
+                    }
+                    var html = '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+                    users.forEach(function(u) {
+                        var label = (u.fullname || u.email || 'User #' + u.id).replace(/</g,'&lt;');
+                        var roleLabel = u.role === 'chu_tich' ? ' (CT HĐ)' : u.role === 'thu_ky' ? ' (TK)' : '';
+                        html += '<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#f5f5f5;border-radius:6px;cursor:pointer;font-size:13px;"><input type="checkbox" name="thanh_phan_ids" value="' + u.id + '">' + label + roleLabel + '</label>';
+                    });
+                    html += '</div><p style="margin-top:8px;font-size:12px;color:#666;">Chọn ít nhất 2 thành viên. CT HĐ KHCN phải có trong danh sách.</p>';
+                    thanhPhanEl.innerHTML = html;
+                    var form = document.getElementById('formBuoc4aLenLich-' + missionId);
+                    if (form) {
+                        var radios = form.querySelectorAll('input[name="hop_hinh_thuc"]');
+                        var diaDiem = document.getElementById('buoc4a-dia-diem-' + missionId);
+                        var linkEl = document.getElementById('buoc4a-link-' + missionId);
+                        function toggleHinhThuc() {
+                            var v = (form.querySelector('input[name="hop_hinh_thuc"]:checked') || {}).value;
+                            if (diaDiem) diaDiem.style.display = (v === 'offline' || v === 'hybrid') ? 'block' : 'none';
+                            if (linkEl) linkEl.style.display = (v === 'online' || v === 'hybrid') ? 'block' : 'none';
+                        }
+                        radios.forEach(function(r) { r.addEventListener('change', toggleHinhThuc); });
+                        toggleHinhThuc();
+                    }
+                })
+                .catch(function() {
+                    thanhPhanEl.innerHTML = '<p style="color:#c00;font-size:13px;">Lỗi tải danh sách Hội đồng.</p>';
+                });
+        };
+
+        window.submitBuoc4aLenLich = function(e, missionId) {
+            e.preventDefault();
+            var form = document.getElementById('formBuoc4aLenLich-' + missionId);
+            if (!form) return false;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return false; }
+            var hopNgay = (form.querySelector('[name="hop_ngay"]') || {}).value;
+            var hopHinhThuc = (form.querySelector('input[name="hop_hinh_thuc"]:checked') || {}).value;
+            if (!hopNgay || !hopHinhThuc) { alert('Vui lòng điền ngày giờ và hình thức họp.'); return false; }
+            var hopDiaDiem = (form.querySelector('[name="hop_dia_diem"]') || {}).value;
+            var hopLink = (form.querySelector('[name="hop_link"]') || {}).value;
+            if ((hopHinhThuc === 'offline' || hopHinhThuc === 'hybrid') && !hopDiaDiem) { alert('Vui lòng nhập địa điểm họp.'); return false; }
+            if ((hopHinhThuc === 'online' || hopHinhThuc === 'hybrid') && !hopLink) { alert('Vui lòng nhập link họp.'); return false; }
+            var checkboxes = form.querySelectorAll('input[name="thanh_phan_ids"]:checked');
+            var ids = [];
+            checkboxes.forEach(function(cb) { ids.push(parseInt(cb.value, 10)); });
+            if (ids.length < 2) { alert('Cần chọn ít nhất 2 thành viên Hội đồng.'); return false; }
+            var ghiChu = (form.querySelector('[name="ghi_chu"]') || {}).value;
+            if (!confirm('Gửi thông báo đến ' + ids.length + ' người?')) return false;
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Đang gửi...'; }
+            fetch(apiBase + '/api/missions/' + missionId + '/buoc4a/len-lich', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ hop_ngay: hopNgay, hop_hinh_thuc: hopHinhThuc, hop_dia_diem: hopDiaDiem || null, hop_link: hopLink || null, thanh_phan_ids: ids, ghi_chu: ghiChu || null })
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Gửi lịch & thông báo →'; }
+                    if (res.ok || res.data.success) {
+                        alert(res.data.message || 'Đã lên lịch họp.');
+                        loadMission(missionId);
+                    } else {
+                        alert(res.data.message || 'Lỗi.');
+                    }
+                })
+                .catch(function() {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Gửi lịch & thông báo →'; }
+                    alert('Lỗi kết nối.');
+                });
+            return false;
+        };
+
+        window.uploadBuoc4aFileFromInput = function(ev, missionId, fieldName, hiddenId) {
+            var fileInput = ev && ev.target;
+            if (!fileInput || !fileInput.files || !fileInput.files[0]) return;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return; }
+            var fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+            fd.append('field_name', fieldName);
+            fetch(apiBase + '/api/missions/' + missionId + '/files', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: fd
+            })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.file && data.file.id) {
+                        var hid = document.getElementById(hiddenId + '-' + missionId);
+                        if (hid) { hid.value = data.file.id; hid.setAttribute('data-uploaded', '1'); }
+                        alert('Đã upload file: ' + (data.file.original_name || ''));
+                    } else { alert(data.message || 'Lỗi upload'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+        };
+
+        window.submitBuoc4aKetQuaHop = function(e, missionId) {
+            e.preventDefault();
+            var form = document.getElementById('formBuoc4aKetQuaHop-' + missionId);
+            if (!form) return false;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return false; }
+            var bienBanId = (form.querySelector('[name="bien_ban_file_id"]') || {}).value;
+            if (!bienBanId) { alert('Vui lòng upload biên bản họp HĐ.'); return false; }
+            var ketLuan = (form.querySelector('input[name="ket_luan"]:checked') || {}).value;
+            if (ketLuan === 'thong_qua_co_chinh_sua') {
+                var nd = (form.querySelector('[name="noi_dung_chinh_sua"]') || {}).value;
+                var han = (form.querySelector('[name="han_chinh_sua"]') || {}).value;
+                if (!nd || !han) { alert('Thông qua có chỉnh sửa cần nội dung và hạn.'); return false; }
+            }
+            if (ketLuan === 'khong_thong_qua') {
+                var lyDo = (form.querySelector('[name="ly_do"]') || {}).value;
+                if (!lyDo) { alert('Không thông qua cần lý do.'); return false; }
+            }
+            if (!confirm('Xác nhận lưu? Không thể chỉnh sửa sau khi lưu.')) return false;
+            var body = {
+                ngay_hop_thuc_te: (form.querySelector('[name="ngay_hop_thuc_te"]') || {}).value,
+                ket_luan: ketLuan,
+                noi_dung_chinh_sua: (form.querySelector('[name="noi_dung_chinh_sua"]') || {}).value || null,
+                han_chinh_sua: (form.querySelector('[name="han_chinh_sua"]') || {}).value || null,
+                ly_do: (form.querySelector('[name="ly_do"]') || {}).value || null,
+                nhan_xet: (form.querySelector('[name="nhan_xet"]') || {}).value || null,
+                bien_ban_file_id: parseInt(bienBanId, 10)
+            };
+            fetch(apiBase + '/api/missions/' + missionId + '/buoc4a/ket-qua-hop', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(body)
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok || res.data.success) { alert(res.data.message || 'Đã lưu.'); loadMission(); }
+                    else { alert(res.data.message || 'Lỗi.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+            return false;
+        };
+
+        window.submitBuoc4aGuiBo = function(e, missionId) {
+            e.preventDefault();
+            var form = document.getElementById('formBuoc4aGuiBo-' + missionId);
+            if (!form) return false;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return false; }
+            var danhMucId = (form.querySelector('[name="danh_muc_file_id"]') || {}).value;
+            if (!danhMucId) { alert('Vui lòng upload file danh mục.'); return false; }
+            var body = {
+                co_quan_nhan: (form.querySelector('[name="co_quan_nhan"]') || {}).value,
+                danh_muc_file_id: parseInt(danhMucId, 10),
+                ngay_gui: (form.querySelector('[name="ngay_gui"]') || {}).value,
+                hinh_thuc_gui: (form.querySelector('input[name="hinh_thuc_gui"]:checked') || {}).value || null,
+                nguoi_nhan: (form.querySelector('[name="nguoi_nhan"]') || {}).value || null,
+                ghi_chu: (form.querySelector('[name="ghi_chu"]') || {}).value || null
+            };
+            fetch(apiBase + '/api/missions/' + missionId + '/buoc4a/gui-bo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(body)
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok || res.data.success) { alert(res.data.message || 'Đã lưu.'); loadMission(); }
+                    else { alert(res.data.message || 'Lỗi.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+            return false;
+        };
+
+        window.submitBuoc4aKetQuaBo = function(e, missionId) {
+            e.preventDefault();
+            var form = document.getElementById('formBuoc4aKetQuaBo-' + missionId);
+            if (!form) return false;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return false; }
+            var ketQua = (form.querySelector('input[name="ket_qua"]:checked') || {}).value;
+            if (ketQua === 'yeu_cau_chinh_sua') {
+                var nd = (form.querySelector('[name="noi_dung_yc"]') || {}).value;
+                var han = (form.querySelector('[name="han_yc"]') || {}).value;
+                if (!nd || !han) { alert('Yêu cầu chỉnh sửa cần nội dung và hạn.'); return false; }
+            }
+            var body = {
+                ngay_nhan: (form.querySelector('[name="ngay_nhan"]') || {}).value,
+                ket_qua: ketQua,
+                noi_dung_yc: (form.querySelector('[name="noi_dung_yc"]') || {}).value || null,
+                han_yc: (form.querySelector('[name="han_yc"]') || {}).value || null,
+                ly_do: (form.querySelector('[name="ly_do"]') || {}).value || null,
+                van_ban_file_id: (form.querySelector('[name="van_ban_file_id"]') || {}).value || null,
+                ghi_chu: (form.querySelector('[name="ghi_chu"]') || {}).value || null
+            };
+            if (body.van_ban_file_id) body.van_ban_file_id = parseInt(body.van_ban_file_id, 10);
+            fetch(apiBase + '/api/missions/' + missionId + '/buoc4a/ket-qua-bo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(body)
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok || res.data.success) { alert(res.data.message || 'Đã lưu.'); loadMission(); }
+                    else { alert(res.data.message || 'Lỗi.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+            return false;
+        };
+
+        window.buoc4aChinhLich = function(missionId) {
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return; }
+            var hopNgay = prompt('Ngày giờ họp mới (VD: 2026-03-20T14:00):');
+            if (!hopNgay) return;
+            fetch(apiBase + '/api/missions/' + missionId + '/buoc4a/chinh-lich', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ hop_ngay: hopNgay })
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok || res.data.success) { alert(res.data.message || 'Đã cập nhật.'); loadMission(); }
+                    else { alert(res.data.message || 'Lỗi.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+        };
+
+        window.submitBuoc4bNopHoSo = function(e, missionId) {
+            e.preventDefault();
+            var form = document.getElementById('formBuoc4bNopHoSo-' + missionId);
+            if (!form) return false;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return false; }
+            var body = {
+                co_quan_nhan: (form.querySelector('[name="co_quan_nhan"]') || {}).value,
+                han_nop: (form.querySelector('[name="han_nop"]') || {}).value,
+                ngay_nop_thuc_te: (form.querySelector('[name="ngay_nop_thuc_te"]') || {}).value,
+                hinh_thuc_nop: (form.querySelector('[name="hinh_thuc_nop"]') || {}).value || null,
+                ma_ho_so: (form.querySelector('[name="ma_ho_so"]') || {}).value || null,
+                ghi_chu: (form.querySelector('[name="ghi_chu"]') || {}).value || null
+            };
+            fetch(apiBase + '/api/missions/' + missionId + '/buoc4b/nop-ho-so', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(body)
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok || res.data.success) { alert(res.data.message || 'Đã lưu.'); loadMission(); }
+                    else { alert(res.data.message || 'Lỗi.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+            return false;
+        };
+
+        window.submitBuoc4bKetQua = function(e, missionId) {
+            e.preventDefault();
+            var form = document.getElementById('formBuoc4bKetQua-' + missionId);
+            if (!form) return false;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return false; }
+            var ketQua = (form.querySelector('input[name="ket_qua"]:checked') || {}).value;
+            var body = {
+                ket_qua: ketQua,
+                noi_dung_yc: (form.querySelector('[name="noi_dung_yc"]') || {}).value || null,
+                han_yc: (form.querySelector('[name="han_yc"]') || {}).value || null,
+                ly_do: (form.querySelector('[name="ly_do"]') || {}).value || null
+            };
+            if (ketQua === 'yeu_cau_chinh_sua' && body.noi_dung_yc && body.han_yc) { /* ok */ }
+            fetch(apiBase + '/api/missions/' + missionId + '/buoc4b/ket-qua', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(body)
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok || res.data.success) { alert(res.data.message || 'Đã lưu.'); loadMission(); }
+                    else { alert(res.data.message || 'Lỗi.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+            return false;
+        };
+
+        window.buoc4aChuyenBuoc5 = function(missionId) {
+            if (!confirm('Xác nhận chuyển sang Bước 5?')) return;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/buoc4a/chuyen-buoc5', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok || res.data.success) { alert(res.data.message || 'Đã chuyển.'); loadMission(); }
+                    else { alert(res.data.message || 'Lỗi.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+        };
+
+        window.submitBuoc5UploadTM = function(e, missionId) {
+            e.preventDefault();
+            var form = document.getElementById('formBuoc5UploadTM-' + missionId);
+            if (!form) return false;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return false; }
+            var fileId = (form.querySelector('[name="file_id"]') || {}).value;
+            if (!fileId) { alert('Vui lòng upload file thuyết minh.'); return false; }
+            var body = {
+                file_id: parseInt(fileId, 10),
+                phien_ban: (form.querySelector('[name="phien_ban"]') || {}).value || null,
+                ghi_chu_thay_doi: (form.querySelector('[name="ghi_chu_thay_doi"]') || {}).value || null
+            };
+            fetch(apiBase + '/api/missions/' + missionId + '/buoc5/upload-thuyet-minh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(body)
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok || res.data.success) { alert(res.data.message || 'Đã lưu.'); loadMission(); }
+                    else { alert(res.data.message || 'Lỗi.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+            return false;
+        };
+
+        window.submitBuoc5NhanQD = function(e, missionId) {
+            e.preventDefault();
+            var form = document.getElementById('formBuoc5NhanQD-' + missionId);
+            if (!form) return false;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return false; }
+            var fileId = (form.querySelector('[name="file_id"]') || {}).value;
+            if (!fileId) { alert('Vui lòng upload file QĐ phê duyệt.'); return false; }
+            var body = {
+                so_qd: (form.querySelector('[name="so_qd"]') || {}).value,
+                ngay_ky: (form.querySelector('[name="ngay_ky"]') || {}).value,
+                co_quan_ky: (form.querySelector('[name="co_quan_ky"]') || {}).value,
+                file_id: parseInt(fileId, 10),
+                ma_de_tai_chinh_thuc: (form.querySelector('[name="ma_de_tai_chinh_thuc"]') || {}).value || null,
+                kinh_phi: parseFloat((form.querySelector('[name="kinh_phi"]') || {}).value),
+                thoi_gian_bd: (form.querySelector('[name="thoi_gian_bd"]') || {}).value,
+                thoi_gian_kt: (form.querySelector('[name="thoi_gian_kt"]') || {}).value
+            };
+            fetch(apiBase + '/api/missions/' + missionId + '/buoc5/nhan-quyet-dinh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(body)
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok || res.data.success) { alert(res.data.message || 'Đã lưu.'); loadMission(); }
+                    else { alert(res.data.message || 'Lỗi.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+            return false;
+        };
+
+        window.submitBuoc6KyHD = function(e, missionId) {
+            e.preventDefault();
+            var form = document.getElementById('formBuoc6KyHD-' + missionId);
+            if (!form) return false;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return false; }
+            var hdNgoaiId = (form.querySelector('[name="file_hd_ngoai_id"]') || {}).value;
+            var hdNoiBoId = (form.querySelector('[name="file_hd_noi_bo_id"]') || {}).value;
+            if (!hdNgoaiId || !hdNoiBoId) { alert('Vui lòng upload đủ 2 file hợp đồng.'); return false; }
+            var giaTri = parseFloat((form.querySelector('[name="gia_tri_hd"]') || {}).value);
+            var body = {
+                so_hd_ngoai: (form.querySelector('[name="so_hd_ngoai"]') || {}).value,
+                ngay_ky_ngoai: (form.querySelector('[name="ngay_ky_ngoai"]') || {}).value,
+                gia_tri_hd: giaTri,
+                file_hd_ngoai_id: parseInt(hdNgoaiId, 10),
+                so_hd_noi_bo: (form.querySelector('[name="so_hd_noi_bo"]') || {}).value,
+                ngay_ky_noi_bo: (form.querySelector('[name="ngay_ky_noi_bo"]') || {}).value,
+                file_hd_noi_bo_id: parseInt(hdNoiBoId, 10),
+                phi_quan_ly: (form.querySelector('[name="phi_quan_ly"]') || {}).value ? parseFloat((form.querySelector('[name="phi_quan_ly"]') || {}).value) : giaTri * 0.03
+            };
+            fetch(apiBase + '/api/missions/' + missionId + '/buoc6/ky-hop-dong', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(body)
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok || res.data.success) { alert(res.data.message || 'Đã lưu.'); loadMission(); }
+                    else { alert(res.data.message || 'Lỗi.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+            return false;
+        };
+
+        window.downloadHoSoNgoaiTimeline = function(missionId, fileId, filename) {
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập để tải file.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/ho-so-ngoai/' + fileId + '/download', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('Lỗi tải file');
+                    return r.blob();
+                })
+                .then(function(blob) {
+                    var a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = filename || 'download';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                })
+                .catch(function() { alert('Lỗi tải file. Kiểm tra đăng nhập.'); });
+        };
+
+        window.toggleStepExpand = function(key, cardEl, missionId) {
+            if (!cardEl) return;
+            var isExpanded = cardEl.classList.contains('expanded');
+            cardEl.classList.toggle('expanded');
+            if (!isExpanded && key === 'xet_chon_phe_duyet') {
+                var contentEl = document.getElementById('buoc4a-content-' + missionId);
+                if (contentEl && contentEl.getAttribute('data-loaded') !== '1' && contentEl.getAttribute('data-nhanh') === 'A') {
+                    contentEl.setAttribute('data-loaded', '1');
+                    window.loadBuoc4aContent(missionId);
+                }
+            }
+            if (!isExpanded && key === 'planning') {
+                var listEl = cardEl.querySelector('.planning-files-list');
+                if (listEl && listEl.getAttribute('data-loaded') !== '1' && missionId) {
+                    listEl.setAttribute('data-loaded', '1');
+                    fetch(apiBase + '/api/missions/' + missionId + '/files')
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            var files = data.files || [];
+                            if (files.length === 0) {
+                                listEl.innerHTML = '<p style="color:#999;font-size:13px;">Chưa có file đăng ký.</p>';
+                                return;
+                            }
+                            var token = localStorage.getItem('token');
+                            var html = '';
+                            files.forEach(function(f) {
+                                var name = (f.original_name || 'file').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                                var label = (f.field_name === 'thuyet_minh_chi_tiet' ? 'Thuyết minh chi tiết' : (f.field_name === 'van_ban_xin_phep_vien_truong' ? 'Văn bản xin phép Viện trưởng' : 'File'));
+                                if (token) {
+                                    html += '<div class="file-item"><span>' + label + ': ' + name + '</span><a href="#" onclick="window.downloadRegistrationFile(' + missionId + ',' + f.id + ',\'' + name.replace(/'/g, "\\'") + '\'); return false;">Tải xuống</a></div>';
+                                } else {
+                                    html += '<div class="file-item"><span>' + label + ': ' + name + '</span><span style="color:#999;font-size:12px;">Đăng nhập để tải</span></div>';
+                                }
+                            });
+                            listEl.innerHTML = html;
+                        })
+                        .catch(function() {
+                            listEl.innerHTML = '<p style="color:#c00;font-size:13px;">Lỗi tải danh sách file.</p>';
+                        });
+                }
+            }
+        };
+
+        window.step2Approve = function(missionId) {
+            if (!confirm('Xác nhận chuyển đề tài sang bước 3 (Nộp cơ quan ngoài)? Hệ thống sẽ gửi email đến Hội đồng KHCN.')) return;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/step2-approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok) { alert(res.data.message || 'Đã chuyển sang bước 3.'); loadMission(); }
+                    else { alert(res.data.message || 'Thất bại.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+        };
+        window.step2RequestSupplement = function(missionId) {
+            var note = prompt('Nhập nội dung yêu cầu bổ sung (gửi đến Chủ nhiệm và Hội đồng):');
+            if (note === null) return;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/step2-request-supplement', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ note: note || '' })
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok) { alert(res.data.message || 'Đã gửi yêu cầu bổ sung.'); }
+                    else { alert(res.data.message || 'Thất bại.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+        };
+        window.step2Reject = function(missionId) {
+            var reason = prompt('Nhập lý do từ chối (gửi đến Hội đồng):');
+            if (reason === null) return;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/step2-reject', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ reason: reason || '' })
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok) { alert(res.data.message || 'Đã từ chối.'); loadMission(); }
+                    else { alert(res.data.message || 'Thất bại.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+        };
+
+        window.step3Confirm4A = function(missionId) {
+            if (!confirm('Xác nhận chuyển đề tài sang Bước 4A?')) return;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/step3-confirm-4a', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok) { alert(res.data.message || 'Đã chuyển Bước 4A.'); loadMission(); }
+                    else { alert(res.data.message || 'Thất bại.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+        };
+        window.step3Confirm4B = function(missionId) {
+            if (!confirm('Xác nhận chuyển đề tài sang Bước 4B?')) return;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/step3-confirm-4b', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok) { alert(res.data.message || 'Đã chuyển Bước 4B.'); loadMission(); }
+                    else { alert(res.data.message || 'Thất bại.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+        };
+        window.step3RequestRevision = function(missionId) {
+            if (!confirm('Yêu cầu Chủ nhiệm chỉnh sửa thuyết minh và nộp lại? CN sẽ nhận email thông báo.')) return;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/step3-request-revision', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok) { alert(res.data.message || 'Đã gửi yêu cầu.'); loadMission(); }
+                    else { alert(res.data.message || 'Thất bại.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+        };
+        window.step3StopMission = function(missionId) {
+            if (!confirm('Xác nhận dừng hồ sơ đợt này? Đề tài sẽ chuyển sang trạng thái "Dừng — không đạt đợt này".')) return;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/step3-stop', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (res.ok) { alert(res.data.message || 'Đã dừng hồ sơ.'); loadMission(); }
+                    else { alert(res.data.message || 'Thất bại.'); }
+                })
+                .catch(function() { alert('Lỗi kết nối.'); });
+        };
+
+        var _resetModalMissionId = 0;
+        window.openResetModal = function(missionId, nhanhHienTai, capHienTai) {
+            _resetModalMissionId = missionId;
+            var overlay = document.getElementById('modal-reset-overlay');
+            var badge = document.getElementById('modal-reset-nhanh-badge');
+            var nhanhLabel = nhanhHienTai === 'A' ? 'Nhánh A — Bộ GD/ĐHQG/Trường' : 'Nhánh B — Nhà nước/NAFOSTED';
+            var badgeColor = nhanhHienTai === 'A' ? '#e3f2fd' : '#f3e5f5';
+            var badgeBorder = nhanhHienTai === 'A' ? '#1976d2' : '#7b1fa2';
+            badge.innerHTML = '<span style="display:inline-block;padding:6px 12px;border-radius:6px;background:' + badgeColor + ';border-left:4px solid ' + badgeBorder + ';font-weight:600;">Nhánh hiện tại: ' + nhanhLabel + '</span>';
+            document.querySelectorAll('input[name="modal_nhanh_moi"]').forEach(function(r) { r.checked = false; });
+            document.getElementById('modal-reset-cap-a').style.display = 'none';
+            document.getElementById('modal-reset-cap-b').style.display = 'none';
+            document.getElementById('modal_ly_do').value = '';
+            document.getElementById('modal_ly_do_hint').textContent = '';
+            document.getElementById('modal_reset_confirm_btn').disabled = true;
+            document.getElementById('modal_reset_confirm_btn').style.background = '#9e9e9e';
+            document.getElementById('modal_reset_confirm_btn').style.cursor = 'not-allowed';
+            overlay.classList.remove('hidden');
+            overlay.onclick = function(e) { if (e.target === overlay) window.closeResetModal(); };
+            var updateCapVisibility = function() {
+                var v = document.querySelector('input[name="modal_nhanh_moi"]:checked');
+                document.getElementById('modal-reset-cap-a').style.display = (v && v.value === 'A') ? 'block' : 'none';
+                document.getElementById('modal-reset-cap-b').style.display = (v && v.value === 'B') ? 'block' : 'none';
+                window._checkResetModalValid();
+            };
+            document.querySelectorAll('input[name="modal_nhanh_moi"]').forEach(function(r) {
+                r.onchange = updateCapVisibility;
+            });
+            var checkValid = function() {
+                var lyDo = (document.getElementById('modal_ly_do').value || '').trim();
+                var nhanh = document.querySelector('input[name="modal_nhanh_moi"]:checked');
+                var cap = nhanh && nhanh.value === 'A' ? document.getElementById('modal_cap_moi_a').value : (nhanh && nhanh.value === 'B' ? document.getElementById('modal_cap_moi_b').value : '');
+                var ok = lyDo.length >= 20 && nhanh && cap;
+                document.getElementById('modal_reset_confirm_btn').disabled = !ok;
+                document.getElementById('modal_reset_confirm_btn').style.background = ok ? '#4caf50' : '#9e9e9e';
+                document.getElementById('modal_reset_confirm_btn').style.cursor = ok ? 'pointer' : 'not-allowed';
+                document.getElementById('modal_ly_do_hint').textContent = lyDo.length > 0 && lyDo.length < 20 ? 'Cần ít nhất 20 ký tự (' + lyDo.length + '/20)' : '';
+            };
+            window._checkResetModalValid = checkValid;
+            document.getElementById('modal_ly_do').oninput = checkValid;
+            document.getElementById('modal_cap_moi_a').onchange = checkValid;
+            document.getElementById('modal_cap_moi_b').onchange = checkValid;
+            document.getElementById('modal_reset_confirm_btn').onclick = function() {
+                if (document.getElementById('modal_reset_confirm_btn').disabled) return;
+                window.submitResetVeBuoc3(_resetModalMissionId);
+            };
+        };
+        window.closeResetModal = function() {
+            document.getElementById('modal-reset-overlay').classList.add('hidden');
+        };
+        window.submitResetVeBuoc3 = function(missionId) {
+            var nhanh = document.querySelector('input[name="modal_nhanh_moi"]:checked');
+            var cap = nhanh && nhanh.value === 'A' ? document.getElementById('modal_cap_moi_a').value : (nhanh && nhanh.value === 'B' ? document.getElementById('modal_cap_moi_b').value : '');
+            var lyDo = (document.getElementById('modal_ly_do').value || '').trim();
+            if (!nhanh || !cap || lyDo.length < 20) return;
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập.'); return; }
+            document.getElementById('modal_reset_confirm_btn').disabled = true;
+            fetch(apiBase + '/api/missions/' + missionId + '/reset-ve-buoc3', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ nhanh_moi: nhanh.value, cap_moi: cap, ly_do: lyDo })
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    window.closeResetModal();
+                    if (res.ok) {
+                        alert(res.data.message || 'Đã chuyển lại Bước 3.');
+                        window._buoc3ForceExpand = true;
+                        loadMission();
+                        setTimeout(function() {
+                            var card = document.querySelector('.stage-card[data-step="cho_ct_hd_xet_duyet"]');
+                            if (card && !card.classList.contains('expanded')) {
+                                card.classList.add('expanded');
+                                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }, 300);
+                    } else {
+                        alert(res.data.message || 'Thất bại.');
+                        document.getElementById('modal_reset_confirm_btn').disabled = false;
+                    }
+                })
+                .catch(function() {
+                    alert('Lỗi kết nối.');
+                    document.getElementById('modal_reset_confirm_btn').disabled = false;
+                });
+        };
+
+        window.step3ExportPhieuPDF = function(missionId) {
+            var m = window._missionData;
+            if (!m || m.id !== missionId) {
+                alert('Đang tải dữ liệu...');
+                return;
+            }
+            var kq = m.buoc3_ket_qua || '';
+            var kqLabel = kq === 'dong_y' ? 'Đồng ý cho phát hành hồ sơ' : kq === 'dong_y_co_dieu_kien' ? 'Đồng ý có điều kiện' : kq === 'khong_dong_y' ? 'Không đồng ý' : kq;
+            var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Phiếu nhận xét - ' + (m.title || '').replace(/</g,'&lt;') + '</title><style>body{font-family:Segoe UI,sans-serif;padding:24px;max-width:700px;margin:0 auto;} h1{font-size:18px;border-bottom:2px solid #333;padding-bottom:8px;} .row{margin:12px 0;} .label{font-weight:600;font-size:12px;color:#555;margin-bottom:4px;} .value{font-size:14px;}</style></head><body>';
+            html += '<h1>PHIẾU NHẬN XÉT CỦA CT HĐ KHCN</h1>';
+            html += '<div class="row"><div class="label">Đề tài</div><div class="value">' + (m.title || '—').replace(/</g,'&lt;') + '</div></div>';
+            html += '<div class="row"><div class="label">Chủ nhiệm</div><div class="value">' + (m.principal || '—').replace(/</g,'&lt;') + '</div></div>';
+            html += '<div class="row"><div class="label">Kết luận</div><div class="value">' + kqLabel + '</div></div>';
+            html += '<div class="row"><div class="label">Đánh giá tính khoa học & tính mới</div><div class="value">' + (m.buoc3_nhan_xet_khoa_hoc || '—').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div></div>';
+            html += '<div class="row"><div class="label">Đánh giá tính khả thi</div><div class="value">' + (m.buoc3_nhan_xet_kha_thi || '—').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div></div>';
+            html += '<div class="row"><div class="label">Phù hợp định hướng KH&CN Viện</div><div class="value">' + (m.buoc3_nhan_xet_dinh_huong || '—').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div></div>';
+            html += '<div class="row"><div class="label">Năng lực chủ nhiệm</div><div class="value">' + (m.buoc3_nhan_xet_nang_luc || '—').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div></div>';
+            if (m.buoc3_dieu_kien) html += '<div class="row"><div class="label">Điều kiện cụ thể</div><div class="value">' + (m.buoc3_dieu_kien || '').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div></div>';
+            if (m.buoc3_ly_do_tu_choi) html += '<div class="row"><div class="label">Lý do từ chối</div><div class="value">' + (m.buoc3_ly_do_tu_choi || '').replace(/</g,'&lt;').replace(/\n/g,'<br>') + '</div></div>';
+            html += '</body></html>';
+            var w = window.open('', '_blank');
+            w.document.write(html);
+            w.document.close();
+            w.focus();
+            setTimeout(function() { w.print(); }, 300);
+        };
+
+        window.downloadRegistrationFile = function(missionId, fileId, filename) {
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập để tải file.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/files/' + fileId + '/download', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('Lỗi tải file');
+                    return r.blob();
+                })
+                .then(function(blob) {
+                    var a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = filename || 'download';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                })
+                .catch(function() { alert('Lỗi tải file. Kiểm tra đăng nhập.'); });
+        };
+
+        loadMission();
+    })();
+    </script>
+</body>
+</html>

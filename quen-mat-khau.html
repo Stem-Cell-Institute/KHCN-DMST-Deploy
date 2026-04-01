@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quên mật khẩu - SCI-ACE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .auth-page { max-width: 440px; margin: 3rem auto; padding: 0 1rem; }
+        .auth-card { background: var(--white); padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); }
+        .auth-card h2 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem; }
+        .auth-card .note { font-size: 0.9rem; color: var(--gray); margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 0.4rem; }
+        .form-group input { width: 100%; padding: 0.75rem 1rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; }
+        .form-group input:focus { outline: none; border-color: var(--primary); }
+        .btn-block { width: 100%; padding: 1rem; font-size: 1.05rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; background: var(--primary); color: var(--white); }
+        .btn-block:hover { background: var(--primary-light); }
+        .btn-block:disabled { opacity: 0.6; cursor: not-allowed; }
+        .auth-footer { text-align: center; margin-top: 1.5rem; color: var(--gray); font-size: 0.95rem; }
+        .auth-footer a { color: var(--primary); font-weight: 500; }
+        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .msg.error { background: #f8d7da; color: #721c24; display: block; }
+        .msg.success { background: #d4edda; color: #155724; display: block; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">ACE-SCI</a>
+                <div class="header-text">
+                    <h1>Quên mật khẩu</h1>
+                    <p>Hệ thống SCI-ACE</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">🏠 Trang chủ</a>
+            <div class="nav-dropdown">
+                <span class="nav-dropdown-trigger">📤 Nộp hồ sơ ▾</span>
+                <div class="nav-dropdown-menu">
+                    <a href="nop-ho-so.html">Nộp hồ sơ (Nghiên cứu viên)</a>
+                    <a href="hoi-dong.html">Khu vực Hội đồng (xem hồ sơ đã nộp)</a>
+                    <a href="quan-tri.html">Quản trị (Admin)</a>
+                </div>
+            </div>
+            <a href="dang-nhap.html">🔐 Đăng nhập</a>
+            <a href="dang-ky.html">📝 Đăng ký</a>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="auth-page">
+            <div class="auth-card">
+                <h2>Lấy lại mật khẩu</h2>
+                <p class="note">Nhập email đăng ký tài khoản. Nếu email tồn tại trong hệ thống, bạn sẽ nhận được link đặt lại mật khẩu qua email (link có hiệu lực 1 giờ).</p>
+                <div id="msg" class="msg"></div>
+                <form id="form-quen-mat-khau">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="Email của bạn" required autocomplete="email">
+                    </div>
+                    <button type="submit" class="btn-block" id="btn-submit">Gửi link đặt lại mật khẩu</button>
+                </form>
+                <p class="auth-footer"><a href="dang-nhap.html">← Quay lại đăng nhập</a></p>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="footer-bottom"><p>&copy; 2026 SCI-ACE. Phiên bản 1.0</p></div>
+        </div>
+    </footer>
+    <script>
+        const form = document.getElementById('form-quen-mat-khau');
+        const msgEl = document.getElementById('msg');
+        const btn = document.getElementById('btn-submit');
+
+        function showMsg(text, type) {
+            msgEl.textContent = text;
+            msgEl.className = 'msg ' + (type === 'error' ? 'error' : 'success');
+        }
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            msgEl.className = 'msg';
+            msgEl.textContent = '';
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: document.getElementById('email').value.trim() })
+                });
+                const data = await res.json().catch(() => ({}));
+                showMsg(data.message || 'Đã gửi. Kiểm tra hộp thư (và thư mục spam).', 'success');
+                if (!res.ok) showMsg(data.message || 'Có lỗi xảy ra.', 'error');
+            } catch (err) {
+                showMsg('Không thể kết nối máy chủ. Vui lòng chạy backend.', 'error');
+            }
+            btn.disabled = false;
+        });
+    </script>
+</body>
+</html>

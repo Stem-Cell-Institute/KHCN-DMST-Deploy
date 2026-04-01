@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORCID Auto-Harvest — SCI-KHCN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --surface: #ffffff;
+    --border: #d0cdc4;
+    --border-strong: #b0ada3;
+    --text: #1a1916;
+    --text-2: #4a4842;
+    --text-3: #787470;
+    --accent: #1c4f8a;
+    --accent-light: #e8f0fb;
+    --green: #1a5c3a;
+    --shadow-lg: 0 4px 24px rgba(0,0,0,.1);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .oh-page-header {
+    background: var(--accent);
+    color: #fff;
+    padding: 16px 28px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .oh-page-header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .oh-page-header .sub {
+    font-size: 12px;
+    opacity: .85;
+    max-width: 560px;
+    line-height: 1.45;
+  }
+  .oh-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .oh-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    background: #fff;
+    border-radius: 8px;
+    padding: 8px 14px;
+    text-decoration: none;
+    box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  }
+  .oh-back-link:hover { background: #eef4fc; }
+  .welcome-user {
+    font-size: 12px;
+    font-family: var(--mono);
+    background: rgba(255,255,255,.16);
+    border: 1px solid rgba(255,255,255,.24);
+    border-radius: 999px;
+    padding: 4px 10px;
+  }
+  .oh-page {
+    flex: 1;
+    max-width: 1680px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px 24px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 0;
+  }
+  .oh-top-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: stretch;
+    min-height: min(58vh, 680px);
+    flex: 0 0 auto;
+  }
+  @media (max-width: 1024px) {
+    .oh-top-grid { grid-template-columns: 1fr; min-height: auto; }
+  }
+  .oh-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    background: var(--surface);
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  .oh-title {
+    font-size: 11.5px;
+    font-family: var(--mono);
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .oh-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .oh-row input {
+    flex: 1;
+    min-width: 140px;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+  }
+  .oh-ncv-table-wrap {
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: auto;
+    max-height: min(42vh, 480px);
+  }
+  .oh-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .oh-table th, .oh-table td { border-bottom: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+  .oh-table th { background: var(--bg); font-family: var(--mono); font-size: 10px; text-transform: uppercase; color: var(--text-3); }
+  .oh-scan-column {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  #orcidChipsWrap { margin-bottom: 8px; }
+  .oh-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    background: #e9ecef;
+    color: #495057;
+    margin: 2px 6px 2px 0;
+  }
+  .oh-chip.checking { background: #fff3cd; color: #8a6d3b; }
+  .oh-chip.new { background: #d1e7dd; color: #0f5132; }
+  .oh-chip.none { background: #e2e3e5; color: #41464b; }
+  .oh-progress { width: 100%; height: 9px; background: #e9ecef; border-radius: 999px; overflow: hidden; margin: 8px 0; }
+  .oh-progress > div { height: 100%; width: 0; background: var(--accent); transition: width .2s linear; }
+  .oh-summary { font-size: 12px; color: var(--text-2); display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0 12px; }
+  .oh-summary b { font-family: var(--mono); }
+  .oh-log {
+    flex: 1;
+    min-height: 280px;
+    background: #0d0d0d;
+    color: #c8f5dc;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.5;
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid #222;
+  }
+  .oh-hint { font-size: 11px; color: var(--text-3); margin: 8px 0 10px; line-height: 1.5; }
+  .oh-results-block {
+    flex: 1 1 auto;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+  }
+  .oh-results {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 2px 8px 0;
+    min-height: 160px;
+  }
+  .oh-result-group {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .oh-result-group > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--accent-light);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .oh-result-group > summary::-webkit-details-marker { display: none; }
+  .oh-result-group > summary::before {
+    content: '▾';
+    font-size: 11px;
+    opacity: .6;
+    margin-right: 4px;
+  }
+  .oh-result-group:not([open]) > summary::before { content: '▸'; }
+  .oh-result-group-body {
+    padding: 10px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .oh-badge-warn {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+    cursor: help;
+  }
+  .oh-src-chip {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text-3);
+    font-weight: 500;
+  }
+  .oh-pub { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: #fff; }
+  .oh-pub h4 { margin: 0 0 6px; font-size: 14px; }
+  .oh-meta { font-size: 11.5px; color: var(--text-3); margin-bottom: 8px; line-height: 1.45; }
+  .oh-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    color: var(--text-2);
+    transition: all .15s;
+  }
+  .btn:hover { background: #eceae3; border-color: var(--border-strong); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 500; }
+  .btn-primary:hover { background: #163d6e; border-color: #163d6e; }
+  .btn-danger { background: #dc3545; color: #fff; border-color: #dc3545; }
+  .btn-danger:hover { filter: brightness(0.95); }
+  .notif {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--green);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 13.5px;
+    box-shadow: var(--shadow-lg);
+    z-index: 200;
+    display: none;
+    animation: slideInRight .25s ease;
+  }
+  @keyframes slideInRight {
+    from { transform: translateX(30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div id="access-denied" style="display:none;max-width:760px;margin:48px auto;padding:0 16px;">
+  <div style="background:#fff3f3;border:1px solid #f5c2c7;color:#842029;border-radius:10px;padding:16px 18px;">
+    <strong>Không có quyền truy cập</strong>
+    <p style="margin:8px 0 0;">Trang ORCID Auto-Harvest chỉ dành cho người dùng trong phạm vi module Viện.</p>
+    <p style="margin:10px 0 0;"><a href="dang-nhap.html?returnUrl=orcid-harvest.html">Đăng nhập</a> hoặc <a href="index.html">về Trang chủ</a>.</p>
+  </div>
+</div>
+
+<div id="harvest-page-root" style="display:none;flex-direction:column;flex:1;min-height:0;">
+  <header class="oh-page-header">
+    <div>
+      <h1>ORCID Auto-Harvest</h1>
+      <p class="sub">Public API v3.0 — quét works theo ORCID iD. Có DOI: làm giàu qua chuỗi resolver. Không DOI: Europe PMC (PMID/PMC), sau đó Scopus API theo EID (nếu cấu hình <code>SCOPUS_API_KEY</code>), rồi OpenAlex (WOS/Scopus), cuối cùng là dữ liệu thô ORCID. Kết quả nhóm theo nguồn enrich ở mục bên dưới.</p>
+    </div>
+    <div class="oh-header-actions">
+      <a href="cong-bo-khoa-hoc.html" class="oh-back-link">← Quản lý công bố</a>
+      <span class="welcome-user" id="welcome-user">Xin chào!</span>
+    </div>
+  </header>
+
+  <main class="oh-page">
+    <div class="oh-top-grid">
+      <section class="oh-card" aria-labelledby="oh-ncv-title">
+        <div class="oh-title" id="oh-ncv-title">Danh sách NCV (ORCID)</div>
+        <p style="font-size:12.5px;color:var(--text-3);line-height:1.5;margin:0 0 10px;">
+          Thêm / cập nhật / tắt quét / xóa. Định dạng: <code>0000-0000-0000-000X</code>.
+          Đang bật quét: <strong id="orcidHarvestNvSummary">0</strong> NCV.
+          <a href="cong-bo-khoa-hoc.html#admin-orcid-nv" class="btn" style="margin-left:8px;padding:4px 10px;font-size:11px;text-decoration:none;display:inline-flex;">↓ Mục NCV trên trang công bố</a>
+        </p>
+        <div class="oh-row">
+          <input id="orcidNameInput" type="text" placeholder="Họ và tên" autocomplete="name">
+          <input id="orcidDeptInput" type="text" placeholder="Phòng / đơn vị" autocomplete="organization">
+        </div>
+        <div class="oh-row">
+          <input id="orcidIdInput" type="text" placeholder="ORCID iD: 0000-0000-0000-000X" spellcheck="false">
+          <button type="button" class="btn btn-primary" onclick="saveOrcidResearcher()">Thêm / cập nhật</button>
+        </div>
+        <div class="oh-ncv-table-wrap">
+          <table class="oh-table" style="margin:0">
+            <thead><tr><th>Họ tên</th><th>Phòng</th><th>ORCID</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+            <tbody id="orcidResearchersTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="oh-card oh-scan-column" aria-labelledby="oh-scan-title">
+        <div class="oh-title" id="oh-scan-title">Bắt đầu quét</div>
+        <div id="orcidChipsWrap"></div>
+        <div class="oh-progress"><div id="orcidProgressFill"></div></div>
+        <div class="oh-summary">
+          <span>NCV đã quét: <b id="orcidCountChecked">0</b></span>
+          <span>Tổng works: <b id="orcidCountWorks">0</b></span>
+          <span>Mới: <b id="orcidCountNew">0</b></span>
+          <span>Trùng: <b id="orcidCountDup">0</b></span>
+        </div>
+        <div class="oh-row">
+          <button type="button" class="btn btn-primary" id="orcidStartBtn" onclick="startOrcidHarvest()">▶ Bắt đầu Quét</button>
+          <button type="button" class="btn btn-danger" id="orcidStopBtn" onclick="stopOrcidHarvest()" disabled>⏹ Dừng quét</button>
+          <button type="button" class="btn" onclick="importAllOrcidNew()">📥 Import tất cả</button>
+        </div>
+        <div class="oh-row" id="ohEnrichRow" style="display:none;flex-direction:column;align-items:flex-start;gap:8px;width:100%">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <button type="button" class="btn btn-primary" id="ohEnrichBtn" onclick="triggerPublicationEnrichment()">🔬 Làm giàu dữ liệu (SJR)</button>
+            <span id="ohEnrichSpinner" style="display:none;font-size:13px;font-family:var(--mono)" aria-live="polite">⏳ Đang xử lý…</span>
+          </div>
+          <p class="oh-hint" style="margin:0">Dữ liệu phân hạng từ SCImago SJR (Admin import CSV). Nếu trước đó báo «ngoài SJR», sau khi import xong hãy bấm lại nút này để hệ thống thử khớp lại.</p>
+        </div>
+        <p class="oh-hint">
+          «Trùng» = đã có trong <code>publications</code> / hàng chờ (dedup: DOI, WOS, Scopus, PMID/PMC, tiêu đề+năm). Bài không DOI: Europe PMC → Scopus (EID) → OpenAlex (nếu không có PMID/PMC) → dữ liệu thô ORCID.
+        </p>
+        <div class="oh-log" id="orcidLog" role="log" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <section class="oh-card oh-results-block" aria-labelledby="oh-results-title">
+      <div class="oh-title" id="oh-results-title">📌 Công bố mới phát hiện</div>
+      <div class="oh-results" id="orcidResults"></div>
+    </section>
+  </main>
+</div>
+
+<div class="notif" id="notif">✅ Thao tác thành công!</div>
+
+<script src="js/system-access.js"></script>
+<script>
+var PUB_INSTITUTE_DOMAIN = '@sci.edu.vn';
+var PUB_INSTITUTE_OK = (function () {
+  try {
+    var user = JSON.parse(localStorage.getItem('user') || '{}');
+    var token = localStorage.getItem('token');
+    if (!token) return false;
+    return typeof hasInstituteModuleAccess === 'function' ? hasInstituteModuleAccess(user) : false;
+  } catch (_) { return false; }
+})();
+
+function harvestShowAccessDenied() {
+  document.getElementById('access-denied').style.display = 'block';
+  var root = document.getElementById('harvest-page-root');
+  if (root) root.style.display = 'none';
+}
+
+function isPubAdmin() {
+  try {
+    var u = JSON.parse(localStorage.getItem('user') || '{}');
+    if (String(u.role || '').toLowerCase() === 'admin') return true;
+    return typeof isSystemSuperAdminEmail === 'function' && isSystemSuperAdminEmail(u.email);
+  } catch (_) { return false; }
+}
+
+async function triggerPublicationEnrichment() {
+  var btn = document.getElementById('ohEnrichBtn');
+  var sp = document.getElementById('ohEnrichSpinner');
+  if (btn) btn.disabled = true;
+  if (sp) sp.style.display = 'inline';
+  try {
+    var data = await apiFetch('/enrich/trigger', {
+      method: 'POST',
+      body: JSON.stringify({ publicationIds: [] })
+    });
+    var st = data.stats || {};
+    var X = Number(st.success) || 0;
+    var Y = Number(st.no_issn) || 0;
+    var Z = Number(st.not_in_sjr) || 0;
+    var msg = 'Hoàn tất: ' + X + ' bài đã enrich, ' + Y + ' bài không tìm được ISSN, ' + Z + ' bài ngoài danh sách SJR';
+    if (Number(st.failed) > 0) msg += ' (' + Number(st.failed) + ' bài lỗi)';
+    showNotif(msg);
+  } catch (e) {
+    showNotif('Lỗi: ' + (e.message || String(e)));
+  } finally {
+    if (btn) btn.disabled = false;
+    if (sp) sp.style.display = 'none';
+  }
+}
+
+if (!PUB_INSTITUTE_OK) {
+  harvestShowAccessDenied();
+} else {
+  document.getElementById('harvest-page-root').style.display = 'flex';
+}
+
+function getLoggedInDisplayName() {
+  try {
+    var userRaw = localStorage.getItem('user');
+    if (!userRaw) return '';
+    var user = JSON.parse(userRaw);
+    return (user && (user.fullname || user.name || user.email)) ? String(user.fullname || user.name || user.email).trim() : '';
+  } catch (_) { return ''; }
+}
+
+function updateWelcomeUser() {
+  var el = document.getElementById('welcome-user');
+  if (!el) return;
+  var name = getLoggedInDisplayName();
+  el.textContent = name ? ('Xin chào, ' + name) : 'Xin chào!';
+}
+
+var API_BASE = '/api';
+var orcidResearchers = [];
+var orcidES = null;
+var orcidDetectedCount = 0;
+
+async function apiFetch(path, options) {
+  options = options || {};
+  var token = localStorage.getItem('token');
+  var headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+  if (token && !headers['Authorization']) headers['Authorization'] = 'Bearer ' + token;
+  var res = await fetch(API_BASE + path, {
+    credentials: 'include',
+    headers: headers,
+    ...options
+  });
+  var data = await res.json().catch(function () { return {}; });
+  if (!res.ok) throw new Error(data.error || data.message || ('HTTP ' + res.status));
+  return data;
+}
+
+function syncUserFromApiMe() {
+  return new Promise(function (resolve) {
+    var tok = localStorage.getItem('token');
+    if (!tok) {
+      resolve();
+      return;
+    }
+    fetch(API_BASE + '/me', {
+      credentials: 'include',
+      headers: { Authorization: 'Bearer ' + tok, Accept: 'application/json' },
+    })
+      .then(function (res) {
+        return res.ok ? res.json() : null;
+      })
+      .then(function (data) {
+        if (data && data.id != null && data.email != null) {
+          localStorage.setItem(
+            'user',
+            JSON.stringify({
+              id: data.id,
+              email: data.email,
+              fullname: data.fullname,
+              role: data.role,
+            })
+          );
+        }
+      })
+      .catch(function () {})
+      .finally(function () {
+        resolve();
+      });
+  });
+}
+
+async function hydratePubsFromServerAndRender() {
+  /* Trang này không render bảng công bố; import chỉ ghi CSDL. */
+}
+
+function showNotif(msg) {
+  var el = document.getElementById('notif');
+  if (!el) return;
+  el.textContent = msg || '✅ Thao tác thành công!';
+  el.style.display = 'block';
+  setTimeout(function () { el.style.display = 'none'; }, 3200);
+}
+
+function logOrcid(msg) {
+  var el = document.getElementById('orcidLog');
+  if (!el) return;
+  el.textContent += (el.textContent ? '\n' : '') + msg;
+  el.scrollTop = el.scrollHeight;
+}
+
+function escHtmlOrcid(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+}
+
+function renderOrcidChips() {
+  var wrap = document.getElementById('orcidChipsWrap');
+  if (!wrap) return;
+  wrap.innerHTML = orcidResearchers
+    .filter(function (r) { return Number(r.is_active) === 1; })
+    .map(function (r, idx) {
+      return '<span class="oh-chip" id="orcidChip-' + idx + '" title="' + escHtmlOrcid(r.orcid_id) + '">⚫ ' + escHtmlOrcid(r.full_name) + '</span>';
+    })
+    .join('');
+}
+
+function renderOrcidResearchers() {
+  var list = orcidResearchers || [];
+  var active = list.filter(function (r) { return Number(r.is_active) === 1; }).length;
+  var sumEl = document.getElementById('orcidHarvestNvSummary');
+  if (sumEl) sumEl.textContent = String(active);
+
+  var rowHtml = list.map(function (r) {
+    return '<tr>' +
+      '<td>' + escHtmlOrcid(r.full_name) + '</td>' +
+      '<td>' + escHtmlOrcid(r.department || '—') + '</td>' +
+      '<td><code>' + escHtmlOrcid(r.orcid_id) + '</code></td>' +
+      '<td>' + (Number(r.is_active) === 1 ? 'Hoạt động' : 'Tạm dừng') + '</td>' +
+      '<td>' +
+        '<button type="button" class="btn" style="padding:4px 8px;font-size:11px" onclick="toggleOrcidResearcher(' + Number(r.id) + ')">' +
+          (Number(r.is_active) === 1 ? 'Tắt quét' : 'Bật quét') + '</button> ' +
+        '<button type="button" class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="deleteOrcidResearcher(' + Number(r.id) + ')">Xóa</button>' +
+      '</td></tr>';
+  }).join('');
+
+  var emptyMsg = '<tr><td colspan="5" style="color:var(--text-3)">Chưa có NCV. Nhập họ tên và ORCID, bấm «Thêm / cập nhật».</td></tr>';
+  var tb = document.getElementById('orcidResearchersTbody');
+  if (tb) tb.innerHTML = rowHtml || emptyMsg;
+}
+
+async function loadOrcidResearchers() {
+  var res = await apiFetch('/orcid/researchers');
+  orcidResearchers = res.data || [];
+  renderOrcidResearchers();
+  renderOrcidChips();
+}
+
+async function saveOrcidResearcher() {
+  var nameEl = document.getElementById('orcidNameInput');
+  var deptEl = document.getElementById('orcidDeptInput');
+  var idEl = document.getElementById('orcidIdInput');
+  if (!nameEl || !idEl) { showNotif('Không tìm thấy form'); return; }
+  var name = (nameEl.value || '').trim();
+  var dept = (deptEl && deptEl.value || '').trim();
+  var orcid = (idEl.value || '').trim();
+  if (!name || !orcid) { showNotif('Nhập họ tên và ORCID'); return; }
+  if (!/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/.test(orcid)) { showNotif('ORCID sai định dạng'); return; }
+  await apiFetch('/orcid/researchers', {
+    method: 'POST',
+    body: JSON.stringify({ full_name: name, department: dept, orcid_id: orcid, is_active: 1 })
+  });
+  nameEl.value = '';
+  if (deptEl) deptEl.value = '';
+  idEl.value = '';
+  await loadOrcidResearchers();
+  showNotif('✅ Đã lưu nghiên cứu viên ORCID');
+}
+
+async function toggleOrcidResearcher(id) {
+  var row = orcidResearchers.find(function (r) { return Number(r.id) === Number(id); });
+  if (!row) return;
+  await apiFetch('/orcid/researchers', {
+    method: 'POST',
+    body: JSON.stringify({
+      full_name: row.full_name, department: row.department, position: row.position,
+      orcid_id: row.orcid_id, is_active: Number(row.is_active) === 1 ? 0 : 1
+    })
+  });
+  await loadOrcidResearchers();
+}
+
+async function deleteOrcidResearcher(id) {
+  if (!confirm('Xóa nghiên cứu viên này khỏi danh sách ORCID?')) return;
+  await apiFetch('/orcid/researchers/' + encodeURIComponent(id), { method: 'DELETE' });
+  await loadOrcidResearchers();
+  showNotif('Đã xóa khỏi danh sách');
+}
+
+var OH_BUCKET_ORDER = ['DOI_Crossref', 'Europe_PMC', 'Scopus', 'OpenAlex', 'ORCID_Raw'];
+var OH_BUCKET_TITLES = {
+  DOI_Crossref: 'DOI / metadata resolver',
+  Europe_PMC: 'Dữ liệu từ Europe PMC',
+  Scopus: 'Dữ liệu từ Scopus (Elsevier)',
+  OpenAlex: 'Dữ liệu từ OpenAlex',
+  ORCID_Raw: 'ORCID Raw (No API)'
+};
+var OH_RAW_TOOLTIP = 'Dữ liệu trích xuất thô từ ORCID (work-summary). Có thể thiếu tóm tắt, chi tiết tác giả hoặc chỉ số tạp chí — nên kiểm tra trước khi import.';
+
+function ohInsertGroupInOrder(root, detailsEl, bucket) {
+  var idx = OH_BUCKET_ORDER.indexOf(bucket);
+  if (idx < 0) idx = OH_BUCKET_ORDER.length;
+  var children = Array.prototype.slice.call(root.children);
+  var before = null;
+  for (var i = 0; i < children.length; i++) {
+    var b = children[i].getAttribute('data-bucket') || '';
+    var j = OH_BUCKET_ORDER.indexOf(b);
+    if (j < 0) j = 99;
+    if (j > idx) { before = children[i]; break; }
+  }
+  if (before) root.insertBefore(detailsEl, before);
+  else root.appendChild(detailsEl);
+}
+
+function ohEnsureResultGroup(bucket) {
+  var root = document.getElementById('orcidResults');
+  if (!root) return null;
+  var b = bucket && OH_BUCKET_ORDER.indexOf(bucket) >= 0 ? bucket : 'ORCID_Raw';
+  var wrapId = 'oh-group-' + b;
+  var detailsEl = document.getElementById(wrapId);
+  if (!detailsEl) {
+    detailsEl = document.createElement('details');
+    detailsEl.className = 'oh-result-group';
+    detailsEl.id = wrapId;
+    detailsEl.setAttribute('data-bucket', b);
+    detailsEl.open = true;
+    var sum = document.createElement('summary');
+    sum.className = 'oh-result-group-summary';
+    var body = document.createElement('div');
+    body.className = 'oh-result-group-body';
+    detailsEl.appendChild(sum);
+    detailsEl.appendChild(body);
+    ohInsertGroupInOrder(root, detailsEl, b);
+  }
+  return {
+    body: detailsEl.querySelector('.oh-result-group-body'),
+    summary: detailsEl.querySelector('summary'),
+    bucket: b,
+    detailsEl: detailsEl
+  };
+}
+
+function ohUpdateGroupSummary(g) {
+  if (!g || !g.body || !g.summary) return;
+  var n = g.body.querySelectorAll('.oh-pub').length;
+  var title = OH_BUCKET_TITLES[g.bucket] || g.bucket;
+  var warn = '';
+  if (g.bucket === 'ORCID_Raw') {
+    warn = ' <span class="oh-badge-warn" title="' + escHtmlOrcid(OH_RAW_TOOLTIP) + '">⚠ Thô từ ORCID</span>';
+  }
+  g.summary.innerHTML = escHtmlOrcid(title) + warn + ' <span class="oh-src-chip">(' + n + ' bài)</span>';
+}
+
+function renderOrcidDetectedCard(item) {
+  var bucket = item.enrichmentGroup || 'ORCID_Raw';
+  var g = ohEnsureResultGroup(bucket);
+  if (!g || !g.body) return;
+  var id = Number(item.queueId || 0);
+  var card = document.createElement('div');
+  card.className = 'oh-pub';
+  card.id = 'orcid-card-' + id;
+  var srcLine = item.enrichmentSource ? '<span class="oh-src-chip">Nguồn: ' + escHtmlOrcid(item.enrichmentSource) + '</span> · ' : '';
+  var doiBtn = item.doi
+    ? '<a class="btn" href="https://doi.org/' + encodeURIComponent(item.doi) + '" target="_blank" rel="noopener">Xem DOI</a>'
+    : '<span class="btn" style="opacity:.65;cursor:default;border-style:dashed">Không có DOI</span>';
+  card.innerHTML =
+    '<h4>' + escHtmlOrcid(item.title || item.doi || '—') + '</h4>' +
+    '<div class="oh-meta">' + srcLine +
+    escHtmlOrcid(item.journal || 'Chưa rõ tạp chí') + ' · ' + escHtmlOrcid(item.year || 'N/A') +
+    ' · IF: ' + escHtmlOrcid(item.impact_factor || '—') + ' · Q: ' + escHtmlOrcid(item.quartile || '—') +
+    ' · ORCID: ' + escHtmlOrcid(item.orcid || '—') + '</div>' +
+    '<div class="oh-actions">' +
+    '<button type="button" class="btn btn-primary" onclick="importOrcidOne(' + id + ')">Import</button>' +
+    '<button type="button" class="btn" onclick="skipOrcidOne(' + id + ')">Bỏ qua</button>' +
+    doiBtn +
+    '</div>';
+  g.body.appendChild(card);
+  ohUpdateGroupSummary(g);
+}
+
+async function importOrcidOne(queueId) {
+  await apiFetch('/orcid/queue/' + encodeURIComponent(queueId) + '/approve', { method: 'POST', body: JSON.stringify({}) });
+  var card = document.getElementById('orcid-card-' + queueId);
+  if (card) card.style.opacity = '0.5';
+  await hydratePubsFromServerAndRender();
+  showNotif('✅ Đã import vào CSDL — xem danh sách tại trang Quản lý công bố');
+}
+
+async function skipOrcidOne(queueId) {
+  await apiFetch('/orcid/queue/' + encodeURIComponent(queueId) + '/reject', { method: 'POST', body: JSON.stringify({}) });
+  var card = document.getElementById('orcid-card-' + queueId);
+  if (card) {
+    var body = card.closest('.oh-result-group-body');
+    var details = body && body.closest('details');
+    card.style.display = 'none';
+    if (body && details) {
+      ohUpdateGroupSummary({
+        body: body,
+        summary: details.querySelector('summary'),
+        bucket: details.getAttribute('data-bucket') || 'ORCID_Raw'
+      });
+    }
+  }
+  showNotif('Đã bỏ qua');
+}
+
+async function importAllOrcidNew() {
+  var res = await apiFetch('/orcid/queue/approve-all', { method: 'POST', body: JSON.stringify({}) });
+  await hydratePubsFromServerAndRender();
+  showNotif('✅ Đã import ' + (res.imported || 0) + ' bản ghi — mở trang Quản lý công bố để kiểm tra');
+}
+
+function resetHarvestSessionUi() {
+  var r = document.getElementById('orcidResults');
+  var l = document.getElementById('orcidLog');
+  if (r) r.innerHTML = '';
+  if (l) l.textContent = '';
+  document.getElementById('orcidCountChecked').textContent = '0';
+  document.getElementById('orcidCountWorks').textContent = '0';
+  document.getElementById('orcidCountNew').textContent = '0';
+  document.getElementById('orcidCountDup').textContent = '0';
+  document.getElementById('orcidProgressFill').style.width = '0%';
+  orcidDetectedCount = 0;
+  setOrcidHarvestRunning(false);
+}
+
+function setOrcidHarvestRunning(running) {
+  var start = document.getElementById('orcidStartBtn');
+  var stop = document.getElementById('orcidStopBtn');
+  if (start) {
+    start.disabled = !!running;
+    start.textContent = running ? 'Đang quét...' : '▶ Bắt đầu Quét';
+  }
+  if (stop) stop.disabled = !running;
+}
+
+function stopOrcidHarvest() {
+  if (!orcidES) {
+    setOrcidHarvestRunning(false);
+    return;
+  }
+  logOrcid('⏹ Đã yêu cầu dừng — ngắt kết nối (server dừng sau bước DOI/NCV hiện tại).');
+  try { orcidES.close(); } catch (_) {}
+  orcidES = null;
+  setOrcidHarvestRunning(false);
+}
+
+async function startOrcidHarvest() {
+  if (orcidES) { try { orcidES.close(); } catch (_) {} orcidES = null; }
+  document.getElementById('orcidResults').innerHTML = '';
+  document.getElementById('orcidLog').textContent = '';
+  orcidDetectedCount = 0;
+  renderOrcidChips();
+  var totalActive = orcidResearchers.filter(function (r) { return Number(r.is_active) === 1; }).length || 1;
+  setOrcidHarvestRunning(true);
+  logOrcid('=== Bắt đầu phiên ORCID Auto-Harvest ===');
+  logOrcid('API: pub.orcid.org/v3.0/{orcid}/works');
+  orcidES = new EventSource('/api/orcid/harvest/stream');
+  orcidES.onmessage = function (e) {
+    var ev = null;
+    try { ev = JSON.parse(e.data); } catch (_) { return; }
+    if (!ev || !ev.type) return;
+    if (ev.type === 'researcher_start') {
+      var chip = document.getElementById('orcidChip-' + ev.index);
+      if (chip) { chip.classList.add('checking'); chip.textContent = '🟡 ' + ev.name; }
+      logOrcid('→ Đang quét: ' + ev.name + ' (' + ev.orcid + ')');
+    } else if (ev.type === 'researcher_done') {
+      var chip = document.getElementById('orcidChip-' + ev.index);
+      if (chip) {
+        chip.classList.remove('checking');
+        if ((ev.newFound || 0) > 0) { chip.classList.add('new'); chip.textContent = '🟢 ' + ev.name + ' (+' + ev.newFound + ')'; }
+        else { chip.classList.add('none'); chip.textContent = '⚫ ' + ev.name; }
+      }
+      logOrcid('  works=' + (ev.worksFound || 0) + ', mới=' + (ev.newFound || 0) + ', trùng=' + (ev.skipped || 0));
+      if (ev.skippedRecords && ev.skippedRecords.length) {
+        logOrcid('--- DANH SÁCH ' + ev.skippedRecords.length + ' BÀI BÁO BỊ LOẠI ---');
+        ev.skippedRecords.forEach(function (rec, ix) {
+          var t = (rec.title || 'Unknown Title').replace(/\s+/g, ' ').trim() || 'Unknown Title';
+          if (t.length > 140) t = t.slice(0, 137) + '...';
+          logOrcid((ix + 1) + '. [' + (rec.reason || '') + '] - ' + t);
+        });
+        logOrcid('------------------------------------');
+      }
+      document.getElementById('orcidCountChecked').textContent = String((ev.index || 0) + 1);
+      document.getElementById('orcidCountWorks').textContent = String((Number(document.getElementById('orcidCountWorks').textContent) || 0) + Number(ev.worksFound || 0));
+      document.getElementById('orcidCountNew').textContent = String((Number(document.getElementById('orcidCountNew').textContent) || 0) + Number(ev.newFound || 0));
+      document.getElementById('orcidCountDup').textContent = String((Number(document.getElementById('orcidCountDup').textContent) || 0) + Number(ev.skipped || 0));
+      document.getElementById('orcidProgressFill').style.width = Math.round((((ev.index || 0) + 1) / totalActive) * 100) + '%';
+      (ev.newItems || []).forEach(function (it) { renderOrcidDetectedCard(it); orcidDetectedCount++; });
+    } else if (ev.type === 'session_complete') {
+      logOrcid('=== Hoàn thành. Tổng mới: ' + (ev.totalNew || orcidDetectedCount) + ' ===');
+      if (ev.stats) {
+        logOrcid('Phân nhóm — DOI: ' + (ev.stats.doi || 0) + ', Europe PMC: ' + (ev.stats.europe_pmc || 0) +
+          ', Scopus: ' + (ev.stats.scopus || 0) + ', OpenAlex: ' + (ev.stats.openalex || 0) +
+          ', ORCID Raw: ' + (ev.stats.raw || 0));
+      }
+      setOrcidHarvestRunning(false);
+      if ((ev.totalNew || 0) === 0) showNotif('Không phát hiện công bố mới');
+    } else if (ev.type === 'session_aborted') {
+      logOrcid('=== Đã dừng quét. NCV đã xử lý xong: ' + (ev.researchersChecked || 0) + ', mới trong phiên: ' + (ev.totalNew || 0) + ' ===');
+      setOrcidHarvestRunning(false);
+    } else if (ev.type === 'log') {
+      logOrcid(ev.message || '');
+    } else if (ev.type === 'error') {
+      logOrcid('LỖI: ' + (ev.message || 'Không rõ'));
+      setOrcidHarvestRunning(false);
+    }
+  };
+  orcidES.addEventListener('done', function () {
+    try { orcidES.close(); } catch (_) {}
+    orcidES = null;
+    setOrcidHarvestRunning(false);
+  });
+  orcidES.onerror = function () {
+    if (orcidES) logOrcid('Kết nối SSE kết thúc (đóng hoặc lỗi mạng).');
+    try { orcidES.close(); } catch (_) {}
+    orcidES = null;
+    setOrcidHarvestRunning(false);
+  };
+}
+
+if (PUB_INSTITUTE_OK) {
+  syncUserFromApiMe().then(function () {
+    updateWelcomeUser();
+    resetHarvestSessionUi();
+    if (isPubAdmin()) {
+      var enrichRow = document.getElementById('ohEnrichRow');
+      if (enrichRow) enrichRow.style.display = 'flex';
+    }
+    loadOrcidResearchers().catch(function () {
+      var tb = document.getElementById('orcidResearchersTbody');
+      if (tb) {
+        tb.innerHTML = '<tr><td colspan="5" style="color:#c8490e">Không tải được danh sách NCV. Kiểm tra backend và đăng nhập.</td></tr>';
+      }
+    });
+  });
+}
+</script>
+</body>
+</html>

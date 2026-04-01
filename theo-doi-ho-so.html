@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theo dõi quy trình hồ sơ - SCI-ACE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .tracking-page { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        .breadcrumb { font-size: 0.9rem; color: var(--gray); margin-bottom: 1rem; }
+        .breadcrumb a { color: var(--primary); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .page-title { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem; }
+        .submission-info { background: var(--white); border-radius: 12px; box-shadow: 0 4px 20px var(--shadow); padding: 1.5rem; margin-bottom: 2rem; }
+        .submission-info h3 { color: var(--primary); margin-bottom: 0.5rem; font-size: 1.25rem; }
+        .submission-info .meta { font-size: 0.9rem; color: var(--gray); }
+        .status-badge { display: inline-block; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; margin-top: 0.5rem; }
+        .status-badge.done { background: #bbf7d0; color: #15803d; }
+        .status-badge.current { background: #cce5ff; color: #004085; }
+        .status-badge.warning { background: #fff3cd; color: #856404; }
+        .status-badge.rejected { background: #fecaca; color: #b91c1c; }
+        .stages { margin-top: 2rem; }
+        .stage-card { background: var(--white); border-radius: 12px; box-shadow: 0 2px 12px var(--shadow); padding: 1.25rem 1.5rem; margin-bottom: 0.75rem; border-left: 4px solid #dee2e6; transition: box-shadow 0.2s; }
+        .stage-card.done { border-left-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
+        .stage-card.current { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.12); box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3); animation: stage-current-blink 1.5s ease-in-out infinite; }
+        .stage-card.rejected { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.08); }
+        @keyframes stage-current-blink { 0%, 100% { background: rgba(239, 68, 68, 0.22); box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4); border-left-color: #dc2626; } 50% { background: rgba(254, 202, 202, 0.6); box-shadow: 0 4px 16px rgba(252, 165, 165, 0.4); border-left-color: #fca5a5; } }
+        .stage-card .stage-num { font-weight: 700; color: var(--primary); font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .stage-card .stage-title { font-weight: 600; color: var(--dark); margin-bottom: 0.35rem; }
+        .stage-card .stage-meta { font-size: 0.85rem; color: var(--gray); }
+        .stage-card .stage-note { font-size: 0.85rem; margin-top: 0.5rem; padding: 0.5rem; border-radius: 6px; background: rgba(0,0,0,0.04); }
+        .stage-status-label { font-size: 0.8rem; font-weight: 700; margin-bottom: 0.35rem; }
+        .stage-card.done .stage-status-label { color: #16a34a; }
+        .stage-card.current .stage-status-label { color: #ef4444; }
+        .stage-overdue-box { margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; border-radius: 8px; font-weight: 600; color: #b91c1c; text-align: center; animation: stage-overdue-blink 1.5s ease-in-out infinite; }
+        @keyframes stage-overdue-blink { 0%, 100% { opacity: 1; background: rgba(239, 68, 68, 0.28); border-color: #ef4444; } 50% { opacity: 0.3; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.6); } }
+        .stage-card.rejected .stage-status-label { color: #ef4444; }
+        .stage-card.pending .stage-status-label { color: var(--gray); }
+        .stage-secretary-actions { margin-top: 1.25rem; padding: 1.25rem; background: rgba(26, 77, 46, 0.06); border-radius: 10px; border: 1px solid rgba(26, 77, 46, 0.15); }
+        .stage-secretary-actions label { display: block; font-weight: 600; color: var(--primary); margin-bottom: 0.5rem; }
+        .stage-secretary-actions textarea { width: 100%; min-height: 80px; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 1rem; font-family: inherit; }
+        .stage-secretary-actions .radio-group { margin-bottom: 1rem; }
+        .stage-secretary-actions .radio-group label { display: inline; font-weight: 500; margin-left: 0.35rem; margin-right: 1rem; }
+        .stage-secretary-actions .btn-done { padding: 0.6rem 1.5rem; background: var(--primary); color: var(--white); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .stage-secretary-actions .btn-done:hover { background: var(--primary-light); }
+        .stage-secretary-actions .btn-done:disabled { opacity: 0.6; cursor: not-allowed; }
+        .gd3-action-buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; align-items: center; }
+        .gd3-action-buttons .btn-valid { background: var(--primary); color: var(--white); }
+        .gd3-action-buttons .btn-supplement { background: #856404; color: #fff; border: none; }
+        .gd3-action-buttons .btn-supplement:hover { background: #b8860b; }
+        .stage-gd3-history { margin-top: 1rem; padding: 1rem 1.25rem; background: rgba(34, 197, 94, 0.12); border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.4); }
+        .stage-gd3-history h4 { font-size: 0.95rem; color: var(--primary); margin-bottom: 0.75rem; }
+        .stage-gd3-history .history-row { font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .stage-gd3-history .history-row strong { display: inline-block; min-width: 7rem; color: var(--dark); }
+        .stage-gd3-history .history-note { white-space: pre-wrap; margin-top: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.04); border-radius: 6px; }
+        .stage-chairman-actions { margin-top: 1.25rem; padding: 1.25rem; background: rgba(26, 77, 46, 0.06); border-radius: 10px; border: 1px solid rgba(26, 77, 46, 0.15); }
+        .stage-chairman-actions label { display: block; font-weight: 600; color: var(--primary); margin-bottom: 0.5rem; }
+        .stage-chairman-actions select { width: 100%; max-width: 320px; padding: 0.5rem 0.75rem; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 1rem; font-family: inherit; }
+        .stage-chairman-actions textarea { width: 100%; min-height: 70px; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 1rem; font-family: inherit; }
+        .stage-chairman-actions .btn-done { padding: 0.6rem 1.5rem; background: var(--primary); color: var(--white); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .stage-chairman-actions .btn-done:hover { background: var(--primary-light); }
+        .stage-chairman-actions .btn-done:disabled { opacity: 0.6; cursor: not-allowed; }
+        .stage-gd4-history { margin-top: 1rem; padding: 1rem 1.25rem; background: rgba(34, 197, 94, 0.12); border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.4); }
+        .stage-gd4-history h4 { font-size: 0.95rem; color: var(--primary); margin-bottom: 0.75rem; }
+        .stage-gd4-history .history-row { font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .stage-gd4-history .history-row strong { display: inline-block; min-width: 8rem; color: var(--dark); }
+        .stage-gd4-history .history-note { white-space: pre-wrap; margin-top: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.04); border-radius: 6px; }
+        .stage-gd4-history .gd4-chairman-note { margin-top: 0.75rem; padding: 0.5rem 0; font-size: 0.85rem; color: var(--gray); }
+        .gd4-reset-area { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(0,0,0,0.08); }
+        .btn-reset-gd4 { padding: 0.5rem 1rem; font-size: 0.9rem; border: 2px solid #856404; background: #fff3cd; color: #856404; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .btn-reset-gd4:hover { background: #ffe69c; }
+        .btn-reset-gd4:disabled { opacity: 0.6; cursor: not-allowed; }
+        .gd4-council-msg { margin-bottom: 1rem; padding: 0.75rem 1rem; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; font-size: 0.9rem; color: #856404; }
+        .gd4-council-msg a { color: var(--primary); font-weight: 600; }
+        .stage-gd5-actions { margin-top: 1.25rem; padding: 1.25rem; background: rgba(26, 77, 46, 0.06); border-radius: 10px; border: 1px solid rgba(26, 77, 46, 0.15); }
+        .stage-gd5-actions h4 { font-size: 0.95rem; color: var(--primary); margin-bottom: 0.75rem; }
+        .stage-gd5-actions .gd5-slot { margin-bottom: 1.25rem; padding: 1rem; background: rgba(255,255,255,0.6); border-radius: 8px; border: 1px solid #dee2e6; }
+        .stage-gd5-actions .gd5-slot label { display: block; font-weight: 600; color: var(--dark); margin-bottom: 0.5rem; }
+        .stage-gd5-actions .gd5-slot input[type="file"] { margin-bottom: 0.5rem; }
+        .stage-gd5-actions .gd5-slot .btn-done { padding: 0.5rem 1rem; background: var(--primary); color: var(--white); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .stage-gd5-actions .gd5-slot .btn-done:disabled { opacity: 0.6; cursor: not-allowed; }
+        .stage-gd5-actions .gd5-slot input[type="file"]:disabled { opacity: 0.6; cursor: not-allowed; }
+        .stage-gd5-actions .gd5-instruction { font-size: 0.9rem; color: var(--gray); margin-bottom: 1rem; }
+        .stage-gd5-actions .gd5-hint { font-size: 0.85rem; color: var(--gray); font-style: italic; }
+        .stage-gd5-actions .gd5-downloads { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6; }
+        .stage-gd5-actions .gd5-downloads a { display: inline-block; margin-right: 1rem; margin-bottom: 0.5rem; color: var(--primary); font-weight: 600; }
+        .stage-gd5-actions .gd5-download-link { background: none; border: none; padding: 0; color: var(--primary); font-weight: 600; cursor: pointer; text-decoration: underline; font-size: inherit; }
+        .stage-gd5-actions .gd5-download-link:hover { color: var(--primary-light); }
+        .stage-gd5-history { margin-top: 1rem; padding: 1rem 1.25rem; background: rgba(34, 197, 94, 0.12); border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.4); }
+        .stage-gd5-history h4 { font-size: 0.95rem; color: var(--primary); margin-bottom: 0.75rem; }
+        .stage-gd5-history .history-row { font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .stage-gd5-history .history-row strong { display: inline-block; min-width: 8rem; color: var(--dark); }
+        .stage-gd5-history .gd5-history-download { margin-left: 0.5rem; padding: 0.25rem 0.6rem; background: var(--primary); color: var(--white); border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+        .stage-gd5-history .gd5-history-download:hover { background: var(--primary-light); }
+        .stage-gd1-submission { margin-top: 0.5rem; }
+        .stage-gd1-submission .stage-meta { margin-bottom: 0.35rem; }
+        .stage-gd1-files { margin-top: 0.75rem; padding: 0.75rem; background: rgba(0,0,0,0.04); border-radius: 8px; }
+        .stage-gd1-files strong { display: block; margin-bottom: 0.5rem; color: var(--dark); }
+        .stage-gd1-file-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.9rem; }
+        .stage-gd1-file-row .gd1-file-download { padding: 0.25rem 0.6rem; background: var(--primary); color: var(--white); border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+        .stage-gd1-file-row .gd1-file-download:hover { background: var(--primary-light); }
+        .stage-meeting-actions { margin-top: 1.25rem; padding: 1.25rem; background: rgba(26, 77, 46, 0.06); border-radius: 10px; border: 1px solid rgba(26, 77, 46, 0.15); }
+        .stage-meeting-actions label { display: block; font-weight: 600; color: var(--primary); margin-bottom: 0.5rem; }
+        .stage-meeting-actions input[type="file"] { margin-bottom: 0.5rem; }
+        .stage-meeting-actions .radio-group { margin-bottom: 1rem; }
+        .stage-meeting-actions .radio-group label { display: inline; font-weight: 500; margin-left: 0.35rem; margin-right: 1rem; }
+        .stage-meeting-actions textarea { width: 100%; min-height: 70px; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 1rem; font-family: inherit; }
+        .stage-meeting-actions .btn-done { padding: 0.6rem 1.5rem; background: var(--primary); color: var(--white); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .stage-meeting-actions .btn-done:hover { background: var(--primary-light); }
+        .stage-meeting-actions .btn-done:disabled { opacity: 0.6; cursor: not-allowed; }
+        .stage-meeting-actions .btn-conditional-reject { padding: 0.6rem 1.25rem; background: #dc2626; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .stage-meeting-actions .btn-conditional-reject:hover { background: #b91c1c; }
+        .stage-meeting-actions .btn-conditional-reject:disabled { opacity: 0.6; cursor: not-allowed; }
+        .conditional-step-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.6); border-radius: 8px; border: 1px solid rgba(0,0,0,0.08); }
+        .conditional-step-row .step-label { flex: 0 0 8rem; font-weight: 600; color: var(--dark); }
+        .conditional-step-row .step-desc { flex: 1; font-size: 0.9rem; color: var(--gray); }
+        .conditional-step-row .step-action { flex: 0 0 auto; }
+        .conditional-step-row .btn-approve-pair { display: flex; gap: 0.75rem; }
+        .conditional-step-row .btn-approve-pair .btn-done, .conditional-step-row .btn-approve-pair .btn-conditional-reject { padding: 0.65rem 1.5rem; font-size: 1rem; }
+        .stage-meeting-history { margin-top: 1rem; padding: 1rem 1.25rem; background: rgba(34, 197, 94, 0.12); border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.4); }
+        .stage-meeting-history h4 { font-size: 0.95rem; color: var(--primary); margin-bottom: 0.75rem; }
+        .stage-meeting-history .history-row { font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .stage-meeting-history .history-row strong { display: inline-block; min-width: 8rem; color: var(--dark); }
+        .stage-meeting-history .meeting-download { margin-left: 0.5rem; padding: 0.25rem 0.6rem; background: var(--primary); color: var(--white); border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+        .stage-meeting-history .meeting-download:hover { background: var(--primary-light); }
+        .stage-meeting-history .history-note { white-space: pre-wrap; margin-top: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.04); border-radius: 6px; }
+        .empty-state { padding: 3rem 2rem; text-align: center; color: var(--gray); }
+        #error a { color: var(--primary); font-weight: 500; }
+        .back-link { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--primary); text-decoration: none; font-weight: 500; margin-bottom: 1rem; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">ACE-SCI</a>
+                <div class="header-text">
+                    <h1>Theo dõi quy trình hồ sơ</h1>
+                    <p>7 giai đoạn xử lý — SCI-ACE</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">🏠 Trang chủ</a>
+            <a href="nhom-1.html">📚 Nhóm hồ sơ 1</a>
+            <a href="nhom-2.html">📝 Nhóm hồ sơ 2</a>
+            <a href="nhom-3.html">👥 Nhóm hồ sơ 3</a>
+            <div class="nav-dropdown">
+                <span class="nav-dropdown-trigger">📤 Nộp hồ sơ ▾</span>
+                <div class="nav-dropdown-menu">
+                    <a href="nop-ho-so.html">Nộp hồ sơ (Nghiên cứu viên)</a>
+                    <a href="hoi-dong.html">Khu vực Hội đồng (xem hồ sơ đã nộp)</a>
+                    <a href="quan-tri.html">Quản trị (Admin)</a>
+                </div>
+            </div>
+            <a href="dang-nhap.html">🔐 Đăng nhập</a>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="tracking-page">
+            <a href="hoi-dong.html" class="back-link">← Quay lại danh sách hồ sơ</a>
+            <div class="breadcrumb"><a href="hoi-dong.html">Khu vực Hội đồng</a> → Theo dõi hồ sơ</div>
+            <div id="loading" class="empty-state">Đang tải thông tin hồ sơ...</div>
+            <div id="error" class="empty-state" style="display: none;"></div>
+            <div id="content" style="display: none;">
+                <div class="submission-info">
+                    <p class="meta" style="margin-bottom: 0.5rem;"><strong>Mã hồ sơ: <span id="sub-id"></span></strong></p>
+                    <h3 id="sub-title"></h3>
+                    <p class="meta">Nộp bởi: <span id="sub-by"></span> — Ngày nộp: <span id="sub-date"></span></p>
+                    <span id="sub-status-badge" class="status-badge"></span>
+                    <div style="margin-top: 1rem;"><button type="button" id="btn-download-ho-so" class="btn-download-track">📥 Tải hồ sơ về</button></div>
+                </div>
+                <h2 class="page-title">Quy trình 7 giai đoạn</h2>
+                <div id="stages" class="stages"></div>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="footer-bottom"><p>&copy; 2026 SCI-ACE. Phiên bản 1.0</p></div>
+        </div>
+    </footer>
+    <script>
+        (function() {
+            var STAGES = [
+                { num: 1, title: 'Chuẩn bị và nộp hồ sơ', who: 'Nghiên cứu viên', time: 'Tùy người — khi hoàn tất thì nộp', docs: 'SCI-ACE-01, 02, 03 + đính kèm → Gửi hồ sơ, email tự động tới Hội đồng' },
+                { num: 2, title: 'Kiểm tra hồ sơ', who: 'Thư ký Hội đồng', time: '3 ngày', docs: 'Hợp lệ → GĐ3; Thiếu → Yêu cầu bổ sung' },
+                { num: 3, title: 'Phân công phản biện', who: 'Chủ tịch Hội đồng', time: '2 ngày', docs: 'Phân công ≥2 thành viên' },
+                { num: 4, title: 'Đánh giá phản biện', who: 'Thành viên Hội đồng', time: '7 ngày', docs: 'Upload SCI-ACE-PĐG' },
+                { num: 5, title: 'Họp Hội đồng', who: 'Toàn thể Hội đồng', time: 'Theo lịch', docs: 'Biên bản SCI-ACE-05; Chấp thuận / Có điều kiện / Không chấp thuận' },
+                { num: 6, title: 'Cấp Quyết định', who: 'Chủ tịch Hội đồng', time: '3 ngày', docs: 'SCI-ACE-QĐ (VN + EN)' },
+                { num: 7, title: 'Thực hiện & Báo cáo', who: 'Nghiên cứu viên', time: '6–12 tháng', docs: 'SCI-ACE-06 (thay đổi), SCI-ACE-07 (định kỳ/kết thúc)' }
+            ];
+            var STATUS_LABELS = {
+                DRAFT: 'Nháp (chưa nộp)',
+                SUBMITTED: 'Đã nộp (chờ kiểm tra)',
+                VALIDATED: 'Đã kiểm tra (chờ phân công)',
+                NEED_REVISION: 'Cần bổ sung',
+                UNDER_REVIEW: 'Đang đánh giá',
+                IN_MEETING: 'Đang họp Hội đồng',
+                APPROVED: 'Đã phê duyệt',
+                REJECTED: 'Không chấp thuận',
+                CONDITIONAL: 'Chấp thuận có điều kiện',
+                IMPLEMENTATION: 'Đang thực hiện',
+                COMPLETED: 'Hoàn thành'
+            };
+            function statusToCurrentStage(status) {
+                var s = (status || 'SUBMITTED').toUpperCase();
+                if (s === 'DRAFT') return { current: 1, rejected: false };
+                if (s === 'SUBMITTED') return { current: 3, rejected: false };
+                if (s === 'NEED_REVISION') return { current: 3, rejected: false, note: 'Hồ sơ cần bổ sung. Nghiên cứu viên nộp lại sau khi chỉnh sửa.' };
+                if (s === 'VALIDATED') return { current: 4, rejected: false };
+                if (s === 'UNDER_REVIEW') return { current: 5, rejected: false };
+                if (s === 'CONDITIONAL') return { current: 6, rejected: false };
+                if (s === 'IN_MEETING') return { current: 6, rejected: false };
+                if (s === 'REJECTED') return { current: 6, rejected: true };
+                if (s === 'APPROVED') return { current: 7, rejected: false };
+                if (s === 'IMPLEMENTATION') return { current: 8, rejected: false };
+                if (s === 'COMPLETED') return { current: 8, rejected: false, allDone: true };
+                return { current: 3, rejected: false };
+            }
+            function escapeHtml(s) {
+                if (s == null) return '';
+                var div = document.createElement('div');
+                div.textContent = String(s);
+                return div.innerHTML;
+            }
+            var id = parseInt((window.location.search.match(/[?&]id=(\d+)/) || [])[1], 10);
+            var loadingEl = document.getElementById('loading');
+            var errorEl = document.getElementById('error');
+            var contentEl = document.getElementById('content');
+            var user = {};
+            try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) {}
+            if (window.location.protocol === 'file:') {
+                loadingEl.style.display = 'none';
+                errorEl.style.display = 'block';
+                errorEl.innerHTML = 'Trang này cần mở qua server. Vui lòng mở trình duyệt và truy cập: <a href="http://localhost:3000/theo-doi-ho-so.html?id=' + (id || '') + '" target="_blank" style="font-weight:600;">http://localhost:3000/theo-doi-ho-so.html?id=' + (id || '') + '</a><br><br>Hoặc từ <a href="http://localhost:3000/hoi-dong.html">Khu vực Hội đồng</a> nhấn "Xem tiến trình" trên hồ sơ cần xem.';
+                return;
+            }
+            if (!id) {
+                loadingEl.style.display = 'none';
+                errorEl.style.display = 'block';
+                errorEl.textContent = 'Thiếu mã hồ sơ. Vui lòng mở từ danh sách hồ sơ tại Khu vực Hội đồng.';
+                return;
+            }
+            var token = localStorage.getItem('token');
+            if (!token) {
+                loadingEl.style.display = 'none';
+                errorEl.style.display = 'block';
+                errorEl.innerHTML = 'Vui lòng <a href="dang-nhap.html">đăng nhập</a> để xem theo dõi hồ sơ.';
+                return;
+            }
+            var port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+            var apiBase = (window.location.protocol === 'file:' || port !== '3000') ? 'http://localhost:3000' : '';
+            var fetchController = new AbortController();
+            var timeoutId = setTimeout(function() { fetchController.abort(); }, 15000);
+            fetch(apiBase + '/api/submissions/' + id, { headers: { 'Authorization': 'Bearer ' + token }, signal: fetchController.signal })
+                .then(function(res) {
+                    clearTimeout(timeoutId);
+                    if (res.status === 401) {
+                        errorEl.innerHTML = 'Phiên đăng nhập hết hạn. <a href="dang-nhap.html">Đăng nhập lại</a>.';
+                        return null;
+                    }
+                    if (res.status === 403) {
+                        errorEl.textContent = 'Bạn không có quyền xem hồ sơ này.';
+                        return null;
+                    }
+                    if (res.status === 404) {
+                        errorEl.innerHTML = 'Không tìm thấy hồ sơ' + (id ? ' (mã hồ sơ: #' + escapeHtml(String(id)) + ').' : '.') +
+                            ' Mã này do hệ thống gán khi nộp; có thể hồ sơ đã bị xóa hoặc danh sách đang hiển thị cũ. ' +
+                            '<a href="hoi-dong.html">Quay lại danh sách hồ sơ</a>, nhấn F5 tải lại rồi chọn hồ sơ còn hiển thị.';
+                        return null;
+                    }
+                    if (!res.ok) {
+                        return res.json().catch(function() { return { message: 'Lỗi máy chủ' }; }).then(function(d) {
+                            if (d && d.message) errorEl.textContent = 'Lỗi: ' + d.message + '. Vui lòng khởi động lại server (npm start) và thử lại.';
+                            else errorEl.textContent = 'Không thể tải thông tin hồ sơ (mã lỗi ' + res.status + '). Kiểm tra backend đang chạy tại http://localhost:3000.';
+                            return null;
+                        });
+                    }
+                    return res.json();
+                })
+                .then(function(data) {
+                    loadingEl.style.display = 'none';
+                    if (!data) {
+                        errorEl.style.display = 'block';
+                        if (!errorEl.textContent) errorEl.textContent = 'Không thể tải thông tin hồ sơ. Kiểm tra kết nối và đảm bảo backend đang chạy (npm start).';
+                        return;
+                    }
+                    try {
+                    if (!Array.isArray(data.reportPeriodicFiles)) data.reportPeriodicFiles = [];
+                    var status = data.status || 'SUBMITTED';
+                    var info = statusToCurrentStage(status);
+                    document.getElementById('sub-id').textContent = '#' + (data.id != null ? data.id : id);
+                    document.getElementById('sub-title').textContent = data.title || 'Không tên';
+                    document.getElementById('sub-by').textContent = (data.submittedByName ? data.submittedByName + ' (' + data.submittedBy + ')' : data.submittedBy) || '—';
+                    document.getElementById('sub-date').textContent = data.createdAt || '—';
+                    var badge = document.getElementById('sub-status-badge');
+                    badge.textContent = STATUS_LABELS[status] || status;
+                    badge.className = 'status-badge ';
+                    if (info.rejected) badge.className += 'rejected';
+                    else if (info.allDone) badge.className += 'done';
+                    else badge.className += 'current';
+                    var stagesHtml = '';
+                    var statusLabels = { done: '✓ Đã xong', current: '▶ Đang tại đây', rejected: '❌ Không chấp thuận', pending: '⏳ Chưa đến' };
+                    var showSecretaryForm = (status === 'SUBMITTED' && info.current === 3 && !info.rejected && (user.role === 'thu_ky' || user.role === 'admin'));
+                    var showChairmanForm = (status === 'VALIDATED' && info.current === 4 && !info.rejected && (user.role === 'chu_tich' || user.role === 'admin'));
+                    var assignedIds = [];
+                    try { assignedIds = JSON.parse(data.assignedReviewerIds || '[]'); } catch (e) {}
+                    var myReviewerSlot = (assignedIds[0] === user.id) ? 1 : ((assignedIds[1] === user.id) ? 2 : 0);
+                    var isCouncil = user.role === 'admin' || ['chu_tich', 'thu_ky', 'thanh_vien'].includes(user.role);
+                    var showGd5Form = (status === 'UNDER_REVIEW' && info.current === 5 && (isCouncil || myReviewerSlot > 0));
+                    var showMeetingForm = (status === 'IN_MEETING' && info.current === 6 && !info.rejected && (user.role === 'thu_ky' || user.role === 'admin'));
+                    var showGd6Form = (status === 'APPROVED' && info.current === 7 && !info.rejected && (user.role === 'thu_ky' || user.role === 'admin'));
+                    var isSubmitter = (data.submittedById === user.id);
+                    var showGd7Form = (status === 'IMPLEMENTATION' && info.current === 8 && (isSubmitter || user.role === 'admin'));
+                    STAGES.forEach(function(st) {
+                        var logicalStepStart = (st.num === 1) ? 1 : st.num + 1;
+                        var logicalStepEnd = (st.num === 1) ? 2 : st.num + 1;
+                        var state = 'pending';
+                        if (info.current > logicalStepEnd) state = 'done';
+                        else if (info.current >= logicalStepStart && info.current <= logicalStepEnd) state = info.rejected ? 'rejected' : 'current';
+                        if (state === 'current' && info.allDone) state = 'done';
+                        var note = (state === 'current' && info.note) ? '<div class="stage-note">' + escapeHtml(info.note) + '</div>' : '';
+                        var label = statusLabels[state] ? '<div class="stage-status-label">' + statusLabels[state] + '</div>' : '';
+                        var overdueHtml = '';
+                        if (state === 'current' && info.current >= 3) {
+                            var stageStart = (info.current === 3) ? data.createdAt : (info.current === 4 ? data.reviewedAt : (info.current === 5 ? data.assignedAt : null));
+                            var timeMatch = st.time.match(/\d+/);
+                            var expectedDays = timeMatch ? parseInt(timeMatch[0], 10) : 0;
+                            if (stageStart && expectedDays > 0) {
+                                var elapsedMs = Date.now() - new Date(stageStart).getTime();
+                                var elapsedDays = elapsedMs / (24 * 60 * 60 * 1000);
+                                var overdueDays = Math.floor(elapsedDays - expectedDays);
+                                if (overdueDays > 0) {
+                                    overdueHtml = '<div class="stage-overdue-box">⚠ Đã quá hạn xử lý ' + overdueDays + ' ngày</div>';
+                                }
+                            }
+                        }
+                        var secretaryForm = '';
+                        if (st.num === 2 && state === 'current' && showSecretaryForm) {
+                            secretaryForm = '<div class="stage-secretary-actions" id="secretary-form-gd3">' +
+                                '<label>Quyết định Thư ký Hội đồng:</label>' +
+                                '<div class="radio-group">' +
+                                '<input type="radio" name="gd3-decision" id="gd3-pass" value="pass"><label for="gd3-pass">Hợp lệ (chuyển GĐ3)</label>' +
+                                '<input type="radio" name="gd3-decision" id="gd3-reject" value="reject"><label for="gd3-reject">Không chấp thuận</label>' +
+                                '<input type="radio" name="gd3-decision" id="gd3-supplement" value="need_supplement"><label for="gd3-supplement">Yêu cầu bổ sung hồ sơ</label>' +
+                                '<input type="radio" name="gd3-decision" id="gd3-revision" value="need_revision"><label for="gd3-revision">Yêu cầu sửa hồ sơ</label>' +
+                                '</div>' +
+                                '<label>Nhận xét / Yêu cầu (gửi nghiên cứu viên và Hội đồng):</label>' +
+                                '<textarea id="gd3-comment" placeholder="Nếu yêu cầu bổ sung hoặc sửa, vui lòng ghi rõ nội dung cần chỉnh..."></textarea>' +
+                                '<div class="gd3-action-buttons">' +
+                                '<button type="button" class="btn-done btn-valid" id="gd3-btn-valid">✓ Đánh dấu Hợp lệ</button>' +
+                                '<button type="button" class="btn-done btn-supplement" id="gd3-btn-supplement">⚠ Yêu cầu bổ sung</button>' +
+                                '<button type="button" class="btn-done" id="gd3-done">Ghi nhận (theo lựa chọn trên)</button>' +
+                                '</div>' +
+                                '</div>';
+                        }
+                        var gd3History = '';
+                        if (st.num === 2 && state === 'done' && data.reviewedAt) {
+                            var gd3DecisionLabels = { VALIDATED: 'Hợp lệ (chuyển GĐ3)', REJECTED: 'Không chấp thuận', NEED_REVISION: 'Yêu cầu bổ sung / sửa hồ sơ' };
+                            var reviewedAtFormatted = '';
+                            try { reviewedAtFormatted = new Date(data.reviewedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { reviewedAtFormatted = data.reviewedAt; }
+                            gd3History = '<div class="stage-gd3-history">' +
+                                '<h4>Lịch sử hành động Thư ký (GĐ2)</h4>' +
+                                '<div class="history-row"><strong>Thời gian:</strong> ' + escapeHtml(reviewedAtFormatted) + '</div>' +
+                                '<div class="history-row"><strong>Quyết định:</strong> ' + escapeHtml(gd3DecisionLabels[status] || status) + '</div>' +
+                                '<div class="history-row"><strong>Người thực hiện:</strong> ' + escapeHtml(data.reviewedByName || 'Thư ký Hội đồng') + '</div>' +
+                                (data.reviewNote ? '<div class="history-row"><strong>Nhận xét / Yêu cầu:</strong></div><div class="history-note">' + escapeHtml(data.reviewNote) + '</div>' : '') +
+                                '</div>';
+                        }
+                        var chairmanForm = '';
+                        if (st.num === 3 && state === 'current' && showChairmanForm) {
+                            chairmanForm = '<div class="stage-chairman-actions" id="chairman-form-gd4">' +
+                                '<label>Phân công phản biện (chọn ít nhất 2 thành viên Hội đồng):</label>' +
+                                '<div id="gd4-council-msg" class="gd4-council-msg" style="display:none;"></div>' +
+                                '<label for="gd4-reviewer1">Phản biện 1:</label><select id="gd4-reviewer1"><option value="">Đang tải...</option></select>' +
+                                '<label for="gd4-reviewer2">Phản biện 2:</label><select id="gd4-reviewer2"><option value="">Đang tải...</option></select>' +
+                                '<label>Ghi chú (tùy chọn, gửi đến phản biện và Hội đồng):</label>' +
+                                '<textarea id="gd4-note" placeholder="Nội dung ghi chú..."></textarea>' +
+                                '<button type="button" class="btn-done" id="gd4-done">Xong</button></div>';
+                        }
+                        var gd4History = '';
+                        if (st.num === 3 && state === 'done' && data.assignedAt) {
+                            var assignedAtFormatted = '';
+                            try { assignedAtFormatted = new Date(data.assignedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch (e) { assignedAtFormatted = data.assignedAt; }
+                            var reviewersText = '—';
+                            if (data.assignedReviewerNames && data.assignedReviewerNames.length) {
+                                reviewersText = data.assignedReviewerNames.map(function(name, i) {
+                                    return 'Phản biện ' + (i + 1) + ': ' + (name || '—');
+                                }).join('; ');
+                            }
+                            var chairmanNote = '<div class="gd4-chairman-note">Nếu Chủ tịch cần thay đổi phản biện, liên hệ Admin để điều chỉnh quá trình tại GĐ3 và thực hiện lại phân công.</div>';
+                            var resetBtnHtml = (user.role === 'admin' && status === 'UNDER_REVIEW') ? '<div class="gd4-reset-area"><button type="button" class="btn-reset-gd4" id="gd4-reset-btn">Đưa về GĐ3 để Chủ tịch phân công lại</button></div>' : '';
+                            gd4History = '<div class="stage-gd4-history">' +
+                                '<h4>Lịch sử hành động Chủ tịch (GĐ3)</h4>' +
+                                '<div class="history-row"><strong>Thời gian:</strong> ' + escapeHtml(assignedAtFormatted) + '</div>' +
+                                '<div class="history-row"><strong>Người thực hiện:</strong> ' + escapeHtml(data.assignedByName || 'Chủ tịch Hội đồng') + '</div>' +
+                                '<div class="history-row"><strong>Phản biện được phân công:</strong> ' + escapeHtml(reviewersText) + '</div>' +
+                                (data.assignNote ? '<div class="history-row"><strong>Ghi chú:</strong></div><div class="history-note">' + escapeHtml(data.assignNote) + '</div>' : '') +
+                                chairmanNote + resetBtnHtml + '</div>';
+                        }
+                        var gd5Form = '';
+                        if (st.num === 4 && state === 'current' && showGd5Form) {
+                            gd5Form = '<div class="stage-gd5-actions" id="gd5-form-container">Đang tải...</div>';
+                        }
+                        var gd5History = '';
+                        if (st.num === 4 && state === 'done' && data.gd5ReviewHistory && data.gd5ReviewHistory.length) {
+                            var hasAny = data.gd5ReviewHistory.some(function(h) { return h.uploadedAt || h.originalName; });
+                            if (hasAny) {
+                                gd5History = '<div class="stage-gd5-history"><h4>Lịch sử hành động phản biện (GĐ4)</h4>';
+                                data.gd5ReviewHistory.forEach(function(h) {
+                                    var timeStr = h.uploadedAt ? (function() { try { return new Date(h.uploadedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return h.uploadedAt; } })() : '—';
+                                    var fileName = h.originalName || '—';
+                                    gd5History += '<div class="history-row"><strong>Phản biện ' + h.slot + ':</strong> ' + escapeHtml(h.reviewerName || '—') + '</div>';
+                                    gd5History += '<div class="history-row"><strong>Thời gian nộp:</strong> ' + escapeHtml(timeStr) + '</div>';
+                                    gd5History += '<div class="history-row"><strong>File:</strong> ' + escapeHtml(fileName);
+                                    if (isCouncil && fileName !== '—') {
+                                        gd5History += ' <button type="button" class="gd5-history-download" data-slot="' + h.slot + '" data-name="' + escapeHtml(fileName) + '">📥 Tải file</button>';
+                                    }
+                                    gd5History += '</div>';
+                                });
+                                gd5History += '</div>';
+                            }
+                        }
+                        var conditionalFlowBlock = '';
+                        if (st.num === 5 && state === 'current' && status === 'CONDITIONAL') {
+                            var hasCondFile = !!(data.conditionalFile && data.conditionalFile.originalName);
+                            var condFileName = hasCondFile ? data.conditionalFile.originalName : 'SCI-ACE-04';
+                            var isChairmanOrAdmin = (user.role === 'chu_tich' || user.role === 'admin');
+                            conditionalFlowBlock = '<div class="stage-meeting-actions" id="conditional-flow-block">' +
+                                '<h4 style="margin-bottom:0.5rem;color:var(--primary);">Hành động Chấp thuận có điều kiện</h4>' +
+                                '<div class="conditional-step-row">' +
+                                '<span class="step-label">Bước 1:</span>' +
+                                '<span class="step-desc">NCV đăng nhập và nộp bản giải trình SCI-ACE-04.</span>' +
+                                '<span class="step-action">';
+                            var canUploadCond = (isSubmitter || user.role === 'admin') && !hasCondFile;
+                            if (canUploadCond) {
+                                conditionalFlowBlock += '<input type="file" id="conditional-file" accept=".pdf,.doc,.docx" style="margin-right:0.5rem;"> <button type="button" class="btn-done" id="conditional-submit-btn">📤 Upload tài liệu</button>';
+                            } else if (hasCondFile) {
+                                conditionalFlowBlock += '<span style="color:var(--primary);font-weight:600;">✓ Đã nộp</span>';
+                            }
+                            if ((isCouncil || (isSubmitter && hasCondFile)) && hasCondFile) {
+                                conditionalFlowBlock += ' <button type="button" class="meeting-download" id="conditional-download-btn" style="margin-left:0.5rem;">📥 Tải tài liệu</button>';
+                            }
+                            if (!isCouncil && !isSubmitter) {
+                                conditionalFlowBlock += '<span style="color:var(--gray);">Chờ NCV nộp trước.</span>';
+                            }
+                            conditionalFlowBlock += '</span></div>' +
+                                '<div class="conditional-step-row"><span class="step-label">Bước 2:</span>' +
+                                '<span class="step-desc">Chủ tịch Hội đồng chọn Thông qua hoặc Không thông qua.</span>' +
+                                '<span class="step-action">';
+                            if (hasCondFile && isChairmanOrAdmin) {
+                                conditionalFlowBlock += '<div class="btn-approve-pair"><button type="button" class="btn-done" id="conditional-approve-btn">Thông qua</button><button type="button" class="btn-conditional-reject" id="conditional-reject-btn">Không thông qua</button></div>';
+                            } else if (hasCondFile) {
+                                conditionalFlowBlock += '<span style="color:var(--gray);">Chờ Chủ tịch quyết định.</span>';
+                            } else {
+                                conditionalFlowBlock += '<span style="color:var(--gray);">Chờ NCV nộp trước.</span>';
+                            }
+                            conditionalFlowBlock += '</span></div></div>';
+                        }
+                        var meetingForm = '';
+                        if (st.num === 5 && state === 'current' && showMeetingForm) {
+                            meetingForm = '<div class="stage-meeting-actions" id="meeting-form-gd5">' +
+                                '<label>Upload biên bản họp Hội đồng (SCI-ACE-05):</label>' +
+                                '<input type="file" id="meeting-file" accept=".pdf,.doc,.docx">' +
+                                '<label>Kết luận Hội đồng:</label>' +
+                                '<div class="radio-group">' +
+                                '<input type="radio" name="meeting-decision" id="meeting-approved" value="approved"><label for="meeting-approved">Chấp thuận</label>' +
+                                '<input type="radio" name="meeting-decision" id="meeting-conditional" value="conditional"><label for="meeting-conditional">Có điều kiện</label>' +
+                                '<input type="radio" name="meeting-decision" id="meeting-rejected" value="rejected"><label for="meeting-rejected">Không chấp thuận</label>' +
+                                '</div>' +
+                                '<label>Ghi chú (tùy chọn):</label>' +
+                                '<textarea id="meeting-note" placeholder="Ghi chú bổ sung về kết luận Hội đồng..."></textarea>' +
+                                '<button type="button" class="btn-done" id="meeting-done">Xong</button></div>';
+                        }
+                        var meetingHistory = '';
+                        var showGd5History = st.num === 5 && (state === 'done' || (state === 'current' && status === 'CONDITIONAL'));
+                        if (showGd5History && data.gd5History && data.gd5History.length > 0) {
+                            meetingHistory = '<div class="stage-meeting-history"><h4>Lịch sử hoạt động Họp Hội đồng (GĐ5)</h4>';
+                            data.gd5History.forEach(function(h, idx) {
+                                var timeStr = h.performedAt ? (function() { try { return new Date(h.performedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return h.performedAt; } })() : '—';
+                                meetingHistory += '<div class="history-row" style="margin-top:' + (idx > 0 ? '0.75rem' : '0') + ';"><strong>' + (idx + 1) + '. ' + escapeHtml(h.label || h.actionType) + ':</strong></div>' +
+                                    '<div class="history-row"><strong>Thời gian:</strong> ' + escapeHtml(timeStr) + '</div>' +
+                                    '<div class="history-row"><strong>Người thực hiện:</strong> ' + escapeHtml(h.performedByName || '—') + '</div>';
+                                if (h.fileFieldName && h.originalFileName) {
+                                    meetingHistory += '<div class="history-row"><strong>File:</strong> ' + escapeHtml(h.originalFileName) + ' <button type="button" class="gd5-history-file-download" data-field="' + escapeHtml(h.fileFieldName) + '" data-name="' + escapeHtml(h.originalFileName) + '">📥 Tải file</button></div>';
+                                } else if (h.fileFieldName === 'meeting_minutes' && data.meetingMinutes && data.meetingMinutes.originalName) {
+                                    meetingHistory += '<div class="history-row"><strong>Biên bản:</strong> ' + escapeHtml(data.meetingMinutes.originalName) + ' <button type="button" class="meeting-download gd5-history-file-download" data-field="meeting_minutes" data-name="' + escapeHtml(data.meetingMinutes.originalName) + '">📥 Tải biên bản</button></div>';
+                                }
+                            });
+                            meetingHistory += '</div>';
+                        } else if (showGd5History && data.meetingDecisionAt) {
+                            var meetingDecisionLabels = { APPROVED: 'Chấp thuận', CONDITIONAL: 'Chấp thuận có điều kiện', REJECTED: 'Không chấp thuận' };
+                            var meetingAtFormatted = data.meetingDecisionAt ? (function() { try { return new Date(data.meetingDecisionAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return data.meetingDecisionAt; } })() : '—';
+                            meetingHistory = '<div class="stage-meeting-history"><h4>Lịch sử hoạt động Họp Hội đồng (GĐ5)</h4>' +
+                                '<div class="history-row"><strong>1. Kết quả họp (Thư ký):</strong></div>' +
+                                '<div class="history-row"><strong>Thời gian:</strong> ' + escapeHtml(meetingAtFormatted) + '</div>' +
+                                '<div class="history-row"><strong>Kết luận:</strong> ' + escapeHtml(meetingDecisionLabels[status] || status) + '</div>' +
+                                '<div class="history-row"><strong>Người thực hiện:</strong> ' + escapeHtml(data.meetingDecisionByName || 'Thư ký Hội đồng') + '</div>';
+                            if (data.meetingNote) meetingHistory += '<div class="history-row"><strong>Ghi chú:</strong></div><div class="history-note">' + escapeHtml(data.meetingNote) + '</div>';
+                            if (data.meetingMinutes && data.meetingMinutes.originalName) {
+                                meetingHistory += '<div class="history-row"><strong>Biên bản:</strong> ' + escapeHtml(data.meetingMinutes.originalName) + ' <button type="button" class="meeting-download" id="meeting-download-btn">📥 Tải biên bản</button></div>';
+                            }
+                            if (status === 'CONDITIONAL' && data.conditionalSubmittedAt) {
+                                var condSubAt = data.conditionalSubmittedAt ? (function() { try { return new Date(data.conditionalSubmittedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return data.conditionalSubmittedAt; } })() : '—';
+                                meetingHistory += '<div class="history-row" style="margin-top:0.75rem;"><strong>2. NCV nộp SCI-ACE-04:</strong></div>' +
+                                    '<div class="history-row"><strong>Thời gian:</strong> ' + escapeHtml(condSubAt) + '</div>' +
+                                    '<div class="history-row"><strong>Người nộp:</strong> ' + escapeHtml(data.conditionalSubmittedByName || data.submittedByName || '—') + '</div>';
+                                if (data.conditionalFile && data.conditionalFile.originalName) {
+                                    meetingHistory += '<div class="history-row"><strong>File:</strong> ' + escapeHtml(data.conditionalFile.originalName) + ' <button type="button" class="gd5-history-file-download" data-field="conditional_sci_ace_04" data-name="' + escapeHtml(data.conditionalFile.originalName) + '">📥 Tải file</button></div>';
+                                }
+                            }
+                            if (status === 'CONDITIONAL' && data.conditionalApprovedAt) {
+                                var condAppAt = data.conditionalApprovedAt ? (function() { try { return new Date(data.conditionalApprovedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return data.conditionalApprovedAt; } })() : '—';
+                                meetingHistory += '<div class="history-row" style="margin-top:0.75rem;"><strong>3. Chủ tịch thông qua:</strong></div>' +
+                                    '<div class="history-row"><strong>Thời gian:</strong> ' + escapeHtml(condAppAt) + '</div>' +
+                                    '<div class="history-row"><strong>Người thực hiện:</strong> ' + escapeHtml(data.conditionalApprovedByName || 'Chủ tịch Hội đồng') + '</div>';
+                            }
+                            if (status === 'APPROVED' && data.conditionalApprovedAt) {
+                                var condAppAt = data.conditionalApprovedAt ? (function() { try { return new Date(data.conditionalApprovedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return data.conditionalApprovedAt; } })() : '—';
+                                meetingHistory += '<div class="history-row" style="margin-top:0.75rem;"><strong>2. Chủ tịch thông qua (sau khi NCV nộp SCI-ACE-04):</strong></div>' +
+                                    '<div class="history-row"><strong>Thời gian:</strong> ' + escapeHtml(condAppAt) + '</div>' +
+                                    '<div class="history-row"><strong>Người thực hiện:</strong> ' + escapeHtml(data.conditionalApprovedByName || 'Chủ tịch Hội đồng') + '</div>';
+                            }
+                            meetingHistory += '</div>';
+                        }
+                        var gd6Form = '';
+                        if (st.num === 6 && state === 'current' && showGd6Form) {
+                            gd6Form = '<div class="stage-meeting-actions" id="gd6-form">' +
+                                '<label>Upload Quyết định (SCI-ACE-QĐ):</label>' +
+                                '<label for="decision-vn">Quyết định tiếng Việt:</label><input type="file" id="decision-vn" accept=".pdf,.doc,.docx">' +
+                                '<label for="decision-en">Quyết định tiếng Anh:</label><input type="file" id="decision-en" accept=".pdf,.doc,.docx">' +
+                                '<button type="button" class="btn-done" id="gd6-done">Cấp Quyết định</button></div>';
+                        }
+                        var gd6History = '';
+                        if (st.num === 6 && state === 'done' && data.decisionIssuedAt) {
+                            var decAtFormatted = data.decisionIssuedAt ? (function() { try { return new Date(data.decisionIssuedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return data.decisionIssuedAt; } })() : '—';
+                            gd6History = '<div class="stage-meeting-history"><h4>Đã cấp Quyết định (GĐ6)</h4>' +
+                                '<div class="history-row"><strong>Thời gian:</strong> ' + escapeHtml(decAtFormatted) + '</div>';
+                            if (data.decisionVn && data.decisionVn.originalName) {
+                                gd6History += '<div class="history-row"><strong>Quyết định (VN):</strong> ' + escapeHtml(data.decisionVn.originalName) + ' <button type="button" class="gd5-history-file-download" data-field="decision_vn" data-name="' + escapeHtml(data.decisionVn.originalName) + '">📥 Tải file</button></div>';
+                            }
+                            if (data.decisionEn && data.decisionEn.originalName) {
+                                gd6History += '<div class="history-row"><strong>Quyết định (EN):</strong> ' + escapeHtml(data.decisionEn.originalName) + ' <button type="button" class="gd5-history-file-download" data-field="decision_en" data-name="' + escapeHtml(data.decisionEn.originalName) + '">📥 Tải file</button></div>';
+                            }
+                            gd6History += '</div>';
+                        }
+                        var gd7Form = '';
+                        if (st.num === 7 && state === 'current' && showGd7Form) {
+                            gd7Form = '<div class="stage-meeting-actions" id="gd7-form">' +
+                                '<h4 style="margin-bottom:0.75rem;color:var(--primary);">SCI-ACE-07: Báo cáo định kỳ & Báo cáo kết thúc</h4>' +
+                                '<div class="gd7-upload-section" style="margin-bottom:1.5rem;">' +
+                                '<label style="display:block;font-weight:600;margin-bottom:0.5rem;">📄 Báo cáo định kỳ (có thể nộp nhiều lần):</label>' +
+                                '<input type="file" id="report-periodic-file" accept=".pdf,.doc,.docx" style="margin-right:0.5rem;">' +
+                                '<button type="button" class="btn-done" id="report-periodic-btn">📤 Nộp báo cáo định kỳ</button>' +
+                                '</div>' +
+                                '<div class="gd7-periodic-list" id="gd7-periodic-list" style="margin-bottom:1.5rem;"></div>' +
+                                '<div class="gd7-upload-section" style="padding-top:1rem;border-top:1px solid #dee2e6;">' +
+                                '<label style="display:block;font-weight:600;margin-bottom:0.5rem;">📄 Báo cáo kết thúc (nộp khi hoàn thành):</label>' +
+                                '<input type="file" id="report-final-file" accept=".pdf,.doc,.docx" style="margin-right:0.5rem;">' +
+                                '<button type="button" class="btn-done" id="report-final-btn">📤 Nộp báo cáo kết thúc</button>' +
+                                '<p style="font-size:0.85rem;color:var(--gray);margin-top:0.5rem;">Sau khi nộp, hồ sơ sẽ chuyển sang trạng thái Hoàn thành.</p>' +
+                                '</div></div>';
+                        }
+                        var gd7History = '';
+                        if (st.num === 7 && (state === 'done' || (state === 'current' && status === 'COMPLETED'))) {
+                            var periodicList = (data.reportPeriodicFiles && data.reportPeriodicFiles.length) ? data.reportPeriodicFiles : [];
+                            var hasFinal = !!(data.reportFinalFile && data.reportFinalFile.originalName);
+                            if (periodicList.length > 0 || hasFinal || data.completedAt) {
+                                gd7History = '<div class="stage-meeting-history"><h4>Báo cáo đã nộp (GĐ7)</h4>';
+                                periodicList.forEach(function(f, idx) {
+                                    var timeStr = f.uploadedAt ? (function() { try { return new Date(f.uploadedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return f.uploadedAt; } })() : '—';
+                                    gd7History += '<div class="history-row"><strong>Báo cáo định kỳ ' + (idx + 1) + ':</strong> ' + escapeHtml(f.originalName) + ' (' + escapeHtml(timeStr) + ') <button type="button" class="gd5-history-file-download" data-field="' + escapeHtml(f.fieldName) + '" data-name="' + escapeHtml(f.originalName) + '">📥 Tải</button></div>';
+                                });
+                                if (hasFinal) {
+                                    var finalTime = data.reportFinalFile.uploadedAt ? (function() { try { return new Date(data.reportFinalFile.uploadedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return data.reportFinalFile.uploadedAt; } })() : '—';
+                                    gd7History += '<div class="history-row" style="margin-top:0.5rem;"><strong>Báo cáo kết thúc:</strong> ' + escapeHtml(data.reportFinalFile.originalName) + ' (' + escapeHtml(finalTime) + ') <button type="button" class="gd5-history-file-download" data-field="report_final" data-name="' + escapeHtml(data.reportFinalFile.originalName) + '">📥 Tải</button></div>';
+                                }
+                                if (data.completedAt) {
+                                    var completedStr = (function() { try { return new Date(data.completedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return data.completedAt; } })();
+                                    gd7History += '<div class="history-row" style="margin-top:0.5rem;color:#16a34a;"><strong>✓ Hoàn thành:</strong> ' + escapeHtml(completedStr) + '</div>';
+                                }
+                                gd7History += '</div>';
+                            }
+                        }
+                        var gd1Block = '';
+                        if (st.num === 1) {
+                            var subName = data.submittedByName || data.submittedBy || '—';
+                            var subEmail = data.submittedBy || '—';
+                            var subDate = data.createdAt ? (function() { try { return new Date(data.createdAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return data.createdAt; } })() : '—';
+                            gd1Block = '<div class="stage-gd1-submission">' +
+                                '<div class="stage-meta">👤 Người nộp: ' + escapeHtml(subName) + ' — ' + escapeHtml(subEmail) + ' — Nộp ngày: ' + escapeHtml(subDate) + '</div>' +
+                                '<div class="stage-gd1-files"><strong>📄 File trong hồ sơ:</strong>';
+                            var fileList = (data.submissionFiles && data.submissionFiles.length) ? data.submissionFiles : [];
+                            fileList.forEach(function(f) {
+                                var fname = f.originalName || f.fieldName || 'File';
+                                var fieldLabel = (f.fieldName === 'sci_ace_01') ? 'SCI-ACE-01' : (f.fieldName === 'sci_ace_02') ? 'SCI-ACE-02' : (f.fieldName === 'sci_ace_03') ? 'SCI-ACE-03' : (f.fieldName && f.fieldName.indexOf('attachment_') === 0) ? ('Đính kèm ' + (parseInt(f.fieldName.replace('attachment_', ''), 10) + 1)) : f.fieldName;
+                                gd1Block += '<div class="stage-gd1-file-row">' +
+                                    '<span>' + escapeHtml(fieldLabel) + ': ' + escapeHtml(fname) + '</span>' +
+                                    ' <button type="button" class="gd1-file-download" data-field-name="' + escapeHtml(f.fieldName) + '" data-name="' + escapeHtml(fname) + '">📥 Tải về</button></div>';
+                            });
+                            if (fileList.length === 0) gd1Block += '<div class="stage-gd1-file-row" style="color:var(--gray);">Chưa có file.</div>';
+                            gd1Block += '</div></div>';
+                        }
+                        var metaOrGd1 = (st.num === 1) ? gd1Block : ('<div class="stage-meta">👤 ' + escapeHtml(st.who) + ' · ⏱ ' + escapeHtml(st.time) + '</div><div class="stage-meta">📄 ' + escapeHtml(st.docs) + '</div>');
+                        stagesHtml += '<div class="stage-card ' + state + '" id="stage-' + st.num + '">' +
+                            label +
+                            '<div class="stage-num">GĐ' + st.num + '</div>' +
+                            '<div class="stage-title">' + escapeHtml(st.title) + '</div>' +
+                            metaOrGd1 +
+                            note + overdueHtml + secretaryForm + chairmanForm + gd5Form + gd5History + meetingForm + conditionalFlowBlock + meetingHistory + gd6Form + gd6History + gd7Form + gd7History + gd3History + gd4History + '</div>';
+                    });
+                    document.getElementById('stages').innerHTML = stagesHtml;
+                    var scrollToStage = sessionStorage.getItem('trackingScrollToStage');
+                    if (scrollToStage) {
+                        sessionStorage.removeItem('trackingScrollToStage');
+                        var logicalNum = parseInt(scrollToStage, 10) || 1;
+                        var displayNum = (logicalNum <= 2) ? 1 : (logicalNum - 1);
+                        var stageEl = document.getElementById('stage-' + displayNum);
+                        if (stageEl) {
+                            setTimeout(function() { stageEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
+                        }
+                    }
+                    var apiBaseGd5History = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                    var tokGd5History = localStorage.getItem('token');
+                    document.querySelectorAll('.gd5-history-download').forEach(function(btn) {
+                        var slot = btn.getAttribute('data-slot');
+                        var name = btn.getAttribute('data-name') || 'phan-bien-' + slot;
+                        btn.onclick = function() {
+                            fetch(apiBaseGd5History + '/api/submissions/' + id + '/review-file/' + slot, { headers: { 'Authorization': 'Bearer ' + tokGd5History } })
+                                .then(function(r) {
+                                    if (!r.ok) throw new Error('Không tải được');
+                                    return r.blob();
+                                })
+                                .then(function(blob) {
+                                    var a = document.createElement('a');
+                                    a.href = URL.createObjectURL(blob);
+                                    a.download = name || 'phan-bien-' + slot;
+                                    a.click();
+                                    URL.revokeObjectURL(a.href);
+                                })
+                                .catch(function() { alert('Không tải được file.'); });
+                        };
+                    });
+                    var apiBaseGd1 = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                    var tokGd1 = localStorage.getItem('token');
+                    document.querySelectorAll('.gd1-file-download').forEach(function(btn) {
+                        var fieldName = btn.getAttribute('data-field-name');
+                        var name = btn.getAttribute('data-name') || fieldName || 'file';
+                        btn.onclick = function() {
+                            fetch(apiBaseGd1 + '/api/submissions/' + id + '/file/' + encodeURIComponent(fieldName), { headers: { 'Authorization': 'Bearer ' + tokGd1 } })
+                                .then(function(r) {
+                                    if (!r.ok) throw new Error('Không tải được');
+                                    return r.blob();
+                                })
+                                .then(function(blob) {
+                                    var a = document.createElement('a');
+                                    a.href = URL.createObjectURL(blob);
+                                    a.download = name;
+                                    a.click();
+                                    URL.revokeObjectURL(a.href);
+                                })
+                                .catch(function() { alert('Không tải được file.'); });
+                        };
+                    });
+                    if (showMeetingForm) {
+                        var meetingDoneBtn = document.getElementById('meeting-done');
+                        if (meetingDoneBtn) {
+                            var apiBaseMeeting = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                            var tokMeeting = localStorage.getItem('token');
+                            meetingDoneBtn.onclick = function() {
+                                var rad = document.querySelector('input[name="meeting-decision"]:checked');
+                                if (!rad) { alert('Vui lòng chọn kết luận: Chấp thuận, Có điều kiện, hoặc Không chấp thuận.'); return; }
+                                var fileInput = document.getElementById('meeting-file');
+                                var file = fileInput ? fileInput.files[0] : null;
+                                if (!file && rad.value !== 'rejected') { alert('Vui lòng chọn file biên bản họp Hội đồng (SCI-ACE-05).'); return; }
+                                var noteEl = document.getElementById('meeting-note');
+                                var note = noteEl ? noteEl.value.trim() : '';
+                                meetingDoneBtn.disabled = true;
+                                var fd = new FormData();
+                                if (file) fd.append('file', file);
+                                fd.append('decision', rad.value);
+                                fd.append('note', note);
+                                fetch(apiBaseMeeting + '/api/submissions/' + id + '/meeting-result', {
+                                    method: 'PUT',
+                                    headers: { 'Authorization': 'Bearer ' + tokMeeting },
+                                    body: fd
+                                }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                                    .then(function(result) {
+                                        if (result.ok) {
+                                            sessionStorage.setItem('trackingScrollToStage', '6');
+                                            alert(result.data.message || 'Đã ghi nhận kết quả họp.');
+                                            window.location.reload();
+                                        } else {
+                                            alert(result.data.message || 'Không thể ghi nhận.');
+                                            meetingDoneBtn.disabled = false;
+                                        }
+                                    })
+                                    .catch(function() {
+                                        alert('Không thể kết nối máy chủ.');
+                                        meetingDoneBtn.disabled = false;
+                                    });
+                            };
+                        }
+                    }
+                    var gd6DoneBtn = document.getElementById('gd6-done');
+                    if (gd6DoneBtn) {
+                        gd6DoneBtn.onclick = function() {
+                            var fileVn = document.getElementById('decision-vn');
+                            var fileEn = document.getElementById('decision-en');
+                            var fVn = fileVn ? fileVn.files[0] : null;
+                            var fEn = fileEn ? fileEn.files[0] : null;
+                            if (!fVn) { alert('Vui lòng chọn file Quyết định tiếng Việt.'); return; }
+                            if (!fEn) { alert('Vui lòng chọn file Quyết định tiếng Anh.'); return; }
+                            gd6DoneBtn.disabled = true;
+                            var fd = new FormData();
+                            fd.append('decision_vn', fVn);
+                            fd.append('decision_en', fEn);
+                            var apiBaseGd6 = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                            var tokGd6 = localStorage.getItem('token');
+                            fetch(apiBaseGd6 + '/api/submissions/' + id + '/issue-decision', {
+                                method: 'PUT',
+                                headers: { 'Authorization': 'Bearer ' + tokGd6 },
+                                body: fd
+                            }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                                .then(function(result) {
+                                    if (result.ok) {
+                                        sessionStorage.setItem('trackingScrollToStage', '7');
+                                        alert(result.data.message || 'Đã cấp Quyết định.');
+                                        window.location.reload();
+                                    } else {
+                                        alert(result.data.message || 'Không thể cấp Quyết định.');
+                                        gd6DoneBtn.disabled = false;
+                                    }
+                                })
+                                .catch(function() { alert('Không thể kết nối máy chủ.'); gd6DoneBtn.disabled = false; });
+                        };
+                    }
+                    var reportPeriodicList = document.getElementById('gd7-periodic-list');
+                    if (reportPeriodicList && data.reportPeriodicFiles && data.reportPeriodicFiles.length > 0) {
+                        data.reportPeriodicFiles.forEach(function(f, idx) {
+                            var timeStr = f.uploadedAt ? (function() { try { return new Date(f.uploadedAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return f.uploadedAt; } })() : '—';
+                            reportPeriodicList.innerHTML += '<div class="history-row" style="margin-bottom:0.35rem;"><span>Báo cáo định kỳ ' + (idx + 1) + ': ' + escapeHtml(f.originalName) + ' (' + escapeHtml(timeStr) + ')</span> <button type="button" class="gd5-history-file-download" data-field="' + escapeHtml(f.fieldName) + '" data-name="' + escapeHtml(f.originalName) + '">📥 Tải</button></div>';
+                        });
+                    }
+                    var reportPeriodicBtn = document.getElementById('report-periodic-btn');
+                    if (reportPeriodicBtn) {
+                        reportPeriodicBtn.onclick = function() {
+                            var fileInput = document.getElementById('report-periodic-file');
+                            var file = fileInput ? fileInput.files[0] : null;
+                            if (!file) { alert('Vui lòng chọn file báo cáo định kỳ.'); return; }
+                            reportPeriodicBtn.disabled = true;
+                            var fd = new FormData();
+                            fd.append('file', file);
+                            var apiBaseGd7 = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                            var tokGd7 = localStorage.getItem('token');
+                            fetch(apiBaseGd7 + '/api/submissions/' + id + '/report-periodic', {
+                                method: 'POST',
+                                headers: { 'Authorization': 'Bearer ' + tokGd7 },
+                                body: fd
+                            }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                                .then(function(result) {
+                                    if (result.ok) {
+                                        sessionStorage.setItem('trackingScrollToStage', '7');
+                                        alert(result.data.message || 'Đã nộp báo cáo định kỳ.');
+                                        window.location.reload();
+                                    } else {
+                                        alert(result.data.message || 'Không thể nộp.');
+                                        reportPeriodicBtn.disabled = false;
+                                    }
+                                })
+                                .catch(function() { alert('Không thể kết nối máy chủ.'); reportPeriodicBtn.disabled = false; });
+                        };
+                    }
+                    var reportFinalBtn = document.getElementById('report-final-btn');
+                    if (reportFinalBtn) {
+                        reportFinalBtn.onclick = function() {
+                            var fileInput = document.getElementById('report-final-file');
+                            var file = fileInput ? fileInput.files[0] : null;
+                            if (!file) { alert('Vui lòng chọn file báo cáo kết thúc.'); return; }
+                            if (!confirm('Xác nhận nộp báo cáo kết thúc? Hồ sơ sẽ chuyển sang trạng thái Hoàn thành.')) return;
+                            reportFinalBtn.disabled = true;
+                            var fd = new FormData();
+                            fd.append('file', file);
+                            var apiBaseGd7 = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                            var tokGd7 = localStorage.getItem('token');
+                            fetch(apiBaseGd7 + '/api/submissions/' + id + '/report-final', {
+                                method: 'POST',
+                                headers: { 'Authorization': 'Bearer ' + tokGd7 },
+                                body: fd
+                            }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                                .then(function(result) {
+                                    if (result.ok) {
+                                        sessionStorage.setItem('trackingScrollToStage', '7');
+                                        alert(result.data.message || 'Đã nộp báo cáo kết thúc. Hồ sơ hoàn thành.');
+                                        window.location.reload();
+                                    } else {
+                                        alert(result.data.message || 'Không thể nộp.');
+                                        reportFinalBtn.disabled = false;
+                                    }
+                                })
+                                .catch(function() { alert('Không thể kết nối máy chủ.'); reportFinalBtn.disabled = false; });
+                        };
+                    }
+                    var condSubmitBtn = document.getElementById('conditional-submit-btn');
+                    if (condSubmitBtn) {
+                            var apiBaseCond = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                            var tokCond = localStorage.getItem('token');
+                            condSubmitBtn.onclick = function() {
+                                var fileInput = document.getElementById('conditional-file');
+                                var file = fileInput ? fileInput.files[0] : null;
+                                if (!file) { alert('Vui lòng chọn file SCI-ACE-04.'); return; }
+                                condSubmitBtn.disabled = true;
+                                var fd = new FormData();
+                                fd.append('file', file);
+                                fetch(apiBaseCond + '/api/submissions/' + id + '/conditional-submit', {
+                                    method: 'POST',
+                                    headers: { 'Authorization': 'Bearer ' + tokCond },
+                                    body: fd
+                                }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                                    .then(function(result) {
+                                        if (result.ok) {
+                                            sessionStorage.setItem('trackingScrollToStage', '6');
+                                            alert(result.data.message || 'Đã nộp SCI-ACE-04.');
+                                            window.location.reload();
+                                        } else {
+                                            alert(result.data.message || 'Không thể nộp.');
+                                            condSubmitBtn.disabled = false;
+                                        }
+                                    })
+                                    .catch(function() { alert('Không thể kết nối máy chủ.'); condSubmitBtn.disabled = false; });
+                            };
+                        }
+                    var condApproveBtn = document.getElementById('conditional-approve-btn');
+                        if (condApproveBtn) {
+                            var apiBaseCondApp = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                            var tokCondApp = localStorage.getItem('token');
+                            condApproveBtn.onclick = function() {
+                                if (!confirm('Xác nhận thông qua? Hồ sơ sẽ chuyển sang giai đoạn Cấp Quyết định.')) return;
+                                condApproveBtn.disabled = true;
+                                var rejectBtn = document.getElementById('conditional-reject-btn');
+                                if (rejectBtn) rejectBtn.disabled = true;
+                                fetch(apiBaseCondApp + '/api/submissions/' + id + '/conditional-approve', {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tokCondApp },
+                                    body: '{}'
+                                }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                                    .then(function(result) {
+                                        if (result.ok) {
+                                            sessionStorage.setItem('trackingScrollToStage', '6');
+                                            alert(result.data.message || 'Đã thông qua.');
+                                            window.location.reload();
+                                        } else {
+                                            alert(result.data.message || 'Không thể thông qua.');
+                                            condApproveBtn.disabled = false;
+                                            if (rejectBtn) rejectBtn.disabled = false;
+                                        }
+                                    })
+                                    .catch(function() { alert('Không thể kết nối máy chủ.'); condApproveBtn.disabled = false; if (rejectBtn) rejectBtn.disabled = false; });
+                            };
+                        }
+                        var condRejectBtn = document.getElementById('conditional-reject-btn');
+                        if (condRejectBtn) {
+                            var apiBaseCondRej = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                            var tokCondRej = localStorage.getItem('token');
+                            condRejectBtn.onclick = function() {
+                                if (!confirm('Xác nhận không thông qua? Email sẽ gửi đến NCV và Hội đồng. NCV cần nộp lại SCI-ACE-04.')) return;
+                                condRejectBtn.disabled = true;
+                                var approveBtn = document.getElementById('conditional-approve-btn');
+                                if (approveBtn) approveBtn.disabled = true;
+                                fetch(apiBaseCondRej + '/api/submissions/' + id + '/conditional-reject', {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tokCondRej },
+                                    body: '{}'
+                                }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                                    .then(function(result) {
+                                        if (result.ok) {
+                                            sessionStorage.setItem('trackingScrollToStage', '6');
+                                            alert(result.data.message || 'Đã gửi thông báo.');
+                                            window.location.reload();
+                                        } else {
+                                            alert(result.data.message || 'Không thể thực hiện.');
+                                            condRejectBtn.disabled = false;
+                                            if (approveBtn) approveBtn.disabled = false;
+                                        }
+                                    })
+                                    .catch(function() { alert('Không thể kết nối máy chủ.'); condRejectBtn.disabled = false; if (approveBtn) approveBtn.disabled = false; });
+                            };
+                        }
+                    var condDownloadBtn = document.getElementById('conditional-download-btn');
+                    if (condDownloadBtn) {
+                            condDownloadBtn.onclick = function() {
+                                var apiBaseCd = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                                var tokCd = localStorage.getItem('token');
+                                var fname = (data.conditionalFile && data.conditionalFile.originalName) ? data.conditionalFile.originalName : 'sci-ace-04.pdf';
+                                fetch(apiBaseCd + '/api/submissions/' + id + '/file/conditional_sci_ace_04', { headers: { 'Authorization': 'Bearer ' + tokCd } })
+                                    .then(function(r) { if (!r.ok) throw new Error('Không tải được'); return r.blob(); })
+                                    .then(function(blob) {
+                                        var a = document.createElement('a');
+                                        a.href = URL.createObjectURL(blob);
+                                        a.download = fname;
+                                        a.click();
+                                        URL.revokeObjectURL(a.href);
+                                    })
+                                    .catch(function() { alert('Không tải được file.'); });
+                            };
+                        }
+                    var meetingDownloadBtn = document.getElementById('meeting-download-btn');
+                    if (meetingDownloadBtn) {
+                        meetingDownloadBtn.onclick = function() {
+                            var apiBaseMeet = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                            var tokMeet = localStorage.getItem('token');
+                            var fname = (data.meetingMinutes && data.meetingMinutes.originalName) ? data.meetingMinutes.originalName : 'bien-ban-hop.pdf';
+                            fetch(apiBaseMeet + '/api/submissions/' + id + '/file/meeting_minutes', { headers: { 'Authorization': 'Bearer ' + tokMeet } })
+                                .then(function(r) { if (!r.ok) throw new Error('Không tải được'); return r.blob(); })
+                                .then(function(blob) {
+                                    var a = document.createElement('a');
+                                    a.href = URL.createObjectURL(blob);
+                                    a.download = fname;
+                                    a.click();
+                                    URL.revokeObjectURL(a.href);
+                                })
+                                .catch(function() { alert('Không tải được file.'); });
+                        };
+                    }
+                    document.querySelectorAll('.gd5-history-file-download').forEach(function(btn) {
+                        var field = btn.getAttribute('data-field');
+                        var fname = btn.getAttribute('data-name') || 'file.pdf';
+                        btn.onclick = function() {
+                            if (!field) return;
+                            var apiBaseGd5 = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                            var tokGd5 = localStorage.getItem('token');
+                            fetch(apiBaseGd5 + '/api/submissions/' + id + '/file/' + encodeURIComponent(field), { headers: { 'Authorization': 'Bearer ' + tokGd5 } })
+                                .then(function(r) { if (!r.ok) throw new Error('Không tải được'); return r.blob(); })
+                                .then(function(blob) {
+                                    var a = document.createElement('a');
+                                    a.href = URL.createObjectURL(blob);
+                                    a.download = fname;
+                                    a.click();
+                                    URL.revokeObjectURL(a.href);
+                                })
+                                .catch(function() { alert('Không tải được file.'); });
+                        };
+                    });
+                    if (showSecretaryForm) {
+                        var apiBaseReview = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                        var submitGd3Review = function(decision, requireComment) {
+                            var commentEl = document.getElementById('gd3-comment');
+                            var comment = commentEl ? commentEl.value.trim() : '';
+                            if (requireComment && !comment) {
+                                alert('Vui lòng nhập nhận xét / yêu cầu bổ sung để gửi đến nghiên cứu viên và Hội đồng.');
+                                if (commentEl) commentEl.focus();
+                                return;
+                            }
+                            var tok = localStorage.getItem('token');
+                            if (!tok) { alert('Vui lòng đăng nhập.'); return; }
+                            var btns = [document.getElementById('gd3-done'), document.getElementById('gd3-btn-valid'), document.getElementById('gd3-btn-supplement')];
+                            btns.forEach(function(b) { if (b) b.disabled = true; });
+                            fetch(apiBaseReview + '/api/submissions/' + id + '/review', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+                                body: JSON.stringify({ decision: decision, comment: comment })
+                            }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                                .then(function(result) {
+                                    if (result.ok) {
+                                        sessionStorage.setItem('trackingScrollToStage', '3');
+                                        alert(result.data.message || 'Đã cập nhật. Email đã gửi đến nghiên cứu viên và Hội đồng.');
+                                        window.location.reload();
+                                    } else {
+                                        alert(result.data.message || 'Không thể cập nhật.');
+                                        btns.forEach(function(b) { if (b) b.disabled = false; });
+                                    }
+                                })
+                                .catch(function(err) {
+                                    console.error('GĐ3 review error', err);
+                                    alert('Không thể kết nối máy chủ. Kiểm tra backend đang chạy (npm start tại http://localhost:3000).');
+                                    btns.forEach(function(b) { if (b) b.disabled = false; });
+                                });
+                        };
+                        var doneBtn = document.getElementById('gd3-done');
+                        if (doneBtn) {
+                            doneBtn.onclick = function() {
+                                var rad = document.querySelector('input[name="gd3-decision"]:checked');
+                                if (!rad) { alert('Vui lòng chọn một quyết định.'); return; }
+                                var requireComment = (rad.value === 'need_supplement' || rad.value === 'need_revision');
+                                submitGd3Review(rad.value, requireComment);
+                            };
+                        }
+                        var btnValid = document.getElementById('gd3-btn-valid');
+                        if (btnValid) {
+                            btnValid.onclick = function() {
+                                var rad = document.getElementById('gd3-pass');
+                                if (rad) rad.checked = true;
+                                submitGd3Review('pass', false);
+                            };
+                        }
+                        var btnSupplement = document.getElementById('gd3-btn-supplement');
+                        if (btnSupplement) {
+                            btnSupplement.onclick = function() {
+                                var rad = document.getElementById('gd3-supplement');
+                                if (rad) rad.checked = true;
+                                submitGd3Review('need_supplement', true);
+                            };
+                        }
+                    }
+                    if (showChairmanForm) {
+                        var apiBaseGd4 = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                        var tok = localStorage.getItem('token');
+                        if (tok) {
+                            fetch(apiBaseGd4 + '/api/users/council', { headers: { 'Authorization': 'Bearer ' + tok } })
+                                .then(function(r) {
+                                    return r.json().then(function(d) { return { ok: r.ok, data: d }; }).catch(function() { return { ok: false, data: null }; });
+                                })
+                                .then(function(result) {
+                                    var data = result.data;
+                                    var council = (data && data.council) ? data.council : [];
+                                    var sel1 = document.getElementById('gd4-reviewer1');
+                                    var sel2 = document.getElementById('gd4-reviewer2');
+                                    var msgEl = document.getElementById('gd4-council-msg');
+                                    if (!sel1 || !sel2) return;
+                                    if (!result.ok) {
+                                        var errMsg = (data && data.message) ? data.message : 'Không tải được danh sách thành viên Hội đồng.';
+                                        sel1.innerHTML = '<option value="">' + escapeHtml(errMsg) + '</option>';
+                                        sel2.innerHTML = '<option value="">' + escapeHtml(errMsg) + '</option>';
+                                        if (msgEl) { msgEl.style.display = 'block'; msgEl.innerHTML = escapeHtml(errMsg) + ' <a href="quan-tri.html">Vào Quản trị</a>'; }
+                                        return;
+                                    }
+                                    var optHtml = '<option value="">-- Chọn thành viên --</option>' + council.map(function(u) {
+                                        var label = (u.fullname || u.email || '') + (u.email ? ' (' + u.email + ')' : '');
+                                        if (u.roleDisplay) label += ' — ' + u.roleDisplay;
+                                        return '<option value="' + u.id + '">' + escapeHtml(label) + '</option>';
+                                    }).join('');
+                                    sel1.innerHTML = optHtml;
+                                    sel2.innerHTML = optHtml;
+                                    if (msgEl) {
+                                        if (council.length === 0) {
+                                            msgEl.style.display = 'block';
+                                            msgEl.innerHTML = 'Chưa có thành viên Hội đồng trong hệ thống. Vào trang <a href="quan-tri.html">Quản trị</a> để thêm tài khoản và cấp vai trò Chủ tịch, Thư ký hoặc Thành viên Hội đồng (chỉ email @sci.edu.vn).';
+                                        } else if (council.length < 2) {
+                                            msgEl.style.display = 'block';
+                                            msgEl.innerHTML = 'Cần ít nhất 2 thành viên Hội đồng để phân công 2 phản biện. Hiện có ' + council.length + ' thành viên. Vào <a href="quan-tri.html">Quản trị</a> để cấp thêm vai trò Chủ tịch / Thư ký / Thành viên.';
+                                        } else {
+                                            msgEl.style.display = 'none';
+                                            msgEl.innerHTML = '';
+                                        }
+                                    }
+                                    var doneBtn = document.getElementById('gd4-done');
+                                    if (doneBtn) {
+                                        doneBtn.onclick = function() {
+                                            var v1 = sel1.value, v2 = sel2.value;
+                                            if (!v1 || !v2) { alert('Vui lòng chọn đủ 2 phản biện.'); return; }
+                                            if (v1 === v2) { alert('Vui lòng chọn 2 thành viên khác nhau.'); return; }
+                                            var commentEl = document.getElementById('gd4-note');
+                                            var note = commentEl ? commentEl.value.trim() : '';
+                                            doneBtn.disabled = true;
+                                            fetch(apiBaseGd4 + '/api/submissions/' + id + '/assign-reviewers', {
+                                                method: 'PUT',
+                                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+                                                body: JSON.stringify({ reviewerIds: [parseInt(v1, 10), parseInt(v2, 10)], note: note })
+                                            }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                                                .then(function(result) {
+                                                    if (result.ok) {
+                                                        sessionStorage.setItem('trackingScrollToStage', '4');
+                                                        alert(result.data.message || 'Đã phân công. Email đã gửi đến phản biện và Hội đồng.');
+                                                        window.location.reload();
+                                                    } else {
+                                                        alert(result.data.message || 'Không thể phân công.');
+                                                        doneBtn.disabled = false;
+                                                    }
+                                                })
+                                                .catch(function(err) {
+                                                    console.error('GĐ4 assign error', err);
+                                                    alert('Không thể kết nối máy chủ.');
+                                                    doneBtn.disabled = false;
+                                                });
+                                        };
+                                    }
+                                })
+                                .catch(function() {
+                                    var sel1 = document.getElementById('gd4-reviewer1');
+                                    var sel2 = document.getElementById('gd4-reviewer2');
+                                    var msgEl = document.getElementById('gd4-council-msg');
+                                    if (sel1) sel1.innerHTML = '<option value="">Không tải được danh sách</option>';
+                                    if (sel2) sel2.innerHTML = '<option value="">Không tải được danh sách</option>';
+                                    if (msgEl) { msgEl.style.display = 'block'; msgEl.innerHTML = 'Không kết nối được máy chủ. Kiểm tra backend đang chạy (npm start) và mở trang tại <a href="http://localhost:3000/theo-doi-ho-so.html?id=' + id + '">http://localhost:3000/theo-doi-ho-so.html</a>.'; }
+                                });
+                        }
+                    }
+                    if (showGd5Form) {
+                        var apiBaseGd5 = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                        var tokGd5 = localStorage.getItem('token');
+                        if (tokGd5) {
+                            fetch(apiBaseGd5 + '/api/submissions/' + id + '/review-files', { headers: { 'Authorization': 'Bearer ' + tokGd5 } })
+                                .then(function(r) { return r.ok ? r.json() : null; })
+                                .then(function(rf) {
+                                    var container = document.getElementById('gd5-form-container');
+                                    if (!container) return;
+                                    var list = (rf && rf.reviewFiles) ? rf.reviewFiles : [];
+                                    var html = '<h4>Đánh giá phản biện (SCI-ACE-PĐG)</h4>';
+                                    html += '<p class="gd5-instruction">Hai phản biện nộp file (PDF hoặc Word có chữ ký / bản scan) tại từng ô bên dưới, chọn file rồi ấn <strong>Xong</strong>. Admin và Hội đồng thấy rõ thể thức nộp; chỉ phản biện được phân công mới nộp được tại ô của mình.</p>';
+                                    [1, 2].forEach(function(slot) {
+                                        var info = list[slot - 1] || {};
+                                        var reviewerName = info.reviewerName || 'Phản biện ' + slot;
+                                        var isMySlot = (myReviewerSlot === slot);
+                                        var isAdminUser = (user.role && String(user.role).toLowerCase() === 'admin');
+                                        var isEnabled = (isMySlot || isAdminUser); // Kích hoạt nếu là slot của mình HOẶC là Admin
+                                        html += '<div class="gd5-slot" data-slot="' + slot + '">';
+                                        html += '<label>Phản biện ' + slot + ': ' + escapeHtml(reviewerName) + '</label>';
+                                        html += '<input type="file" id="gd5-file-' + slot + '" accept=".pdf,.doc,.docx"' + (isEnabled ? '' : ' disabled') + '> ';
+                                        html += '<button type="button" class="btn-done" id="gd5-done-' + slot + '"' + (isEnabled ? '' : ' disabled') + '>Xong</button>';
+                                        if (!isMySlot && !isAdminUser) html += ' <span class="gd5-hint">(Chỉ ' + escapeHtml(reviewerName) + ' mới nộp tại đây)</span>';
+                                        if (info.hasFile) html += ' <span style="color:var(--primary);font-size:0.9rem;">(Đã nộp: ' + escapeHtml(info.originalName || '') + ')</span>';
+                                        if (info.hasFile && (isCouncil || myReviewerSlot > 0 || isAdminUser)) { // Admin cũng có thể tải
+                                            html += ' <button type="button" class="gd5-download-link" data-slot="' + slot + '" data-name="' + escapeHtml(info.originalName || 'phản biện ' + slot) + '">📥 Tải file</button>';
+                                        }
+                                        html += '</div>';
+                                    });
+                                    html += '<div class="gd5-downloads"><strong>Thành viên Hội đồng:</strong> Có thể tải và xem file phản biện sau khi phản biện đã nộp và ấn Xong.</div>';
+                                    container.innerHTML = html;
+                                    container.querySelectorAll('.gd5-download-link').forEach(function(btn) {
+                                        var slot = btn.getAttribute('data-slot');
+                                        var name = btn.getAttribute('data-name') || 'file';
+                                        btn.onclick = function() {
+                                            fetch(apiBaseGd5 + '/api/submissions/' + id + '/review-file/' + slot, { headers: { 'Authorization': 'Bearer ' + tokGd5 } })
+                                                .then(function(r) {
+                                                    if (!r.ok) throw new Error('Không tải được');
+                                                    return r.blob();
+                                                })
+                                                .then(function(blob) {
+                                                    var a = document.createElement('a');
+                                                    a.href = URL.createObjectURL(blob);
+                                                    a.download = name || 'phan-bien-' + slot;
+                                                    a.click();
+                                                    URL.revokeObjectURL(a.href);
+                                                })
+                                                .catch(function() { alert('Không tải được file.'); });
+                                        };
+                                    });
+                                    [1, 2].forEach(function(slot) {
+                                        var btn = document.getElementById('gd5-done-' + slot);
+                                        var fileInput = document.getElementById('gd5-file-' + slot);
+                                        var isMySlotThis = (myReviewerSlot === slot);
+                                        var isAdminThis = (user.role && String(user.role).toLowerCase() === 'admin');
+                                        var enabledThis = (isMySlotThis || isAdminThis);
+                                        if (!btn || !fileInput || !enabledThis) return;
+                                        btn.onclick = function() {
+                                            var file = fileInput.files[0];
+                                            if (!file) { alert('Vui lòng chọn file (PDF hoặc Word có chữ ký / bản scan).'); return; }
+                                            btn.disabled = true;
+                                            var fd = new FormData();
+                                            fd.append('file', file);
+                                            fd.append('slot', String(slot));
+                                            fetch(apiBaseGd5 + '/api/submissions/' + id + '/review-upload', {
+                                                method: 'POST',
+                                                headers: { 'Authorization': 'Bearer ' + tokGd5 },
+                                                body: fd
+                                            }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                                                .then(function(result) {
+                                                    if (result.ok) {
+                                                        sessionStorage.setItem('trackingScrollToStage', '5');
+                                                        alert(result.data.message || 'Đã nộp file đánh giá.');
+                                                        window.location.reload();
+                                                    } else {
+                                                        alert(result.data.message || 'Không thể nộp file.');
+                                                        btn.disabled = false;
+                                                    }
+                                                })
+                                                .catch(function() {
+                                                    alert('Không thể kết nối máy chủ. Kiểm tra: (1) Backend đang chạy — trong thư mục dự án chạy: npm start\n(2) Mở trang qua trình duyệt tại: http://localhost:3000/theo-doi-ho-so.html?id=' + id);
+                                                    btn.disabled = false;
+                                                });
+                                        };
+                                    });
+                                })
+                                .catch(function() {
+                                    var container = document.getElementById('gd5-form-container');
+                                    if (container) container.innerHTML = 'Không tải được thông tin file phản biện.';
+                                });
+                        } else {
+                            var container = document.getElementById('gd5-form-container');
+                            if (container) container.innerHTML = 'Vui lòng đăng nhập.';
+                        }
+                    }
+                    var resetGd4Btn = document.getElementById('gd4-reset-btn');
+                    if (resetGd4Btn) {
+                        var apiBaseReset = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                        var tokReset = localStorage.getItem('token');
+                        resetGd4Btn.onclick = function() {
+                            if (!confirm('Xác nhận đưa hồ sơ về GĐ4? Chủ tịch Hội đồng sẽ thực hiện lại phân công phản biện.')) return;
+                            resetGd4Btn.disabled = true;
+                            fetch(apiBaseReset + '/api/submissions/' + id + '/reset-gd4', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tokReset }
+                            }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }).catch(function() { return { ok: false, data: { message: 'Phản hồi lỗi từ máy chủ' } }; }); })
+                                .then(function(result) {
+                                    if (result.ok) {
+                                        sessionStorage.setItem('trackingScrollToStage', '4');
+                                        alert(result.data.message || 'Đã đưa về GĐ4.');
+                                        window.location.reload();
+                                    } else {
+                                        alert(result.data.message || 'Không thể đưa về GĐ4.');
+                                        resetGd4Btn.disabled = false;
+                                    }
+                                })
+                                .catch(function(err) {
+                                    console.error('Reset GĐ4 error', err);
+                                    alert('Không thể kết nối máy chủ. Kiểm tra: (1) Backend đang chạy (npm start tại http://localhost:3000); (2) Mở trang tại http://localhost:3000/theo-doi-ho-so.html?id=' + id + '; (3) Khởi động lại server nếu vừa cập nhật code.');
+                                    resetGd4Btn.disabled = false;
+                                });
+                        };
+                    }
+                    contentEl.style.display = 'block';
+                    var apiBaseForDownload = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                    document.getElementById('btn-download-ho-so').onclick = function() {
+                        var tok = localStorage.getItem('token');
+                        if (!tok) { alert('Vui lòng đăng nhập.'); return; }
+                        var btn = this;
+                        btn.disabled = true;
+                        fetch(apiBaseForDownload + '/api/submissions/' + id + '/download', { headers: { 'Authorization': 'Bearer ' + tok } })
+                            .then(function(r) {
+                                if (!r.ok) throw new Error('Không tải được');
+                                return r.blob();
+                            })
+                            .then(function(blob) {
+                                var a = document.createElement('a');
+                                a.href = URL.createObjectURL(blob);
+                                a.download = 'ho-so-' + id + '.zip';
+                                a.click();
+                                URL.revokeObjectURL(a.href);
+                            })
+                            .catch(function() { alert('Không tải được hồ sơ.'); })
+                            .finally(function() { btn.disabled = false; });
+                    };
+                    } catch (e) {
+                        console.error('[theo-doi-ho-so] Lỗi xử lý dữ liệu:', e);
+                        errorEl.style.display = 'block';
+                        errorEl.innerHTML = 'Lỗi khi hiển thị hồ sơ: ' + escapeHtml(e.message || 'Không xác định') + '. <a href="hoi-dong.html">Quay lại danh sách</a> hoặc <button type="button" class="btn-done" onclick="location.reload()">Thử lại</button>';
+                    }
+                })
+                .catch(function(err) {
+                    clearTimeout(timeoutId);
+                    console.error('[theo-doi-ho-so] Lỗi tải hồ sơ:', err);
+                    loadingEl.style.display = 'none';
+                    errorEl.style.display = 'block';
+                    var base = (port !== '3000') ? 'http://localhost:3000' : (window.location.origin || 'http://localhost:3000');
+                    var isTimeout = err && err.name === 'AbortError';
+                    fetch(base + '/api/health').then(function(r) { return r.ok; }).catch(function() { return false; }).then(function(ok) {
+                        if (ok) {
+                            var msg = isTimeout ? 'Máy chủ phản hồi chậm (quá 15 giây). ' : '';
+                            errorEl.innerHTML = msg + 'Backend đang chạy nhưng không tải được dữ liệu. Thử: <a href="dang-nhap.html">đăng nhập lại</a> rồi vào <a href="hoi-dong.html">Khu vực Hội đồng</a> xem tiến trình. Hoặc mở cửa sổ ẩn danh (Ctrl+Shift+N). <br><br><button type="button" class="btn-done" id="retry-fetch-btn" style="margin-top:0.5rem;">Thử lại</button>';
+                            var retryBtn = document.getElementById('retry-fetch-btn');
+                            if (retryBtn) retryBtn.onclick = function() { window.location.reload(); };
+                        } else {
+                            errorEl.innerHTML = 'Không thể kết nối tới backend. <br><br>' +
+                                '• Đảm bảo đã chạy <code>npm start</code> trong thư mục dự án.<br>' +
+                                '• Thử mở: <a href="' + base + '/api/health" target="_blank">' + base + '/api/health</a> — nếu mở được thì backend đang chạy.<br>' +
+                                '• Thử cửa sổ ẩn danh (Ctrl+Shift+N) để loại trừ extension.';
+                        }
+                    });
+                });
+        })();
+    </script>
+</body>
+</html>

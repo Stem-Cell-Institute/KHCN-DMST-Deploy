@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Quản lý KHCN & ĐMST - Viện Tế bào gốc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .module-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .module-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        .module-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .module-title {
+            font-size: 22px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .module-description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .module-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .mini-stat {
+            flex: 1;
+            text-align: center;
+        }
+
+        .mini-stat-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .mini-stat-label {
+            font-size: 11px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        .btn-access {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .btn-access:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .modules-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧬 Hệ thống Quản lý KHCN & ĐMST</h1>
+            <p>Viện Tế bào gốc - Trường ĐHKHTN, ĐHQG TP.HCM</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-icon">📋</div>
+                <div class="stat-number">156</div>
+                <div class="stat-label">Nhiệm vụ KHCN</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-number">89</div>
+                <div class="stat-label">Nhân lực KHCN</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🔬</div>
+                <div class="stat-number">42</div>
+                <div class="stat-label">Tài sản trí tuệ</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-number">324</div>
+                <div class="stat-label">Công bố khoa học</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🤝</div>
+                <div class="stat-number">67</div>
+                <div class="stat-label">Hợp tác</div>
+            </div>
+        </div>
+
+        <div class="modules-grid">
+            <!-- Module 1: Quản lý Nhiệm vụ KHCN -->
+            <div class="module-card" onclick="window.location.href='module-tasks.html'">
+                <div class="module-icon">📋</div>
+                <div class="module-title">Quản lý Nhiệm vụ KHCN</div>
+                <div class="module-description">
+                    Quản lý đề tài, dự án, chương trình KHCN các cấp (Nhà nước, Bộ, ĐHQG, Viện). Theo dõi từ đăng ký, xét chọn, phê duyệt đến nghiệm thu.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">23</div>
+                        <div class="mini-stat-label">Đang thực hiện</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">98</div>
+                        <div class="mini-stat-label">Đã hoàn thành</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">5</div>
+                        <div class="mini-stat-label">Quá hạn</div>
+                    </div>
+                </div>
+                <button class="btn-access">Truy cập →</button>
+            </div>
+
+            <!-- Module 2: Quản lý Nhân lực KHCN -->
+            <div class="module-card" onclick="window.location.href='module-personnel.html'">
+                <div class="module-icon">👥</div>
+                <div class="module-title">Quản lý Nhân lực KHCN</div>
+                <div class="module-description">
+                    Quản lý viên chức, nhóm nghiên cứu mạnh, nhóm chuyên gia, nhóm nghiên cứu trẻ tài năng, người học tham gia NCKH.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">12</div>
+                        <div class="mini-stat-label">Nhóm NC mạnh</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">8</div>
+                        <div class="mini-stat-label">Nhóm chuyên gia</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">156</div>
+                        <div class="mini-stat-label">SV NCKH</div>
+                    </div>
+                </div>
+                <button class="btn-access">Truy cập →</button>
+            </div>
+
+            <!-- Module 3: Quản lý Tài sản Trí tuệ -->
+            <div class="module-card" onclick="window.location.href='module-ip.html'">
+                <div class="module-icon">🔬</div>
+                <div class="module-title">Quản lý Tài sản Trí tuệ</div>
+                <div class="module-description">
+                    Quản lý sáng chế, giải pháp hữu ích, thiết kế công nghiệp, bí mật kinh doanh. Xác lập và bảo vệ quyền SHTT.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">18</div>
+                        <div class="mini-stat-label">Sáng chế</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">24</div>
+                        <div class="mini-stat-label">GPHU</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">35</div>
+                        <div class="mini-stat-label">Sáng kiến</div>
+                    </div>
+                </div>
+                <button class="btn-access">Truy cập →</button>
+            </div>
+
+            <!-- Module 4: Quản lý Tài chính KHCN -->
+            <div class="module-card" onclick="window.location.href='module-finance.html'">
+                <div class="module-icon">💰</div>
+                <div class="module-title">Quản lý Tài chính KHCN</div>
+                <div class="module-description">
+                    Quản lý ngân sách, dự toán, tạm ứng, thanh quyết toán kinh phí. Theo dõi nguồn kinh phí và phân bổ chi tiêu.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">45 tỷ</div>
+                        <div class="mini-stat-label">Tổng kinh phí</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">78%</div>
+                        <div class="mini-stat-label">Đã giải ngân</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">23</div>
+                        <div class="mini-stat-label">Chờ quyết toán</div>
+                    </div>
+                </div>
+                <button class="btn-access">Truy cập →</button>
+            </div>
+
+            <!-- Module 5: Quản lý Công bố Khoa học -->
+            <div class="module-card" onclick="window.location.href='module-publication.html'">
+                <div class="module-icon">📄</div>
+                <div class="module-title">Quản lý Công bố Khoa học</div>
+                <div class="module-description">
+                    Quản lý bài báo khoa học, sách, giáo trình, kỷ yếu hội nghị. Theo dõi ISI/Scopus, Q1-Q4, hội nghị quốc tế.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">156</div>
+                        <div class="mini-stat-label">ISI/Scopus</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">89</div>
+                        <div class="mini-stat-label">Hội nghị QT</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">23</div>
+                        <div class="mini-stat-label">Sách</div>
+                    </div>
+                </div>
+                <button class="btn-access">Truy cập →</button>
+            </div>
+
+            <!-- Module 6: Quản lý Hợp tác -->
+            <div class="module-card" onclick="window.location.href='module-cooperation.html'">
+                <div class="module-icon">🤝</div>
+                <div class="module-title">Quản lý Hợp tác</div>
+                <div class="module-description">
+                    Quản lý hợp tác trong nước, quốc tế, doanh nghiệp, địa phương. Theo dõi MOU, hợp đồng, dự án hợp tác.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">34</div>
+                        <div class="mini-stat-label">Quốc tế</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">23</div>
+                        <div class="mini-stat-label">Doanh nghiệp</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">10</div>
+                        <div class="mini-stat-label">Địa phương</div>
+                    </div>
+                </div>
+                <button class="btn-access">Truy cập →</button>
+            </div>
+
+            <!-- Module 7: Quản lý Chuyển giao Công nghệ -->
+            <div class="module-card" onclick="window.location.href='module-tech-transfer.html'">
+                <div class="module-icon">🔄</div>
+                <div class="module-title">Quản lý Chuyển giao Công nghệ</div>
+                <div class="module-description">
+                    Quản lý chuyển giao công nghệ, thương mại hóa kết quả KHCN, tập huấn công nghệ, doanh nghiệp spin-off.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">12</div>
+                        <div class="mini-stat-label">Hợp đồng CGCN</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">8</div>
+                        <div class="mini-stat-label">Thương mại hóa</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">15</div>
+                        <div class="mini-stat-label">Tập huấn</div>
+                    </div>
+                </div>
+                <button class="btn-access">Truy cập →</button>
+            </div>
+
+            <!-- Module 8: Quản lý Cơ sở vật chất -->
+            <div class="module-card" onclick="window.location.href='module-facilities.html'">
+                <div class="module-icon">🏢</div>
+                <div class="module-title">Quản lý Cơ sở vật chất</div>
+                <div class="module-description">
+                    Quản lý phòng thí nghiệm, thiết bị, tài sản cố định. Đăng ký sử dụng, bảo trì, khấu hao, thanh lý.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">45</div>
+                        <div class="mini-stat-label">Phòng TN</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">890</div>
+                        <div class="mini-stat-label">Thiết bị</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">95%</div>
+                        <div class="mini-stat-label">Tỷ lệ sử dụng</div>
+                    </div>
+                </div>
+                <button class="btn-access">Truy cập →</button>
+            </div>
+
+            <!-- Module 9: Quản lý Đạo đức & Liêm chính -->
+            <div class="module-card" onclick="window.location.href='module-ethics.html'">
+                <div class="module-icon">⚖️</div>
+                <div class="module-title">Quản lý Đạo đức & Liêm chính</div>
+                <div class="module-description">
+                    Quản lý đạo đức nghiên cứu, thí nghiệm động vật, xử lý vi phạm, hội đồng đạo đức, hồ sơ đạo đức.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">234</div>
+                        <div class="mini-stat-label">Hồ sơ đạo đức</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">0</div>
+                        <div class="mini-stat-label">Vi phạm</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">12</div>
+                        <div class="mini-stat-label">Hội đồng</div>
+                    </div>
+                </div>
+                <button class="btn-access">Truy cập →</button>
+            </div>
+
+            <!-- Module 10: Quản lý Khen thưởng & Đánh giá -->
+            <div class="module-card" onclick="window.location.href='module-reward.html'">
+                <div class="module-icon">🏆</div>
+                <div class="module-title">Quản lý Khen thưởng & Đánh giá</div>
+                <div class="module-description">
+                    Quản lý thi đua khen thưởng, đánh giá hiệu quả KHCN, xử lý vi phạm, giờ chuẩn, hệ số KHCN.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">45</div>
+                        <div class="mini-stat-label">Khen thưởng</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">12</div>
+                        <div class="mini-stat-label">Giải thưởng</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">2</div>
+                        <div class="mini-stat-label">Vi phạm</div>
+                    </div>
+                </div>
+                <button class="btn-access">Truy cập →</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

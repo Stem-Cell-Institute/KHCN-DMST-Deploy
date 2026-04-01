@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Đạo đức & Liêm chính - Viện Tế bào gốc</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 40px; }
+        .header h1 { font-size: 24px; }
+        .breadcrumb { font-size: 14px; opacity: 0.9; }
+        .breadcrumb a { color: white; text-decoration: none; }
+        .main-container { display: flex; height: calc(100vh - 80px); }
+        .sidebar { width: 280px; background: white; border-right: 1px solid #e0e0e0; overflow-y: auto; }
+        .menu-section { padding: 20px; }
+        .menu-title { font-size: 12px; color: #999; text-transform: uppercase; font-weight: 600; margin-bottom: 15px; }
+        .menu-item { padding: 12px 15px; margin-bottom: 5px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: all 0.3s; }
+        .menu-item:hover { background: #f0f0f0; }
+        .menu-item.active { background: #667eea; color: white; }
+        .content-area { flex: 1; padding: 30px; overflow-y: auto; }
+        .page-title { font-size: 28px; color: #333; margin-bottom: 30px; }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #667eea; }
+        .stat-label { font-size: 12px; color: #999; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-value { font-size: 36px; font-weight: bold; color: #333; }
+        .ethics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .ethics-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 4px solid #667eea; }
+        .ethics-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 10px; }
+        .ethics-code { font-family: monospace; font-size: 14px; color: #667eea; font-weight: 600; margin-bottom: 15px; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
+        .status-approved { background: #e8f5e9; color: #388e3c; }
+        .status-pending { background: #fff3e0; color: #f57c00; }
+        .status-review { background: #e3f2fd; color: #1976d2; }
+        .alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .alert-success { background: #e8f5e9; color: #388e3c; }
+        .timeline { position: relative; padding-left: 30px; margin-top: 20px; }
+        .timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: #e0e0e0; }
+        .timeline-item { position: relative; margin-bottom: 20px; padding-left: 20px; }
+        .timeline-item::before { content: ''; position: absolute; left: -24px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: #667eea; border: 3px solid white; box-shadow: 0 0 0 2px #667eea; }
+        .timeline-date { font-size: 12px; color: #999; margin-bottom: 5px; }
+        .timeline-content { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚖️ Quản lý Đạo đức & Liêm chính</h1>
+        <div class="breadcrumb"><a href="index.html">🏠 Trang chủ</a> / Đạo đức & Liêm chính</div>
+    </div>
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="menu-section">
+                <div class="menu-title">Quản lý đạo đức</div>
+                <div class="menu-item active"><span>📊</span><span>Tổng quan</span></div>
+                <div class="menu-item"><span>➕</span><span>Đăng ký hồ sơ mới</span></div>
+                <div class="menu-item"><span>📁</span><span>Hồ sơ đạo đức</span></div>
+            </div>
+            <div class="menu-section">
+                <div class="menu-title">Theo trạng thái</div>
+                <div class="menu-item"><span>⏳</span><span>Chờ xét duyệt</span></div>
+                <div class="menu-item"><span>🔍</span><span>Đang xem xét</span></div>
+                <div class="menu-item"><span>✅</span><span>Đã phê duyệt</span></div>
+                <div class="menu-item"><span>❌</span><span>Từ chối</span></div>
+            </div>
+            <div class="menu-section">
+                <div class="menu-title">Hội đồng</div>
+                <div class="menu-item"><span>👥</span><span>Hội đồng đạo đức</span></div>
+                <div class="menu-item"><span>📅</span><span>Lịch họp</span></div>
+            </div>
+        </div>
+        <div class="content-area">
+            <h2 class="page-title">Tổng quan Đạo đức & Liêm chính</h2>
+            <div class="alert alert-success">
+                <span>✅</span>
+                <div><strong>Tuân thủ tốt:</strong> Không có vi phạm đạo đức nghiên cứu trong năm 2024-2025.</div>
+            </div>
+            <div class="stats-row">
+                <div class="stat-box"><div class="stat-label">Hồ sơ đạo đức</div><div class="stat-value">234</div></div>
+                <div class="stat-box"><div class="stat-label">Đã phê duyệt</div><div class="stat-value">215</div></div>
+                <div class="stat-box"><div class="stat-label">Đang xem xét</div><div class="stat-value">15</div></div>
+                <div class="stat-box"><div class="stat-label">Vi phạm</div><div class="stat-value">0</div></div>
+            </div>
+            <h3 style="margin: 30px 0 20px;">Hồ sơ đạo đức gần đây</h3>
+            <div class="ethics-grid">
+                <div class="ethics-card">
+                    <div class="ethics-code">EC-2025-001</div>
+                    <div class="ethics-title">Nghiên cứu ứng dụng tế bào gốc trong điều trị bệnh tim mạch</div>
+                    <span class="status-badge status-approved">Đã phê duyệt</span>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-size: 13px; color: #666;">Chủ nhiệm:</span>
+                            <strong style="font-size: 13px;">TS. Nguyễn Văn A</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-size: 13px; color: #666;">Ngày phê duyệt:</span>
+                            <strong style="font-size: 13px;">15/01/2025</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-size: 13px; color: #666;">Hết hạn:</span>
+                            <strong style="font-size: 13px;">15/01/2028</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="ethics-card">
+                    <div class="ethics-code">EC-2025-002</div>
+                    <div class="ethics-title">Thử nghiệm lâm sàng gel tế bào gốc điều trị vết thương</div>
+                    <span class="status-badge status-review">Đang xem xét</span>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-size: 13px; color: #666;">Chủ nhiệm:</span>
+                            <strong style="font-size: 13px;">PGS.TS. Trần Thị B</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-size: 13px; color: #666;">Ngày nộp:</span>
+                            <strong style="font-size: 13px;">01/02/2025</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-size: 13px; color: #666;">Họp hội đồng:</span>
+                            <strong style="font-size: 13px;">20/02/2025</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="ethics-card">
+                    <div class="ethics-code">EC-2025-003</div>
+                    <div class="ethics-title">Nghiên cứu cơ chế biệt hóa tế bào gốc thành tế bào thần kinh</div>
+                    <span class="status-badge status-pending">Chờ xét duyệt</span>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-size: 13px; color: #666;">Chủ nhiệm:</span>
+                            <strong style="font-size: 13px;">TS. Lê Văn C</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="font-size: 13px; color: #666;">Ngày nộp:</span>
+                            <strong style="font-size: 13px;">08/02/2025</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 30px;">
+                <h3 style="margin-bottom: 20px;">Quy trình xét duyệt hồ sơ đạo đức</h3>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-date">Bước 1</div>
+                        <div class="timeline-content"><strong>Nộp hồ sơ:</strong> Chủ nhiệm nộp hồ sơ đạo đức đầy đủ qua hệ thống</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">Bước 2</div>
+                        <div class="timeline-content"><strong>Kiểm tra hành chính:</strong> Văn phòng kiểm tra tính đầy đủ của hồ sơ (3-5 ngày)</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">Bước 3</div>
+                        <div class="timeline-content"><strong>Phân công phản biện:</strong> Hội đồng phân công 2 phản biện độc lập (7-10 ngày)</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">Bước 4</div>
+                        <div class="timeline-content"><strong>Họp hội đồng:</strong> Hội đồng đạo đức xem xét và quyết định</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-date">Bước 5</div>
+                        <div class="timeline-content"><strong>Cấp mã đạo đức:</strong> Hồ sơ được phê duyệt sẽ được cấp mã đạo đức</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

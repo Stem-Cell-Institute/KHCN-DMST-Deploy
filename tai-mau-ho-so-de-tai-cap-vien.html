@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hướng dẫn tải mẫu hồ sơ - Đề tài cấp Viện</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-light: #2563eb;
+            --primary-rgb: 30, 64, 175;
+            --accent: #ea580c;
+            --accent-light: #fb923c;
+            --dark: #1e3a5f;
+            --gray: #475569;
+            --gray-light: #94a3b8;
+            --bg: #f8fafc;
+            --white: #ffffff;
+            --shadow: rgba(30, 64, 175, 0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; line-height: 1.7; color: var(--dark); background: var(--bg); }
+        .container { max-width: 900px; margin: 0 auto; padding: 0 2rem; }
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: var(--white);
+            padding: 2rem 0;
+        }
+        .header-content { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+        .logo { display: flex; align-items: center; padding: 0.5rem; background: var(--white); border-radius: 20px; text-decoration: none; flex-shrink: 0; }
+        .logo img { height: 60px; width: auto; }
+        .header-text h1 { font-family: 'Libre Baskerville', serif; font-size: 1.6rem; margin-bottom: 0.25rem; }
+        .header-text p { font-size: 0.95rem; opacity: 0.95; }
+        nav { background: var(--white); box-shadow: 0 2px 10px var(--shadow); position: sticky; top: 0; z-index: 100; }
+        nav .container { display: flex; gap: 1rem; padding: 1rem 2rem; flex-wrap: wrap; align-items: center; }
+        nav a { color: var(--gray); text-decoration: none; font-weight: 500; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.3s; }
+        nav a:hover { color: var(--primary); background: rgba(var(--primary-rgb), 0.08); }
+        main { padding: 2rem 0; }
+        .guide-section {
+            background: var(--white);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px var(--shadow);
+            margin-bottom: 2rem;
+        }
+        .guide-section h2 { font-family: 'Libre Baskerville', serif; font-size: 1.4rem; color: var(--primary); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent-light); }
+        .guide-section p { color: var(--gray); margin-bottom: 1.5rem; }
+        .phase-block { margin-bottom: 2rem; }
+        .phase-block h3 {
+            font-size: 1.1rem;
+            color: var(--primary);
+            background: linear-gradient(90deg, #6a76ee 0%, #8e5ee6 100%);
+            color: white;
+            padding: 12px 18px;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        .step-group { margin-bottom: 1.5rem; padding-left: 0.5rem; }
+        .step-group h4 { font-size: 0.95rem; color: var(--dark); margin-bottom: 0.75rem; }
+        .template-list { list-style: none; padding: 0; }
+        .template-list li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.2s;
+        }
+        .template-list li:hover { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.05); }
+        .template-list a {
+            flex: 1;
+            color: var(--dark);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .template-list a:hover { color: var(--primary); }
+        .template-code { font-family: monospace; font-size: 12px; color: var(--accent); background: #fff3e0; padding: 2px 8px; border-radius: 4px; }
+        .btn-download { background: var(--accent); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-download:hover { background: #c2410c; color: white; }
+        footer { background: var(--dark); color: var(--white); padding: 1.5rem 0; margin-top: 2rem; text-align: center; }
+        footer p { color: var(--gray-light); font-size: 0.9rem; }
+        .intro-box { background: #e3f2fd; border-left: 4px solid var(--primary); padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+    </style>
+</head>
+<body class="theme-cap-vien">
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="de-tai-cap-vien.html" class="logo">
+                    <img src="images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc">
+                </a>
+                <div class="header-text">
+                    <h1>Hướng dẫn tải mẫu hồ sơ</h1>
+                    <p>Đề tài cấp Viện — Mẫu văn bản theo giai đoạn và bước</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav>
+        <div class="container">
+            <a href="index.html">🏠 Trang chủ</a>
+            <a href="de-tai-cap-vien.html">📋 Đề tài cấp Viện</a>
+            <a href="nop-de-tai-cap-vien.html">📝 Nộp đề tài</a>
+            <a href="theo-doi-de-tai-cap-vien.html">📁 Theo dõi hồ sơ</a>
+            <a href="hoi-dong-de-tai-cap-vien.html">👥 Hội đồng</a>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <div class="guide-section">
+                <h2>📥 Hướng dẫn nghiên cứu viên và Hội đồng</h2>
+                <div class="intro-box">
+                    <p><strong>Nghiên cứu viên</strong> và <strong>thành viên Hội đồng</strong> tải mẫu hồ sơ theo từng giai đoạn và bước bên dưới. Sau khi điền xong, truy cập trang <strong>Theo dõi tiến trình</strong> của đề tài và thực hiện upload tại nút hành động tương ứng.</p>
+                </div>
+
+                <div class="phase-block">
+                    <h3>📋 GIAI ĐOẠN 1: ĐĂNG KÝ VÀ XÉT DUYỆT HỒ SƠ</h3>
+                    <div class="step-group">
+                        <h4>Bước 1 — Nộp hồ sơ đề xuất (Nghiên cứu viên)</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-TASK-01</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-01_ ĐƠN ĐỀ XUẤT ĐỀ TÀI.md" target="_blank" download>Đơn đề xuất đề tài</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-01_ ĐƠN ĐỀ XUẤT ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                            <li><span class="template-code">SCI-TASK-02</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-02_ THUYẾT MINH ĐỀ TÀI NGHIÊN CỨU KHOA HỌC.md" target="_blank" download>Thuyết minh đề tài nghiên cứu khoa học</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-02_ THUYẾT MINH ĐỀ TÀI NGHIÊN CỨU KHOA HỌC.md" class="btn-download" download>📥 Tải</a></li>
+                            <li><span class="template-code">SCI-TASK-03</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-03_ DỰ TOÁN KINH PHÍ CHI TIẾT ĐỀ TÀI.md" target="_blank" download>Dự toán kinh phí chi tiết</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-03_ DỰ TOÁN KINH PHÍ CHI TIẾT ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                    <div class="step-group">
+                        <h4>Bước 2 — Kiểm tra hồ sơ hành chính (Thư ký HĐKHCN)</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-TASK-04</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-04_ PHIẾU KIỂM TRA HỒ SƠ HÀNH CHÍNH ĐỀ TÀI.md" target="_blank" download>Phiếu kiểm tra hồ sơ hành chính</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-04_ PHIẾU KIỂM TRA HỒ SƠ HÀNH CHÍNH ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                    <div class="step-group">
+                        <h4>Bước 3 — Phân công phản biện (Chủ tịch HĐKHCN)</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-TASK-05</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-05_ PHIẾU PHÂN CÔNG PHẢN BIỆN ĐỀ TÀI.md" target="_blank" download>Phiếu phân công phản biện</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-05_ PHIẾU PHÂN CÔNG PHẢN BIỆN ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                    <div class="step-group">
+                        <h4>Bước 4 — Đánh giá phản biện (2 Phản biện)</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-TASK-06</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-06_ PHIẾU ĐÁNH GIÁ CỦA CHUYÊN GIA PHẢN BIỆN ĐỀ TÀI.md" target="_blank" download>Phiếu đánh giá của chuyên gia phản biện</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-06_ PHIẾU ĐÁNH GIÁ CỦA CHUYÊN GIA PHẢN BIỆN ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                    <div class="step-group">
+                        <h4>Bước 5 — Họp Hội đồng Khoa học Viện</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-TASK-07</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-07_ BIÊN BẢN HỌP HỘI ĐỒNG KHOA HỌC XÉT DUYỆT ĐỀ TÀI.md" target="_blank" download>Biên bản họp Hội đồng Khoa học xét duyệt đề tài</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-07_ BIÊN BẢN HỌP HỘI ĐỒNG KHOA HỌC XÉT DUYỆT ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                    <div class="step-group">
+                        <h4>Bước 6 — Cấp Quyết định phê duyệt (Viện trưởng)</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-INST-QĐ</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-INST-QĐ_ QUYẾT ĐỊNH PHÊ DUYỆT ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ CẤP VIỆN.md" target="_blank" download>Quyết định phê duyệt đề tài KHCN cấp Viện</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-INST-QĐ_ QUYẾT ĐỊNH PHÊ DUYỆT ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ CẤP VIỆN.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="phase-block">
+                    <h3>📝 GIAI ĐOẠN 2: KÝ HỢP ĐỒNG VÀ TRIỂN KHAI</h3>
+                    <div class="step-group">
+                        <h4>Bước 7 — Ký hợp đồng thực hiện</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-CONTRACT-01</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-CONTRACT-01_ HỢP ĐỒNG THỰC HIỆN NHIỆM VỤ KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Hợp đồng thực hiện nhiệm vụ khoa học và công nghệ</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-CONTRACT-01_ HỢP ĐỒNG THỰC HIỆN NHIỆM VỤ KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="phase-block">
+                    <h3>⚙️ GIAI ĐOẠN 3: THỰC HIỆN VÀ BÁO CÁO</h3>
+                    <div class="step-group">
+                        <h4>Bước 10 & 10A — Báo cáo tiến độ 6 tháng</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-INST-07</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-INST-07_ BÁO CÁO TIẾN ĐỘ THỰC HIỆN ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Báo cáo tiến độ thực hiện đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-INST-07_ BÁO CÁO TIẾN ĐỘ THỰC HIỆN ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                    <div class="step-group">
+                        <h4>Bước 11 — Điều chỉnh nội dung/nhân sự/thời gian</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-ACE-06</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-ACE-06_ ĐƠN XIN ĐIỀU CHỈNH NỘI DUNG/NHÂN SỰ/THỜI GIAN THỰC HIỆN ĐỀ TÀI.md" target="_blank" download>Đơn xin điều chỉnh nội dung/nhân sự/thời gian</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-ACE-06_ ĐƠN XIN ĐIỀU CHỈNH NỘI DUNG/NHÂN SỰ/THỜI GIAN THỰC HIỆN ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="phase-block">
+                    <h3>🎯 GIAI ĐOẠN 4: NGHIỆM THU</h3>
+                    <div class="step-group">
+                        <h4>Bước 12 — Nộp hồ sơ nghiệm thu (Chủ nhiệm)</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-FINAL-01</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-01_ ĐƠN ĐỀ NGHỊ NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Đơn đề nghị nghiệm thu đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-01_ ĐƠN ĐỀ NGHỊ NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                            <li><span class="template-code">SCI-FINAL-02</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-02_ BÁO CÁO TỔNG KẾT ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Báo cáo tổng kết đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-02_ BÁO CÁO TỔNG KẾT ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                            <li><span class="template-code">SCI-FINAL-03</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-03_ BÁO CÁO TÀI CHÍNH QUYẾT TOÁN ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Báo cáo tài chính quyết toán đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-03_ BÁO CÁO TÀI CHÍNH QUYẾT TOÁN ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                    <div class="step-group">
+                        <h4>Bước 13-14 — Phản biện nghiệm thu</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-FINAL-04</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-04_ PHIẾU ĐÁNH GIÁ PHẢN BIỆN NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Phiếu đánh giá phản biện nghiệm thu đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-04_ PHIẾU ĐÁNH GIÁ PHẢN BIỆN NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                    <div class="step-group">
+                        <h4>Bước 15 — Họp Hội đồng nghiệm thu</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-FINAL-05</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-05_ BIÊN BẢN HỌP HỘI ĐỒNG NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Biên bản họp Hội đồng nghiệm thu đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-05_ BIÊN BẢN HỌP HỘI ĐỒNG NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                            <li><span class="template-code">SCI-FINAL-06</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-06_ PHIẾU NHẬN XÉT VÀ CHẤM ĐIỂM CỦA THÀNH VIÊN HỘI ĐỒNG NGHIỆM THU.md" target="_blank" download>Phiếu nhận xét và chấm điểm của thành viên Hội đồng nghiệm thu</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-06_ PHIẾU NHẬN XÉT VÀ CHẤM ĐIỂM CỦA THÀNH VIÊN HỘI ĐỒNG NGHIỆM THU.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                    <div class="step-group">
+                        <h4>Bước 16 — Quyết định nghiệm thu (Viện trưởng)</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-FINAL-07</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-07_ QUYẾT ĐỊNH CÔNG NHẬN KẾT QUẢ NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ CẤP VIỆN.md" target="_blank" download>Quyết định công nhận kết quả nghiệm thu đề tài KHCN cấp Viện</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-07_ QUYẾT ĐỊNH CÔNG NHẬN KẾT QUẢ NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ CẤP VIỆN.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                    <div class="step-group">
+                        <h4>Bước 18 — Thanh lý hợp đồng</h4>
+                        <ul class="template-list">
+                            <li><span class="template-code">SCI-FINAL-08</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-08_ BIÊN BẢN THANH LÝ HỢP ĐỒNG THỰC HIỆN NHIỆM VỤ KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Biên bản thanh lý hợp đồng thực hiện nhiệm vụ KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-08_ BIÊN BẢN THANH LÝ HỢP ĐỒNG THỰC HIỆN NHIỆM VỤ KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Viện Tế bào gốc — Đề tài cấp Viện</p>
+        </div>
+    </footer>
+</body>
+</html>

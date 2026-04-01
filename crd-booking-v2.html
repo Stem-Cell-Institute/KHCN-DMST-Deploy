@@ -1,0 +1,2576 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<title>Đặt lịch Thiết bị – CRD | Viện Tế bào gốc</title>
+<style>
+/* ════════════════════════════════════════════
+   RESET & BASE  —  tiệp hệ thống gốc SCI-KHCN
+════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 20px;
+  color: #333;
+}
+:root {
+  --primary:   #667eea;
+  --secondary: #764ba2;
+  --grad:      linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --white:     #ffffff;
+  --surface:   #f8f9ff;
+  --border:    #e8ecff;
+  --text:      #333333;
+  --muted:     #666666;
+  --light:     #999999;
+  --success:   #4caf88;
+  --warning:   #f5a623;
+  --danger:    #e05c6a;
+  --shadow:    0 10px 30px rgba(102,126,234,.18);
+  --shadow-lg: 0 20px 50px rgba(102,126,234,.28);
+  --r:         15px;
+  --r-xs:      8px;
+  /* Lịch trực quan: đậm hơn mặc định */
+  --tl-grid:       #b8c0d4;
+  --tl-row-line:   #d2d6e3;
+  --tl-stripe-a:   #c8cede;
+  --tl-stripe-b:   #e4e7f0;
+}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #f0f0f8; }
+::-webkit-scrollbar-thumb { background: #c5c9f0; border-radius: 3px; }
+
+/* ── Animations ─────────────────────────────── */
+@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+.fade-up { animation: fadeUp .28s ease both; }
+
+/* ── Layout ─────────────────────────────────── */
+.container { max-width: 1400px; margin: 0 auto; }
+
+/* ── Cards ──────────────────────────────────── */
+.card        { background: var(--white); border-radius: var(--r); box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s; }
+.card:hover  { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.card-flat   { background: var(--white); border-radius: var(--r); box-shadow: var(--shadow); }
+
+/* ── Buttons ────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; border-radius: var(--r-xs); font-family: inherit; font-weight: 600;
+  cursor: pointer; transition: all .2s; white-space: nowrap; text-decoration: none;
+}
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary  { background: var(--grad); color:#fff; padding:10px 20px; font-size:14px; box-shadow:0 4px 14px rgba(102,126,234,.35); }
+.btn-primary:not(:disabled):hover { transform:scale(1.04); box-shadow:0 6px 20px rgba(102,126,234,.5); }
+.btn-outline  { background:transparent; color:var(--primary); border:1.5px solid var(--primary); padding:9px 18px; font-size:13px; }
+.btn-outline:hover  { background:var(--primary); color:#fff; }
+.btn-ghost    { background:transparent; color:var(--muted); border:1.5px solid var(--border); padding:9px 18px; font-size:13px; }
+.btn-ghost:hover    { border-color:var(--primary); color:var(--primary); }
+.btn-danger   { background:var(--danger); color:#fff; padding:7px 14px; font-size:12px; }
+.btn-danger:hover   { opacity:.88; }
+.btn-back     { background:rgba(255,255,255,.18); color:#fff; border:1.5px solid rgba(255,255,255,.4); padding:8px 16px; font-size:13px; border-radius:var(--r-xs); }
+.btn-back:hover     { background:rgba(255,255,255,.30); }
+.btn-sm   { padding:6px 13px !important; font-size:12px !important; }
+.btn-full { width:100%; }
+
+/* ── Form fields ────────────────────────────── */
+.field { margin-bottom: 16px; }
+.field label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:5px; }
+.field label .req { color:var(--danger); }
+.field input, .field select {
+  width:100%; border:1.5px solid var(--border); border-radius:var(--r-xs);
+  padding:9px 13px; font-size:14px; font-family:inherit; color:var(--text);
+  background:var(--surface); outline:none; transition:border-color .2s;
+}
+.field input:focus, .field select:focus { border-color:var(--primary); }
+.field select {
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M0 0l5 7 5-7z' fill='%23999'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center;
+}
+.field-note { font-size:11px; color:var(--light); margin-top:4px; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.span-2 { grid-column:1/-1; }
+
+/* ── Alert ──────────────────────────────────── */
+.alert { border-radius:var(--r-xs); padding:10px 14px; font-size:13px; margin-bottom:12px; display:flex; align-items:flex-start; gap:8px; }
+.alert-error   { background:#fde8eb; border:1px solid #f5b8c0; color:#c0392b; }
+.alert-success { background:#e8f8f1; border:1px solid #a8e6ca; color:#2e7d52; }
+
+/* ── Badge ──────────────────────────────────── */
+.badge { display:inline-flex; align-items:center; border-radius:20px; padding:3px 10px; font-size:11px; font-weight:600; }
+
+/* ── Avatar ─────────────────────────────────── */
+.avatar { border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; background:var(--grad); box-shadow:0 3px 10px rgba(102,126,234,.3); }
+
+/* ── Modal ──────────────────────────────────── */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(102,126,234,.22);
+  backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:1000;
+  display:flex; align-items:center; justify-content:center;
+  padding:16px; animation:fadeIn .2s ease;
+}
+.modal-box { background:var(--white); border-radius:var(--r); width:100%; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:fadeUp .22s ease; }
+.modal-header { background:var(--grad); padding:18px 24px; border-radius:var(--r) var(--r) 0 0; display:flex; justify-content:space-between; align-items:center; }
+.modal-header h3 { color:#fff; font-size:17px; font-weight:700; }
+.modal-header p  { color:rgba(255,255,255,.75); font-size:12px; margin-top:2px; }
+.modal-close { background:rgba(255,255,255,.22); border:none; color:#fff; cursor:pointer; width:28px; height:28px; border-radius:50%; font-size:17px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.modal-body   { padding:24px; }
+.modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:8px; }
+
+/* ── Page header ────────────────────────────── */
+.page-header {
+  background:var(--white); border-radius:var(--r); padding:22px 28px;
+  margin-bottom:22px; box-shadow:var(--shadow-lg);
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;
+}
+.page-header-left  { display:flex; align-items:center; gap:14px; }
+.page-header-title { font-size:21px; font-weight:700; color:var(--primary); }
+.page-header-sub   { font-size:12px; color:var(--muted); margin-top:2px; }
+.page-header-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+/* ── Breadcrumb ─────────────────────────────── */
+.breadcrumb {
+  display:flex; align-items:center; gap:7px;
+  font-size:12px; color:rgba(255,255,255,.75);
+  margin-bottom:14px;
+}
+.breadcrumb a    { color:rgba(255,255,255,.9); text-decoration:none; font-weight:600; }
+.breadcrumb a:hover { color:#fff; text-decoration:underline; }
+.breadcrumb-sep  { opacity:.5; }
+
+/* ── Stats bar ──────────────────────────────── */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:16px; margin-bottom:22px; }
+.stat-card  { background:var(--white); border-radius:var(--r); padding:18px 14px; text-align:center; box-shadow:var(--shadow); transition:transform .25s,box-shadow .25s; }
+.stat-card:hover { transform:translateY(-5px); box-shadow:var(--shadow-lg); }
+.stat-icon   { font-size:30px; margin-bottom:7px; }
+.stat-number { font-size:26px; font-weight:700; color:var(--primary); margin-bottom:3px; }
+.stat-label  { font-size:12px; color:var(--muted); }
+
+/* ── Tabs ───────────────────────────────────── */
+/* visible: không cắt tooltip lịch (::after) — bo góc vẫn do nền trắng + tab-pane */
+.tabs-wrap { background:var(--white); border-radius:var(--r); box-shadow:var(--shadow); overflow:visible; }
+.tabs-nav  { display:flex; border-bottom:1px solid var(--border); overflow-x:auto; }
+.tab-btn   { border:none; background:none; padding:14px 21px; font-family:inherit; font-weight:600; font-size:13.5px; cursor:pointer; color:var(--muted); border-bottom:3px solid transparent; white-space:nowrap; transition:all .2s; }
+.tab-btn.active      { color:var(--primary); border-bottom-color:var(--primary); }
+.tab-btn:hover:not(.active) { color:var(--primary); }
+.tab-pane        { display:none; padding:24px; }
+.tab-pane.active { display:block; animation:fadeUp .25s ease; }
+
+/* ── Section header ─────────────────────────── */
+.sec-hdr  { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; flex-wrap:wrap; }
+.sec-title { display:flex; align-items:center; gap:10px; }
+.sec-title h2    { font-size:18px; font-weight:700; color:var(--text); }
+.sec-title .icon { font-size:22px; }
+.sec-count       { font-size:12px; color:var(--muted); margin-top:1px; }
+
+/* ── Timeline ───────────────────────────────── */
+/* padding-bottom: chỗ cho tooltip phía dưới hàng cuối (ô lịch dùng ::after bên dưới thanh) */
+.tl-wrap  { overflow-x:auto; padding-bottom:72px; }
+/* fixed + colgroup: cột thead/tbody khớp; colspan+flex không còn lệch lưới so với hàng giờ */
+.tl-table { table-layout:fixed; border-collapse:collapse; min-width:max-content; width:max-content; }
+.tl-label {
+  width:168px; min-width:168px; max-width:168px; padding:10px 12px; box-sizing:border-box;
+  border-right:2px solid var(--tl-grid); vertical-align:middle;
+  position:sticky; left:0; z-index:2;
+}
+.tl-hr-head {
+  width:58px; min-width:58px; max-width:58px; box-sizing:border-box;
+  font-size:11px; color:#3d4456; text-align:center; padding:6px 2px; font-weight:700;
+  border-left:1px solid var(--tl-grid);
+  letter-spacing:0.02em;
+}
+.tl-cell    {
+  width:58px; min-width:58px; max-width:58px; height:56px; box-sizing:border-box;
+  border-left:1px solid var(--tl-grid); position:relative; cursor:default; flex:0 0 58px;
+}
+.tl-table tbody tr { border-bottom:1px solid var(--tl-row-line); }
+.tl-table thead tr { border-bottom:1px solid var(--tl-grid); }
+.tl-col-device { width:168px; }
+.tl-col-hour    { width:58px; }
+.tl-th-corner   { font-weight:600; }
+.tl-row-track { position:relative; height:60px; }
+.tl-bk-layer { position:absolute; left:0; top:0; width:100%; height:100%; z-index:4; pointer-events:none; }
+.bk-bar     { position:absolute; top:4px; height:52px; box-sizing:border-box; border-radius:6px; overflow:visible;
+              display:flex; flex-direction:column; justify-content:center; padding:3px 8px;
+              line-height:1.2; pointer-events:auto; cursor:pointer; z-index:5; }
+.bk-bar .bt { font-size:10px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:0.01em; }
+.bk-bar .brg { font-size:9px; font-weight:700; color:#5b4a7a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bk-bar .bu { font-size:9px; font-weight:600; color:#4a4f5c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bk-bar.narrow { padding:2px 5px; }
+.bk-bar.narrow .bt { font-size:8px; font-weight:800; }
+.bk-bar.narrow .brg { font-size:7px; font-weight:700; }
+.bk-bar.narrow .bu { font-size:7px; font-weight:600; }
+/* Tooltip đầy đủ khi hover (ô lịch nhỏ bị ellipsis) */
+.bk-bar .bk-bar-inner { flex:1; min-width:0; min-height:0; overflow:hidden; width:100%; display:flex; flex-direction:column; justify-content:center; gap:2px; }
+/* Tooltip gắn body + fixed — nền đặc, luôn đè lưới / các hàng khác (không dùng ::after trong bảng) */
+.bk-tooltip-portal {
+  position: fixed;
+  z-index: 950;
+  box-sizing: border-box;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 12px 16px;
+  background-color: #1a1f2e;
+  color: #f0f2f7;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.55;
+  word-break: break-word;
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.55);
+  border: 1px solid rgba(255,255,255,.14);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .12s ease, visibility .12s;
+  isolation: isolate;
+}
+.bk-tooltip-portal.is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+.bk-bar:hover { z-index: 20; }
+.tl-half    { position:absolute; top:0; height:100%; z-index:1; cursor:pointer; box-sizing:border-box; }
+.tl-half:hover { background:rgba(102,126,234,.1); }
+.unavail-bg  { position:absolute; inset:0;
+  background:repeating-linear-gradient(45deg,var(--tl-stripe-a) 0,var(--tl-stripe-a) 3px,var(--tl-stripe-b) 3px,var(--tl-stripe-b) 10px);
+  pointer-events:none; z-index:0; }
+.tl-row-even { background:#fff; }
+.tl-row-odd  { background:var(--surface); }
+
+/* ── Data table ─────────────────────────────── */
+.data-table { width:100%; border-collapse:collapse; font-size:13px; }
+.data-table th { padding:11px 15px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); background:var(--surface); border-bottom:2px solid var(--border); }
+.data-table td { padding:11px 15px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.data-table tbody tr:hover { background:rgba(102,126,234,.04); }
+
+/* ── Inner sub-tabs cho tab Người dùng ───────────── */
+.u-sub-tabs { display:flex; gap:0; margin-bottom:18px; border-bottom:2px solid var(--border); }
+.u-sub-tab  { padding:9px 22px; border:none; background:none; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); border-bottom:3px solid transparent; margin-bottom:-2px; transition:all .2s; }
+.u-sub-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.u-sub-tab:hover:not(.active) { color:var(--primary); }
+.u-sub-tab .tab-icon { margin-right:5px; }
+
+/* ── User system table ────────────────────────────── */
+.u-sys-table { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
+.u-sys-table th { text-align:left; padding:9px 12px; background:var(--surface); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); border-bottom:2px solid var(--border); white-space:nowrap; }
+.u-sys-table td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; color:var(--text); }
+.u-sys-table tbody tr:hover td { background:#fafbff; }
+.u-sys-table .col-type  { width:110px; }
+.u-sys-table .col-role  { width:120px; }
+.u-sys-table .col-stat  { width:90px; text-align:center; }
+.u-sys-table .col-crd   { width:130px; }
+.u-sys-table .col-acts  { width:200px; text-align:right; }
+
+/* ── Machine & user grids ───────────────────── */
+.machine-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:18px; }
+.user-grid    { display:grid; grid-template-columns:repeat(auto-fill,minmax(255px,1fr)); gap:16px; }
+.m-card-info  { background:var(--surface); border-radius:var(--r-xs); padding:10px 12px; font-size:12px; color:var(--muted); line-height:2; margin-bottom:12px; }
+.u-card-stats { background:var(--surface); border-radius:var(--r-xs); padding:8px 12px; font-size:12px; color:var(--muted); }
+
+/* ── Legend strip ───────────────────────────── */
+.legend-wrap { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.legend-chip { display:flex; align-items:center; gap:6px; border-radius:20px; padding:4px 12px; font-size:12px; font-weight:600; }
+
+/* ── Date nav ───────────────────────────────── */
+.date-nav { display:flex; align-items:center; gap:6px; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--r-xs); padding:6px 12px; }
+.date-nav button { background:none; border:none; color:var(--muted); cursor:pointer; font-size:18px; line-height:1; padding:0 3px; }
+.date-nav input  { background:none; border:none; color:var(--text); font-size:13.5px; font-family:inherit; font-weight:600; cursor:pointer; outline:none; }
+
+/* ── User pill (header) ─────────────────────── */
+.user-pill { display:flex; align-items:center; gap:9px; background:var(--surface); border-radius:30px; padding:5px 14px 5px 5px; border:1px solid var(--border); }
+.u-pill-name { font-size:13px; font-weight:700; color:var(--text); line-height:1.2; }
+.u-pill-role { font-size:10px; color:var(--muted); }
+
+/* ── Chat panel ─────────────────────────────── */
+.chat-panel { position:fixed; bottom:20px; right:20px; width:390px; height:520px; background:var(--white); border-radius:var(--r); box-shadow:var(--shadow-lg); display:flex; flex-direction:column; z-index:900; border:1px solid var(--border); animation:fadeUp .25s ease; }
+.chat-hdr   { background:var(--grad); padding:12px 16px; border-radius:var(--r) var(--r) 0 0; display:flex; justify-content:space-between; align-items:center; }
+.chat-hdr span { color:#fff; font-weight:700; font-size:14px; }
+.chat-body  { display:flex; flex:1; overflow:hidden; }
+.chat-side  { width:118px; border-right:1px solid var(--border); overflow-y:auto; background:var(--surface); }
+.chat-user-item { padding:10px 6px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; transition:all .15s; border-left:3px solid transparent; }
+.chat-user-item.broadcast-item { background:linear-gradient(180deg, rgba(102,126,234,.12) 0%, rgba(118,75,162,.08) 100%); font-weight:600; }
+.chat-user-item.broadcast-item .chat-uname { font-size:8.5px; max-width:100%; line-height:1.25; }
+.chat-sender { font-size:10px; color:var(--muted); margin-bottom:2px; font-weight:600; }
+.chat-msg-wrap { position:relative; cursor:default; border-radius:6px; padding:2px 4px; transition:background .15s; }
+.chat-msg-wrap:hover { background:rgba(102,126,234,.06); }
+.chat-msg-wrap.selected { background:rgba(244,67,54,.07); border:1.5px solid rgba(244,67,54,.3); padding:1.5px 3.5px; }
+.chat-del-icon { display:none; position:absolute; top:-8px; font-size:14px; cursor:pointer; opacity:.6; transition:opacity .15s; }
+.chat-msg-wrap:hover .chat-del-icon,
+.chat-msg-wrap.selected .chat-del-icon { display:flex; }
+.chat-del-icon:hover { opacity:1; }
+.chat-del-icon.right { right:2px; }
+.chat-del-icon.left { left:2px; }
+.chat-user-item.active     { background:rgba(102,126,234,.1); border-left-color:var(--primary); }
+.chat-user-item:hover:not(.active) { background:rgba(102,126,234,.05); }
+.chat-uname { font-size:9px; text-align:center; line-height:1.3; color:var(--muted); }
+.chat-user-item.active .chat-uname { color:var(--primary); font-weight:600; }
+.chat-msgs  { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
+.chat-mode-strip { flex-shrink:0; padding:8px 12px; background:linear-gradient(90deg,#f3f0ff,#fafbff); border-bottom:1px solid var(--border); font-size:11px; line-height:1.45; color:var(--text); }
+.chat-mode-strip strong { color:var(--primary); }
+.chat-list  { flex:1; min-height:0; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+.chat-empty { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; color:var(--muted); text-align:center; font-size:12px; min-height:0; }
+.chat-input-wrap { flex-shrink:0; max-height:48%; overflow-y:auto; border-top:1px solid var(--border); background:var(--white); }
+.bubble     { max-width:85%; font-size:12.5px; line-height:1.5; border-radius:14px; padding:8px 12px; }
+.bubble.me  { background:var(--grad); color:#fff; border-bottom-right-radius:3px; box-shadow:0 3px 10px rgba(102,126,234,.25); }
+.bubble.them{ background:var(--surface); color:var(--text); border-bottom-left-radius:3px; border:1px solid var(--border); }
+.chat-time  { font-size:10px; color:var(--light); margin-top:3px; }
+.bk-tag     { font-size:10px; font-weight:600; border-radius:10px; padding:2px 8px; border:1px solid; margin-bottom:3px; display:inline-block; }
+.chat-input-area { padding:8px 10px; border-top:1px solid var(--border); }
+.chat-ref   { width:100%; border:1px solid var(--border); border-radius:6px; padding:5px 8px; color:var(--muted); font-size:10px; background:var(--surface); margin-bottom:6px; outline:none; font-family:inherit; }
+.chat-row   { display:flex; gap:6px; }
+.chat-input { flex:1; border:1.5px solid var(--border); border-radius:8px; padding:7px 11px; font-size:12.5px; color:var(--text); outline:none; background:var(--surface); font-family:inherit; transition:border-color .2s; }
+.chat-input:focus { border-color:var(--primary); }
+.unread-dot { position:absolute; top:-4px; right:-4px; width:15px; height:15px; border-radius:50%; background:var(--danger); font-size:9px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; }
+.notif-btn  { position:relative; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--r-xs); padding:8px 16px; cursor:pointer; color:var(--muted); font-family:inherit; font-weight:600; font-size:13px; transition:all .2s; }
+.notif-btn.active { background:rgba(102,126,234,.1); border-color:var(--primary); color:var(--primary); }
+.notif-badge { position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; background:var(--danger); font-size:10px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; }
+
+/* ── Booking info box ───────────────────────── */
+.bk-info-box { display:flex; align-items:center; gap:12px; border-radius:var(--r-xs); padding:12px 16px; margin-bottom:16px; }
+
+/* ── Search input ───────────────────────────── */
+.search-input { border:1.5px solid var(--border); border-radius:var(--r-xs); padding:8px 14px; font-size:13px; width:220px; outline:none; color:var(--text); background:var(--white); font-family:inherit; transition:border-color .2s; }
+.search-input:focus { border-color:var(--primary); }
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width:768px) {
+  body { padding:12px; }
+  .page-header { padding:16px 18px; }
+  .page-header-title { font-size:17px; }
+  .grid-2 { grid-template-columns:1fr; }
+  .span-2 { grid-column:1; }
+  .chat-panel { width:100%; right:0; bottom:0; border-radius:var(--r) var(--r) 0 0; }
+  .modal-box  { max-width:100% !important; }
+  .search-input { width:100%; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Breadcrumb + nút quay lại -->
+  <div class="breadcrumb">
+    <a href="index.html">🏠 Trang chủ</a>
+    <span class="breadcrumb-sep">›</span>
+    <span>Đặt lịch thiết bị CRD</span>
+    <span class="breadcrumb-sep">·</span>
+    <a href="crd-dang-ky.html" style="font-size:12px;font-weight:600;">Đăng ký (khách / SV)</a>
+    <div style="margin-left:auto;">
+      <button class="btn btn-back btn-sm" onclick="history.back()">← Quay lại</button>
+    </div>
+  </div>
+
+  <!-- ── Page header ─────────────────────────── -->
+  <div class="page-header fade-up">
+    <div class="page-header-left">
+      <div style="font-size:36px;">🔬</div>
+      <div>
+        <div class="page-header-title">Đặt lịch Thiết bị – CRD</div>
+        <div class="page-header-sub">Center of Research &amp; Development · Viện Tế bào gốc · ĐHQG TP.HCM</div>
+      </div>
+    </div>
+    <div class="page-header-right">
+      <!-- Thương lượng: Researcher ↔ Admin -->
+      <button class="notif-btn" id="chat-toggle-btn" onclick="toggleChat()" style="display:none;">
+        💬 Thương lượng
+      </button>
+      <!-- User pill — được truyền vào từ hệ thống chính qua URL param hoặc localStorage -->
+      <div class="user-pill">
+        <div class="avatar" id="hd-avatar" style="width:34px;height:34px;font-size:13px;"></div>
+        <div>
+          <div class="u-pill-name" id="hd-name"></div>
+          <div class="u-pill-role" id="hd-role"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Stats ────────────────────────────────── -->
+  <div class="stats-grid" id="stats-grid"></div>
+
+  <!-- ── Tabs ─────────────────────────────────── -->
+  <div class="tabs-wrap card-flat fade-up">
+    <div class="tabs-nav" id="tabs-nav"></div>
+
+    <!-- Lịch trực quan -->
+    <div class="tab-pane active" id="tab-calendar">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <h2 style="font-size:17px;font-weight:700;color:var(--text);">Lịch sử dụng thiết bị</h2>
+        <div class="date-nav">
+          <button onclick="changeDate(-1)">‹</button>
+          <input type="date" id="date-picker" title="Chọn ngày" onchange="renderTimeline()">
+          <button onclick="changeDate(1)">›</button>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="setToday()">Hôm nay</button>
+        <button class="btn btn-primary btn-sm" id="new-bk-btn" onclick="openBookingModal(null,9)">+ Đặt lịch mới</button>
+      </div>
+      <div class="legend-wrap" id="machine-legend"></div>
+      <div class="tl-wrap">
+        <table class="tl-table" id="tl-table"></table>
+      </div>
+      <div style="margin-top:10px;font-size:12px;font-weight:600;color:#4a4f5c;display:flex;gap:18px;flex-wrap:wrap;align-items:center;">
+        <span>🖱️ Mỗi ô = 1 giờ; nửa trái = :00, nửa phải = :30 — click để đặt (bước 30 phút)</span>
+        <span style="display:flex;align-items:center;gap:5px;">
+          <span style="display:inline-block;width:20px;height:11px;background:repeating-linear-gradient(45deg,var(--tl-stripe-a) 0,var(--tl-stripe-a) 3px,var(--tl-stripe-b) 3px,var(--tl-stripe-b) 10px);border:1px solid var(--tl-grid);border-radius:2px;"></span>
+          Ngoài giờ hoạt động
+        </span>
+      </div>
+    </div>
+
+    <!-- Danh sách lịch -->
+    <div class="tab-pane" id="tab-bookings">
+      <div class="sec-hdr">
+        <div class="sec-title">
+          <span class="icon">📋</span>
+          <div><h2 id="bk-title">Danh sách lịch đặt</h2><div class="sec-count" id="bk-count"></div></div>
+        </div>
+        <input type="text" class="search-input" placeholder="🔍 Tìm kiếm..." id="bk-search" oninput="renderBookingsTable()">
+      </div>
+      <div class="card-flat" style="overflow:hidden;">
+        <table class="data-table">
+          <thead><tr id="bk-thead"></tr></thead>
+          <tbody id="bk-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quản lý thiết bị (admin) -->
+    <div class="tab-pane" id="tab-machines">
+      <div class="sec-hdr">
+        <div class="sec-title">
+          <span class="icon">🔬</span>
+          <div><h2>Quản lý Thiết bị</h2><div class="sec-count" id="m-count"></div></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openMachineModal(null)">+ Thêm thiết bị</button>
+      </div>
+      <div class="machine-grid" id="m-grid"></div>
+    </div>
+
+    <!-- Quản lý người dùng (admin) -->
+    <div class="tab-pane" id="tab-users">
+      <div class="sec-hdr">
+        <div class="sec-title">
+          <span class="icon">👥</span>
+          <div><h2>Quản lý Người dùng</h2><div class="sec-count" id="u-count"></div></div>
+        </div>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div class="u-sub-tabs" id="u-sub-tabs" style="display:none;">
+        <button class="u-sub-tab active" id="utab-crd"   onclick="switchUserTab('crd')"><span class="tab-icon">🔬</span>Người dùng CRD</button>
+        <button class="u-sub-tab"        id="utab-sys"    onclick="switchUserTab('sys')"><span class="tab-icon">⚙️</span>Tài khoản Hệ thống</button>
+      </div>
+
+      <!-- CRD sub-tab -->
+      <div id="u-panel-crd">
+        <div class="sec-hdr">
+          <div></div>
+          <button class="btn btn-primary btn-sm" onclick="openPersonModal()">+ Thêm người dùng CRD</button>
+        </div>
+        <div id="crd-roles-admin"></div>
+        <div class="user-grid" id="u-grid"></div>
+      </div>
+
+      <!-- Hệ thống sub-tab -->
+      <div id="u-panel-sys" style="display:none;">
+        <div class="toolbar-wrap" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+          <input type="text" id="sys-filter" class="search-field" placeholder="Lọc theo tên, email…" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;" oninput="renderSysUsers()">
+          <select id="sys-filter-type" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);" onchange="renderSysUsers()">
+            <option value="all">Tất cả</option>
+            <option value="in">🏛 Trong Viện (@sci.edu.vn)</option>
+            <option value="out">🌐 Ngoài Viện (khách CRD)</option>
+            <option value="disabled">⛔ Đã vô hiệu hoá</option>
+            <option value="no_crd">❌ Chưa vào CRD</option>
+          </select>
+          <span id="sys-count-label" style="font-size:12px;color:var(--muted);margin-left:auto;"></span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="u-sys-table">
+            <thead>
+              <tr>
+                <th class="col-type">Loại TK</th>
+                <th>Họ tên</th>
+                <th>Email</th>
+                <th class="col-role">Vai trò hệ thống</th>
+                <th class="col-crd">Hồ sơ CRD</th>
+                <th class="col-stat">Trạng thái</th>
+                <th class="col-acts">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="sys-users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tabs-wrap -->
+</div><!-- /container -->
+
+<!-- ════════════════════════════════════════════
+     CHAT PANEL
+════════════════════════════════════════════ -->
+<div class="chat-panel" id="chat-panel" style="display:none;">
+  <div class="chat-hdr">
+    <div>
+      <span>💬 Thương lượng lịch sử dụng</span>
+      <div style="font-size:9px;font-weight:600;opacity:.88;margin-top:2px;letter-spacing:.02em;">Bản cập nhật · Kênh chung = mục 📢 đầu danh sách</div>
+    </div>
+    <button class="modal-close" onclick="toggleChat()">×</button>
+  </div>
+  <div class="chat-body">
+    <div class="chat-side" id="chat-side"></div>
+    <div class="chat-msgs">
+      <div class="chat-mode-strip" id="chat-mode-strip" style="display:none;"></div>
+      <div class="chat-empty" id="chat-empty">
+        <div style="font-size:30px;">💬</div>
+        <div>Chọn <strong>Kênh chung</strong> để thông báo cho mọi người,<br>hoặc chọn một người để nhắn riêng.</div>
+      </div>
+      <div class="chat-list" id="chat-list" style="display:none;"></div>
+      <div id="chat-input-wrap" style="display:none;">
+        <div class="chat-input-area" style="padding:10px 12px;">
+          <!-- Luôn ở trên cùng để không bị cắt khi khung chat thấp -->
+          <div id="admin-chat-actions" style="display:none;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+            <div id="chat-email-line" style="display:none;margin-bottom:6px;">
+              <label style="cursor:pointer;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);">
+                <input type="checkbox" id="chat-email-notif" onchange="toggleEmailNotif(this.checked)">
+                <span>🔔 Email khi có tin mới (kênh chung)</span>
+              </label>
+            </div>
+            <div id="mod-tools" style="display:none;">
+              <div style="display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;">
+                <button type="button" class="btn btn-sm" id="chat-del-btn" onclick="deleteSelectedChatMsg()" style="display:none;background:#ffebee;color:#c62828;border:1px solid #ffcdd2;font-size:11px;">
+                  🗑 Xóa tin đã chọn
+                </button>
+              </div>
+              <div id="mod-hint" style="display:none;margin-top:6px;font-size:10px;color:#c62828;background:#fff5f5;padding:6px 8px;border-radius:6px;border:1px solid #ffcdd2;">
+                <strong>Quản trị:</strong> chọn <strong>📢 Kênh chung</strong> bên trái — nhấn 🗑 trên tin rồi bấm «Xóa tin đã chọn».
+              </div>
+            </div>
+          </div>
+          <select class="chat-ref" id="chat-bk-ref">
+            <option value="">— Đính kèm booking (tuỳ chọn) —</option>
+          </select>
+          <div id="broadcast-hint" style="display:none;margin-top:6px;margin-bottom:6px;">
+            <div style="font-size:10px;color:var(--primary);background:#eef0ff;padding:6px 8px;border-radius:4px;">
+              📢 <strong>Kênh chung</strong> — mọi người trong CRD đều thấy. Giới hạn: tối đa 3 tin / 30 giây.
+            </div>
+          </div>
+          <div id="cooldown-wrap" style="display:none;margin-bottom:4px;">
+            <div id="cooldown-bar" style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;">
+              <div id="cooldown-fill" style="height:100%;background:var(--primary);transition:width 1s linear;width:100%;"></div>
+            </div>
+            <div id="cooldown-label" style="font-size:10px;color:var(--muted);margin-top:2px;"></div>
+          </div>
+          <div class="chat-row" style="margin-top:6px;">
+            <input class="chat-input" type="text" id="chat-input" placeholder="Nhập tin nhắn..." onkeydown="if(event.key==='Enter')sendChat()">
+            <button class="btn btn-primary btn-sm" id="chat-send-btn" onclick="sendChat()">Gửi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL — ĐẶT LỊCH
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-booking" style="display:none;" onclick="if(event.target===this)closeModal('modal-booking')">
+  <div class="modal-box" style="max-width:500px;">
+    <div class="modal-header">
+      <div><h3>Đặt lịch sử dụng thiết bị</h3><p id="bk-modal-sub"></p></div>
+      <button class="modal-close" onclick="closeModal('modal-booking')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="bk-info-box" id="bk-info-box"></div>
+      <div style="background:var(--surface);border-radius:var(--r-xs);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--muted);">
+        📅 Ngày đặt: <strong id="bk-date-lbl" style="color:var(--text);"></strong>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label>Giờ bắt đầu <span class="req">*</span></label><select id="bk-sh" onchange="onBkStartChange()"></select></div>
+        <div class="field"><label>Giờ kết thúc <span class="req">*</span></label><select id="bk-eh" onchange="updDuration()"></select></div>
+      </div>
+      <div id="bk-dur" style="text-align:center;margin-bottom:14px;font-size:12px;color:var(--primary);background:rgba(102,126,234,.08);border-radius:var(--r-xs);padding:6px;display:none;"></div>
+      <div class="field">
+        <label>Tên nhóm nghiên cứu <span class="req">*</span></label>
+        <input type="text" id="bk-research-group" placeholder="VD: Nhóm Tế bào gốc — Lab A" autocomplete="organization">
+      </div>
+      <div class="field">
+        <label>Mục đích sử dụng <span class="req">*</span></label>
+        <input type="text" id="bk-purpose" placeholder="VD: Phân tích cấu trúc mẫu vật liệu...">
+      </div>
+      <div id="bk-err"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-booking')">Huỷ</button>
+        <button class="btn btn-primary" onclick="confirmBooking()">✅ Xác nhận đặt lịch</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL — SỬA / HUỶ LỊCH ĐẶT
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-booking-edit" style="display:none;" onclick="if(event.target===this)closeModal('modal-booking-edit')">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-header">
+      <div><h3>Sửa lịch đặt</h3><p id="be-title"></p></div>
+      <button class="modal-close" onclick="closeModal('modal-booking-edit')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="be-info-box" style="border-radius:var(--r-xs);padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;align-items:center;gap:10px;"></div>
+      <div class="grid-2">
+        <div class="field"><label>Giờ bắt đầu</label><select id="be-sh" onchange="onBeStartChange()"></select></div>
+        <div class="field"><label>Giờ kết thúc</label><select id="be-eh" onchange="updBeDuration()"></select></div>
+      </div>
+      <div id="be-dur" style="text-align:center;margin-bottom:14px;font-size:12px;color:var(--primary);background:rgba(102,126,234,.08);border-radius:var(--r-xs);padding:6px;display:none;"></div>
+      <div class="field">
+        <label>Tên nhóm nghiên cứu <span class="req">*</span></label>
+        <input type="text" id="be-rg" placeholder="VD: Nhóm Tế bào gốc — Lab A" autocomplete="organization">
+      </div>
+      <div class="field">
+        <label>Mục đích sử dụng <span class="req">*</span></label>
+        <input type="text" id="be-purpose">
+      </div>
+      <div id="be-err"></div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="be-del-btn" onclick="deleteBookingFromEdit()">🗑 Xoá</button>
+        <div style="flex:1;"></div>
+        <button class="btn btn-ghost" onclick="closeModal('modal-booking-edit')">Huỷ</button>
+        <button class="btn btn-primary" onclick="saveBookingEdit()">💾 Cập nhật</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL — THIẾT BỊ
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-machine" style="display:none;" onclick="if(event.target===this)closeModal('modal-machine')">
+  <div class="modal-box" style="max-width:540px;">
+    <div class="modal-header">
+      <div><h3 id="mm-title">Thêm thiết bị mới</h3><p>Cấu hình thông tin thiết bị phòng thí nghiệm</p></div>
+      <button class="modal-close" onclick="closeModal('modal-machine')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="field span-2"><label>Tên thiết bị <span class="req">*</span></label><input type="text" id="mm-name" placeholder="VD: SEM-9000"></div>
+        <div class="field">
+          <label>Loại thiết bị <span class="req">*</span></label>
+          <input type="text" id="mm-type" placeholder="VD: Tủ thao tác vô trùng, Máy PCR…" autocomplete="off">
+        </div>
+        <div class="field"><label>Vị trí</label><input type="text" id="mm-loc" placeholder="VD: Lab A-01"></div>
+        <div class="field span-2"><label>Mô tả</label><input type="text" id="mm-desc" placeholder="Mô tả ngắn về thiết bị..."></div>
+        <div class="field">
+          <label>Màu hiển thị</label>
+          <input type="color" id="mm-color" value="#667eea" style="height:42px;padding:4px;border:1.5px solid var(--border);border-radius:var(--r-xs);width:100%;cursor:pointer;">
+        </div>
+        <div class="field">
+          <label>Tối đa giờ/lần</label>
+          <input type="number" id="mm-maxh" value="4" min="1" max="12">
+          <div class="field-note">Số giờ tối đa trong 1 lần đặt</div>
+        </div>
+        <div class="field"><label>Giờ mở cửa</label><select id="mm-from"></select></div>
+        <div class="field"><label>Giờ đóng cửa</label><select id="mm-to"></select>
+          <div class="field-note">Trên lịch, từ mốc này trở đi là ngoài giờ (vd đóng 22:00 → đặt được đến 21:30). Nhấn Cập nhật để lưu.</div>
+        </div>
+      </div>
+      <div id="mm-err"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-machine')">Huỷ</button>
+        <button class="btn btn-primary" id="mm-save-btn" onclick="saveMachine()">Thêm thiết bị</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL — NGƯỜI DÙNG CRD (admin)
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-person" style="display:none;" onclick="if(event.target===this)closeModal('modal-person')">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-header">
+      <div><h3 id="pu-title">Thêm người dùng CRD</h3><p id="pu-sub">Tài khoản dùng trong đặt lịch thiết bị (không thay thế đăng nhập hệ thống SCI-ACE)</p></div>
+      <button class="modal-close" onclick="closeModal('modal-person')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pu-edit-id" value="">
+      <div id="pu-sync-note" class="field-note" style="display:none;padding:10px 12px;background:var(--surface);border-radius:var(--r-xs);margin-bottom:12px;border:1px solid var(--border);"></div>
+      <div class="field"><label>Họ và tên <span class="req">*</span></label><input type="text" id="pu-name" placeholder="Nguyễn Văn A" autocomplete="name"></div>
+      <div class="field"><label>Email</label><input type="email" id="pu-email" placeholder="Bất kỳ domain (sci.edu.vn, gmail…)" autocomplete="email"></div>
+      <div class="field">
+        <label>Vai trò</label>
+        <select id="pu-role"></select>
+        <div class="field-note">Danh sách lấy từ mục «Vai trò CRD» bên dưới (tab Người dùng).</div>
+      </div>
+      <div class="field"><label>Avatar (tuỳ chọn, 1–2 ký tự)</label><input type="text" id="pu-av" maxlength="2" placeholder="Để trống = chữ cái đầu tên"></div>
+      <div id="pu-admin-opts" style="display:none;border-top:1px solid var(--border);padding-top:14px;margin-top:6px;">
+        <div class="field" style="margin-bottom:10px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+            <input type="checkbox" id="pu-ban"> Tạm khoá (ban) — không đặt lịch / chat trong CRD
+          </label>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+            <input type="checkbox" id="pu-revoked"> Gỡ quyền CRD — xoá khỏi module (tài khoản đồng bộ sẽ không tự tạo lại hồ sơ)
+          </label>
+        </div>
+      </div>
+      <div id="pu-err"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('modal-person')">Huỷ</button>
+        <button class="btn btn-primary" id="pu-save-btn" onclick="savePerson()">Thêm người dùng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-user-stats" style="display:none;" onclick="if(event.target===this)closeModal('modal-user-stats')">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-header">
+      <div><h3 id="ust-title">Thống kê sử dụng thiết bị</h3><p id="ust-sub"></p></div>
+      <button class="modal-close" onclick="closeModal('modal-user-stats')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="ust-summary" style="margin-bottom:14px;font-size:13px;color:var(--muted);"></div>
+      <div style="overflow-x:auto;max-height:320px;">
+        <table class="data-table" style="width:100%;font-size:12px;">
+          <thead><tr><th>Thiết bị</th><th style="text-align:right;">Số lịch</th><th style="text-align:right;">Tổng giờ</th></tr></thead>
+          <tbody id="ust-tbody"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer" style="margin-top:16px;">
+        <button class="btn btn-ghost" onclick="closeModal('modal-user-stats')">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal reset mật khẩu hệ thống -->
+<div class="modal-overlay" id="modal-reset-pwd" style="display:none;" onclick="if(event.target===this)closeModal('modal-reset-pwd')">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-header">
+      <div>
+        <h3 id="rp-title">🔑 Đặt lại mật khẩu</h3>
+        <p id="rp-sub" style="font-size:11px;opacity:.75;margin-top:3px;"></p>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-reset-pwd')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="rp-alert"></div>
+      <div class="field">
+        <label>Email tài khoản</label>
+        <input id="rp-email" type="email" readonly style="background:#f0f0f8;color:var(--muted);cursor:not-allowed;">
+      </div>
+      <div class="field">
+        <label>Mật khẩu mới <span style="color:var(--danger);">*</span></label>
+        <input id="rp-password" type="text" placeholder="Nhập mật khẩu mới (≥ 6 ký tự)">
+      </div>
+      <div id="rp-hint" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-ghost" style="color:var(--text);border:1px solid var(--border);" onclick="closeModal('modal-reset-pwd')">Huỷ</button>
+        <button class="btn btn-primary" onclick="submitResetPassword()">Đặt lại mật khẩu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+/* ── Helpers ─────────────────────────────────────────────── */
+const HOURS   = Array.from({length:24},(_,i)=>i);
+const pad     = n  => String(n).padStart(2,'0');
+const fmt     = h  => `${pad(h)}:00`;
+const fmtT    = t  => {
+  const n = Number(t);
+  if (!Number.isFinite(n)) return '??:??';
+  if (n >= 24 - 1e-9) return '24:00';
+  const totalMins = Math.round(n * 60);
+  const hh = Math.floor(totalMins / 60) % 24;
+  const mm = totalMins % 60;
+  return `${pad(hh)}:${pad(mm)}`;
+};
+const fmtDur  = d  => {
+  const totalMins = Math.round(Number(d) * 60);
+  const hh = Math.floor(totalMins / 60);
+  const mm = totalMins % 60;
+  if (mm === 0) return hh + ' giờ';
+  if (hh === 0) return mm + ' phút';
+  return hh + ' giờ ' + mm + ' phút';
+};
+const hourISO = t  => {
+  const totalMins = Math.round(Number(t) * 60);
+  if (totalMins >= 24 * 60) return '23:59:59';
+  const hh = Math.floor(totalMins / 60) % 24;
+  const mm = totalMins % 60;
+  return `${pad(hh)}:${pad(mm)}:00`;
+};
+function ivOverlap(a0,a1,b0,b1){ return !(a1 <= b0 || a0 >= b1); }
+
+/** Parse giờ mở/đóng từ API (số, BigInt, "22", "22:00") — tránh NaN rơi về mặc định 20:00 trên lịch */
+function parseAvailHour(v) {
+  if (v == null || v === '') return NaN;
+  if (typeof v === 'bigint') return Number(v);
+  if (typeof v === 'number') return Number.isFinite(v) ? v : NaN;
+  const s = String(v).trim();
+  if (!s) return NaN;
+  const m = /^(\d{1,2}):00$/.exec(s) || /^(\d{1,2})$/.exec(s);
+  if (m) {
+    const h = Number(m[1]);
+    return Number.isFinite(h) ? h : NaN;
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/** Gộp camelCase + snake_case sau fetch (proxy / client cũ / Turso) */
+function normalizeCrdMachine(m) {
+  if (!m || typeof m !== 'object') return m;
+  const o = { ...m };
+  if (o.availFrom == null && o.avail_from != null) o.availFrom = o.avail_from;
+  if (o.availTo == null && o.avail_to != null) o.availTo = o.avail_to;
+  if (o.maxHours == null && o.max_hours != null) o.maxHours = o.max_hours;
+  if ((o.desc == null || o.desc === '') && o.description != null) o.desc = o.description;
+  return o;
+}
+
+function mergeMachinesFromApi(list) {
+  return (list || []).map(normalizeCrdMachine);
+}
+
+/** Khung giờ thiết bị: ô cột h mở khi h >= af && h < at (at = mốc đóng, exclusive) */
+function machineAvailBounds(m) {
+  if (!m) return { af: 8, at: 20 };
+  let af = parseAvailHour(m.availFrom ?? m.avail_from);
+  let at = parseAvailHour(m.availTo ?? m.avail_to);
+  if (!Number.isFinite(af)) af = 8;
+  if (!Number.isFinite(at)) at = 20;
+  af = Math.max(0, Math.min(23, Math.round(af)));
+  at = Math.max(1, Math.min(24, Math.round(at)));
+  if (at <= af) at = Math.min(24, af + 1);
+  return { af, at };
+}
+
+function halfFreeTL(m, date, h, half, bookings){
+  const { af, at } = machineAvailBounds(m);
+  const t0 = h + half * 0.5, t1 = t0 + 0.5;
+  if (t0 + 1e-6 < af || t1 > at + 1e-6) return false;
+  return !bookings.some(b => b.machineId === m.id && b.date === date && ivOverlap(t0,t1,b.startH,b.endH));
+}
+const uid     = () => Math.random().toString(36).slice(2,10);
+const today   = () => new Date().toISOString().split('T')[0];
+const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+/* ── API helpers ──────────────────────────────────────────── */
+const API = (() => {
+  const base = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000'))
+    ? 'http://localhost:3000' : '';
+  const token = () => localStorage.getItem('token') || '';
+  /** Chỉ gửi Bearer khi có token (tránh ghi đè toàn bộ headers khi merge) */
+  const authHeaders = () => {
+    const t = token();
+    return t ? { Authorization: 'Bearer ' + t } : {};
+  };
+
+  async function apiFetch(path, opts = {}) {
+    const { headers: optHeaders, ...rest } = opts;
+    const headers = { ...authHeaders(), ...(optHeaders || {}) };
+    /* Cùng origin: gửi cookie phiên (bổ sung Bearer). Khác origin: chỉ Bearer trong headers. */
+    const credentials = base ? 'omit' : 'include';
+    const res = await fetch((base || '') + path, {
+      ...rest,
+      headers,
+      cache: 'no-store',
+      credentials,
+    });
+    if (res.status === 401) {
+      alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+      window.location.href = 'index.html';
+      throw new Error('Unauthorized');
+    }
+    if (res.status === 403) {
+      const j403 = await res.json().catch(() => ({}));
+      const m403 = j403.message || 'Không có quyền thực hiện thao tác này.';
+      alert(m403);
+      /* Không redirect về trang chủ: nhiều lỗi CRD (vd. tuỳ chọn email) là 403 nhưng vẫn dùng được trang. */
+      throw new Error(m403);
+    }
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.message || 'Lỗi API: ' + res.status);
+    }
+    return res.json();
+  }
+
+  return {
+    base,
+    getState:       () => apiFetch('/api/crd/state'),
+    getAdminSnap:   () => apiFetch('/api/crd/admin/snapshot'),
+    createBooking:  b  => apiFetch('/api/crd/bookings',   { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b) }),
+    updateBooking:  (id, b) => apiFetch(`/api/crd/bookings/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b) }),
+    deleteBooking:  id => apiFetch(`/api/crd/bookings/${id}`,  { method:'DELETE' }),
+    createMachine:  m  => apiFetch('/api/crd/admin/machines', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(m) }),
+    updateMachine:  (id, m) => apiFetch(`/api/crd/admin/machines/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(m) }),
+    deleteMachine:  id => apiFetch(`/api/crd/admin/machines/${id}`, { method:'DELETE' }),
+    createPerson:   p  => apiFetch('/api/crd/admin/persons', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(p) }),
+    updatePerson:   (id, p) => apiFetch(`/api/crd/admin/persons/${encodeURIComponent(id)}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(p) }),
+    deletePerson:   id => apiFetch(`/api/crd/admin/persons/${encodeURIComponent(id)}`, { method:'DELETE' }),
+    getPersonStats: id => apiFetch(`/api/crd/admin/persons/${encodeURIComponent(id)}/stats`),
+    createRoleDef:  b  => apiFetch('/api/crd/admin/role-defs', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b) }),
+    updateRoleDef:  (slug, b) => apiFetch(`/api/crd/admin/role-defs/${encodeURIComponent(slug)}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b) }),
+    deleteRoleDef:  slug => apiFetch(`/api/crd/admin/role-defs/${encodeURIComponent(slug)}`, { method:'DELETE' }),
+    createChat:     c  => apiFetch('/api/crd/chats',  { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(c) }),
+    markChatRead:   id => apiFetch(`/api/crd/chats/${id}/read`, { method:'PUT' }),
+    markThreadRead: fromId => apiFetch('/api/crd/chats/mark-thread-read', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({fromId}) }),
+    markBroadcastRead: () => apiFetch('/api/crd/chats/broadcast-read', { method:'PUT' }),
+    deleteChat:      id => apiFetch(`/api/crd/admin/chats/${id}`, { method:'DELETE' }),
+    getEmailNotif:  () => apiFetch('/api/crd/email-notif'),
+    setEmailNotif:  enabled => apiFetch('/api/crd/email-notif', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ enabled }) }),
+    me:             () => apiFetch('/api/me'),
+    // Quản lý tài khoản hệ thống
+    getAllSysUsers: () => apiFetch('/api/crd/admin/users'),
+    disableSysUser: id => apiFetch(`/api/crd/admin/users/${id}/disable`, { method:'PUT' }),
+    resetPassword:  (id, password) => apiFetch(`/api/crd/admin/users/${id}/reset-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password }) }),
+  };
+})();
+
+/* ════════════════════════════════════════════
+   APP STATE (từ API)
+════════════════════════════════════════════ */
+let currentUser      = null;  // { id, name, email, role, avatar }
+let currentDate     = today();
+let chatSelectedUser = null;
+/** Id kênh nhắn chung (đồng bộ với server). */
+let crdBroadcastId = '__crd_broadcast__';
+let broadcastLastRead = 0;
+/** Trạng thái thông báo email kênh chung. */
+let emailNotifEnabled = true;
+/** Countdown gửi kênh chung (giây còn lại). */
+let broadcastCooldown = 0;
+let broadcastCooldownTimer = null;
+let editingMachineId = null;
+let pendingMachineId = null;
+let appRole          = 'user';   // 'admin' | 'user' (từ /api/crd/state)
+let appReady         = false;
+let sysUsers         = [];       // danh sách tài khoản hệ thống đầy đủ (admin only)
+
+/* ── Resolve user từ hệ thống đăng nhập ─────────────────── */
+function resolveCurrentUser() {
+  // 1. Thử từ crd_user đã được index.html ghi (ưu tiên)
+  try {
+    const raw = localStorage.getItem('crd_user');
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u && u.id && u.name) return u;
+    }
+  } catch(e) {}
+
+  // 2. Thử từ user đăng nhập chính
+  try {
+    const raw = localStorage.getItem('user');
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u && u.id) {
+        const name = (u.fullname || u.email || 'User').trim();
+        const role = (u.role || 'user').toLowerCase();
+        return {
+          id: 'u_app_' + u.id,
+          name,
+          email: u.email || '',
+          role: role === 'admin' ? 'admin' : 'user',
+          avatar: name.charAt(0).toUpperCase(),
+        };
+      }
+    }
+  } catch(e) {}
+
+  // 3. Fallback demo
+  return { id:'u1', name:'Nguyễn Minh Khoa', email:'khoa@crd.edu.vn', role:'user', avatar:'K' };
+}
+
+/* ── DB state (sẽ được load từ API) ──────────────────────── */
+const DB = { machines: [], users: [], bookings: [], chats: [], crdRoles: [] };
+
+function ensureCrdRolesFallback() {
+  if (DB.crdRoles && DB.crdRoles.length) return;
+  DB.crdRoles = [
+    { slug: 'user', label: 'Researcher', sortOrder: 0, isAdminSlot: false },
+    { slug: 'admin', label: 'Admin CRD', sortOrder: 1, isAdminSlot: true },
+  ];
+}
+
+function crdRoleLabel(slug) {
+  const d = (DB.crdRoles || []).find(r => r.slug === slug);
+  return d ? d.label : (slug || '—');
+}
+
+function crdRoleIsAdminSlot(slug) {
+  const d = (DB.crdRoles || []).find(r => r.slug === slug);
+  if (d) return !!d.isAdminSlot;
+  return String(slug || '').toLowerCase() === 'admin';
+}
+
+/** Quản trị hệ thống (JWT) hoặc vai trò CRD có cờ Quản trị (Admin CRD) */
+function isCrdModerator() {
+  return String(appRole || '').toLowerCase() === 'admin' || crdRoleIsAdminSlot(currentUser && currentUser.role);
+}
+
+function fillPuRoleSelect() {
+  ensureCrdRolesFallback();
+  const sel = document.getElementById('pu-role');
+  if (!sel) return;
+  const roles = [...DB.crdRoles].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  sel.innerHTML = roles
+    .map(r => `<option value="${escHtml(r.slug)}">${escHtml(r.label)}</option>`)
+    .join('');
+}
+
+function renderCrdRoleDefsPanel() {
+  const host = document.getElementById('crd-roles-admin');
+  if (!host) return;
+  if (appRole !== 'admin') {
+    host.innerHTML = '';
+    return;
+  }
+  ensureCrdRolesFallback();
+  const rows = [...DB.crdRoles].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const escAttr = s =>
+    String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;');
+  host.innerHTML = `
+    <div class="card-flat" style="margin-bottom:20px;padding:18px 20px;border:1px solid var(--border);">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+        <div>
+          <h3 style="font-size:16px;font-weight:800;margin:0 0 6px;color:var(--text);">Vai trò CRD (ô sổ xuống)</h3>
+          <p style="font-size:12px;color:var(--muted);margin:0;max-width:640px;line-height:1.5;">
+            Thêm, đổi tên hoặc xóa các loại vai trò hiện khi <strong>Thêm người dùng CRD</strong>. Mã nội bộ (slug) dùng lưu trong CSDL; tên hiển thị là những gì người dùng thấy.
+          </p>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" style="min-width:520px;">
+          <thead><tr>
+            <th>Mã (slug)</th>
+            <th>Tên hiển thị</th>
+            <th style="width:88px;">Thứ tự</th>
+            <th style="width:120px;">Quản trị*</th>
+            <th style="width:150px;"></th>
+          </tr></thead>
+          <tbody>
+            ${rows
+              .map(r => {
+                const sid = String(r.slug).replace(/[^a-z0-9_]/gi, '_');
+                const canDel = r.slug !== 'user' && r.slug !== 'admin';
+                const admDisabled = r.slug === 'user' || r.slug === 'admin' ? 'disabled' : '';
+                const admChecked = r.isAdminSlot ? 'checked' : '';
+                return `<tr>
+                  <td><code style="font-size:12px;">${escHtml(r.slug)}</code></td>
+                  <td><input type="text" id="crd-r-${sid}-lab" class="search-input" style="width:100%;max-width:220px;padding:6px 10px;" value="${escAttr(r.label)}"></td>
+                  <td><input type="number" id="crd-r-${sid}-ord" class="search-input" style="width:72px;padding:6px 8px;" value="${Number(r.sortOrder) || 0}"></td>
+                  <td style="text-align:center;"><input type="checkbox" id="crd-r-${sid}-adm" ${admChecked} ${admDisabled} title="Vai trò kiểu Admin CRD: huy hiệu tím, không nằm trong danh sách thương lượng với NV"></td>
+                  <td style="white-space:nowrap;">
+                    <button type="button" class="btn btn-outline btn-sm" onclick='saveCrdRoleRow(${JSON.stringify(r.slug)})'>Lưu</button>
+                    ${canDel ? `<button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick='deleteCrdRoleRow(${JSON.stringify(r.slug)})'>Xóa</button>` : '<span style="font-size:11px;color:var(--muted);">—</span>'}
+                  </td>
+                </tr>`;
+              })
+              .join('')}
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin:10px 0 14px;line-height:1.45;">* Quản trị: giống «Admin CRD» — không hiện trong danh sách đối tác thương lượng (nghiên cứu viên). Hai vai trò mặc định <code>user</code> / <code>admin</code> không xóa được.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding-top:4px;border-top:1px solid var(--border);">
+        <div class="field" style="margin:0;min-width:120px;">
+          <label style="font-size:11px;">Mã mới (vd: tech)</label>
+          <input type="text" id="crd-new-slug" class="search-input" style="padding:8px 10px;" placeholder="ky_thuat_vien" autocomplete="off">
+        </div>
+        <div class="field" style="margin:0;min-width:160px;">
+          <label style="font-size:11px;">Tên hiển thị</label>
+          <input type="text" id="crd-new-label" class="search-input" style="padding:8px 10px;" placeholder="Kỹ thuật viên" autocomplete="off">
+        </div>
+        <div class="field" style="margin:0;width:88px;">
+          <label style="font-size:11px;">Thứ tự</label>
+          <input type="number" id="crd-new-ord" class="search-input" style="padding:8px 10px;" value="50">
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;margin-bottom:8px;">
+          <input type="checkbox" id="crd-new-adm"> Quản trị
+        </label>
+        <button type="button" class="btn btn-primary btn-sm" onclick="addCrdRoleRow()" style="margin-bottom:2px;">+ Thêm vai trò</button>
+      </div>
+    </div>`;
+}
+
+function saveCrdRoleRow(slug) {
+  const sid = String(slug).replace(/[^a-z0-9_]/gi, '_');
+  const labEl = document.getElementById(`crd-r-${sid}-lab`);
+  const ordEl = document.getElementById(`crd-r-${sid}-ord`);
+  const admEl = document.getElementById(`crd-r-${sid}-adm`);
+  if (!labEl || !ordEl) return;
+  const label = labEl.value.trim();
+  const sortOrder = parseInt(ordEl.value, 10);
+  const isAdminSlot = admEl && !admEl.disabled ? admEl.checked : undefined;
+  const body = { label, sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0 };
+  if (isAdminSlot !== undefined) body.isAdminSlot = isAdminSlot;
+  API.updateRoleDef(slug, body)
+    .then(res => {
+      DB.crdRoles = res.crdRoles || DB.crdRoles;
+      renderAll();
+    })
+    .catch(err => alert(err.message || String(err)));
+}
+
+function deleteCrdRoleRow(slug) {
+  if (!confirm(`Xóa vai trò «${slug}» khỏi danh sách?`)) return;
+  API.deleteRoleDef(slug)
+    .then(res => {
+      DB.crdRoles = res.crdRoles || DB.crdRoles;
+      renderAll();
+    })
+    .catch(err => alert(err.message || String(err)));
+}
+
+function addCrdRoleRow() {
+  const slug = document.getElementById('crd-new-slug').value.trim().toLowerCase();
+  const label = document.getElementById('crd-new-label').value.trim();
+  const sortOrder = parseInt(document.getElementById('crd-new-ord').value, 10);
+  const isAdminSlot = document.getElementById('crd-new-adm').checked;
+  API.createRoleDef({
+    slug,
+    label,
+    sortOrder: Number.isFinite(sortOrder) ? sortOrder : 999,
+    isAdminSlot,
+  })
+    .then(res => {
+      DB.crdRoles = res.crdRoles || DB.crdRoles;
+      document.getElementById('crd-new-slug').value = '';
+      document.getElementById('crd-new-label').value = '';
+      document.getElementById('crd-new-ord').value = '50';
+      document.getElementById('crd-new-adm').checked = false;
+      renderAll();
+    })
+    .catch(err => alert(err.message || String(err)));
+}
+
+/* ════════════════════════════════════════════
+   KHỞI ĐỘNG
+════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async () => {
+  currentUser = resolveCurrentUser();
+
+  // Gọi API để lấy dữ liệu
+  const loadingEl = document.getElementById('stats-grid');
+  if (loadingEl) loadingEl.innerHTML = '<p style="padding:20px;text-align:center;color:var(--muted);">Đang tải dữ liệu…</p>';
+
+  try {
+    const isAdmin = currentUser.role === 'admin';
+    const data = isAdmin
+      ? await API.getAdminSnap()
+      : await API.getState();
+
+    DB.machines = mergeMachinesFromApi(data.machines);
+    DB.users    = data.users    || [];
+    DB.bookings = data.bookings || [];
+    DB.chats    = data.chats    || [];
+    DB.crdRoles = data.crdRoles || [];
+    appRole     = data.appRole  || currentUser.role;
+    if (data.broadcastLastRead != null) broadcastLastRead = Number(data.broadcastLastRead) || 0;
+    if (data.broadcastChannelId) crdBroadcastId = data.broadcastChannelId;
+    ensureCrdRolesFallback();
+
+    // Đồng bộ currentUser.id = mePersonId (ID CRD của người dùng)
+    if (data.mePersonId) {
+      currentUser.id = data.mePersonId;
+    }
+    console.info('[CRD đặt lịch] Đã tải dữ liệu (client 2026-03-27). Không thấy dòng này = trình duyệt đang dùng bản HTML cache cũ — thử Ctrl+F5 hoặc tắt cache trong DevTools.');
+  } catch (err) {
+    console.error('[CRD] Lỗi load dữ liệu:', err);
+    alert('Không tải được dữ liệu: ' + err.message);
+  }
+
+  appReady = true;
+  initApp();
+});
+
+function initApp() {
+  const isAdmin = appRole === 'admin';
+
+  /* Header user pill */
+  const av = document.getElementById('hd-avatar');
+  av.textContent = currentUser.avatar || (currentUser.name || '?').charAt(0).toUpperCase();
+  av.style.background = isAdmin
+    ? 'linear-gradient(135deg,#764ba2,#667eea)'
+    : 'linear-gradient(135deg,#667eea,#764ba2)';
+  document.getElementById('hd-name').textContent = currentUser.name;
+  document.getElementById('hd-role').textContent = isAdmin
+    ? 'Administrator'
+    : (String(appRole).toLowerCase() === 'crd_user' ? 'Đặt lịch CRD (khách)' : 'Researcher');
+
+  /* Chat btn & new booking btn */
+  document.getElementById('chat-toggle-btn').style.display = 'inline-flex';
+  document.getElementById('new-bk-btn').style.display      = isAdmin ? 'none' : 'inline-flex';
+
+  /* Tabs */
+  const tabs = [
+    {id:'calendar', label:'📅 Lịch trực quan'},
+    {id:'bookings', label:'📋 Danh sách lịch'},
+    ...(isAdmin ? [{id:'machines',label:'🔬 Thiết bị'},{id:'users',label:'👥 Người dùng'}] : []),
+  ];
+  document.getElementById('tabs-nav').innerHTML = tabs.map((t,i) =>
+    `<button class="tab-btn${i===0?' active':''}" onclick="switchTab('${t.id}',this)">${t.label}</button>`
+  ).join('');
+
+  /* Date picker */
+  document.getElementById('date-picker').value = currentDate;
+
+  /* Hour options cho machine modal (đóng cửa tối đa 24:00 — khớp server) */
+  document.getElementById('mm-from').innerHTML = HOURS.map(h=>`<option value="${h}">${fmt(h)}</option>`).join('');
+  document.getElementById('mm-to').innerHTML = HOURS.map(h=>`<option value="${h}">${fmt(h)}</option>`).join('')
+    + '<option value="24">24:00</option>';
+
+  renderAll();
+  initBkTooltipPortal();
+
+  /* Sub-tabs người dùng (admin) */
+  if (isAdmin) {
+    document.getElementById('u-sub-tabs').style.display = 'flex';
+    loadSysUsers();
+  }
+}
+
+/* ── Tab switch ──────────────────────────────────────────── */
+function switchTab(id, btn) {
+  if (id !== 'calendar') hideBkTooltipPortal();
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+/* Tooltip lịch: fixed + body — nền đặc, không bị hàng khác đè (pseudo trong <tr> bị stacking context) */
+let bkTooltipEl = null;
+let bkTooltipListenersBound = false;
+
+function ensureBkTooltipPortal() {
+  if (bkTooltipEl) return bkTooltipEl;
+  bkTooltipEl = document.createElement('div');
+  bkTooltipEl.className = 'bk-tooltip-portal';
+  bkTooltipEl.setAttribute('role', 'tooltip');
+  document.body.appendChild(bkTooltipEl);
+  return bkTooltipEl;
+}
+
+function hideBkTooltipPortal() {
+  if (!bkTooltipEl) return;
+  bkTooltipEl.classList.remove('is-visible');
+  bkTooltipEl.textContent = '';
+}
+
+function positionBkTooltipForBar(bar) {
+  const text = bar.getAttribute('data-bk-pop');
+  if (!text) {
+    hideBkTooltipPortal();
+    return;
+  }
+  const el = ensureBkTooltipPortal();
+  el.textContent = text;
+  el.classList.add('is-visible');
+  const r = bar.getBoundingClientRect();
+  el.style.left = '0px';
+  el.style.top = '0px';
+  const tw = el.offsetWidth;
+  const th = el.offsetHeight;
+  const pad = 8;
+  let left = r.left + r.width / 2 - tw / 2;
+  let top = r.bottom + pad;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  left = Math.max(pad, Math.min(left, vw - tw - pad));
+  if (top + th > vh - pad) {
+    top = r.top - th - pad;
+    if (top < pad) top = pad;
+  }
+  el.style.left = `${left}px`;
+  el.style.top = `${top}px`;
+}
+
+function initBkTooltipPortal() {
+  if (bkTooltipListenersBound) return;
+  bkTooltipListenersBound = true;
+  const table = document.getElementById('tl-table');
+  if (!table) return;
+
+  table.addEventListener('mouseover', (e) => {
+    const bar = e.target.closest('.bk-bar');
+    if (!bar || !table.contains(bar)) return;
+    positionBkTooltipForBar(bar);
+  });
+  table.addEventListener('mouseout', (e) => {
+    const bar = e.target.closest('.bk-bar');
+    if (!bar) return;
+    const rel = e.relatedTarget;
+    if (rel && bar.contains(rel)) return;
+    hideBkTooltipPortal();
+  });
+
+  // Click → mở modal sửa / xoá
+  table.addEventListener('click', (e) => {
+    const bar = e.target.closest('.bk-bar');
+    if (!bar || !table.contains(bar)) return;
+    const bkId = bar.getAttribute('data-bk-id');
+    if (bkId) {
+      hideBkTooltipPortal();
+      openEditBookingModal(bkId);
+    }
+  });
+
+  const hideOnMove = () => hideBkTooltipPortal();
+  window.addEventListener('scroll', hideOnMove, true);
+  window.addEventListener('resize', hideOnMove);
+  const tlWrap = document.querySelector('.tl-wrap');
+  if (tlWrap) tlWrap.addEventListener('scroll', hideOnMove, { passive: true });
+}
+
+/* ── Render all ──────────────────────────────────────────── */
+function renderAll() {
+  ensureCrdRolesFallback();
+  renderStats();
+  renderTimeline();
+  renderBookingsTable();
+  renderMachinesGrid();
+  renderCrdRoleDefsPanel();
+  renderUsersGrid();
+  renderChatSidebar();
+  updateUnreadBadge();
+}
+
+/* ════════════════════════════════════════════
+   STATS
+════════════════════════════════════════════ */
+function renderStats() {
+  const isAdmin = appRole === 'admin';
+  const my = DB.bookings.filter(b => b.userId === currentUser.id).length;
+  const items = [
+    {icon:'📋', n:DB.bookings.length,  label:'Tổng lịch đặt'},
+    {icon:'📅', n:DB.bookings.filter(b => b.date === today()).length, label:'Đặt hôm nay'},
+    {icon:'🔬', n:DB.machines.length,  label:'Thiết bị CRD'},
+    {icon:'👤', n:isAdmin?DB.users.length:my, label:isAdmin?'Người dùng':'Lịch của tôi'},
+  ];
+  document.getElementById('stats-grid').innerHTML = items.map(s => `
+    <div class="stat-card">
+      <div class="stat-icon">${s.icon}</div>
+      <div class="stat-number">${s.n}</div>
+      <div class="stat-label">${s.label}</div>
+    </div>`).join('');
+}
+
+/* ════════════════════════════════════════════
+   TIMELINE
+════════════════════════════════════════════ */
+function renderTimeline() {
+  hideBkTooltipPortal();
+  currentDate = document.getElementById('date-picker').value;
+  /* Cột 6→23 (đủ cho availTo tới 24); mỗi thiết bị tô ngoài giờ theo af/at riêng */
+  const hours   = HOURS.slice(6, 24);
+
+  document.getElementById('machine-legend').innerHTML = DB.machines.map(m => `
+    <div class="legend-chip" style="background:${m.color}12;border:1px solid ${m.color}44;color:${m.color};">
+      <span style="width:8px;height:8px;border-radius:50%;background:${m.color};display:inline-block;"></span>
+      ${escHtml(m.name)}
+    </div>`).join('');
+
+  let html = '<colgroup><col class="tl-col-device" />';
+  hours.forEach(() => { html += '<col class="tl-col-hour" />'; });
+  html += '</colgroup>';
+  html += '<thead><tr>';
+  html += `<th class="tl-label tl-th-corner" style="background:var(--surface);position:sticky;left:0;z-index:3;font-size:12px;color:#3d4456;font-weight:700;text-align:left;">Thiết bị</th>`;
+  hours.forEach(h => { html += `<th class="tl-hr-head">${fmt(h)}</th>`; });
+  html += '</tr></thead><tbody>';
+
+  const cellW = 58;
+  const h0 = hours[0];
+  const hEnd = h0 + hours.length;
+  const trackW = hours.length * cellW;
+
+  DB.machines.forEach((m, mi) => {
+    const rowBg  = mi % 2 === 0 ? '#fff' : 'var(--surface)';
+    const rowBks = DB.bookings.filter(b => b.machineId === m.id && b.date === currentDate)
+      .sort((a,b)=>a.startH-b.startH);
+    const { af, at } = machineAvailBounds(m);
+
+    html += `<tr style="background:${rowBg};">`;
+    html += `<td class="tl-label" style="background:${rowBg};">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:${m.color};flex-shrink:0;display:inline-block;"></span>
+        <div>
+          <div style="font-weight:800;font-size:13px;color:#1f2430;">${escHtml(m.name)}</div>
+          <div style="font-size:10px;font-weight:600;color:#5a6172;margin-top:1px;">${escHtml(m.type)}</div>
+          <div style="font-size:9px;font-weight:600;color:#4a4f5c;margin-top:3px;font-variant-numeric:tabular-nums;" title="Khung giờ đang áp dụng cho hàng này (từ máy chủ)">⏰ ${fmt(af)}–${fmt(at)}</div>
+        </div>
+      </div>
+    </td>`;
+    html += `<td colspan="${hours.length}" style="padding:0;vertical-align:top;background:${rowBg};">
+      <div class="tl-row-track" style="width:100%;box-sizing:border-box;">
+        <div style="display:flex;height:56px;position:relative;z-index:1;width:100%;box-sizing:border-box;">`;
+    hours.forEach(h => {
+      const avail = h >= af && h < at;
+      /* Không vẽ vạch :30 giữa ô — gradient tối chỉ có trên ô trong giờ, ô ngoài giờ không có nên lệch cột */
+      html += `<div class="tl-cell" style="flex-shrink:0;position:relative;">`;
+      if (!avail) html += '<div class="unavail-bg"></div>';
+      if (avail) {
+        [0,1].forEach(half => {
+          if (halfFreeTL(m, currentDate, h, half, DB.bookings)) {
+            const st = h + half * 0.5;
+            html += `<div class="tl-half" style="left:${half*50}%;width:50%;" title="${half?'Đặt từ :30':'Đặt từ :00'}" onclick="openBookingModal('${m.id}',${st})"></div>`;
+          }
+        });
+      }
+      html += '</div>';
+    });
+    html += `</div><div class="tl-bk-layer">`;
+    rowBks.forEach(bk => {
+      const visS = Math.max(bk.startH, h0);
+      const visE = Math.min(bk.endH, hEnd);
+      if (visE <= visS + 1e-6) return;
+      const left = (visS - h0) * cellW;
+      const barW = Math.max((visE - visS) * cellW, 36);
+        const user = DB.users.find(u => u.id === bk.userId);
+      const rawName = (user && user.name) ? user.name : '—';
+      const uname = escHtml(rawName);
+      const t1 = fmtT(bk.startH), t2 = fmtT(bk.endH);
+      const purposeRaw = (bk.purpose || '').trim();
+      const rgRaw = (bk.researchGroup || '').trim();
+      const oneLine = s => String(s).replace(/\r\n|\r|\n/g, ' ').replace(/\s+/g, ' ').trim();
+      let popText = `Thiết bị: ${oneLine(m.name)} · Giờ: ${t1} – ${t2} · Người đặt: ${oneLine(rawName)}`;
+      if (rgRaw) popText += ` · Nhóm NC: ${oneLine(rgRaw)}`;
+      if (purposeRaw) popText += ` · Mục đích: ${oneLine(purposeRaw)}`;
+      const safePop = escHtml(popText);
+      const roomy = barW >= 72;
+      const nb = roomy ? 'bk-bar' : 'bk-bar narrow';
+      const rgEsc = rgRaw ? escHtml(oneLine(rgRaw)) : '';
+      html += `<div class="${nb}" data-bk-id="${escHtml(bk.id)}" style="left:${left}px;width:${barW}px;background:${m.color}22;border:1.5px solid ${m.color}88;" data-bk-pop="${safePop}" aria-label="${safePop}">
+        <div class="bk-bar-inner">
+          <div class="bt" style="color:${m.color};">${t1} – ${t2}</div>
+          ${rgEsc ? `<div class="brg">${rgEsc}</div>` : ''}
+          <div class="bu">${uname}</div>
+          </div>
+      </div>`;
+    });
+    html += '</div></div></td></tr>';
+  });
+
+  html += '</tbody>';
+  document.getElementById('tl-table').innerHTML = html;
+}
+
+function changeDate(d) {
+  const dt = new Date(currentDate); dt.setDate(dt.getDate() + d);
+  currentDate = dt.toISOString().split('T')[0];
+  document.getElementById('date-picker').value = currentDate;
+  renderTimeline();
+}
+function setToday() {
+  currentDate = today();
+  document.getElementById('date-picker').value = currentDate;
+  renderTimeline();
+}
+
+/* ════════════════════════════════════════════
+   BOOKING MODAL
+════════════════════════════════════════════ */
+function halfHourSelectOpts(from, to, isEnd) {
+  let html = '';
+  if (isEnd) {
+    for (let t = from + 0.5; t <= to + 1e-9; t += 0.5)
+      html += `<option value="${t}">${fmtT(t)}</option>`;
+  } else {
+    for (let t = from; t < to; t += 0.5)
+      html += `<option value="${t}">${fmtT(t)}</option>`;
+  }
+  return html;
+}
+
+function openBookingModal(machineId, startH) {
+  pendingMachineId = machineId || DB.machines[0].id;
+  const m = DB.machines.find(x => x.id === pendingMachineId);
+  const { af, at } = machineAvailBounds(m);
+
+  document.getElementById('bk-modal-sub').textContent = `${m.name} — ${m.location}`;
+  document.getElementById('bk-info-box').style.cssText = `background:${m.color}10;border:1.5px solid ${m.color}33;`;
+  document.getElementById('bk-info-box').innerHTML = `
+    <div style="width:14px;height:14px;border-radius:50%;background:${m.color};flex-shrink:0;"></div>
+    <div>
+      <div style="font-weight:700;color:var(--text);font-size:14px;">${escHtml(m.name)}</div>
+      <div style="font-size:12px;color:var(--muted);">${escHtml(m.type)} · ${escHtml(m.location)} · Tối đa ${m.maxHours}h/lần · Bước 30 phút</div>
+    </div>`;
+  document.getElementById('bk-date-lbl').textContent = currentDate;
+
+  const sh = document.getElementById('bk-sh');
+  const eh = document.getElementById('bk-eh');
+  sh.innerHTML = halfHourSelectOpts(af, at, false);
+  eh.innerHTML = halfHourSelectOpts(af, at, true);
+  const s0 = (startH != null && Number.isFinite(Number(startH))) ? Number(startH) : af;
+  sh.value = String(s0);
+  let e0 = Math.min(s0 + 2, at);
+  if (e0 <= s0) e0 = Math.min(s0 + 0.5, at);
+  eh.value = String(e0);
+  updDuration();
+
+  document.getElementById('bk-research-group').value = '';
+  document.getElementById('bk-purpose').value = '';
+  document.getElementById('bk-err').innerHTML  = '';
+  showModal('modal-booking');
+}
+
+function onBkStartChange() {
+  const s = +document.getElementById('bk-sh').value;
+  const eh = document.getElementById('bk-eh');
+  let e = +eh.value;
+  if (e <= s) {
+    const m = DB.machines.find(x => x.id === pendingMachineId);
+    const { at } = m ? machineAvailBounds(m) : { at: 24 };
+    const ne = m ? Math.min(s + 0.5, at) : s + 0.5;
+    eh.value = String(ne);
+  }
+  updDuration();
+}
+
+function updDuration() {
+  const s   = +document.getElementById('bk-sh').value;
+  const e   = +document.getElementById('bk-eh').value;
+  const el  = document.getElementById('bk-dur');
+  if (e > s) { el.textContent = `⏱ Thời lượng: ${fmtDur(e - s)} (${fmtT(s)} – ${fmtT(e)})`; el.style.display = 'block'; }
+  else        { el.style.display = 'none'; }
+}
+
+function confirmBooking() {
+  const m       = DB.machines.find(x => x.id === pendingMachineId);
+  const { af, at } = machineAvailBounds(m);
+  const startH  = +document.getElementById('bk-sh').value;
+  const endH    = +document.getElementById('bk-eh').value;
+  const researchGroup = document.getElementById('bk-research-group').value.trim();
+  const purpose = document.getElementById('bk-purpose').value.trim();
+  const errEl   = document.getElementById('bk-err');
+
+  const setErr = msg => { errEl.innerHTML = `<div class="alert alert-error">⚠️ ${msg}</div>`; };
+
+  if (endH <= startH)              return setErr('Giờ kết thúc phải sau giờ bắt đầu');
+  const stepOk = x => Math.abs(Math.round(x * 2) - x * 2) < 1e-5;
+  if (!stepOk(startH) || !stepOk(endH)) return setErr('Giờ phải theo bước 30 phút (VD 8, 8.5, 9)');
+  if (endH - startH > m.maxHours) return setErr(`Tối đa ${m.maxHours} giờ/lần đặt`);
+  if (startH + 1e-9 < af || endH > at + 1e-9)
+                                   return setErr(`Máy chỉ hoạt động ${fmt(af)}–${fmt(Math.min(at, 24))}`);
+  if (!researchGroup) return setErr('Vui lòng nhập tên nhóm nghiên cứu');
+  if (!purpose)  return setErr('Vui lòng nhập mục đích sử dụng');
+
+  API.createBooking({ machineId: m.id, date: currentDate, startH, endH, purpose, researchGroup })
+    .then(() => {
+  closeModal('modal-booking');
+      return appRole === 'admin' ? API.getAdminSnap() : API.getState();
+    })
+    .then(data => {
+      DB.bookings = data.bookings || [];
+  renderAll();
+    })
+    .catch(err => {
+      errEl.innerHTML = `<div class="alert alert-error">⚠️ ${err.message}</div>`;
+    });
+}
+
+/* ════════════════════════════════════════════
+   EDIT / DELETE BOOKING (click bar)
+════════════════════════════════════════════ */
+let editingBookingId = null;
+
+function openEditBookingModal(bkId) {
+  const bk = DB.bookings.find(b => b.id === bkId);
+  if (!bk) return;
+  editingBookingId = bkId;
+  const m = DB.machines.find(x => x.id === bk.machineId);
+  if (!m) return;
+
+  const { af, at } = machineAvailBounds(m);
+  const isOwner = bk.userId === currentUser.id;
+  const isAdmin = appRole === 'admin';
+
+  // Header & info
+  document.getElementById('be-title').textContent = `${m.name} — ${m.date}`;
+  document.getElementById('be-info-box').style.cssText = `background:${m.color}10;border:1.5px solid ${m.color}33;`;
+  document.getElementById('be-info-box').innerHTML = `
+    <div style="width:12px;height:12px;border-radius:50%;background:${m.color};flex-shrink:0;"></div>
+    <div style="font-size:12px;">
+      <div style="font-weight:700;">${escHtml(m.name)}</div>
+      <div style="color:var(--muted);">${escHtml(m.location)} · ${escHtml(m.type)}</div>
+    </div>`;
+
+  // Time selects
+  const shEl = document.getElementById('be-sh');
+  const ehEl = document.getElementById('be-eh');
+  shEl.innerHTML = halfHourSelectOpts(af, at, false);
+  ehEl.innerHTML = halfHourSelectOpts(af, at, true);
+  shEl.value = String(bk.startH);
+  ehEl.value = String(bk.endH);
+  updBeDuration();
+
+  // Form data
+  document.getElementById('be-rg').value = bk.researchGroup || '';
+  document.getElementById('be-purpose').value = bk.purpose || '';
+  document.getElementById('be-err').innerHTML = '';
+
+  // Delete button: chỉ người đặt hoặc admin
+  const delBtn = document.getElementById('be-del-btn');
+  delBtn.style.display = (isOwner || isAdmin) ? '' : 'none';
+
+  // Fields editable: admin sửa tất cả; người đặt chỉ sửa giờ + nội dung
+  const rgEl = document.getElementById('be-rg');
+  const purEl = document.getElementById('be-purpose');
+  rgEl.disabled = false;
+  purEl.disabled = false;
+
+  showModal('modal-booking-edit');
+}
+
+function onBeStartChange() {
+  const s = +document.getElementById('be-sh').value;
+  const eh = document.getElementById('be-eh');
+  let e = +eh.value;
+  if (e <= s) {
+    eh.value = String(Math.min(s + 0.5, 24));
+  }
+  updBeDuration();
+}
+
+function updBeDuration() {
+  const s = +document.getElementById('be-sh').value;
+  const e = +document.getElementById('be-eh').value;
+  const el = document.getElementById('be-dur');
+  if (e > s) {
+    el.textContent = `⏱ Thời lượng: ${fmtDur(e - s)} (${fmtT(s)} – ${fmtT(e)})`;
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function saveBookingEdit() {
+  if (!editingBookingId) return;
+  const bk = DB.bookings.find(b => b.id === editingBookingId);
+  if (!bk) return;
+
+  const m = DB.machines.find(x => x.id === bk.machineId);
+  if (!m) return;
+  const { af, at } = machineAvailBounds(m);
+
+  const startH = +document.getElementById('be-sh').value;
+  const endH   = +document.getElementById('be-eh').value;
+  const researchGroup = document.getElementById('be-rg').value.trim();
+  const purpose = document.getElementById('be-purpose').value.trim();
+  const errEl = document.getElementById('be-err');
+  const setErr = msg => { errEl.innerHTML = `<div class="alert alert-error">⚠️ ${msg}</div>`; };
+
+  if (endH <= startH) return setErr('Giờ kết thúc phải sau giờ bắt đầu');
+  const stepOk = x => Math.abs(Math.round(x * 2) - x * 2) < 1e-5;
+  if (!stepOk(startH) || !stepOk(endH)) return setErr('Giờ phải theo bước 30 phút');
+  if (endH - startH > m.maxHours) return setErr(`Tối đa ${m.maxHours} giờ/lần đặt`);
+  if (startH + 1e-9 < af || endH > at + 1e-9)
+    return setErr(`Máy chỉ hoạt động ${fmt(af)}–${fmt(Math.min(at, 24))}`);
+  if (!researchGroup) return setErr('Vui lòng nhập tên nhóm nghiên cứu');
+  if (!purpose) return setErr('Vui lòng nhập mục đích sử dụng');
+
+  const body = {
+    startH, endH,
+    researchGroup,
+    purpose
+  };
+
+  API.updateBooking(editingBookingId, body)
+    .then(() => {
+      closeModal('modal-booking-edit');
+      return appRole === 'admin' ? API.getAdminSnap() : API.getState();
+    })
+    .then(data => {
+      DB.bookings = data.bookings || [];
+      renderAll();
+    })
+    .catch(err => {
+      errEl.innerHTML = `<div class="alert alert-error">⚠️ ${err.message}</div>`;
+    });
+}
+
+function deleteBookingFromEdit() {
+  if (!editingBookingId) return;
+  if (!confirm('Huỷ lịch đặt này?')) return;
+  API.deleteBooking(editingBookingId)
+    .then(() => {
+      closeModal('modal-booking-edit');
+      return appRole === 'admin' ? API.getAdminSnap() : API.getState();
+    })
+    .then(data => {
+      DB.bookings = data.bookings || [];
+      renderAll();
+    })
+    .catch(err => {
+      document.getElementById('be-err').innerHTML =
+        `<div class="alert alert-error">⚠️ ${err.message}</div>`;
+    });
+}
+
+/* ════════════════════════════════════════════
+   BOOKINGS TABLE
+════════════════════════════════════════════ */
+function renderBookingsTable() {
+  const isAdmin = appRole === 'admin';
+  const q = (document.getElementById('bk-search').value || '').toLowerCase();
+
+  let rows = DB.bookings.filter(b => {
+    if (!isAdmin && b.userId !== currentUser.id) return false;
+    const m = DB.machines.find(x => x.id === b.machineId);
+    const u = DB.users.find(x => x.id === b.userId);
+    return !q || (m?.name + u?.name + b.date + b.purpose + (b.researchGroup || '')).toLowerCase().includes(q);
+  }).sort((a,b) => b.date.localeCompare(a.date) || a.startH - b.startH);
+
+  document.getElementById('bk-title').textContent = isAdmin ? 'Tất cả lịch đặt' : 'Lịch đặt của tôi';
+  document.getElementById('bk-count').textContent = `${rows.length} lịch`;
+
+  const heads = isAdmin
+    ? ['Thiết bị','Ngày','Thời gian','Thời lượng','Người đặt','Nhóm NC','Mục đích','']
+    : ['Thiết bị','Ngày','Thời gian','Nhóm NC','Mục đích','Trạng thái',''];
+
+  document.getElementById('bk-thead').innerHTML = heads.map(h => `<th>${h}</th>`).join('');
+
+  const now = new Date();
+  document.getElementById('bk-tbody').innerHTML = rows.length ? rows.map((b, i) => {
+    const m      = DB.machines.find(x => x.id === b.machineId);
+    const u      = DB.users.find(x => x.id === b.userId);
+    const canDel = isAdmin || b.userId === currentUser.id;
+    const isPast = new Date(`${b.date}T${hourISO(b.endH)}`) < now;
+
+    const machineTd = `<td>
+      <div style="display:flex;align-items:center;">
+        <span style="width:10px;height:10px;border-radius:50%;background:${m?.color};display:inline-block;margin-right:7px;flex-shrink:0;"></span>
+        <div>
+          <div style="font-weight:700;color:${m?.color};">${escHtml(m?.name||'?')}</div>
+          <div style="font-size:10px;color:var(--light);">${escHtml(m?.location||'')}</div>
+        </div>
+      </div></td>`;
+
+    const userTd = `<td>
+      <div style="display:flex;align-items:center;gap:7px;">
+        <div class="avatar" style="width:24px;height:24px;font-size:10px;">${escHtml(u?.avatar||'?')}</div>
+        <span style="font-size:12px;">${escHtml(u?.name||'?')}</span>
+      </div></td>`;
+
+    const statusBadge = isPast
+      ? `<span class="badge" style="background:#f5f5f5;color:#999;border:1px solid #ddd;">Đã qua</span>`
+      : `<span class="badge" style="background:#e8f8f1;color:#2e7d52;border:1px solid #a8e6ca;">Đã đặt</span>`;
+
+    const delBtn = canDel
+      ? `<button class="btn btn-ghost btn-sm" onclick="deleteBooking('${b.id}')" style="color:var(--danger);border-color:rgba(224,92,106,.35);">Huỷ</button>`
+      : '';
+
+    const durationBadge = `<span class="badge" style="background:#eef0ff;color:var(--primary);border:1px solid #c5caf5;">${fmtDur(b.endH-b.startH)}</span>`;
+
+    const rgTd = `<td style="color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;" title="${escHtml(b.researchGroup || '')}">${escHtml(b.researchGroup || '—')}</td>`;
+
+    if (isAdmin) return `<tr>
+      ${machineTd}
+      <td style="font-variant-numeric:tabular-nums;">${b.date}</td>
+      <td><strong>${fmtT(b.startH)} – ${fmtT(b.endH)}</strong></td>
+      <td>${durationBadge}</td>
+      ${userTd}
+      ${rgTd}
+      <td style="color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(b.purpose)}">${escHtml(b.purpose)}</td>
+      <td>${delBtn}</td>
+    </tr>`;
+
+    return `<tr>
+      ${machineTd}
+      <td style="font-variant-numeric:tabular-nums;">${b.date}</td>
+      <td><strong>${fmtT(b.startH)} – ${fmtT(b.endH)}</strong></td>
+      ${rgTd}
+      <td style="color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(b.purpose)}">${escHtml(b.purpose)}</td>
+      <td>${statusBadge}</td>
+      <td>${delBtn}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">
+    <div style="font-size:36px;margin-bottom:8px;">📅</div>Không có lịch đặt nào</td></tr>`;
+}
+
+function deleteBooking(id) {
+  const b = DB.bookings.find(x => x.id === id);
+  if (!b) return;
+  if (appRole !== 'admin' && b.userId !== currentUser.id) return;
+  if (!confirm('Huỷ lịch đặt này?')) return;
+  API.deleteBooking(id)
+    .then(() => appRole === 'admin' ? API.getAdminSnap() : API.getState())
+    .then(data => { DB.bookings = data.bookings || []; renderAll(); })
+    .catch(err => alert('Lỗi: ' + err.message));
+}
+
+/* ════════════════════════════════════════════
+   MACHINE MANAGER
+════════════════════════════════════════════ */
+function renderMachinesGrid() {
+  document.getElementById('m-count').textContent = `${DB.machines.length} thiết bị`;
+  document.getElementById('m-grid').innerHTML = DB.machines.map(m => {
+    const { af, at } = machineAvailBounds(m);
+    return `
+    <div class="card" style="padding:20px;border-top:4px solid ${m.color};">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div>
+          <div style="font-weight:700;font-size:17px;color:var(--text);">${escHtml(m.name)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">${escHtml(m.type)}</div>
+        </div>
+        <span style="width:12px;height:12px;border-radius:50%;background:${m.color};display:inline-block;margin-top:4px;flex-shrink:0;"></span>
+      </div>
+      <div class="m-card-info">
+        📍 ${escHtml(m.location)}<br>
+        ⏰ Hoạt động: ${fmt(af)} – ${fmt(at)}<br>
+        ⏱ Tối đa ${m.maxHours} giờ/lần<br>
+        ℹ️ ${escHtml((m.desc||'').slice(0,60))}${m.desc&&m.desc.length>60?'…':''}
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openMachineModal('${m.id}')">✏️ Sửa</button>
+        <button class="btn btn-danger btn-sm"  style="flex:1;" onclick="deleteMachine('${m.id}')">🗑 Xoá</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openMachineModal(id) {
+  editingMachineId = id;
+  const m = id ? DB.machines.find(x => x.id === id) : null;
+  document.getElementById('mm-title').textContent    = m ? 'Chỉnh sửa thiết bị' : 'Thêm thiết bị mới';
+  document.getElementById('mm-save-btn').textContent = m ? 'Cập nhật' : 'Thêm thiết bị';
+  document.getElementById('mm-name').value  = m?.name     || '';
+  document.getElementById('mm-type').value  = m?.type     || '';
+  document.getElementById('mm-loc').value   = m?.location || '';
+  document.getElementById('mm-desc').value  = m?.desc     || '';
+  document.getElementById('mm-color').value = m?.color    || '#667eea';
+  document.getElementById('mm-maxh').value  = m?.maxHours || 4;
+  if (m) {
+    const { af, at } = machineAvailBounds(m);
+    document.getElementById('mm-from').value = af;
+    document.getElementById('mm-to').value   = at;
+  } else {
+    document.getElementById('mm-from').value = 8;
+    document.getElementById('mm-to').value   = 20;
+  }
+  document.getElementById('mm-err').innerHTML = '';
+  showModal('modal-machine');
+}
+
+function saveMachine() {
+  const name = document.getElementById('mm-name').value.trim();
+  const type = document.getElementById('mm-type').value.trim();
+  if (!name) { document.getElementById('mm-err').innerHTML='<div class="alert alert-error">⚠️ Vui lòng nhập tên thiết bị</div>'; return; }
+  if (!type) { document.getElementById('mm-err').innerHTML='<div class="alert alert-error">⚠️ Vui lòng nhập loại thiết bị</div>'; return; }
+  const obj = {
+    name, type,
+    location:       document.getElementById('mm-loc').value.trim(),
+    desc:           document.getElementById('mm-desc').value.trim(),
+    color:          document.getElementById('mm-color').value,
+    maxHours:      +document.getElementById('mm-maxh').value || 4,
+    availFrom:     +document.getElementById('mm-from').value,
+    availTo:       +document.getElementById('mm-to').value,
+  };
+  const promise = editingMachineId
+    ? API.updateMachine(editingMachineId, obj)
+    : API.createMachine(obj);
+  promise
+    .then(res => {
+      const m = res && res.machine;
+      if (m && m.id) {
+        const nm = normalizeCrdMachine(m);
+        const ix = DB.machines.findIndex(x => x.id === nm.id);
+        if (ix >= 0) DB.machines[ix] = { ...DB.machines[ix], ...nm };
+        else DB.machines.push(nm);
+      }
+      return API.getAdminSnap();
+    })
+    .then(data => {
+      DB.machines = mergeMachinesFromApi(data.machines);
+  closeModal('modal-machine');
+  renderAll();
+    })
+    .catch(err => { document.getElementById('mm-err').innerHTML=`<div class="alert alert-error">⚠️ ${escHtml(err.message)}</div>`; });
+}
+
+function deleteMachine(id) {
+  const m = DB.machines.find(x => x.id === id);
+  if (!confirm(`Xoá thiết bị "${m?.name}"?\nCác lịch đặt liên quan cũng sẽ bị xoá.`)) return;
+  API.deleteMachine(id)
+    .then(() => API.getAdminSnap())
+    .then(data => {
+      DB.machines = mergeMachinesFromApi(data.machines);
+      DB.bookings = data.bookings || [];
+  renderAll();
+    })
+    .catch(err => alert('Lỗi: ' + err.message));
+}
+
+/* ════════════════════════════════════════════
+   USER MANAGER
+════════════════════════════════════════════ */
+function openPersonModal(editId) {
+  const errEl = document.getElementById('pu-err');
+  errEl.innerHTML = '';
+  document.getElementById('pu-edit-id').value = editId || '';
+  const adminOpts = document.getElementById('pu-admin-opts');
+  const syncNote = document.getElementById('pu-sync-note');
+  const btn = document.getElementById('pu-save-btn');
+  if (!editId) {
+    document.getElementById('pu-title').textContent = 'Thêm người dùng CRD';
+    document.getElementById('pu-sub').textContent = 'Tài khoản chỉ dùng trong module đặt lịch (không thay thế đăng nhập SCI-ACE).';
+    document.getElementById('pu-name').value = '';
+    document.getElementById('pu-email').value = '';
+    fillPuRoleSelect();
+    const pr = document.getElementById('pu-role');
+    if (pr && [...pr.options].some(o => o.value === 'user')) pr.value = 'user';
+    document.getElementById('pu-av').value = '';
+    adminOpts.style.display = 'none';
+    syncNote.style.display = 'none';
+    btn.textContent = 'Thêm người dùng';
+  } else {
+    const u = DB.users.find(x => x.id === editId);
+    if (!u) return;
+    document.getElementById('pu-title').textContent = 'Sửa người dùng CRD';
+    document.getElementById('pu-sub').textContent = 'Quản trị toàn bộ thông tin hiển thị và quyền trong module.';
+    document.getElementById('pu-name').value = u.name || '';
+    document.getElementById('pu-email').value = u.email || '';
+    fillPuRoleSelect();
+    const pr = document.getElementById('pu-role');
+    if (pr) pr.value = u.role || 'user';
+    document.getElementById('pu-av').value = (u.avatar && u.avatar !== '?') ? u.avatar : '';
+    adminOpts.style.display = 'block';
+    document.getElementById('pu-ban').checked = !!u.isBanned;
+    document.getElementById('pu-revoked').checked = !!u.crdAccessRevoked;
+    const synced = String(u.id).startsWith('u_app_');
+    if (synced) {
+      syncNote.style.display = 'block';
+      syncNote.innerHTML = '🔐 <strong>Đồng bộ đăng nhập</strong> (id <code>u_app_*</code>): có thể sửa tên/email hiển thị CRD, ban, gỡ quyền. Xoá CRD = gỡ quyền (không xoá tài khoản hệ thống).';
+    } else {
+      syncNote.style.display = 'block';
+      syncNote.innerHTML = '👤 Tài khoản CRD cục bộ: có thể xoá hẳn khỏi cơ sở dữ liệu CRD.';
+    }
+    btn.textContent = 'Lưu thay đổi';
+  }
+  showModal('modal-person');
+}
+
+function savePerson() {
+  const errEl = document.getElementById('pu-err');
+  errEl.innerHTML = '';
+  const editId = document.getElementById('pu-edit-id').value.trim();
+  const name = document.getElementById('pu-name').value.trim();
+  const email = document.getElementById('pu-email').value.trim();
+  const role = document.getElementById('pu-role').value;
+  const avatar = document.getElementById('pu-av').value.trim();
+  if (!name) {
+    errEl.innerHTML = '<div class="alert alert-error">⚠️ Vui lòng nhập họ tên</div>';
+    return;
+  }
+  if (!editId) {
+    const body = { name, email, role };
+    if (avatar) body.avatar = avatar;
+    API.createPerson(body)
+      .then(() => API.getAdminSnap())
+      .then(data => {
+        DB.users = data.users || [];
+        DB.bookings = data.bookings || DB.bookings;
+        DB.chats = data.chats || DB.chats;
+        if (data.broadcastLastRead != null) broadcastLastRead = Number(data.broadcastLastRead) || 0;
+        if (data.broadcastChannelId) crdBroadcastId = data.broadcastChannelId;
+        if (data.crdRoles) DB.crdRoles = data.crdRoles;
+        closeModal('modal-person');
+        renderAll();
+      })
+      .catch(err => { errEl.innerHTML = `<div class="alert alert-error">⚠️ ${escHtml(err.message)}</div>`; });
+  return;
+  }
+  const body = { name, email, role };
+  if (avatar) body.avatar = avatar;
+  body.isBanned = document.getElementById('pu-ban').checked;
+  body.crdAccessRevoked = document.getElementById('pu-revoked').checked;
+  API.updatePerson(editId, body)
+    .then(() => API.getAdminSnap())
+    .then(data => {
+      DB.users = data.users || [];
+      DB.bookings = data.bookings || DB.bookings;
+      DB.chats = data.chats || DB.chats;
+      if (data.broadcastLastRead != null) broadcastLastRead = Number(data.broadcastLastRead) || 0;
+      if (data.broadcastChannelId) crdBroadcastId = data.broadcastChannelId;
+      if (data.crdRoles) DB.crdRoles = data.crdRoles;
+      closeModal('modal-person');
+      renderAll();
+    })
+    .catch(err => { errEl.innerHTML = `<div class="alert alert-error">⚠️ ${escHtml(err.message)}</div>`; });
+}
+
+function openUserStatsModal(userId) {
+  const u = DB.users.find(x => x.id === userId);
+  document.getElementById('ust-title').textContent = 'Thống kê sử dụng thiết bị';
+  document.getElementById('ust-sub').textContent = u ? `${u.name} · ${u.email || ''}` : '';
+  document.getElementById('ust-summary').textContent = 'Đang tải…';
+  document.getElementById('ust-tbody').innerHTML = '';
+  showModal('modal-user-stats');
+  API.getPersonStats(userId)
+    .then(s => {
+      document.getElementById('ust-summary').innerHTML =
+        `<strong>${s.totalBookings}</strong> lịch đặt (không tính đã huỷ) · ` +
+        `<strong style="color:var(--primary);">${s.totalHours}</strong> giờ tổng cộng`;
+      const rows = (s.byMachine || []).map(m => `<tr>
+        <td>${escHtml(m.machineName)}</td>
+        <td style="text-align:right;">${m.bookings}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums;">${m.hours}</td>
+      </tr>`).join('');
+      document.getElementById('ust-tbody').innerHTML = rows || '<tr><td colspan="3" style="text-align:center;color:var(--muted);">Chưa có dữ liệu</td></tr>';
+    })
+    .catch(err => {
+      document.getElementById('ust-summary').textContent = 'Lỗi: ' + err.message;
+    });
+}
+
+function renderUsersGrid() {
+  document.getElementById('u-count').textContent = `${DB.users.length} người dùng`;
+  ensureCrdRolesFallback();
+  document.getElementById('u-grid').innerHTML = DB.users.map(u => {
+    const bkCount = DB.bookings.filter(b => b.userId === u.id && (b.status || 'confirmed') !== 'cancelled').length;
+    const hoursSum = DB.bookings
+      .filter(b => b.userId === u.id && (b.status || 'confirmed') !== 'cancelled')
+      .reduce((a, b) => a + (Number(b.endH) - Number(b.startH)), 0);
+    const hrsRounded = Math.round(hoursSum * 100) / 100;
+    const isAdm   = crdRoleIsAdminSlot(u.role);
+    const rlbl    = crdRoleLabel(u.role);
+    const synced  = String(u.id).startsWith('u_app_');
+    const avatarGrad = isAdm ? 'linear-gradient(135deg,#764ba2,#667eea)' : 'var(--grad)';
+    const roleBadge  = isAdm
+      ? `<span class="badge" style="background:#f3eeff;color:#764ba2;border:1px solid #d4b8f5;">🔑 ${escHtml(rlbl)}</span>`
+      : `<span class="badge" style="background:#eef0ff;color:var(--primary);border:1px solid #c5caf5;">👤 ${escHtml(rlbl)}</span>`;
+    const statusBadges = [];
+    if (u.isBanned) statusBadges.push('<span class="badge" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;">⛔ Đã khoá</span>');
+    if (u.crdAccessRevoked) statusBadges.push('<span class="badge" style="background:#fce4ec;color:#c2185b;border:1px solid #f8bbd0;">🚫 Gỡ CRD</span>');
+    if (synced) statusBadges.push('<span class="badge" style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;">Đồng bộ</span>');
+    const actions = [];
+    actions.push(`<button type="button" class="btn btn-outline btn-sm btn-full" style="margin-top:8px;" onclick='openPersonModal(${JSON.stringify(u.id)})'>✏️ Sửa / Ban / Gỡ</button>`);
+    actions.push(`<button type="button" class="btn btn-ghost btn-sm btn-full" style="margin-top:6px;" onclick='openUserStatsModal(${JSON.stringify(u.id)})'>📊 Thống kê theo máy</button>`);
+    if (!isAdm) {
+      const delLabel = synced ? '🗑 Gỡ quyền CRD + xoá lịch' : '🗑 Xoá tài khoản CRD';
+      actions.push(`<button type="button" class="btn btn-ghost btn-sm btn-full" style="margin-top:6px;color:var(--danger);border-color:rgba(224,92,106,.35);" onclick='deleteUser(${JSON.stringify(u.id)})'>${delLabel}</button>`);
+    }
+    return `<div class="card" style="padding:20px;">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+        <div class="avatar" style="width:44px;height:44px;font-size:17px;background:${avatarGrad};">${escHtml(u.avatar)}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:15px;color:var(--text);">${escHtml(u.name)}</div>
+          <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${escHtml(u.email||'')}</div>
+          <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;">${roleBadge}${statusBadges.join('')}</div>
+        </div>
+      </div>
+      <div class="u-card-stats">📋 <strong style="color:var(--primary);">${bkCount}</strong> lịch · ⏱ <strong style="color:var(--primary);">${hrsRounded}</strong> giờ (ước lượng trên danh sách hiện tại)</div>
+      ${actions.join('')}
+    </div>`;
+  }).join('');
+}
+
+function deleteUser(id) {
+  const u = DB.users.find(x => x.id === id);
+  const synced = String(id).startsWith('u_app_');
+  const msg = synced
+    ? `Gỡ "${u?.name || id}" khỏi module CRD?\n— Xoá mọi lịch & chat CRD của người này\n— Hồ sơ CRD giữ lại ở trạng thái "gỡ quyền" (không tự tạo lại khi đăng nhập)\n— Tài khoản đăng nhập hệ thống không bị xoá`
+    : `Xoá hoàn toàn tài khoản CRD "${u?.name || id}" và mọi lịch đặt liên quan?`;
+  if (!confirm(msg)) return;
+  API.deletePerson(id)
+    .then(() => API.getAdminSnap())
+    .then(data => {
+      DB.users = data.users || [];
+      DB.bookings = data.bookings || [];
+      DB.chats = data.chats || [];
+      if (data.broadcastLastRead != null) broadcastLastRead = Number(data.broadcastLastRead) || 0;
+      if (data.broadcastChannelId) crdBroadcastId = data.broadcastChannelId;
+      renderAll();
+    })
+    .catch(err => alert('Lỗi: ' + err.message));
+}
+
+/* ════════════════════════════════════════════
+   SUB-TABS NGƯỜI DÙNG (CRD vs Hệ thống)
+════════════════════════════════════════════ */
+let activeUserTab = 'crd';
+
+function switchUserTab(tab) {
+  activeUserTab = tab;
+  document.querySelectorAll('.u-sub-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('utab-' + tab).classList.add('active');
+  document.getElementById('u-panel-crd').style.display = tab === 'crd' ? '' : 'none';
+  document.getElementById('u-panel-sys').style.display  = tab === 'sys' ? '' : 'none';
+  if (tab === 'sys' && !sysUsers.length) loadSysUsers();
+}
+
+function loadSysUsers() {
+  API.getAllSysUsers()
+    .then(data => {
+      sysUsers = Array.isArray(data) ? data : [];
+      renderSysUsers();
+    })
+    .catch(err => {
+      console.error('Lỗi tải tài khoản hệ thống:', err);
+    });
+}
+
+function renderSysUsers() {
+  const tbody = document.getElementById('sys-users-tbody');
+  if (!tbody) return;
+  const filterText = (document.getElementById('sys-filter')?.value || '').toLowerCase();
+  const filterType = document.getElementById('sys-filter-type')?.value || 'all';
+
+  const filtered = sysUsers.filter(u => {
+    // Lọc text
+    if (filterText) {
+      const inName  = (u.fullname || '').toLowerCase().includes(filterText);
+      const inEmail = (u.email     || '').toLowerCase().includes(filterText);
+      if (!inName && !inEmail) return false;
+    }
+    // Lọc loại
+    const isInVien    = u.crd?.isInVien ?? false;
+    const isDisabled  = !!u.isDisabled;
+    const hasCrd      = !!u.crd;
+    switch (filterType) {
+      case 'in':       if (!isInVien)  return false; break;
+      case 'out':      if (isInVien)  return false; break;
+      case 'disabled': if (!isDisabled) return false; break;
+      case 'no_crd':  if (hasCrd)     return false; break;
+    }
+    return true;
+  });
+
+  const countLabel = document.getElementById('sys-count-label');
+  if (countLabel) countLabel.textContent = `${filtered.length} / ${sysUsers.length} tài khoản`;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted);">Không có tài khoản nào phù hợp</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(u => {
+    const inVien   = u.crd?.isInVien ?? false;
+    const isDisabled = !!u.isDisabled;
+    const crd       = u.crd;
+    const hasCrd    = !!crd;
+    const synced    = crd?.syncedFromApp ?? false;
+    const crdBanned = crd?.isBanned ?? false;
+    const crdRevoke = crd?.crdAccessRevoked ?? false;
+
+    // Badge loại tài khoản
+    const typeBadge = inVien
+      ? `<span class="badge" style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;">🏛 Viện</span>`
+      : `<span class="badge" style="background:#e3f2fd;color:#1565c0;border:1px solid #90caf9;">🌐 Khách</span>`;
+
+    // Trạng thái hệ thống
+    const statBadges = [];
+    if (isDisabled) statBadges.push(`<span class="badge" style="background:#ffebee;color:#c62828;border:1px solid #ffcdd2;">⛔ Đã vô hiệu hoá</span>`);
+    if (!isDisabled && !hasCrd) statBadges.push(`<span class="badge" style="background:#f5f5f5;color:#757575;">❌ Chưa vào CRD</span>`);
+
+    // Vai trò hệ thống
+    const roleBadge = {
+      admin:        `<span class="badge" style="background:#f3eeff;color:#764ba2;border:1px solid #d4b8f5;">🔑 Admin</span>`,
+      crd_user:     `<span class="badge" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;">🌐 CRD Guest</span>`,
+      researcher:   `<span class="badge" style="background:#eef0ff;color:var(--primary);border:1px solid #c5caf5;">🔬 Researcher</span>`,
+    }[u.role] || `<span class="badge" style="background:#f5f5f5;color:#757575;">${escHtml(u.role || '—')}</span>`;
+
+    // Hồ sơ CRD
+    let crdCell = '—';
+    if (hasCrd) {
+      const crdRoleBadges = {
+        admin: `<span class="badge" style="background:#f3eeff;color:#764ba2;">🔑 Admin</span>`,
+      }[crd.personRole] || `<span class="badge" style="background:#eef0ff;color:var(--primary);">👤 ${escHtml(crd.personRole || 'user')}</span>`;
+      const crdStatusBadges = [];
+      if (crdBanned) crdStatusBadges.push(`<span class="badge" style="background:#fff3e0;color:#e65100;">⛔ Khoá</span>`);
+      if (crdRevoke) crdStatusBadges.push(`<span class="badge" style="background:#fce4ec;color:#c2185b;">🚫 Gỡ CRD</span>`);
+      if (synced)    crdStatusBadges.push(`<span class="badge" style="background:#e8f5e9;color:#2e7d32;">Đồng bộ</span>`);
+      crdCell = `<div style="display:flex;flex-direction:column;gap:3px;">
+        <div>${crdRoleBadges}</div>
+        ${crdStatusBadges.length ? `<div>${crdStatusBadges.join('')}</div>` : ''}
+      </div>`;
+    }
+
+    // Actions
+    const acts = [];
+    // Disable/Enable
+    const disableLabel = isDisabled ? '🔓 Kích hoạt' : '⛔ Vô hiệu hoá';
+    acts.push(`<button type="button" class="btn btn-sm" style="${isDisabled ? 'background:#e8f5e9;color:#2e7d52;border:1px solid #a5d6a7;' : 'background:#fff3e0;color:#e65100;border:1px solid #ffcc80;'}" onclick="toggleSysDisable(${u.id})">${disableLabel}</button>`);
+    // Reset password
+    acts.push(`<button type="button" class="btn btn-sm btn-outline" onclick="openResetPwdModal(${u.id})">🔑 Đặt lại MK</button>`);
+    // CRD actions (if has crd profile)
+    if (hasCrd) {
+      acts.push(`<button type="button" class="btn btn-sm btn-ghost" onclick="openPersonModal(${JSON.stringify(crd.personId)})">✏️ Sửa CRD</button>`);
+    }
+
+    return `<tr>
+      <td>${typeBadge}</td>
+      <td style="font-weight:600;">${escHtml(u.fullname || '—')}</td>
+      <td style="color:var(--muted);font-size:12px;">${escHtml(u.email || '—')}</td>
+      <td>${roleBadge}</td>
+      <td>${crdCell}</td>
+      <td style="text-align:center;">${statBadges.join('')}</td>
+      <td style="text-align:right;"><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">${acts.join('')}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+let resetPwdUserId = null;
+function openResetPwdModal(userId) {
+  resetPwdUserId = userId;
+  const u = sysUsers.find(x => x.id === userId);
+  if (!u) return;
+  document.getElementById('rp-email').value = u.email || '';
+  document.getElementById('rp-password').value = '';
+  document.getElementById('rp-hint').innerHTML = `Tài khoản: <strong>${escHtml(u.fullname || u.email)}</strong> — Mật khẩu mới sẽ có hiệu lực ngay.`;
+  document.getElementById('rp-alert').innerHTML = '';
+  showModal('modal-reset-pwd');
+}
+
+function submitResetPassword() {
+  const alertEl = document.getElementById('rp-alert');
+  alertEl.innerHTML = '';
+  const password = document.getElementById('rp-password').value.trim();
+  if (!password || password.length < 6) {
+    alertEl.innerHTML = `<div class="alert alert-error">⚠️ Mật khẩu phải ít nhất 6 ký tự</div>`;
+    return;
+  }
+  API.resetPassword(resetPwdUserId, password)
+    .then(() => {
+      alertEl.innerHTML = `<div class="alert alert-success">✅ Mật khẩu đã được đặt lại thành công.</div>`;
+      setTimeout(() => closeModal('modal-reset-pwd'), 1200);
+    })
+    .catch(err => { alertEl.innerHTML = `<div class="alert alert-error">⚠️ ${escHtml(err.message)}</div>`; });
+}
+
+function toggleSysDisable(userId) {
+  const u = sysUsers.find(x => x.id === userId);
+  const action = u?.isDisabled ? 'kích hoạt lại' : 'vô hiệu hoá';
+  if (!confirm(`Chắc chắn muốn ${action} tài khoản "${u?.fullname || u?.email}"?`)) return;
+  API.disableSysUser(userId)
+    .then(() => loadSysUsers())
+    .catch(err => alert('Lỗi: ' + err.message));
+}
+
+/* ════════════════════════════════════════════
+   CHAT
+════════════════════════════════════════════ */
+function toggleChat() {
+  const panel  = document.getElementById('chat-panel');
+  const btn    = document.getElementById('chat-toggle-btn');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'flex';
+  btn.classList.toggle('active', !isOpen);
+  if (!isOpen) {
+    renderChatSidebar();
+    if (!chatSelectedUser) {
+      const s = document.getElementById('chat-mode-strip');
+      if (s) s.style.display = 'none';
+      const a = document.getElementById('admin-chat-actions');
+      if (a) a.style.display = 'none';
+    }
+  }
+}
+
+function countBroadcastUnread() {
+  if (!currentUser || !crdBroadcastId) return 0;
+  return DB.chats.filter(c =>
+    c.toId === crdBroadcastId &&
+    c.ts > broadcastLastRead &&
+    c.fromId !== currentUser.id
+  ).length;
+}
+
+function renderChatSidebar() {
+  if (!currentUser) return;
+  /* Admin & Researcher: danh sách đối thoại = mọi người không phải admin (trừ chính mình) */
+  const others = DB.users.filter(u => u.id !== currentUser.id && !crdRoleIsAdminSlot(u.role) && !u.isBanned && !u.crdAccessRevoked);
+  const bcUnread = countBroadcastUnread();
+  const bcActive = chatSelectedUser === crdBroadcastId;
+  const broadcastRow = `<div class="chat-user-item broadcast-item${bcActive ? ' active' : ''}" onclick='selectChatUser(${JSON.stringify(crdBroadcastId)})'>
+      <div style="position:relative;">
+        <div class="avatar" style="width:30px;height:30px;font-size:14px;background:linear-gradient(135deg,#667eea,#764ba2);">📢</div>
+        ${bcUnread > 0 ? `<div class="unread-dot">${bcUnread}</div>` : ''}
+      </div>
+      <div class="chat-uname">Kênh chung</div>
+    </div>`;
+  const peerRows = others.map(u => {
+    const uc     = DB.chats.filter(c => c.fromId === u.id && c.toId === currentUser.id && !c.read).length;
+    const active = chatSelectedUser === u.id;
+    return `<div class="chat-user-item${active?' active':''}" onclick='selectChatUser(${JSON.stringify(u.id)})'>
+      <div style="position:relative;">
+        <div class="avatar" style="width:30px;height:30px;font-size:12px;">${escHtml(u.avatar)}</div>
+        ${uc>0?`<div class="unread-dot">${uc}</div>`:''}
+      </div>
+      <div class="chat-uname">${escHtml(u.name.split(' ').pop())}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('chat-side').innerHTML = broadcastRow + peerRows;
+  updateUnreadBadge();
+}
+
+function selectChatUser(userId) {
+  chatSelectedUser = userId;
+
+  function finishOpen() {
+    const isBc = userId === crdBroadcastId;
+    document.getElementById('broadcast-hint').style.display = isBc ? '' : 'none';
+
+    const strip = document.getElementById('chat-mode-strip');
+    strip.style.display = 'block';
+    if (isBc) {
+      strip.innerHTML = '<strong>📢 Kênh chung</strong> — mọi người trong CRD đều thấy. <span style="color:var(--muted);">Giới hạn: 3 tin / 30 giây.</span>';
+    } else {
+      const peer = DB.users.find(u => u.id === userId);
+      strip.innerHTML = '<strong>💬 Nhắn riêng</strong> với <strong>' + escHtml(peer ? peer.name : '—') + '</strong> <span style="color:var(--muted);">(khác với 📢 Kênh chung)</span>';
+    }
+
+    const adminPanel = document.getElementById('admin-chat-actions');
+    adminPanel.style.display = 'block';
+    const emailLine = document.getElementById('chat-email-line');
+    API.getEmailNotif()
+      .then(r => {
+        emailNotifEnabled = r && r.enabled !== false;
+        document.getElementById('chat-email-notif').checked = emailNotifEnabled;
+        emailLine.style.display = '';
+      })
+      .catch(() => { emailLine.style.display = 'none'; });
+
+    const modTools = document.getElementById('mod-tools');
+    const modHint = document.getElementById('mod-hint');
+    if (isCrdModerator()) {
+      modTools.style.display = '';
+      modHint.style.display = isBc ? 'none' : '';
+    } else {
+      modTools.style.display = 'none';
+    }
+
+    /* Booking ref dropdown */
+    const sel = document.getElementById('chat-bk-ref');
+    if (userId === crdBroadcastId) {
+      sel.innerHTML = '<option value="">— Đính kèm booking của bạn (tuỳ chọn) —</option>'
+        + DB.bookings.filter(b => b.userId === currentUser.id).map(b => {
+            const m = DB.machines.find(x => x.id === b.machineId);
+            return `<option value="${b.id}">${escHtml(m?.name||'?')} | ${b.date} | ${fmtT(b.startH)}–${fmtT(b.endH)}</option>`;
+          }).join('');
+    } else {
+      const relevant = DB.bookings.filter(b => b.userId === userId || b.userId === currentUser.id);
+      sel.innerHTML = '<option value="">— Đính kèm booking (tuỳ chọn) —</option>'
+        + relevant.map(b => {
+            const m = DB.machines.find(x => x.id === b.machineId);
+            return `<option value="${b.id}">${escHtml(m?.name||'?')} | ${b.date} | ${fmtT(b.startH)}–${fmtT(b.endH)}</option>`;
+          }).join('');
+    }
+    document.getElementById('chat-empty').style.display      = 'none';
+    document.getElementById('chat-list').style.display       = 'flex';
+    document.getElementById('chat-input-wrap').style.display = 'block';
+    renderChatSidebar();
+    renderChatMessages();
+  }
+
+  if (userId === crdBroadcastId) {
+    finishOpen();
+    API.markBroadcastRead()
+      .then(r => {
+        if (r && r.broadcastLastRead != null) broadcastLastRead = Number(r.broadcastLastRead) || 0;
+        renderChatSidebar();
+        updateUnreadBadge();
+      })
+      .catch(() => {});
+  } else {
+    API.markThreadRead(userId).catch(() => {});
+    finishOpen();
+  }
+}
+
+let selectedChatMsgId = null;
+
+function renderChatMessages() {
+  if (!chatSelectedUser) return;
+  let thread;
+  if (chatSelectedUser === crdBroadcastId) {
+    thread = DB.chats.filter(c => c.toId === crdBroadcastId).sort((a,b) => a.ts - b.ts);
+  } else {
+    thread = DB.chats.filter(c =>
+      (c.fromId === currentUser.id && c.toId === chatSelectedUser) ||
+      (c.fromId === chatSelectedUser && c.toId === currentUser.id)
+    ).sort((a,b) => a.ts - b.ts);
+  }
+
+  const isBc = chatSelectedUser === crdBroadcastId;
+  const isMod = isCrdModerator();
+  const list = document.getElementById('chat-list');
+  selectedChatMsgId = null;
+  document.getElementById('chat-del-btn').style.display = 'none';
+
+  list.innerHTML = thread.map(c => {
+    const isMe = c.fromId === currentUser.id;
+    const sender = DB.users.find(x => x.id === c.fromId);
+    const senderLabel = (isBc && !isMe)
+      ? `<div class="chat-sender">${escHtml(sender?.name || 'Người dùng')}</div>`
+      : '';
+    const bk   = c.bookingId && DB.bookings.find(b => b.id === c.bookingId);
+    const mc   = bk && DB.machines.find(m => m.id === bk.machineId);
+    const bkTag = bk
+      ? `<div style="align-self:${isMe?'flex-end':'flex-start'};">
+           <span class="bk-tag" style="color:${mc?.color};border-color:${mc?.color}44;background:${mc?.color}10;">
+             📅 ${escHtml(mc?.name||'?')} ${fmtT(bk.startH)}–${fmtT(bk.endH)}
+           </span>
+         </div>`
+      : '';
+    const delIcon = (isBc && isMod)
+      ? `<div class="chat-del-icon ${isMe?'right':'left'}" title="Chọn để xóa tin này" onclick="event.stopPropagation();selectChatMsgForDelete('${escHtml(c.id)}')">🗑</div>`
+      : '';
+    return `<div class="chat-msg-wrap" id="cmsg-${escHtml(c.id)}">
+      ${delIcon}
+      <div style="display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'};">
+        ${senderLabel}
+        ${bkTag}
+        <div class="bubble ${isMe?'me':'them'}">${escHtml(c.msg)}</div>
+        <div class="chat-time">${new Date(c.ts).toLocaleTimeString('vi',{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+    </div>`;
+  }).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
+function selectChatMsgForDelete(msgId) {
+  const prev = selectedChatMsgId;
+  if (prev) {
+    const el = document.getElementById('cmsg-' + prev);
+    if (el) el.classList.remove('selected');
+  }
+  if (prev === msgId) {
+    selectedChatMsgId = null;
+    document.getElementById('chat-del-btn').style.display = 'none';
+    return;
+  }
+  selectedChatMsgId = msgId;
+  const el = document.getElementById('cmsg-' + msgId);
+  if (el) el.classList.add('selected');
+  document.getElementById('chat-del-btn').style.display = '';
+}
+
+function deleteSelectedChatMsg() {
+  if (!selectedChatMsgId) return;
+  if (!confirm('Xóa tin nhắn này khỏi kênh chung? Hành động không thể hoàn tác.')) return;
+  API.deleteChat(selectedChatMsgId)
+    .then(() => {
+      DB.chats = DB.chats.filter(c => c.id !== selectedChatMsgId);
+      selectedChatMsgId = null;
+      document.getElementById('chat-del-btn').style.display = 'none';
+      renderChatMessages();
+    })
+    .catch(err => alert('Lỗi: ' + err.message));
+}
+
+function toggleEmailNotif(enabled) {
+  API.setEmailNotif(enabled)
+    .then(() => { emailNotifEnabled = enabled; })
+    .catch(() => {});
+}
+
+const RATE_LIMIT_SEC = 30;
+const RATE_BURST = 3; // khớp server
+
+function startBroadcastCooldown(sec) {
+  broadcastCooldown = sec;
+  const wrap = document.getElementById('cooldown-wrap');
+  const fill = document.getElementById('cooldown-fill');
+  const lbl  = document.getElementById('cooldown-label');
+  const btn  = document.getElementById('chat-send-btn');
+  if (!wrap) return;
+  wrap.style.display = '';
+  fill.style.width = '0%';
+  lbl.textContent = `Chờ ${sec}s…`;
+  if (broadcastCooldownTimer) clearInterval(broadcastCooldownTimer);
+  broadcastCooldownTimer = setInterval(() => {
+    broadcastCooldown--;
+    if (broadcastCooldown <= 0) {
+      clearInterval(broadcastCooldownTimer);
+      broadcastCooldownTimer = null;
+      wrap.style.display = 'none';
+      btn.disabled = false;
+      btn.textContent = 'Gửi';
+    } else {
+      fill.style.width = ((RATE_LIMIT_SEC - broadcastCooldown) / RATE_LIMIT_SEC * 100) + '%';
+      lbl.textContent = `Chờ ${broadcastCooldown}s…`;
+    }
+  }, 1000);
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg   = input.value.trim();
+  if (!msg || !chatSelectedUser) return;
+  if (chatSelectedUser === crdBroadcastId && broadcastCooldown > 0) {
+    alert('Vui lòng chờ ' + broadcastCooldown + 's trước khi gửi tin tiếp trên kênh chung.');
+    return;
+  }
+  const bkRef = document.getElementById('chat-bk-ref').value || null;
+  const btn   = document.getElementById('chat-send-btn');
+  btn.disabled = true;
+  btn.textContent = '…';
+  API.createChat({ toId: chatSelectedUser, bookingId: bkRef, msg })
+    .then(() => (appRole === 'admin' ? API.getAdminSnap() : API.getState()))
+    .then(data => {
+      DB.chats = data.chats || [];
+      if (data.broadcastLastRead != null) broadcastLastRead = Number(data.broadcastLastRead) || 0;
+      input.value = '';
+      if (chatSelectedUser === crdBroadcastId) startBroadcastCooldown(RATE_LIMIT_SEC);
+      btn.disabled = false;
+      btn.textContent = 'Gửi';
+      renderChatMessages();
+      renderChatSidebar();
+      updateUnreadBadge();
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.textContent = 'Gửi';
+      if (err && err.message && err.message.includes('429')) {
+        const m = err.message;
+        const sec = parseInt(m.match(/\d+/)?.[0] || '30', 10);
+        startBroadcastCooldown(sec);
+        alert(m);
+      } else {
+        alert('Lỗi gửi tin nhắn: ' + (err.message || String(err)));
+      }
+    });
+}
+
+function updateUnreadBadge() {
+  if (!currentUser) return;
+  const nPeer = DB.chats.filter(c => c.toId === currentUser.id && !c.read).length;
+  const n     = nPeer + countBroadcastUnread();
+  const btn    = document.getElementById('chat-toggle-btn');
+  const old    = btn.querySelector('.notif-badge');
+  if (old) old.remove();
+  if (n > 0) btn.insertAdjacentHTML('beforeend', `<span class="notif-badge">${n}</span>`);
+}
+
+/* ── Modal helpers ───────────────────────────────────────── */
+const showModal  = id => document.getElementById(id).style.display = 'flex';
+const closeModal = id => document.getElementById(id).style.display = 'none';
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal('modal-booking');
+    closeModal('modal-machine');
+    closeModal('modal-person');
+  }
+});
+</script>
+</body>
+</html>

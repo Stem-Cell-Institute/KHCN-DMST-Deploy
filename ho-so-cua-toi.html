@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hồ sơ của tôi - SCI-ACE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .my-submissions-page { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        .page-title { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem; }
+        .intro-note {
+            background: #e7f3ff; border-left: 4px solid var(--primary); padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.95rem; color: var(--gray);
+        }
+        .user-bar { background: rgba(26, 77, 46, 0.08); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+        .user-bar span { font-weight: 500; color: var(--primary); }
+        .user-bar a { color: var(--gray); font-size: 0.9rem; }
+        .user-bar .btn-new { background: var(--accent); color: var(--white); padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        .user-bar .btn-new:hover { background: #e67300; color: var(--white); }
+        .submissions-list { background: var(--white); border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); overflow: hidden; }
+        .submission-item { padding: 1.25rem 1.5rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .submission-item:last-child { border-bottom: none; }
+        .submission-item h4 { color: var(--primary); margin-bottom: 0.25rem; }
+        .submission-item .meta { font-size: 0.9rem; color: var(--gray); }
+        .item-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+        .btn-download { padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; border: none; cursor: pointer; background: var(--accent); color: var(--white); font-weight: 500; }
+        .btn-download:hover { background: #e67300; }
+        .btn-track { display: inline-block; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; border: 2px solid var(--primary); background: transparent; color: var(--primary); font-weight: 600; text-decoration: none; }
+        .btn-track:hover { background: rgba(26, 77, 46, 0.1); color: var(--primary); }
+        .empty-state { padding: 3rem 2rem; text-align: center; color: var(--gray); }
+        .empty-state a { color: var(--primary); font-weight: 500; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">ACE-SCI</a>
+                <div class="header-text">
+                    <h1>Hồ sơ của tôi</h1>
+                    <p>Nghiên cứu viên — Xem và tải hồ sơ đã nộp</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">🏠 Trang chủ</a>
+            <a href="nhom-1.html">📚 Nhóm hồ sơ 1</a>
+            <a href="nhom-2.html">📝 Nhóm hồ sơ 2</a>
+            <a href="nhom-3.html">👥 Nhóm hồ sơ 3</a>
+            <div class="nav-dropdown">
+                <span class="nav-dropdown-trigger">📤 Nộp hồ sơ ▾</span>
+                <div class="nav-dropdown-menu">
+                    <a href="nop-ho-so.html">Nộp hồ sơ (Nghiên cứu viên)</a>
+                    <a href="hoi-dong.html">Khu vực Hội đồng (xem hồ sơ đã nộp)</a>
+                    <a href="quan-tri.html">Quản trị (Admin)</a>
+                </div>
+            </div>
+            <a href="dang-nhap.html">🔐 Đăng nhập</a>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="my-submissions-page">
+            <div id="user-bar" class="user-bar" style="display: none;">
+                <span id="user-email"></span>
+                <div>
+                    <a href="nop-ho-so.html" class="btn-new">➕ Nộp hồ sơ mới</a>
+                    <a href="dang-nhap.html" style="margin-left: 0.75rem;">Thoát đăng nhập</a>
+                </div>
+            </div>
+            <h2 class="page-title">Thư mục hồ sơ đã nộp</h2>
+            <p class="intro-note">Bạn có thể xem danh sách hồ sơ đã nộp và <strong>tải về</strong> để xem. Hồ sơ đã nộp <strong>không thể chỉnh sửa</strong>.</p>
+            <div id="submissions-list" class="submissions-list">
+                <div class="empty-state">Đang tải...</div>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="footer-bottom"><p>&copy; 2026 SCI-ACE. Phiên bản 1.0</p></div>
+        </div>
+    </footer>
+    <script>
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const listEl = document.getElementById('submissions-list');
+        const userBar = document.getElementById('user-bar');
+        const userEmail = document.getElementById('user-email');
+
+        if (token && user.email) {
+            userEmail.textContent = user.email;
+            userBar.style.display = 'flex';
+        } else {
+            listEl.innerHTML = '<div class="empty-state">Vui lòng <a href="dang-nhap.html">đăng nhập</a> để xem hồ sơ của bạn.</div>';
+        }
+
+        function escapeHtml(s) {
+            if (!s) return '';
+            const div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        async function loadSubmissions() {
+            if (!token) return;
+            try {
+                const res = await fetch('/api/submissions', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (res.status === 401) {
+                    listEl.innerHTML = '<div class="empty-state">Phiên đăng nhập hết hạn. <a href="dang-nhap.html">Đăng nhập lại</a>.</div>';
+                    return;
+                }
+                const data = await res.json().catch(() => ({}));
+                const items = Array.isArray(data) ? data : (data.items || data.submissions || []);
+                if (items.length === 0) {
+                    listEl.innerHTML = '<div class="empty-state">Bạn chưa nộp hồ sơ nào. <a href="nop-ho-so.html">Nộp hồ sơ mới</a>.</div>';
+                    return;
+                }
+                listEl.innerHTML = items.map(function(s) {
+                    const id = s.id || s._id;
+                    const title = s.title || 'Không tên';
+                    const date = s.createdAt || '';
+                    return '<div class="submission-item">' +
+                        '<div><h4>' + escapeHtml(title) + '</h4><p class="meta">Ngày nộp: ' + escapeHtml(date) + '</p></div>' +
+                        '<div class="item-actions">' +
+                        '<a href="theo-doi-ho-so.html?id=' + id + '" class="btn-track">📋 Tiến trình</a>' +
+                        '<button type="button" class="btn-download" data-id="' + id + '">Tải về</button>' +
+                        '</div></div>';
+                }).join('');
+                listEl.querySelectorAll('.btn-download').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        fetch('/api/submissions/' + id + '/download', { headers: { 'Authorization': 'Bearer ' + token } })
+                            .then(function(r) {
+                                if (!r.ok) throw new Error('Không tải được');
+                                return r.blob();
+                            })
+                            .then(function(blob) {
+                                const a = document.createElement('a');
+                                a.href = URL.createObjectURL(blob);
+                                a.download = 'ho-so-' + id + '.zip';
+                                a.click();
+                                URL.revokeObjectURL(a.href);
+                            })
+                            .catch(function() { alert('Không tải được hồ sơ.'); });
+                    });
+                });
+            } catch (err) {
+                listEl.innerHTML = '<div class="empty-state">Không thể tải danh sách. Vui lòng chạy backend.</div>';
+            }
+        }
+        if (token) loadSubmissions();
+    </script>
+</body>
+</html>

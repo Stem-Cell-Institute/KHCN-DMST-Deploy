@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khu vực Hội đồng - Đề tài cấp Viện</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .council-page { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+        .page-title { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 1rem; }
+        .user-bar { background: rgba(26, 77, 46, 0.08); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+        .user-bar span { font-weight: 500; color: var(--primary); }
+        .submissions-list { background: var(--white); border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); overflow: hidden; }
+        .submission-item { padding: 1.25rem 1.5rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .submission-item:last-child { border-bottom: none; }
+        .submission-item h4 { color: var(--primary); margin-bottom: 0.25rem; }
+        .submission-item h4 a:hover { text-decoration: underline; color: var(--accent); }
+        .submission-item .meta { font-size: 0.9rem; color: var(--gray); }
+        .submission-item .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .btn-sm { padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; text-decoration: none; font-weight: 500; border: none; cursor: pointer; }
+        .btn-view { background: var(--primary); color: var(--white); text-decoration: none; }
+        .btn-download { background: var(--accent); color: var(--white); }
+        .btn-delete { background: #dc3545; color: var(--white); }
+        .empty-state { padding: 3rem 2rem; text-align: center; color: var(--gray); }
+        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
+    </style>
+</head>
+<body class="theme-cap-vien">
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="de-tai-cap-vien.html" class="logo"><img src="images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc" style="height:72px;width:auto;display:block;"></a>
+                <div class="header-text">
+                    <h1>Khu vực Hội đồng</h1>
+                    <p>Nhiệm vụ KHCN cấp cơ sở — Xem và xét duyệt hồ sơ đề tài cấp Viện</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">Trang chủ</a>
+            <a href="quan-ly-de-tai-co-so.html">Nhiệm vụ KHCN</a>
+            <a href="de-tai-cap-vien.html">Đề tài cấp Viện</a>
+            <a href="nop-de-tai-cap-vien.html">Nộp đề tài</a>
+            <a href="theo-doi-de-tai-cap-vien.html">Theo dõi hồ sơ</a>
+            <a href="hoi-dong-de-tai-cap-vien.html">Hội đồng</a>
+            <div id="auth-status"></div>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="council-page">
+            <div id="user-bar" class="user-bar" style="display: none;">
+                <span id="user-email"></span>
+                <a href="dang-nhap.html" id="btn-logout">Thoát đăng nhập</a>
+            </div>
+            <h2 class="page-title">Hồ sơ đề tài cấp Viện đã nộp</h2>
+            <div id="msg" class="msg" style="display: none;"></div>
+            <div id="submissions-list" class="submissions-list">
+                <div class="empty-state">Đang tải danh sách...</div>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <p>2026 Viện Tế bào gốc - Đề tài cấp Viện</p>
+        </div>
+    </footer>
+    <script src="js/auth-status.js"></script>
+    <script src="hoi-dong-cap-vien.js"></script>
+</body>
+</html>

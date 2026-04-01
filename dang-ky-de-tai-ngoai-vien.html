@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký Nhiệm vụ KHCN mới - Đề tài ngoài Viện</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body.content-page-register { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        .register-page { max-width: 900px; margin: 0 auto; padding: 30px; }
+        .register-intro { background: white; padding: 1.5rem 2rem; border-radius: 12px; margin-bottom: 2rem; border-left: 4px solid #667eea; }
+        .register-intro h2 { color: #667eea; margin-bottom: 0.5rem; }
+        .register-intro p { color: #666; font-size: 0.95rem; }
+        .register-section { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem; }
+        .register-section h3 { color: #333; margin-bottom: 1rem; font-size: 1.1rem; }
+        .tab-container { margin-bottom: 1.5rem; }
+        .tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 2px solid #e0e0e0; margin-bottom: 1.5rem; align-items: center; }
+        .tabs .tab { padding: 12px 20px; border: none; background: transparent; cursor: pointer; font-weight: 500; color: #666; border-radius: 8px 8px 0 0; }
+        .tabs .tab:hover { background: #f0f0f0; color: #333; }
+        .tabs .tab.active { background: #667eea; color: white; }
+        .steps-tabs { flex-wrap: wrap; }
+        .step-tab { display: inline-flex; align-items: center; gap: 6px; }
+        .step-num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; background: rgba(0,0,0,0.15); border-radius: 50%; font-size: 0.85rem; font-weight: 700; }
+        .tabs .tab.active .step-num { background: rgba(255,255,255,0.3); }
+        .tabs .tab:not(.active) .step-num { background: #e0e0e0; color: #666; }
+        .step-arrow { color: #bbb; font-size: 1rem; padding: 0 4px; }
+        .header-greeting { margin-left: auto; font-size: 1rem; font-weight: 500; color: rgba(255,255,255,0.95); }
+        .header-greeting a { color: rgba(255,255,255,0.9); text-decoration: none; }
+        .header-greeting a:hover { text-decoration: underline; }
+        .btn-upload-mau { padding: 6px 14px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 0.9rem; }
+        .btn-upload-mau:hover { background: #5568d3; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group-full { grid-column: 1 / -1; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 0.4rem; font-size: 0.9rem; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #667eea; }
+        .form-group input[type="file"] { padding: 0.5rem; background: #f8f9fa; border: 2px dashed #dee2e6; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .required-star { color: #dc3545; }
+        .upload-desc { font-size: 0.85rem; color: #666; margin-top: 0.25rem; }
+        .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; margin-bottom: 20px; }
+        .btn-back:hover { background: #5568d3; }
+        .btn-submit { padding: 12px 24px; background: #4caf50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem; }
+        .btn-submit:hover { background: #43a047; }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-cancel { padding: 12px 24px; background: #ffd93d; color: #333; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-right: 10px; }
+        .btn-cancel:hover { background: #f5c400; }
+        .form-actions { display: flex; gap: 10px; margin-top: 1.5rem; }
+        .msg { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .msg.error { background: #f8d7da; color: #721c24; display: block; }
+        .msg.success { background: #d4edda; color: #155724; display: block; }
+        .success-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .success-modal { background: white; border-radius: 12px; padding: 2rem; max-width: 480px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .success-modal h3 { color: #1a4d2e; margin-bottom: 1rem; font-size: 1.25rem; }
+        .success-modal p { color: #333; line-height: 1.6; margin-bottom: 0.75rem; }
+        .success-modal .btn-ok { display: block; width: 100%; padding: 12px; background: #1a4d2e; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+        .success-modal .btn-ok:hover { background: #2d6a4f; }
+        @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } .step-arrow { display: none; } .admin-templates-grid { grid-template-columns: 1fr !important; } }
+    </style>
+</head>
+<body class="content-page-register">
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="de-tai-cap-vien.html" class="logo"><img src="images/logo-vien-te-bao-goc.png" alt="Logo" style="height:72px;width:auto;display:block;"></a>
+                <div class="header-text">
+                    <h1>Đăng ký Nhiệm vụ KHCN mới</h1>
+                    <p>Đề tài ngoài Viện — Cấp Bộ / ĐHQG / Nhà nước</p>
+                </div>
+                <div class="header-greeting" id="header-greeting"></div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">Trang chủ</a>
+            <a href="quan-ly-de-tai-co-so.html">Nhiệm vụ KHCN</a>
+            <a href="de-tai-cap-vien.html">Đề tài cấp Viện</a>
+            <a href="dang-ky-de-tai-ngoai-vien.html" class="active">Đăng ký đề tài ngoài Viện</a>
+            <span id="nav-auth"><a href="dang-nhap.html">Đăng nhập</a></span>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="register-page">
+            <a href="quan-ly-de-tai-co-so.html" class="btn-back">← Quay lại Nhiệm vụ KHCN</a>
+
+            <div class="register-intro">
+                <h2>Đăng ký đề tài ngoài Viện</h2>
+                <p>Điền thông tin đề tài và tải lên hồ sơ theo quy định (Điều 11, 12). Sau khi đăng ký, đề tài sẽ xuất hiện trong danh sách Nhiệm vụ KHCN.</p>
+            </div>
+
+            <div id="msg" class="msg"></div>
+
+            <form id="formDangKy" novalidate>
+                <div class="tab-container">
+                    <div class="tabs steps-tabs">
+                        <button type="button" class="tab step-tab active" data-tab="basic-info" data-step="1"><span class="step-num">1</span> Thông tin cơ bản</button>
+                        <span class="step-arrow">→</span>
+                        <button type="button" class="tab step-tab" data-tab="team-info" data-step="2"><span class="step-num">2</span> Nhóm thực hiện</button>
+                        <span class="step-arrow">→</span>
+                        <button type="button" class="tab step-tab" data-tab="budget-info" data-step="3"><span class="step-num">3</span> Kinh phí</button>
+                        <span class="step-arrow">→</span>
+                        <button type="button" class="tab step-tab" data-tab="timeline-info" data-step="4"><span class="step-num">4</span> Tiến độ</button>
+                        <span class="step-arrow">→</span>
+                        <button type="button" class="tab step-tab" data-tab="legal-info" data-step="5"><span class="step-num">5</span> Hồ sơ pháp lý</button>
+                    </div>
+
+                    <div id="basic-info" class="tab-content active">
+                        <div class="register-section">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="add-level">Cấp đề tài</label>
+                                    <select id="add-level" title="Cấp đề tài">
+                                        <option value="ministry">Cấp Bộ</option>
+                                        <option value="university">Cấp ĐHQG</option>
+                                        <option value="national">Cấp Nhà nước</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Mã đề tài</label>
+                                    <input type="text" id="add-code" placeholder="Để trống — cơ quan ngoài cấp sau">
+                                </div>
+                                <div class="form-group">
+                                    <label>Cơ quan quản lý</label>
+                                    <input type="text" id="add-managing-agency" placeholder="VD: Bộ KH&amp;CN, ĐHQG-HCM">
+                                </div>
+                                <div class="form-group">
+                                    <label>Hợp đồng số</label>
+                                    <input type="text" id="add-contract-number" placeholder="Số hợp đồng (nếu có)">
+                                </div>
+                                <div class="form-group form-group-full">
+                                    <label>Tên đề tài <span class="required-star">*</span></label>
+                                    <input type="text" id="add-title" placeholder="Nhập tên đầy đủ của đề tài KHCN" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="add-mission-type">Loại đề tài</label>
+                                    <select id="add-mission-type" title="Loại đề tài">
+                                        <option value="research">Đề tài nghiên cứu</option>
+                                        <option value="project">Dự án</option>
+                                        <option value="program">Chương trình</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="add-field">Lĩnh vực</label>
+                                    <select id="add-field" title="Lĩnh vực">
+                                        <option value="stem-cell">Tế bào gốc</option>
+                                        <option value="biotechnology">Công nghệ sinh học</option>
+                                        <option value="medicine">Y sinh học</option>
+                                        <option value="other">Khác</option>
+                                    </select>
+                                </div>
+                                <div class="form-group form-group-full">
+                                    <label>Mục tiêu nghiên cứu</label>
+                                    <textarea id="add-objectives" placeholder="Mô tả mục tiêu và ý nghĩa của đề tài" rows="3"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Ngày bắt đầu</label>
+                                    <input type="date" id="add-start-date">
+                                </div>
+                                <div class="form-group">
+                                    <label>Ngày kết thúc</label>
+                                    <input type="date" id="add-end-date">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="team-info" class="tab-content">
+                        <div class="register-section">
+                            <div class="form-grid">
+                                <div class="form-group form-group-full">
+                                    <label>Chủ nhiệm <span class="required-star">*</span></label>
+                                    <select id="add-principal">
+                                        <option value="">Chọn chủ nhiệm...</option>
+                                        <option value="1">TS. Nguyễn Văn A</option>
+                                        <option value="2">PGS.TS. Trần Thị B</option>
+                                        <option value="3">TS. Lê Văn C</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Số lượng thành viên</label>
+                                    <input type="number" id="add-team-count" min="2" placeholder="Nhập số thành viên">
+                                </div>
+                                <div class="form-group">
+                                    <label>Số nghiên cứu sinh</label>
+                                    <input type="number" id="add-phd-count" min="0" placeholder="Số NCS tham gia">
+                                </div>
+                                <div class="form-group form-group-full">
+                                    <label>Danh sách thành viên</label>
+                                    <textarea id="add-team-list" placeholder="Nhập danh sách thành viên (mỗi người một dòng)"></textarea>
+                                </div>
+                                <div class="form-group form-group-full">
+                                    <label>Đơn vị phối hợp</label>
+                                    <textarea id="add-cooperating-units" placeholder="Các đơn vị trong/ngoài viện tham gia phối hợp (nếu có đơn vị ngoài SCI)"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="budget-info" class="tab-content">
+                        <div class="register-section">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Nguồn kinh phí</label>
+                                    <select id="add-funding-source">
+                                        <option value="">Chọn nguồn...</option>
+                                        <option value="nsnn">Ngân sách Nhà nước</option>
+                                        <option value="dhqg">Ngân sách ĐHQG</option>
+                                        <option value="bo">Ngân sách Bộ</option>
+                                        <option value="cooperation">Hợp tác</option>
+                                        <option value="other">Nguồn khác</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tổng kinh phí / Kinh phí được duyệt (VNĐ)</label>
+                                    <input type="number" id="add-budget" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Kinh phí đã giải ngân (VNĐ)</label>
+                                    <input type="number" id="add-disbursed-budget" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Năm giải ngân</label>
+                                    <input type="text" id="add-disbursement-year" placeholder="VD: 2025">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="timeline-info" class="tab-content">
+                        <div class="register-section">
+                            <div class="form-group">
+                                <label>Sản phẩm dự kiến</label>
+                                <textarea id="add-outputs" placeholder="Liệt kê các sản phẩm nghiên cứu dự kiến (bài báo, sáng chế, v.v.)" rows="4"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Kế hoạch thực hiện</label>
+                                <textarea id="add-plan" placeholder="Mô tả các giai đoạn thực hiện và mốc thời gian chính" rows="6"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Rủi ro và giải pháp</label>
+                                <textarea id="add-risks" placeholder="Các rủi ro dự kiến và giải pháp phòng ngừa" rows="4"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="legal-info" class="tab-content">
+                        <div class="register-section">
+                            <h3>Khi đăng ký (Điều 11, 12)</h3>
+                            <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;">Tải lên các hồ sơ theo quy định. Chấp nhận file PDF, Word (.doc, .docx).</p>
+
+                            <div class="form-group">
+                                <label for="add-thuyet-minh">Thuyết minh chi tiết (bản nháp / bản gửi duyệt) <span class="required-star">*</span></label>
+                                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <input type="file" id="add-thuyet-minh" accept=".pdf,.doc,.docx" name="thuyet_minh_chi_tiet" title="Thuyết minh chi tiết" style="flex: 1; min-width: 200px;">
+                                    <button type="button" class="btn-download-mau" id="btn-download-thuyet-minh" style="padding: 8px 14px; background: #e3f2fd; color: #1976d2; border: 1px solid #90caf9; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 0.9rem;">📥 Tải mẫu</button>
+                                </div>
+                                <p class="upload-desc">Bản thuyết minh chi tiết đề tài — bản nháp hoặc bản đã gửi cơ quan phê duyệt.</p>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="add-van-ban-xin-phep">Văn bản xin phép Viện trưởng</label>
+                                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <input type="file" id="add-van-ban-xin-phep" accept=".pdf,.doc,.docx" name="van_ban_xin_phep_vien_truong" title="Văn bản xin phép Viện trưởng" style="flex: 1; min-width: 200px;">
+                                    <button type="button" class="btn-download-mau" id="btn-download-van-ban" style="padding: 8px 14px; background: #e3f2fd; color: #1976d2; border: 1px solid #90caf9; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 0.9rem;">📥 Tải mẫu</button>
+                                </div>
+                                <p class="upload-desc"><strong>Bắt buộc</strong> nếu Chủ nhiệm là viên chức SCI tham gia đề tài không do Viện chủ trì (Điều 9).</p>
+                            </div>
+
+                            <div id="admin-templates-section" class="admin-templates-box" style="display: none; margin-top: 2rem; padding: 1.25rem; background: #f8f9fa; border: 1px dashed #667eea; border-radius: 12px;">
+                                <h4 style="margin-bottom: 0.5rem; color: #667eea;">⚙️ Quản trị mẫu (chỉ Admin)</h4>
+                                <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Upload mẫu để user tải về. Chỉ Admin mới thấy phần này.</p>
+                                <div class="admin-templates-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div>
+                                        <label style="font-size: 0.85rem; font-weight: 500;">Mẫu Thuyết minh chi tiết</label>
+                                        <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                            <input type="file" id="admin-template-thuyet-minh" accept=".pdf,.doc,.docx" style="flex:1; padding: 6px;">
+                                            <button type="button" class="btn-upload-mau" id="admin-btn-upload-thuyet-minh">Upload</button>
+                                        </div>
+                                        <span id="admin-msg-thuyet-minh" style="font-size: 0.8rem; color: #0a0;"></span>
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.85rem; font-weight: 500;">Mẫu Văn bản xin phép Viện trưởng</label>
+                                        <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                            <input type="file" id="admin-template-van-ban" accept=".pdf,.doc,.docx" style="flex:1; padding: 6px;">
+                                            <button type="button" class="btn-upload-mau" id="admin-btn-upload-van-ban">Upload</button>
+                                        </div>
+                                        <span id="admin-msg-van-ban" style="font-size: 0.8rem; color: #0a0;"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions" id="form-actions" style="display: none;">
+                    <button type="submit" class="btn-submit" id="btnSubmit">Đăng ký</button>
+                </div>
+            </form>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <p>2026 Viện Tế bào gốc — Đăng ký đề tài ngoài Viện</p>
+        </div>
+    </footer>
+
+    <div id="successModal" class="success-modal-overlay" style="display: none;">
+        <div class="success-modal">
+            <h3>✅ Đề xuất đã được gửi thành công</h3>
+            <p>Đề xuất đã được gửi đến <strong>Hội đồng KHCN Viện Tế bào gốc</strong>.</p>
+            <p>Hệ thống đã gửi email cung cấp thông tin về đề xuất đề tài của Chủ nhiệm đến các thành viên Hội đồng KHCN Viện Tế bào gốc.</p>
+            <p>Đề tài sẽ xuất hiện trong danh sách Nhiệm vụ KHCN. Bạn có thể theo dõi tiến trình tại trang tiến trình đề tài.</p>
+            <button type="button" class="btn-ok" id="successModalOk">Đồng ý</button>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
+
+        var user = {};
+        try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) {}
+        var greetingEl = document.getElementById('header-greeting');
+        var navAuthEl = document.getElementById('nav-auth');
+        var isLoggedIn = !!(user.email || user.fullname);
+        if (greetingEl) {
+            if (isLoggedIn) {
+                var name = (user.fullname || '').trim() || (user.email || '').split('@')[0];
+                var label = ((user.role || '').toLowerCase() === 'admin') ? 'Xin chào Admin' : ('Chào ' + (name || 'bạn'));
+                greetingEl.textContent = label;
+            } else {
+                greetingEl.innerHTML = '<a href="dang-nhap.html">Đăng nhập</a>';
+            }
+        }
+        if (navAuthEl) {
+            if (isLoggedIn) {
+                navAuthEl.innerHTML = '<a href="dang-nhap.html" id="btn-logout-nav">Đăng xuất</a>';
+                document.getElementById('btn-logout-nav')?.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = 'dang-nhap.html';
+                });
+            } else {
+                navAuthEl.innerHTML = '<a href="dang-nhap.html">Đăng nhập</a>';
+            }
+        }
+        var isAdmin = ((user.role || '').toLowerCase() === 'admin');
+        var adminSection = document.getElementById('admin-templates-section');
+        if (adminSection) adminSection.style.display = isAdmin ? 'block' : 'none';
+
+        function updateStepUI() {
+            var activeTab = document.querySelector('.tabs .tab.active');
+            var targetId = activeTab ? activeTab.getAttribute('data-tab') : '';
+            var formActions = document.getElementById('form-actions');
+            if (formActions) formActions.style.display = (targetId === 'legal-info') ? 'flex' : 'none';
+        }
+        document.querySelectorAll('.tabs .tab').forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                var targetId = this.getAttribute('data-tab');
+                document.querySelectorAll('.tabs .tab').forEach(function(t) { t.classList.remove('active'); });
+                document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+                this.classList.add('active');
+                var target = document.getElementById(targetId);
+                if (target) target.classList.add('active');
+                updateStepUI();
+            });
+        });
+        updateStepUI();
+
+        var levelParam = (function() {
+            var m = /[?&]level=([^&]+)/.exec(window.location.search);
+            return m ? decodeURIComponent(m[1]) : '';
+        })();
+        var levelSelect = document.getElementById('add-level');
+        if (levelSelect && ['national','ministry','university'].indexOf(levelParam) >= 0) {
+            levelSelect.value = levelParam;
+        }
+
+        document.getElementById('formDangKy').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var token = localStorage.getItem('token');
+            if (!token) {
+                showMsg('Vui lòng đăng nhập để đăng ký đề tài.', 'error');
+                return;
+            }
+            var title = (document.getElementById('add-title') || {}).value || '';
+            if (!title.trim()) {
+                showMsg('Vui lòng nhập tên đề tài.', 'error');
+                return;
+            }
+            var thuyetMinh = document.getElementById('add-thuyet-minh');
+            if (!thuyetMinh || !thuyetMinh.files || !thuyetMinh.files[0]) {
+                showMsg('Vui lòng tải lên Thuyết minh chi tiết (bắt buộc).', 'error');
+                return;
+            }
+
+            var level = (document.getElementById('add-level') || {}).value || levelParam || 'ministry';
+            var payload = {
+                level: level,
+                title: title.trim(),
+                code: (document.getElementById('add-code') || {}).value.trim() || undefined,
+                managing_agency: (document.getElementById('add-managing-agency') || {}).value.trim() || undefined,
+                contract_number: (document.getElementById('add-contract-number') || {}).value.trim() || undefined,
+                mission_type: (document.getElementById('add-mission-type') || {}).value || undefined,
+                field: (document.getElementById('add-field') || {}).value || undefined,
+                objectives: (document.getElementById('add-objectives') || {}).value.trim() || undefined,
+                start_date: (document.getElementById('add-start-date') || {}).value || undefined,
+                end_date: (document.getElementById('add-end-date') || {}).value || undefined,
+                cooperating_units: (document.getElementById('add-cooperating-units') || {}).value.trim() || undefined,
+                funding_source: (document.getElementById('add-funding-source') || {}).value || undefined,
+                budget: (document.getElementById('add-budget') || {}).value ? parseFloat(document.getElementById('add-budget').value) : undefined,
+                approved_budget: (document.getElementById('add-budget') || {}).value ? parseFloat(document.getElementById('add-budget').value) : undefined,
+                disbursed_budget: (document.getElementById('add-disbursed-budget') || {}).value ? parseFloat(document.getElementById('add-disbursed-budget').value) : undefined,
+                disbursement_year: (document.getElementById('add-disbursement-year') || {}).value.trim() || undefined,
+                status: 'cho_vien_xet_chon'
+            };
+
+            var btn = document.getElementById('btnSubmit');
+            if (btn) { btn.disabled = true; btn.textContent = 'Đang đăng ký...'; }
+
+            fetch(apiBase + '/api/missions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(payload)
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }).catch(function() { return { ok: false, data: {} }; }); })
+                .then(function(res) {
+                    if (!res.ok) {
+                        if (btn) { btn.disabled = false; btn.textContent = 'Đăng ký'; }
+                        showMsg(res.data.message || 'Đăng ký thất bại.', 'error');
+                        return;
+                    }
+                    var missionId = res.data.mission && res.data.mission.id;
+                    if (!missionId) {
+                        if (btn) { btn.disabled = false; btn.textContent = 'Đăng ký'; }
+                        showMsg('Đăng ký thành công nhưng không nhận được ID đề tài.', 'error');
+                        return;
+                    }
+                    return uploadFiles(missionId, token);
+                })
+                .then(function() {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Đăng ký'; }
+                    showSuccessPopup();
+                })
+                .catch(function(err) {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Đăng ký'; }
+                    showMsg(err && err.message ? err.message : 'Lỗi kết nối. Kiểm tra máy chủ.', 'error');
+                });
+        });
+
+        function uploadFiles(missionId, token) {
+            var thuyetMinh = document.getElementById('add-thuyet-minh');
+            var vanBanXinPhep = document.getElementById('add-van-ban-xin-phep');
+            var promises = [];
+
+            if (thuyetMinh && thuyetMinh.files && thuyetMinh.files[0]) {
+                var fd1 = new FormData();
+                fd1.append('file', thuyetMinh.files[0]);
+                fd1.append('field_name', 'thuyet_minh_chi_tiet');
+                promises.push(
+                    fetch(apiBase + '/api/missions/' + missionId + '/files', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: fd1
+                    }).then(function(r) {
+                        if (!r.ok) return r.json().then(function(d) { throw new Error(d.message || 'Lỗi upload Thuyết minh'); });
+                        return r.json();
+                    })
+                );
+            }
+            if (vanBanXinPhep && vanBanXinPhep.files && vanBanXinPhep.files[0]) {
+                var fd2 = new FormData();
+                fd2.append('file', vanBanXinPhep.files[0]);
+                fd2.append('field_name', 'van_ban_xin_phep_vien_truong');
+                promises.push(
+                    fetch(apiBase + '/api/missions/' + missionId + '/files', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: fd2
+                    }).then(function(r) {
+                        if (!r.ok) return r.json().then(function(d) { throw new Error(d.message || 'Lỗi upload Văn bản xin phép'); });
+                        return r.json();
+                    })
+                );
+            }
+            return Promise.all(promises);
+        }
+
+        function showMsg(text, type) {
+            var el = document.getElementById('msg');
+            if (!el) return;
+            el.textContent = text;
+            el.className = 'msg ' + (type || '');
+            el.style.display = 'block';
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function showSuccessPopup() {
+            var modal = document.getElementById('successModal');
+            if (modal) modal.style.display = 'flex';
+        }
+        document.getElementById('successModalOk')?.addEventListener('click', function() {
+            var modal = document.getElementById('successModal');
+            if (modal) modal.style.display = 'none';
+            window.location.href = 'quan-ly-de-tai-co-so.html';
+        });
+
+        function downloadTemplate(type, filename) {
+            fetch(apiBase + '/api/missions-templates/' + type + '/download')
+                .then(function(r) {
+                    if (r.status === 404) return r.json().then(function(d) { throw new Error(d.message || 'Chưa có mẫu'); });
+                    if (!r.ok) throw new Error('Lỗi tải mẫu');
+                    return r.blob();
+                })
+                .then(function(blob) {
+                    var a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = filename || type + '.pdf';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                })
+                .catch(function(e) { alert(e.message || 'Chưa có mẫu. Admin chưa upload.'); });
+        }
+
+        document.getElementById('btn-download-thuyet-minh')?.addEventListener('click', function() {
+            fetch(apiBase + '/api/missions-templates').then(function(r) { return r.json(); })
+                .then(function(d) {
+                    var t = (d.templates || []).find(function(x) { return x.template_type === 'thuyet_minh_chi_tiet'; });
+                    downloadTemplate('thuyet_minh_chi_tiet', t ? t.original_name : 'Mau_Thuyet_minh_chi_tiet.pdf');
+                })
+                .catch(function() { downloadTemplate('thuyet_minh_chi_tiet', 'Mau_Thuyet_minh_chi_tiet.pdf'); });
+        });
+        document.getElementById('btn-download-van-ban')?.addEventListener('click', function() {
+            fetch(apiBase + '/api/missions-templates').then(function(r) { return r.json(); })
+                .then(function(d) {
+                    var t = (d.templates || []).find(function(x) { return x.template_type === 'van_ban_xin_phep_vien_truong'; });
+                    downloadTemplate('van_ban_xin_phep_vien_truong', t ? t.original_name : 'Mau_Van_ban_xin_phep_Vien_truong.pdf');
+                })
+                .catch(function() { downloadTemplate('van_ban_xin_phep_vien_truong', 'Mau_Van_ban_xin_phep_Vien_truong.pdf'); });
+        });
+
+        function adminUploadTemplate(type, fileInputId, msgSpanId) {
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập Admin.'); return; }
+            var inp = document.getElementById(fileInputId);
+            var msg = document.getElementById(msgSpanId);
+            if (!inp || !inp.files || !inp.files[0]) {
+                if (msg) { msg.textContent = 'Chọn file trước.'; msg.style.color = '#c00'; }
+                return;
+            }
+            var fd = new FormData();
+            fd.append('file', inp.files[0]);
+            fd.append('template_type', type);
+            if (msg) { msg.textContent = 'Đang upload...'; msg.style.color = '#666'; }
+            fetch(apiBase + '/api/admin/missions-templates', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: fd
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (msg) {
+                        msg.textContent = res.ok ? (res.data.message || 'Đã upload.') : (res.data.message || 'Thất bại.');
+                        msg.style.color = res.ok ? '#0a0' : '#c00';
+                    }
+                    if (res.ok && inp) inp.value = '';
+                })
+                .catch(function() { if (msg) { msg.textContent = 'Lỗi kết nối.'; msg.style.color = '#c00'; } });
+        }
+        document.getElementById('admin-btn-upload-thuyet-minh')?.addEventListener('click', function() {
+            adminUploadTemplate('thuyet_minh_chi_tiet', 'admin-template-thuyet-minh', 'admin-msg-thuyet-minh');
+        });
+        document.getElementById('admin-btn-upload-van-ban')?.addEventListener('click', function() {
+            adminUploadTemplate('van_ban_xin_phep_vien_truong', 'admin-template-van-ban', 'admin-msg-van-ban');
+        });
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Hệ thống Viện Tế bào gốc</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .auth-page { max-width: 440px; margin: 3rem auto; padding: 0 1rem; }
+        .auth-card { background: var(--white); padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); }
+        .auth-card h2 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 0.4rem; }
+        .form-group input { width: 100%; padding: 0.75rem 1rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; }
+        .form-group input:focus { outline: none; border-color: var(--primary); }
+        .btn-block { width: 100%; padding: 1rem; font-size: 1.05rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; background: var(--primary); color: var(--white); }
+        .btn-block:hover { background: var(--primary-light); }
+        .btn-block:disabled { opacity: 0.6; cursor: not-allowed; }
+        .auth-footer { text-align: center; margin-top: 1.5rem; color: var(--gray); font-size: 0.95rem; }
+        .auth-footer a { color: var(--primary); font-weight: 500; }
+        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .msg.error { background: #f8d7da; color: #721c24; display: block; }
+        .msg.success { background: #d4edda; color: #155724; display: block; }
+        .role-links { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee; font-size: 0.9rem; }
+        .role-links a { display: block; margin: 0.4rem 0; color: var(--gray); }
+        .role-links a:hover { color: var(--primary); }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo"><img src="images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc" style="height:72px;width:auto;display:block;"></a>
+                <div class="header-text">
+                    <h1>Đăng nhập</h1>
+                    <p>Hệ thống dùng chung cho Trang chủ, Nhiệm vụ KHCN, Đề tài cấp Viện, Hội đồng đạo đức (SCI-ACE)</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container nav-auth">
+            <a href="index.html">🏠 Trang chủ</a>
+            <span class="nav-divider"></span>
+            <a href="dang-ky.html">📝 Đăng ký</a>
+            <span class="nav-divider"></span>
+            <a href="quan-tri-cap-vien.html">⚙️ Quản trị</a>
+            <div id="auth-status"></div>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="auth-page">
+            <div class="auth-card">
+                <h2>Đăng nhập</h2>
+                <div id="msg" class="msg"></div>
+                <form id="form-dang-nhap" action="/api/login" method="POST">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="Email của bạn" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Mật khẩu</label>
+                        <input type="password" id="password" name="password" placeholder="Mật khẩu" required autocomplete="current-password">
+                        <p style="margin-top: 0.5rem; font-size: 0.9rem;"><a href="quen-mat-khau.html">Quên mật khẩu?</a></p>
+                    </div>
+                    <button type="submit" class="btn-block" id="btn-submit">Đăng nhập</button>
+                </form>
+                <p class="auth-footer">Chưa có tài khoản? <a href="dang-ky.html">Đăng ký Viện</a> (@sci.edu.vn) · <a href="crd-dang-ky.html">Đăng ký đặt lịch CRD</a> (mọi email)</p>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="footer-bottom"><p>&copy; 2026 Viện Tế bào gốc — Hệ thống Quản lý KHCN & ĐMST</p></div>
+        </div>
+    </footer>
+    <script src="js/auth-status.js"></script>
+    <script>
+        const form = document.getElementById('form-dang-nhap');
+        const msgEl = document.getElementById('msg');
+        const btn = document.getElementById('btn-submit');
+
+        function showMsg(text, type) {
+            msgEl.textContent = text;
+            msgEl.className = 'msg ' + (type === 'error' ? 'error' : 'success');
+        }
+        try {
+            if (/[?&]banned=1(?:&|$)/.test(window.location.search)) {
+                showMsg('Tài khoản đã bị khóa hoặc phiên đăng nhập không còn hợp lệ. Vui lòng liên hệ quản trị viên.', 'error');
+            }
+        } catch (e) {}
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            msgEl.className = 'msg';
+            msgEl.textContent = '';
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value.trim(),
+                        password: document.getElementById('password').value
+                    })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.token) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user || {}));
+                    var returnUrl = (function() { var m = /[?&]returnUrl=([^&]+)/.exec(window.location.search); return m ? decodeURIComponent(m[1]) : ''; })();
+                    if (returnUrl && /^[a-zA-Z0-9_\-./]+\.html/.test(returnUrl)) window.location.href = returnUrl;
+                    else window.location.href = 'index.html';
+                } else {
+                    showMsg(data.message || 'Email hoặc mật khẩu không đúng.', 'error');
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                showMsg('Không thể kết nối máy chủ. Chạy trong thư mục dự án: npm install → npm start. Sau đó mở trình duyệt tại: http://localhost:3000/dang-nhap.html', 'error');
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

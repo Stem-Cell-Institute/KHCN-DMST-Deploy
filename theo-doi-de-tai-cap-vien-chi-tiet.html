@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiến trình hồ sơ - Đề tài cấp Viện</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body.content-page-timeline { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        body.content-page-timeline main.content-page { background: #f5f7fa; }
+        .timeline-page { max-width: 1400px; margin: 0 auto; padding: 30px; }
+        .timeline-toolbar { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+        .btn-export, .btn-action { border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.3s; }
+        .btn-export { background: white; color: #667eea; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .btn-export:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .btn-action { background: #667eea; color: white; margin-right: 8px; margin-top: 8px; }
+        .btn-action:hover { background: #764ba2; }
+        .btn-action.btn-secondary { background: #6c757d; }
+        .btn-action.btn-secondary:hover { background: #5a6268; }
+        .stage-actions { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ddd; display: flex; flex-wrap: wrap; gap: 8px; }
+        .task-header, .progress-overview { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .task-code { font-family: monospace; font-size: 14px; color: #667eea; font-weight: 600; margin-bottom: 10px; }
+        .task-title { font-size: 24px; font-weight: 600; color: #333; margin-bottom: 15px; }
+        .task-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0; }
+        .meta-item { display: flex; flex-direction: column; gap: 5px; }
+        .meta-label { font-size: 12px; color: #999; text-transform: uppercase; }
+        .meta-value { font-size: 15px; color: #333; font-weight: 600; }
+        .progress-label { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .progress-bar { width: 100%; height: 25px; background: #e0e0e0; border-radius: 12px; overflow: hidden; position: relative; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 13px; transition: width 0.5s; }
+        .timeline-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
+        .stat-mini { text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+        .stat-mini-value { font-size: 28px; font-weight: bold; }
+        .stat-mini-label { font-size: 12px; color: #666; margin-top: 5px; }
+        .timeline-phases { display: flex; flex-direction: column; margin-top: 0; border-left: none !important; }
+        .timeline-phases::before { display: none !important; }
+        #content-area { border-left: none !important; }
+        #content-area::before { display: none !important; }
+        .timeline-page { border-left: none !important; }
+        .phase-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; border-radius: 8px; margin: 30px 0 20px; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); }
+        .phase-header:first-of-type { margin-top: 0; }
+        .phase-header h3 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px; line-height: 1.4; }
+        /* Viền trái: mặc định xám; CHỈ .completed mới xanh; .active = cam; .pending = xám */
+        .stage-card { background: white; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; border-left: 5px solid #e0e0e0; border-left-color: #e0e0e0 !important; position: relative; transition: all 0.3s; }
+        .stage-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .stage-card.completed { border-left-color: #4caf50 !important; }
+        .stage-card.active { border-left-color: #ff9800 !important; box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3); }
+        .stage-card.pending { border-left-color: #e0e0e0 !important; }
+        .stage-card.overdue { border-left-color: #f44336 !important; box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3); }
+        .stage-header { padding: 20px 25px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; background: #fafafa; transition: all 0.3s; }
+        .stage-card.completed .stage-header { background: #f1f8f4; }
+        .stage-card.active .stage-header { background: #fff8e1; }
+        .stage-card.pending .stage-header { background: #fafafa; }
+        .stage-card.overdue .stage-header { background: #ffebee; }
+        .stage-header:hover { background: #f0f0f0; }
+        .stage-left { display: flex; align-items: center; gap: 15px; flex: 1; }
+        .stage-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; background: #e0e0e0; color: #666; flex-shrink: 0; }
+        .stage-card.completed .stage-icon { background: #4caf50; color: white; }
+        .stage-card.active .stage-icon { background: #ff9800; color: white; }
+        .stage-card.pending .stage-icon { background: #e0e0e0; color: #999; }
+        .stage-card.overdue .stage-icon { background: #f44336; color: white; }
+        .stage-info h3 { font-size: 17px; color: #333; margin-bottom: 5px; }
+        .stage-subtitle { font-size: 13px; color: #666; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .stage-duration { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #999; }
+        .stage-status { display: flex; align-items: center; gap: 10px; }
+        .stage-badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-done { background: #e8f5e9; color: #388e3c; }
+        .badge-progress { background: #fff3e0; color: #f57c00; }
+        .badge-pending { background: #f5f5f5; color: #999; }
+        .badge-overdue { background: #ffebee; color: #c62828; }
+        .expand-icon { font-size: 18px; color: #999; transition: transform 0.3s; }
+        .stage-card.expanded .expand-icon { transform: rotate(180deg); }
+        .stage-content { display: none; padding: 25px; border-top: 1px solid #e0e0e0; }
+        .stage-card.expanded .stage-content { display: block; }
+        .template-hint { font-size: 12px; color: #666; margin-top: 12px; padding: 10px 14px; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #667eea; }
+        .template-hint a { color: #667eea; text-decoration: none; font-weight: 500; }
+        .template-hint a:hover { text-decoration: underline; }
+        .stage-timeline { position: relative; padding-left: 30px; margin-bottom: 20px; }
+        .stage-timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: #e0e0e0; }
+        .timeline-event { position: relative; margin-bottom: 20px; padding-left: 20px; }
+        .timeline-event::before { content: ''; position: absolute; left: -24px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: #667eea; border: 3px solid white; box-shadow: 0 0 0 2px #667eea; }
+        .timeline-event.success::before { background: #4caf50; box-shadow: 0 0 0 2px #4caf50; }
+        .timeline-event.warning::before { background: #ff9800; box-shadow: 0 0 0 2px #ff9800; }
+        .timeline-event.error::before { background: #f44336; box-shadow: 0 0 0 2px #f44336; }
+        .event-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .event-title { font-size: 14px; font-weight: 600; color: #333; }
+        .event-time { font-size: 12px; color: #999; white-space: nowrap; }
+        .event-content { background: #f8f9fa; padding: 12px 15px; border-radius: 8px; font-size: 13px; color: #666; line-height: 1.6; }
+        .event-user { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: #999; }
+        .user-avatar { width: 24px; height: 24px; border-radius: 50%; background: #667eea; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+        .files-section { margin-top: 20px; }
+        .files-title { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .file-list { display: flex; flex-direction: column; gap: 10px; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0; transition: all 0.3s; }
+        .file-item:hover { background: #e8e9ea; border-color: #667eea; }
+        .file-info { display: flex; align-items: center; gap: 10px; }
+        .file-icon { font-size: 20px; }
+        .file-details { display: flex; flex-direction: column; }
+        .file-name { font-size: 13px; color: #333; font-weight: 500; }
+        .file-meta { font-size: 11px; color: #999; }
+        .btn-download, .btn-download-file { background: #4caf50; color: white; border: none; padding: 6px 15px; border-radius: 6px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.3s; }
+        .btn-download:hover, .btn-download-file:hover { background: #45a049; transform: translateY(-2px); }
+        .parallel-stages { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 20px; }
+        .parallel-label { text-align: center; font-size: 14px; font-weight: 600; color: #667eea; margin-bottom: 15px; padding: 10px; background: #f0f0ff; border-radius: 8px; }
+        .alert-box { padding: 15px 20px; border-radius: 8px; margin: 15px 0; display: flex; align-items: flex-start; gap: 10px; }
+        .alert-success { background: #e8f5e9; border-left: 4px solid #4caf50; color: #2e7d32; }
+        .alert-warning { background: #fff3e0; border-left: 4px solid #ff9800; color: #e65100; }
+        .alert-info { background: #e3f2fd; border-left: 4px solid #2196f3; color: #0d47a1; }
+        .alert-error { background: #ffebee; border-left: 4px solid #f44336; color: #c62828; }
+        .scroll-to-top { position: fixed; bottom: 30px; right: 30px; background: #667eea; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .scroll-to-top.visible { opacity: 1; visibility: visible; }
+        .scroll-to-top:hover { transform: translateY(-5px); box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5); }
+        .empty-state { padding: 3rem 2rem; text-align: center; color: #666; }
+        @media (max-width: 968px) { .parallel-stages { grid-template-columns: 1fr; } .timeline-stats { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) { .timeline-page { padding: 15px; } .task-meta { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body class="content-page-timeline theme-cap-vien">
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="de-tai-cap-vien.html" class="logo"><img src="images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc" style="height:72px;width:auto;display:block;"></a>
+                <div class="header-text">
+                    <h1>Tiến trình hồ sơ đề tài</h1>
+                    <p>Đề tài cấp Viện — Nộp hồ sơ và theo dõi tiến độ</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">Trang chủ</a>
+            <a href="quan-ly-de-tai-co-so.html">Nhiệm vụ KHCN</a>
+            <a href="de-tai-cap-vien.html">Đề tài cấp Viện</a>
+            <a href="tai-mau-ho-so-de-tai-cap-vien.html">📥 Tải mẫu hồ sơ</a>
+            <a href="nop-de-tai-cap-vien.html">Nộp đề tài</a>
+            <a href="theo-doi-de-tai-cap-vien.html">Theo dõi hồ sơ</a>
+            <a href="hoi-dong-de-tai-cap-vien.html">Hội đồng</a>
+            <a href="dang-nhap.html">Đăng nhập</a>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="timeline-page">
+            <div class="breadcrumb" style="margin-bottom:1rem;">
+                <a href="de-tai-cap-vien.html">Đề tài cấp Viện</a> /
+                <a href="theo-doi-de-tai-cap-vien.html">Theo dõi hồ sơ</a> /
+                <span id="breadcrumb-id">#—</span>
+            </div>
+            <div id="content-area">
+                <div class="empty-state">Đang tải tiến trình...</div>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <p>2026 Viện Tế bào gốc - Đề tài cấp Viện</p>
+        </div>
+    </footer>
+    <div class="scroll-to-top" id="scrollToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</div>
+
+    <script src="timeline-cap-vien.js"></script>
+</body>
+</html>

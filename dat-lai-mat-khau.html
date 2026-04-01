@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đặt lại mật khẩu - SCI-ACE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .auth-page { max-width: 440px; margin: 3rem auto; padding: 0 1rem; }
+        .auth-card { background: var(--white); padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); }
+        .auth-card h2 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 0.4rem; }
+        .form-group input { width: 100%; padding: 0.75rem 1rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; }
+        .form-group input:focus { outline: none; border-color: var(--primary); }
+        .btn-block { width: 100%; padding: 1rem; font-size: 1.05rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; background: var(--primary); color: var(--white); }
+        .btn-block:hover { background: var(--primary-light); }
+        .btn-block:disabled { opacity: 0.6; cursor: not-allowed; }
+        .auth-footer { text-align: center; margin-top: 1.5rem; color: var(--gray); font-size: 0.95rem; }
+        .auth-footer a { color: var(--primary); font-weight: 500; }
+        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .msg.error { background: #f8d7da; color: #721c24; display: block; }
+        .msg.success { background: #d4edda; color: #155724; display: block; }
+        .msg.info { background: #e7f3ff; color: #0d47a1; display: block; }
+        #connection-status { padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">ACE-SCI</a>
+                <div class="header-text">
+                    <h1>Đặt lại mật khẩu</h1>
+                    <p>Hệ thống SCI-ACE</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">🏠 Trang chủ</a>
+            <div class="nav-dropdown">
+                <span class="nav-dropdown-trigger">📤 Nộp hồ sơ ▾</span>
+                <div class="nav-dropdown-menu">
+                    <a href="nop-ho-so.html">Nộp hồ sơ (Nghiên cứu viên)</a>
+                    <a href="hoi-dong.html">Khu vực Hội đồng (xem hồ sơ đã nộp)</a>
+                    <a href="quan-tri.html">Quản trị (Admin)</a>
+                </div>
+            </div>
+            <a href="dang-nhap.html">🔐 Đăng nhập</a>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="auth-page">
+            <div class="auth-card">
+                <h2>Nhập mật khẩu mới</h2>
+                <div id="connection-status"></div>
+                <div id="msg" class="msg"></div>
+                <form id="form-reset">
+                    <input type="hidden" id="token" name="token" value="">
+                    <div class="form-group">
+                        <label for="password">Mật khẩu mới</label>
+                        <input type="password" id="password" name="password" placeholder="Ít nhất 6 ký tự" required minlength="6" autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="password2">Xác nhận mật khẩu mới</label>
+                        <input type="password" id="password2" name="password2" placeholder="Nhập lại mật khẩu" required minlength="6" autocomplete="new-password">
+                        <span id="pass2-hint" style="font-size: 0.85rem; color: #dc3545;"></span>
+                    </div>
+                    <button type="submit" class="btn-block" id="btn-submit">Đặt lại mật khẩu</button>
+                </form>
+                <p class="auth-footer"><a href="dang-nhap.html">← Quay lại đăng nhập</a></p>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="footer-bottom"><p>&copy; 2026 SCI-ACE. Phiên bản 1.0</p></div>
+        </div>
+    </footer>
+    <script>
+        const apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
+        const params = new URLSearchParams(window.location.search);
+        const tokenFromUrl = params.get('token');
+        const tokenEl = document.getElementById('token');
+        const msgEl = document.getElementById('msg');
+        const btn = document.getElementById('btn-submit');
+
+        if (tokenFromUrl) {
+            tokenEl.value = tokenFromUrl;
+        } else {
+            msgEl.textContent = 'Link không hợp lệ hoặc thiếu mã. Vui lòng dùng link trong email hoặc yêu cầu quên mật khẩu lại.';
+            msgEl.className = 'msg error';
+        }
+
+        // Kiểm tra kết nối server khi tải trang
+        (async function checkConnection() {
+            const statusEl = document.getElementById('connection-status');
+            try {
+                const r = await fetch(apiBase + '/api/health');
+                if (r.ok) {
+                    statusEl.innerHTML = '✓ <strong>Server đã sẵn sàng.</strong> Bạn có thể đặt lại mật khẩu.';
+                    statusEl.style.background = '#d4edda';
+                    statusEl.style.color = '#155724';
+                } else {
+                    statusEl.innerHTML = '✗ Server chưa phản hồi đúng.';
+                    statusEl.style.background = '#f8d7da';
+                    statusEl.style.color = '#721c24';
+                }
+            } catch (e) {
+                statusEl.innerHTML = '✗ <strong>Server chưa chạy.</strong> Double-click file <code>start-server.bat</code> trong thư mục dự án, HOẶC mở Terminal gõ: <code>node server.js</code>. Sau đó <a href="javascript:location.reload()">tải lại trang</a>.';
+                statusEl.style.background = '#fff3cd';
+                statusEl.style.color = '#856404';
+            }
+        })();
+
+        document.getElementById('password2').addEventListener('input', function() {
+            const p1 = document.getElementById('password').value;
+            const hint = document.getElementById('pass2-hint');
+            if (this.value && p1 !== this.value) hint.textContent = 'Mật khẩu không trùng khớp.';
+            else hint.textContent = '';
+        });
+
+        document.getElementById('form-reset').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const token = tokenEl.value;
+            const password = document.getElementById('password').value;
+            const password2 = document.getElementById('password2').value;
+            if (!token) {
+                msgEl.textContent = 'Link không hợp lệ.';
+                msgEl.className = 'msg error';
+                return;
+            }
+            if (password !== password2) {
+                msgEl.textContent = 'Mật khẩu xác nhận không trùng khớp.';
+                msgEl.className = 'msg error';
+                return;
+            }
+            msgEl.className = 'msg';
+            msgEl.textContent = '';
+            btn.disabled = true;
+            try {
+                const res = await fetch(apiBase + '/api/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, password })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    msgEl.textContent = data.message || 'Đã đặt lại mật khẩu. Chuyển đến trang đăng nhập...';
+                    msgEl.className = 'msg success';
+                    setTimeout(function() { window.location.href = 'dang-nhap.html'; }, 2000);
+                } else {
+                    msgEl.textContent = data.message || 'Link hết hạn hoặc không hợp lệ.';
+                    msgEl.className = 'msg error';
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                msgEl.innerHTML = 'Không thể kết nối máy chủ. Double-click <strong>start-server.bat</strong> trong thư mục dự án (hoặc chạy <code>node server.js</code> trong Terminal), rồi <a href="javascript:location.reload()">tải lại trang</a>.';
+                msgEl.className = 'msg error';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

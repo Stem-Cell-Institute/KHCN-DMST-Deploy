@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Nhân lực KHCN - Viện Tế bào gốc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .breadcrumb {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .breadcrumb a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+        }
+
+        .menu-section {
+            padding: 20px;
+        }
+
+        .menu-title {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .menu-item {
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .menu-item:hover {
+            background: #f0f0f0;
+        }
+
+        .menu-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .menu-item .icon {
+            font-size: 18px;
+        }
+
+        .menu-item .badge {
+            margin-left: auto;
+            background: #ff4757;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            color: #333;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success { background: #6bcf7f; color: white; }
+        .btn-warning { background: #ffd93d; color: #333; }
+        .btn-danger { background: #ff4757; color: white; }
+        .btn-info { background: #6bceff; color: #333; }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .stat-change.up { color: #6bcf7f; }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .person-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .person-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .person-header {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .person-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+        }
+
+        .person-info {
+            flex: 1;
+        }
+
+        .person-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .person-title {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .person-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            padding: 4px 10px;
+            background: #e9ecef;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .tag.tag-primary { background: #e3f2fd; color: #1976d2; }
+        .tag.tag-success { background: #e8f5e9; color: #388e3c; }
+        .tag.tag-warning { background: #fff3e0; color: #f57c00; }
+
+        .person-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .mini-stat {
+            text-align: center;
+        }
+
+        .mini-stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .mini-stat-label {
+            font-size: 11px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        .group-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .group-title {
+            font-size: 22px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .group-status {
+            padding: 6px 15px;
+            background: #e8f5e9;
+            color: #388e3c;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .group-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 11px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 15px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .members-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .member-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .member-avatar-small {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+        }
+
+        .filter-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .tab-container {
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>👥 Quản lý Nhân lực KHCN</h1>
+            <div class="breadcrumb">
+                <a href="index.html">🏠 Trang chủ</a> / Nhân lực KHCN
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="menu-section">
+                <div class="menu-title">Quản lý nhân lực</div>
+                <div class="menu-item active" onclick="showSection('overview')">
+                    <span class="icon">📊</span>
+                    <span>Tổng quan</span>
+                </div>
+                <div class="menu-item" onclick="showSection('researchers')">
+                    <span class="icon">👨‍🔬</span>
+                    <span>Viên chức KHCN</span>
+                    <span class="badge">89</span>
+                </div>
+                <div class="menu-item" onclick="showSection('research-groups')">
+                    <span class="icon">👥</span>
+                    <span>Nhóm nghiên cứu mạnh</span>
+                    <span class="badge">12</span>
+                </div>
+                <div class="menu-item" onclick="showSection('expert-groups')">
+                    <span class="icon">🎯</span>
+                    <span>Nhóm chuyên gia</span>
+                    <span class="badge">8</span>
+                </div>
+                <div class="menu-item" onclick="showSection('young-talent')">
+                    <span class="icon">⭐</span>
+                    <span>Nhóm NC trẻ tài năng</span>
+                    <span class="badge">6</span>
+                </div>
+                <div class="menu-item" onclick="showSection('students')">
+                    <span class="icon">🎓</span>
+                    <span>Sinh viên NCKH</span>
+                    <span class="badge">156</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Phân loại</div>
+                <div class="menu-item" onclick="filterByDegree('professor')">
+                    <span class="icon">🎓</span>
+                    <span>Giáo sư</span>
+                    <span class="badge">5</span>
+                </div>
+                <div class="menu-item" onclick="filterByDegree('associate-prof')">
+                    <span class="icon">📚</span>
+                    <span>Phó Giáo sư</span>
+                    <span class="badge">12</span>
+                </div>
+                <div class="menu-item" onclick="filterByDegree('phd')">
+                    <span class="icon">🎓</span>
+                    <span>Tiến sĩ</span>
+                    <span class="badge">45</span>
+                </div>
+                <div class="menu-item" onclick="filterByDegree('master')">
+                    <span class="icon">📖</span>
+                    <span>Thạc sĩ</span>
+                    <span class="badge">27</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Báo cáo</div>
+                <div class="menu-item" onclick="showSection('statistics')">
+                    <span class="icon">📈</span>
+                    <span>Thống kê nhân lực</span>
+                </div>
+                <div class="menu-item" onclick="showSection('evaluation')">
+                    <span class="icon">⭐</span>
+                    <span>Đánh giá hiệu quả</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <!-- Overview Section -->
+            <div id="overview-section" class="section">
+                <div class="page-header">
+                    <h2 class="page-title">Tổng quan Nhân lực KHCN</h2>
+                    <button class="btn btn-primary" onclick="openAddPersonModal()">
+                        ➕ Thêm nhân lực
+                    </button>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-label">Tổng viên chức KHCN</div>
+                        <div class="stat-value">89</div>
+                        <div class="stat-change up">↗ +7 so với năm trước</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Nhóm nghiên cứu mạnh</div>
+                        <div class="stat-value">12</div>
+                        <div class="stat-change up">↗ +2 nhóm mới</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Nhóm chuyên gia</div>
+                        <div class="stat-value">8</div>
+                        <div class="stat-change">→ Ổn định</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">SV tham gia NCKH</div>
+                        <div class="stat-value">156</div>
+                        <div class="stat-change up">↗ +23 sinh viên</div>
+                    </div>
+                </div>
+
+                <div class="filter-bar">
+                    <h3 style="margin-bottom: 15px;">Tìm kiếm & Lọc</h3>
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label>Tìm kiếm</label>
+                            <input type="text" placeholder="Tên, email, chuyên môn..." id="searchInput">
+                        </div>
+                        <div class="form-group">
+                            <label>Học vị</label>
+                            <select id="degreeFilter">
+                                <option value="">Tất cả</option>
+                                <option value="professor">Giáo sư</option>
+                                <option value="associate-prof">Phó Giáo sư</option>
+                                <option value="phd">Tiến sĩ</option>
+                                <option value="master">Thạc sĩ</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Lĩnh vực</label>
+                            <select id="fieldFilter">
+                                <option value="">Tất cả</option>
+                                <option value="stem-cell">Tế bào gốc</option>
+                                <option value="biotech">Công nghệ sinh học</option>
+                                <option value="medicine">Y sinh học</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Loại nhóm</label>
+                            <select id="groupFilter">
+                                <option value="">Tất cả</option>
+                                <option value="strong">Nhóm NC mạnh</option>
+                                <option value="expert">Nhóm chuyên gia</option>
+                                <option value="young">Nhóm NC trẻ</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="margin: 30px 0 20px;">Viên chức KHCN nổi bật</h3>
+                <div class="cards-grid" id="researchersGrid"></div>
+
+                <h3 style="margin: 40px 0 20px;">Nhóm nghiên cứu mạnh</h3>
+                <div id="researchGroupsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Person Modal -->
+    <div id="addPersonModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Thêm viên chức KHCN</h2>
+                <button class="close-btn" onclick="closeAddPersonModal()">&times;</button>
+            </div>
+
+            <div class="tab-container">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab(event, 'person-basic')">Thông tin cơ bản</button>
+                    <button class="tab" onclick="switchTab(event, 'person-academic')">Học vị & Chuyên môn</button>
+                    <button class="tab" onclick="switchTab(event, 'person-achievements')">Thành tích</button>
+                </div>
+
+                <div id="person-basic" class="tab-content active">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        <div class="form-group">
+                            <label>Họ và tên *</label>
+                            <input type="text" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input type="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Số điện thoại</label>
+                            <input type="tel">
+                        </div>
+                        <div class="form-group">
+                            <label>Ngày sinh</label>
+                            <input type="date">
+                        </div>
+                        <div class="form-group">
+                            <label>Chức vụ</label>
+                            <select>
+                                <option value="">Chọn chức vụ...</option>
+                                <option value="director">Viện trưởng</option>
+                                <option value="vice-director">Phó Viện trưởng</option>
+                                <option value="head">Trưởng phòng/TT</option>
+                                <option value="researcher">Nghiên cứu viên</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Đơn vị</label>
+                            <select>
+                                <option value="">Chọn đơn vị...</option>
+                                <option value="research">Phòng NC</option>
+                                <option value="lab">Phòng TN</option>
+                                <option value="admin">Hành chính</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="person-academic" class="tab-content">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                        <div class="form-group">
+                            <label>Học vị cao nhất *</label>
+                            <select required>
+                                <option value="">Chọn học vị...</option>
+                                <option value="professor">Giáo sư</option>
+                                <option value="associate-prof">Phó Giáo sư</option>
+                                <option value="phd">Tiến sĩ</option>
+                                <option value="master">Thạc sĩ</option>
+                                <option value="bachelor">Đại học</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Năm đạt học vị</label>
+                            <input type="number" min="1980" max="2025">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Chuyên môn</label>
+                            <input type="text" placeholder="VD: Tế bào gốc, Công nghệ sinh học...">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Lĩnh vực nghiên cứu</label>
+                            <textarea placeholder="Mô tả chi tiết lĩnh vực nghiên cứu chính" rows="4"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="person-achievements" class="tab-content">
+                    <div style="display: grid; gap: 20px;">
+                        <div class="form-group">
+                            <label>Số bài báo ISI/Scopus</label>
+                            <input type="number" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Chỉ số H-index</label>
+                            <input type="number" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Số sáng chế/GPHU</label>
+                            <input type="number" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Giải thưởng</label>
+                            <textarea placeholder="Liệt kê các giải thưởng đã đạt được" rows="4"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-warning" onclick="closeAddPersonModal()">Hủy</button>
+                <button class="btn btn-success" onclick="savePerson()">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data
+        const researchers = [
+            {
+                id: 1,
+                name: 'PGS.TS. Nguyễn Văn A',
+                title: 'Phó Giáo sư, Tiến sĩ',
+                degree: 'associate-prof',
+                field: 'Tế bào gốc',
+                publications: 56,
+                hIndex: 12,
+                patents: 5,
+                groups: ['Nhóm NC mạnh']
+            },
+            {
+                id: 2,
+                name: 'TS. Trần Thị B',
+                title: 'Tiến sĩ',
+                degree: 'phd',
+                field: 'Công nghệ sinh học',
+                publications: 34,
+                hIndex: 8,
+                patents: 3,
+                groups: ['Nhóm NC trẻ']
+            },
+            {
+                id: 3,
+                name: 'PGS.TS. Lê Văn C',
+                title: 'Phó Giáo sư, Tiến sĩ',
+                degree: 'associate-prof',
+                field: 'Y sinh học',
+                publications: 67,
+                hIndex: 15,
+                patents: 8,
+                groups: ['Nhóm NC mạnh', 'Nhóm chuyên gia']
+            }
+        ];
+
+        const researchGroups = [
+            {
+                id: 1,
+                name: 'Nhóm nghiên cứu ứng dụng tế bào gốc trong y học tái tạo',
+                leader: 'PGS.TS. Nguyễn Văn A',
+                members: 8,
+                status: 'active',
+                established: '2020',
+                publications: 45,
+                projects: 6
+            },
+            {
+                id: 2,
+                name: 'Nhóm nghiên cứu công nghệ nuôi cấy tế bào gốc',
+                leader: 'PGS.TS. Lê Văn C',
+                members: 6,
+                status: 'active',
+                established: '2019',
+                publications: 38,
+                projects: 4
+            }
+        ];
+
+        function renderResearchersGrid() {
+            const grid = document.getElementById('researchersGrid');
+            grid.innerHTML = researchers.map(person => `
+                <div class="person-card" onclick="openPersonDetail(${person.id})">
+                    <div class="person-header">
+                        <div class="person-avatar">👤</div>
+                        <div class="person-info">
+                            <div class="person-name">${person.name}</div>
+                            <div class="person-title">${person.title}</div>
+                            <div class="person-tags">
+                                <span class="tag tag-primary">${person.field}</span>
+                                ${person.groups.map(g => `<span class="tag tag-success">${g}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="person-stats">
+                        <div class="mini-stat">
+                            <div class="mini-stat-number">${person.publications}</div>
+                            <div class="mini-stat-label">Bài báo</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-number">${person.hIndex}</div>
+                            <div class="mini-stat-label">H-index</div>
+                        </div>
+                        <div class="mini-stat">
+                            <div class="mini-stat-number">${person.patents}</div>
+                            <div class="mini-stat-label">Sáng chế</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderResearchGroups() {
+            const container = document.getElementById('researchGroupsContainer');
+            container.innerHTML = researchGroups.map(group => `
+                <div class="group-card">
+                    <div class="group-header">
+                        <h3 class="group-title">${group.name}</h3>
+                        <span class="group-status">Đang hoạt động</span>
+                    </div>
+                    <div class="group-info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Trưởng nhóm</div>
+                            <div class="info-value">${group.leader}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Số thành viên</div>
+                            <div class="info-value">${group.members} người</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Năm thành lập</div>
+                            <div class="info-value">${group.established}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Công bố khoa học</div>
+                            <div class="info-value">${group.publications} bài báo</div>
+                        </div>
+                    </div>
+                    <div class="members-list">
+                        ${Array(group.members).fill(0).map((_, i) => `
+                            <div class="member-chip">
+                                <div class="member-avatar-small">👤</div>
+                                <span>Thành viên ${i + 1}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button class="btn btn-primary">Chi tiết</button>
+                        <button class="btn btn-info">Báo cáo</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showSection(section) {
+            console.log('Showing section:', section);
+        }
+
+        function filterByDegree(degree) {
+            console.log('Filter by degree:', degree);
+        }
+
+        function openAddPersonModal() {
+            document.getElementById('addPersonModal').classList.add('active');
+        }
+
+        function closeAddPersonModal() {
+            document.getElementById('addPersonModal').classList.remove('active');
+        }
+
+        function savePerson() {
+            alert('Đã thêm viên chức KHCN!');
+            closeAddPersonModal();
+        }
+
+        function openPersonDetail(id) {
+            alert('Xem chi tiết viên chức ID: ' + id);
+        }
+
+        function switchTab(event, tabId) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            renderResearchersGrid();
+            renderResearchGroups();
+        });
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>

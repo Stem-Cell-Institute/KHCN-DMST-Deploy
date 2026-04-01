@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nộp hồ sơ - SCI-ACE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .upload-page { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        .upload-intro { background: var(--white); padding: 1.5rem 2rem; border-radius: 12px; margin-bottom: 2rem; border-left: 4px solid var(--accent); }
+        .upload-intro h2 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem; }
+        .upload-intro p { color: var(--gray); font-size: 0.95rem; }
+        .upload-section { background: var(--white); padding: 2rem; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); margin-bottom: 1.5rem; }
+        .upload-section h3 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem; font-size: 1.2rem; }
+        .upload-section .code { display: inline-block; background: var(--accent); color: var(--white); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; margin-right: 0.5rem; }
+        .upload-section .desc { color: var(--gray); font-size: 0.9rem; margin-bottom: 1rem; }
+        .upload-section .required { color: #dc3545; font-size: 0.85rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 0.4rem; }
+        .form-group input[type="file"] { width: 100%; padding: 0.5rem; border: 2px dashed #dee2e6; border-radius: 8px; background: #f8f9fa; }
+        .form-group input[type="text"] { width: 100%; padding: 0.75rem 1rem; border: 2px solid #dee2e6; border-radius: 8px; }
+        .btn-submit { padding: 1rem 2rem; background: var(--primary); color: var(--white); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem; }
+        .btn-submit:hover { background: var(--primary-light); }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .msg.error { background: #f8d7da; color: #721c24; display: block; }
+        .msg.success { background: #d4edda; color: #155724; display: block; }
+        .user-bar { background: rgba(26, 77, 46, 0.08); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+        .user-bar span { font-weight: 500; color: var(--primary); }
+        .user-bar a { color: var(--gray); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">ACE-SCI</a>
+                <div class="header-text">
+                    <h1>Nộp hồ sơ xét duyệt</h1>
+                    <p>Nghiên cứu viên — Hệ thống SCI-ACE</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">🏠 Trang chủ</a>
+            <a href="nhom-1.html">📚 Nhóm hồ sơ 1</a>
+            <a href="nhom-2.html">📝 Nhóm hồ sơ 2</a>
+            <a href="nhom-3.html">👥 Nhóm hồ sơ 3</a>
+            <div class="nav-dropdown">
+                <span class="nav-dropdown-trigger">📤 Nộp hồ sơ ▾</span>
+                <div class="nav-dropdown-menu">
+                    <a href="nop-ho-so.html">Nộp hồ sơ (Nghiên cứu viên)</a>
+                    <a href="hoi-dong.html">Khu vực Hội đồng (xem hồ sơ đã nộp)</a>
+                    <a href="quan-tri.html">Quản trị (Admin)</a>
+                </div>
+            </div>
+            <div id="auth-status"></div>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="upload-page">
+            <div id="user-bar" class="user-bar" style="display: none;">
+                <span id="user-email"></span>
+                <div>
+                    <a href="ho-so-cua-toi.html" style="margin-right: 1rem; color: var(--primary); font-weight: 500;">📁 Xem hồ sơ đã nộp</a>
+                    <a href="#" id="btn-logout">Thoát đăng nhập</a>
+                </div>
+            </div>
+            <div class="upload-intro">
+                <h2>Hướng dẫn nộp hồ sơ</h2>
+                <p>Vui lòng tải lên đúng từng đầu mục theo danh sách bên dưới. Hồ sơ lần đầu cần có đủ <strong>SCI-ACE-01</strong>, <strong>SCI-ACE-02</strong>, <strong>SCI-ACE-03</strong> và tài liệu đính kèm. Sau khi nộp, hệ thống sẽ gửi email thông báo đến các thành viên Hội đồng.</p>
+            </div>
+            <div id="msg" class="msg"></div>
+            <form id="form-nop-ho-so">
+                <input type="hidden" id="submission-title" name="title" value="">
+                <div class="form-group">
+                    <label for="title">Tên đề tài / Mã hồ sơ</label>
+                    <input type="text" id="title" name="titleDisplay" placeholder="VD: Nghiên cứu XYZ - 2026" required>
+                </div>
+
+                <div class="upload-section">
+                    <h3><span class="code">SCI-ACE-01</span> Đơn đề nghị xét duyệt</h3>
+                    <p class="desc">Đơn chính thức gửi Hội đồng Đạo đức, kèm thông tin hành chính về đề tài.</p>
+                    <p class="required">* Bắt buộc (lần đầu nộp)</p>
+                    <div class="form-group">
+                        <label>Tải file (PDF hoặc DOCX)</label>
+                        <input type="file" name="sci_ace_01" accept=".pdf,.doc,.docx">
+                    </div>
+                </div>
+
+                <div class="upload-section">
+                    <h3><span class="code">SCI-ACE-02</span> Phiếu thuyết minh đề tài</h3>
+                    <p class="desc">Mô tả chi tiết kế hoạch nghiên cứu, phương pháp và động vật sử dụng.</p>
+                    <p class="required">* Bắt buộc (lần đầu nộp)</p>
+                    <div class="form-group">
+                        <label>Tải file (PDF hoặc DOCX)</label>
+                        <input type="file" name="sci_ace_02" accept=".pdf,.doc,.docx">
+                    </div>
+                </div>
+
+                <div class="upload-section">
+                    <h3><span class="code">SCI-ACE-03</span> Báo cáo tuân thủ 3R</h3>
+                    <p class="desc">Giải trình cụ thể về Replacement, Reduction, Refinement trong nghiên cứu.</p>
+                    <p class="required">* Bắt buộc (lần đầu nộp)</p>
+                    <div class="form-group">
+                        <label>Tải file (PDF hoặc DOCX)</label>
+                        <input type="file" name="sci_ace_03" accept=".pdf,.doc,.docx">
+                    </div>
+                </div>
+
+                <div class="upload-section">
+                    <h3>Tài liệu đính kèm (nếu có)</h3>
+                    <p class="desc">Thuyết minh đề tài, lý lịch khoa học, quyết định người hướng dẫn, bản cam kết đạo đức...</p>
+                    <div class="form-group">
+                        <label>Tải file (có thể chọn nhiều file)</label>
+                        <input type="file" name="attachments" accept=".pdf,.doc,.docx,.xls,.xlsx" multiple>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn-submit" id="btn-submit">Gửi hồ sơ</button>
+                </div>
+            </form>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="footer-bottom"><p>&copy; 2026 SCI-ACE. Phiên bản 1.0</p></div>
+        </div>
+    </footer>
+    <script src="js/auth-status.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        const userBar = document.getElementById('user-bar');
+        const userEmail = document.getElementById('user-email');
+        const btnLogout = document.getElementById('btn-logout');
+        if (token && userBar) {
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (user.email) { userEmail.textContent = user.email; userBar.style.display = 'flex'; }
+            } catch (_) {}
+        } else {
+            const intro = document.querySelector('.upload-intro');
+            if (intro) {
+                const p = document.createElement('p');
+                p.style.marginTop = '0.75rem';
+                p.style.color = '#856404';
+                p.style.background = '#fff3cd';
+                p.style.padding = '0.75rem 1rem';
+                p.style.borderRadius = '8px';
+                p.innerHTML = 'Bạn cần <a href="dang-nhap.html">đăng nhập</a> với tài khoản @sci.edu.vn để nộp hồ sơ.';
+                intro.appendChild(p);
+            }
+        }
+        if (btnLogout) { btnLogout.href = 'dang-nhap.html'; btnLogout.addEventListener('click', function() { localStorage.removeItem('token'); localStorage.removeItem('user'); }); }
+
+        document.getElementById('form-nop-ho-so').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const msgEl = document.getElementById('msg');
+            const btn = document.getElementById('btn-submit');
+            const title = document.getElementById('title').value.trim();
+            if (!title) { msgEl.textContent = 'Vui lòng nhập tên đề tài / mã hồ sơ.'; msgEl.className = 'msg error'; return; }
+            const f01 = document.querySelector('input[name="sci_ace_01"]').files[0];
+            const f02 = document.querySelector('input[name="sci_ace_02"]').files[0];
+            const f03 = document.querySelector('input[name="sci_ace_03"]').files[0];
+            if (!f01 || !f02 || !f03) {
+                msgEl.textContent = 'Lần đầu nộp cần đủ 3 file: SCI-ACE-01, SCI-ACE-02, SCI-ACE-03.';
+                msgEl.className = 'msg error';
+                return;
+            }
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('sci_ace_01', f01);
+            formData.append('sci_ace_02', f02);
+            formData.append('sci_ace_03', f03);
+            const att = document.querySelector('input[name="attachments"]');
+            if (att.files.length) for (let i = 0; i < att.files.length; i++) formData.append('attachments', att.files[i]);
+            msgEl.className = 'msg'; msgEl.textContent = '';
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/submissions', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') },
+                    body: formData
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    window.location.href = 'nop-ho-so-thanh-cong.html';
+                    return;
+                } else {
+                    msgEl.textContent = data.message || 'Gửi hồ sơ thất bại. Vui lòng đăng nhập lại.';
+                    msgEl.className = 'msg error';
+                }
+                btn.disabled = false;
+            } catch (err) {
+                msgEl.textContent = 'Không thể kết nối máy chủ. Vui lòng chạy backend.';
+                msgEl.className = 'msg error';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

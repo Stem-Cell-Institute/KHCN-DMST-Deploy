@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chi tiết đề xuất — Hợp tác Quốc tế</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0f172a; --ink-soft: #334155; --ink-muted: #64748b; --bg: #dfe7f2; --card: #fff;
+  --accent: #2563eb; --accent-light: #e8f0fe; --green: #059669; --green-light: #ecfdf5;
+  --amber: #d97706; --amber-light: #fffbeb; --red: #dc2626; --red-light: #fef2f2;
+  --quy-trinh: #1a6fb5; --quy-trinh-light: #eff6ff; --nhiem-vu: #6d28d9; --kinh-phi: #b45309;
+  --border: #b8c5d6; --border-subtle: #e2e8f0; --shadow: 0 1px 2px rgba(15,23,42,.08), 0 4px 14px rgba(15,23,42,.07);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Be Vietnam Pro', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+.topbar { background: var(--card); border-bottom: 2px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); }
+.back-btn { color: var(--ink-soft); font-size: 13px; cursor: pointer; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); }
+.back-btn:hover { background: var(--bg); color: var(--ink); }
+.badge { display: inline-flex; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge-hoat-dong { background: #eff6ff; color: #1a6fb5; }
+.badge-dich-vu { background: #f0fdf4; color: #15803d; }
+.badge-tai-tro { background: #fff7ed; color: #b45309; }
+.badge-cho-duyet { background: #fffbeb; color: #b45309; }
+.badge-da-duyet { background: #f0fdf4; color: #15803d; }
+
+.de-xuat-layout { display: grid; grid-template-columns: 65% 35%; gap: 24px; padding: 24px; max-width: 1400px; margin: 0 auto; }
+@media (max-width: 1024px) { .de-xuat-layout { grid-template-columns: 1fr; } }
+
+/* Tờ trình */
+.to-trinh { background: #eff6ff; border-left: 4px solid #1a6fb5; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+.to-trinh h2 { font-size: 14px; color: var(--ink-muted); margin-bottom: 12px; }
+.to-trinh .ten { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+.to-trinh .row { margin-bottom: 8px; font-size: 13px; }
+.to-trinh .de-nghi { margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(26,111,181,0.3); font-weight: 600; }
+.canh-bao-nguong { background: #fffbeb; border: 1px solid #f59e0b; border-radius: 6px; padding: 10px 12px; margin-top: 12px; font-size: 13px; color: #78350f; }
+
+/* Accordion */
+.accordion { background: var(--card); border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; overflow: hidden; }
+.accordion-header { padding: 14px 16px; cursor: pointer; font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+.accordion-header:hover { background: var(--bg); }
+.accordion-body { padding: 16px; border-top: 1px solid var(--border); }
+.accordion-body table { width: 100%; border-collapse: collapse; }
+.accordion-body td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.accordion-body td:first-child { width: 35%; color: var(--ink-muted); }
+
+/* Action panel */
+.action-panel { background: var(--card); border-radius: 8px; border: 1px solid var(--border); padding: 20px; position: sticky; top: 80px; }
+.action-panel h3 { font-size: 14px; margin-bottom: 16px; }
+.btn-action { width: 100%; padding: 12px 16px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; border: none; margin-bottom: 10px; }
+.btn-phe-duyet { background: var(--green); color: #fff; }
+.btn-phe-duyet:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-yeu-cau { background: #f59e0b; color: #fff; }
+.btn-khong-duyet { background: var(--red-light); color: var(--red); border: 1px solid #fecaca; }
+.info-row { font-size: 12px; color: var(--ink-muted); margin-bottom: 6px; }
+.info-row strong { color: var(--ink); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+.tab { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--bg); color: var(--ink-muted); }
+.tab.active { background: var(--card); color: var(--ink); border: 1px solid var(--border); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--card); border-radius: 12px; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.form-group input, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
+.form-group textarea { min-height: 80px; resize: vertical; }
+.timeline { padding-left: 20px; border-left: 2px solid var(--border); }
+.timeline-item { margin-bottom: 16px; position: relative; padding-left: 20px; }
+.timeline-item::before { content: ''; position: absolute; left: -26px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+.timeline-item .time { font-size: 11px; color: var(--ink-muted); }
+.timeline-item .who { font-weight: 600; font-size: 13px; }
+.timeline-item .note { font-size: 13px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="module-hoatac-quocte.html#de-xuat-cho-duyet" class="back-btn">← Các đề xuất chờ duyệt</a>
+  <div id="header-badges"></div>
+</div>
+
+<div class="de-xuat-layout">
+  <div class="col-left">
+    <div class="tabs">
+      <button type="button" class="tab active" data-tab="ho-so">Hồ sơ</button>
+      <button type="button" class="tab" data-tab="lich-su">Lịch sử</button>
+      <button type="button" class="tab" data-tab="quan-tri" id="tab-quan-tri" style="display:none;">Quản trị</button>
+    </div>
+    <div id="tab-ho-so" class="tab-content active">
+      <div id="to-trinh-box" class="to-trinh"></div>
+      <div class="accordion open">
+        <div class="accordion-header">Thông tin chi tiết</div>
+        <div class="accordion-body" id="detail-accordion"></div>
+      </div>
+      <div class="accordion">
+        <div class="accordion-header">Hồ sơ đính kèm</div>
+        <div class="accordion-body" id="files-accordion"></div>
+      </div>
+      <div class="accordion">
+        <div class="accordion-header">Điều kiện pháp lý</div>
+        <div class="accordion-body" id="legal-accordion"></div>
+      </div>
+      <div class="accordion">
+        <div class="accordion-header">Lịch sử xử lý</div>
+        <div class="accordion-body" id="history-accordion"></div>
+      </div>
+    </div>
+    <div id="tab-lich-su" class="tab-content">
+      <div id="history-full"></div>
+    </div>
+    <div id="tab-quan-tri" class="tab-content">
+      <p style="color:var(--ink-muted);">Chỉ Admin mới xem được tab này.</p>
+    </div>
+  </div>
+  <div class="col-right">
+    <div class="action-panel" id="action-panel"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-phe-duyet">
+  <div class="modal">
+    <div class="modal-header"><h3>Phê duyệt đề xuất</h3><button onclick="closeModal('modal-phe-duyet')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Ý kiến Viện trưởng</label>
+        <textarea id="phe-duyet-y-kien" placeholder="Gợi ý điền sẵn theo loại hình"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Ngày ký *</label>
+        <input type="date" id="phe-duyet-ngay-ky" required>
+      </div>
+      <div class="form-group">
+        <label>Số văn bản (nếu có)</label>
+        <input type="text" id="phe-duyet-so-vb" placeholder="VD: 45/TB-SCI">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="back-btn" onclick="closeModal('modal-phe-duyet')">Hủy</button>
+      <button class="btn-action btn-phe-duyet" onclick="submitPheDuyet()">Xác nhận phê duyệt →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-yeu-cau">
+  <div class="modal">
+    <div class="modal-header"><h3>Yêu cầu bổ sung</h3><button onclick="closeModal('modal-yeu-cau')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nội dung yêu cầu * (tối thiểu 20 ký tự)</label>
+        <textarea id="yeu-cau-noi-dung" placeholder="Đề nghị bổ sung:&#10;1. ...&#10;2. ..." minlength="20" required></textarea>
+      </div>
+      <div class="form-group">
+        <label>Hạn bổ sung *</label>
+        <input type="date" id="yeu-cau-han" required>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="back-btn" onclick="closeModal('modal-yeu-cau')">Hủy</button>
+      <button class="btn-action btn-yeu-cau" onclick="submitYeuCau()">Gửi yêu cầu →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-khong-duyet">
+  <div class="modal">
+    <div class="modal-header"><h3>Không phê duyệt</h3><button onclick="closeModal('modal-khong-duyet')">✕</button></div>
+    <div class="modal-body">
+      <p style="color:var(--red);font-size:13px;margin-bottom:16px;">⚠ Lưu ý: Hành động này không thể hoàn tác.</p>
+      <div class="form-group">
+        <label>Lý do * (tối thiểu 30 ký tự)</label>
+        <textarea id="khong-duyet-ly-do" minlength="30" required></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="back-btn" onclick="closeModal('modal-khong-duyet')">Hủy</button>
+      <button class="btn-action btn-khong-duyet" onclick="submitKhongDuyet()">Xác nhận không phê duyệt</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : (window.location.origin || '');
+var deXuatId = null;
+var deXuatData = null;
+
+function getParam(name) {
+  var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+function formatDate(s) {
+  if (!s) return '—';
+  var p = (s + '').slice(0, 10).split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : s;
+}
+
+function formatNumber(n) {
+  if (n == null || isNaN(n)) return '—';
+  return new Intl.NumberFormat('vi-VN').format(n) + ' VNĐ';
+}
+
+function loadDeXuat() {
+  deXuatId = parseInt(getParam('id'), 10);
+  if (!deXuatId) { document.body.innerHTML = '<div style="padding:40px;text-align:center;">ID không hợp lệ.</div>'; return; }
+  var token = localStorage.getItem('token');
+  if (!token) { document.body.innerHTML = '<div style="padding:40px;text-align:center;">Vui lòng đăng nhập.</div>'; return; }
+  fetch(apiBase + '/api/htqt/de-xuat/' + deXuatId, { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (!res.ok) {
+        document.body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--red);">' + (res.data.message || 'Không tải được.') + '</div>';
+        return;
+      }
+      deXuatData = res.data;
+      renderPage();
+    })
+    .catch(function() {
+      document.body.innerHTML = '<div style="padding:40px;text-align:center;">Lỗi kết nối máy chủ.</div>';
+    });
+}
+
+function loaiHinhLabel(l) {
+  var m = { hoat_dong_khcn: 'Hoạt động KH&CN', dich_vu_khcn: 'Dịch vụ KH&CN', tai_tro_vien_tro: 'Tài trợ / Viện trợ' };
+  return m[(l || '').toLowerCase()] || l || '—';
+}
+
+function renderPage() {
+  var d = deXuatData;
+  var status = (d.status || '').toLowerCase();
+  var loaiHinh = (d.loai_hinh || '').toLowerCase();
+  var co = d.co_canh_bao || {};
+  var phi = d.phi_quan_ly || {};
+
+  document.getElementById('header-badges').innerHTML =
+    '<span class="badge badge-' + (loaiHinh === 'hoat_dong_khcn' ? 'hoat-dong' : loaiHinh === 'dich_vu_khcn' ? 'dich-vu' : 'tai-tro') + '">' + loaiHinhLabel(d.loai_hinh) + '</span> ' +
+    '<span class="badge ' + (status === 'cho_vt_phe_duyet' ? 'badge-cho-duyet' : 'badge-da-duyet') + '">' + (status === 'cho_vt_phe_duyet' ? 'Chờ duyệt' : status === 'da_phe_duyet' ? 'Đã duyệt' : status) + '</span>';
+
+  var canNgưỡng = co.NGƯỠNG_KINH_PHI || co.NGƯỠNG_THOI_GIAN;
+  document.getElementById('to-trinh-box').innerHTML =
+    '<h2>TỜ TRÌNH <span style="float:right;font-weight:400;">Điều 62</span></h2>' +
+    '<p>Kính trình Viện trưởng xem xét phê duyệt:</p>' +
+    '<div class="ten">' + (d.ten || '—').replace(/</g, '&lt;') + '</div>' +
+    '<div class="row">Loại hình: <span class="badge">' + loaiHinhLabel(d.loai_hinh) + '</span></div>' +
+    '<div class="row">Đối tác: ' + (d.doi_tac_ten || '—').replace(/</g, '&lt;') + (d.doi_tac_quoc_gia ? ', ' + d.doi_tac_quoc_gia : '') + '</div>' +
+    '<div class="row">Chủ nhiệm: ' + (d.chu_nhiem_ten || '—').replace(/</g, '&lt;') + (d.chu_nhiem_hoc_vi ? ', ' + d.chu_nhiem_hoc_vi : '') + (d.chu_nhiem_don_vi ? ', ' + d.chu_nhiem_don_vi : '') + '</div>' +
+    '<div class="row">Kinh phí: ' + formatNumber(d.kinh_phi_vnd) + '</div>' +
+    '<div class="row">→ Phí quản lý (Điều 69): ' + (phi.pct || 0) + '% = ' + formatNumber(phi.vnd) + '</div>' +
+    '<div class="row">Thời gian: ' + (d.ngay_bat_dau ? formatDate(d.ngay_bat_dau) : '—') + ' đến ' + (d.ngay_ket_thuc ? formatDate(d.ngay_ket_thuc) : '—') + (d.thoi_gian_thang ? ' / ' + d.thoi_gian_thang + ' tháng' : '') + '</div>' +
+    (canNgưỡng ? '<div class="canh-bao-nguong">⚠ Cần báo cáo ĐHQG-HCM trước khi triển khai</div>' : '') +
+    '<div class="row" style="margin-top:12px;">Ý kiến Phòng KHCN:</div>' +
+    '<div style="font-size:13px;color:var(--ink-soft);">"' + (d.to_trinh_phong_khcn || '—').replace(/</g, '&lt;').replace(/\n/g, '<br>') + '"</div>' +
+    '<div class="de-nghi">Đề nghị Viện trưởng: ' + (d.de_nghi_vt || '—').replace(/</g, '&lt;') + '</div>';
+
+  document.getElementById('detail-accordion').innerHTML =
+    '<table><tr><td>Tên đầy đủ</td><td>' + (d.ten || '—').replace(/</g, '&lt;') + '</td></tr>' +
+    '<tr><td>Mô tả / mục tiêu</td><td>' + ((d.mo_ta || '—').slice(0, 500)).replace(/</g, '&lt;').replace(/\n/g, '<br>') + '</td></tr>' +
+    '<tr><td>Đối tác</td><td>' + (d.doi_tac_ten || '—').replace(/</g, '&lt;') + ', ' + (d.doi_tac_quoc_gia || '—') + '</td></tr>' +
+    '<tr><td>Hình thức hợp tác</td><td>' + (d.hinh_thuc_hop_tac || '—').replace(/</g, '&lt;') + '</td></tr>' +
+    '<tr><td>Chủ nhiệm</td><td>' + (d.chu_nhiem_ten || '—').replace(/</g, '&lt;') + ', ' + (d.chu_nhiem_hoc_vi || '') + ', ' + (d.chu_nhiem_don_vi || '') + '</td></tr>' +
+    '<tr><td>Kinh phí</td><td>' + formatNumber(d.kinh_phi_vnd) + '</td></tr>' +
+    '<tr><td>Phí quản lý</td><td>' + (phi.pct || 0) + '% = ' + formatNumber(phi.vnd) + '</td></tr></table>';
+
+  var files = d.files || [];
+  document.getElementById('files-accordion').innerHTML = files.length === 0
+    ? '<p style="color:var(--ink-muted);">Chưa có file đính kèm.</p>'
+    : files.map(function(f) {
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">' +
+          '<span>' + (f.ten_file || '—').replace(/</g, '&lt;') + '</span>' +
+          '<span style="font-size:11px;color:var(--ink-muted);">' + formatDate(f.uploaded_at) + '</span>' +
+          '</div>';
+      }).join('');
+
+  var legalText = '';
+  if (loaiHinh === 'hoat_dong_khcn') legalText = 'Điều 64: Thực hiện như đề tài cấp cơ sở. Điều 65: Phải ký hợp đồng trước khi thực hiện. Điều 69: Phí = 5% + 3%. Điều 66: Nghiệm thu theo quy trình đề tài cấp cơ sở.';
+  else if (loaiHinh === 'tai_tro_vien_tro') legalText = 'Điều 64: Phải trình Trường ĐHKHTN phê duyệt. Điều 69: Phí = 3%. Điều 66: Báo cáo kết thúc gửi Trường ĐHKHTN.';
+  else if (loaiHinh === 'dich_vu_khcn') legalText = 'Điều 69: Phí = 10% + 3%. Điều 65: Phải ký hợp đồng dịch vụ trước khi thực hiện.';
+  else legalText = 'Chưa phân loại loại hình.';
+  if (co.NGƯỠNG_KINH_PHI) legalText += ' ⚠ Kinh phí > 500 triệu: cần báo cáo ĐHQG-HCM.';
+  if (co.NGƯỠNG_THOI_GIAN) legalText += ' ⚠ Thời gian > 5 năm: cần báo cáo ĐHQG-HCM.';
+  document.getElementById('legal-accordion').innerHTML = '<p style="font-size:13px;">' + legalText.replace(/</g, '&lt;') + '</p>';
+
+  var hist = d.history || [];
+  document.getElementById('history-accordion').innerHTML = hist.length === 0
+    ? '<p style="color:var(--ink-muted);">Chưa có lịch sử.</p>'
+    : hist.slice(0, 5).map(function(h) {
+        return '<div class="timeline-item"><div class="time">' + (h.performed_at || '').replace('T', ' ').slice(0, 16) + '</div>' +
+          '<div class="who">' + (h.performed_by_name || '—').replace(/</g, '&lt;') + '</div>' +
+          '<div class="note">' + (h.note || h.action || '').replace(/</g, '&lt;') + '</div></div>';
+      }).join('');
+  document.getElementById('history-full').innerHTML = hist.length === 0
+    ? '<p style="color:var(--ink-muted);">Chưa có lịch sử.</p>'
+    : '<div class="timeline">' + hist.map(function(h) {
+        return '<div class="timeline-item"><div class="time">' + (h.performed_at || '').replace('T', ' ').slice(0, 16) + '</div>' +
+          '<div class="who">' + (h.performed_by_name || '—').replace(/</g, '&lt;') + ' — ' + (h.action || '') + '</div>' +
+          '<div class="note">' + (h.note || '').replace(/</g, '&lt;') + '</div></div>';
+      }).join('') + '</div>';
+
+  var canPheDuyet = d.can_phe_duyet && status === 'cho_vt_phe_duyet';
+  var actionHtml = '<h3>QUYẾT ĐỊNH</h3><hr style="margin:12px 0;border:none;border-top:1px solid var(--border);">';
+  if (status === 'cho_vt_phe_duyet') {
+    actionHtml += '<button class="btn-action btn-phe-duyet" id="btn-phe-duyet" onclick="openModal(\'modal-phe-duyet\')" ' + (canPheDuyet ? '' : 'disabled title="Hồ sơ chưa đủ hoặc chưa phân loại"') + '>PHÊ DUYỆT</button>' +
+      '<button class="btn-action btn-yeu-cau" onclick="openModal(\'modal-yeu-cau\')">YÊU CẦU BỔ SUNG</button>' +
+      '<button class="btn-action btn-khong-duyet" onclick="openModal(\'modal-khong-duyet\')">KHÔNG PHÊ DUYỆT</button>';
+  }
+  actionHtml += '<hr style="margin:16px 0;border:none;border-top:1px solid var(--border);">' +
+    '<div class="info-row">Mã đề xuất: <strong>' + (d.ma_de_xuat || '—').replace(/</g, '&lt;') + '</strong></div>' +
+    '<div class="info-row">Ngày nhận: ' + formatDate(d.ngay_tiep_nhan || d.created_at) + '</div>' +
+    '<div class="info-row">Hạn xử lý: ' + formatDate(d.han_xu_ly_vt) + '</div>' +
+    '<div class="info-row">Phí quản lý (Điều 69): ' + (phi.pct || 0) + '% = ' + formatNumber(phi.vnd) + '</div>';
+  document.getElementById('action-panel').innerHTML = actionHtml;
+
+  var defaultYkien = '';
+  if (loaiHinh === 'hoat_dong_khcn') defaultYkien = 'Đồng ý phê duyệt. Giao Phòng KHCN cấp mã dự án và triển khai theo Điều 62, 64.';
+  else if (loaiHinh === 'tai_tro_vien_tro') defaultYkien = 'Đồng ý xác nhận. Giao Phòng KHCN phối hợp CN chuẩn bị hồ sơ trình Trường ĐHKHTN.';
+  else defaultYkien = 'Đồng ý phê duyệt theo quy định.';
+  document.getElementById('phe-duyet-y-kien').placeholder = defaultYkien;
+  document.getElementById('phe-duyet-ngay-ky').value = new Date().toISOString().slice(0, 10);
+
+  var user = {};
+  try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) {}
+  if ((user.role || '').toLowerCase() === 'admin') {
+    document.getElementById('tab-quan-tri').style.display = 'block';
+  }
+
+  document.querySelectorAll('.accordion').forEach(function(acc) {
+    var h = acc.querySelector('.accordion-header');
+    if (h && !acc.classList.contains('open')) {
+      h.onclick = function() {
+        acc.classList.toggle('open');
+        acc.querySelector('.accordion-body').style.display = acc.classList.contains('open') ? 'block' : 'none';
+      };
+      acc.querySelector('.accordion-body').style.display = 'none';
+    }
+  });
+  document.querySelectorAll('.accordion.open .accordion-body').forEach(function(b) { b.style.display = 'block'; });
+
+  document.querySelectorAll('.tab').forEach(function(t) {
+    t.onclick = function() {
+      document.querySelectorAll('.tab').forEach(function(x) { x.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(x) { x.classList.remove('active'); });
+      this.classList.add('active');
+      document.getElementById('tab-' + this.dataset.tab).classList.add('active');
+    };
+  });
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function submitPheDuyet() {
+  var token = localStorage.getItem('token');
+  if (!token) { alert('Vui lòng đăng nhập.'); return; }
+  var ngayKy = document.getElementById('phe-duyet-ngay-ky').value;
+  if (!ngayKy) { alert('Vui lòng chọn ngày ký.'); return; }
+  fetch(apiBase + '/api/htqt/de-xuat/' + deXuatId + '/phe-duyet', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({
+      y_kien: document.getElementById('phe-duyet-y-kien').value,
+      ngay_ky: ngayKy,
+      so_van_ban: document.getElementById('phe-duyet-so-vb').value
+    })
+  })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (res.ok) { closeModal('modal-phe-duyet'); loadDeXuat(); alert(res.data.message || 'Đã phê duyệt.'); }
+      else { alert(res.data.message || 'Thất bại.'); }
+    })
+    .catch(function() { alert('Lỗi kết nối.'); });
+}
+
+function submitYeuCau() {
+  var token = localStorage.getItem('token');
+  if (!token) { alert('Vui lòng đăng nhập.'); return; }
+  var nd = document.getElementById('yeu-cau-noi-dung').value.trim();
+  var han = document.getElementById('yeu-cau-han').value;
+  if (nd.length < 20) { alert('Nội dung tối thiểu 20 ký tự.'); return; }
+  if (!han) { alert('Vui lòng chọn hạn bổ sung.'); return; }
+  fetch(apiBase + '/api/htqt/de-xuat/' + deXuatId + '/yeu-cau-bo-sung', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ noi_dung: nd, han_bo_sung: han, gui_den: ['phong_khcn', 'chu_nhiem'] })
+  })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (res.ok) { closeModal('modal-yeu-cau'); loadDeXuat(); alert(res.data.message || 'Đã gửi yêu cầu.'); }
+      else { alert(res.data.message || 'Thất bại.'); }
+    })
+    .catch(function() { alert('Lỗi kết nối.'); });
+}
+
+function submitKhongDuyet() {
+  var token = localStorage.getItem('token');
+  if (!token) { alert('Vui lòng đăng nhập.'); return; }
+  var lyDo = document.getElementById('khong-duyet-ly-do').value.trim();
+  if (lyDo.length < 30) { alert('Lý do tối thiểu 30 ký tự.'); return; }
+  if (!confirm('Bạn có chắc muốn không phê duyệt đề xuất này?')) return;
+  fetch(apiBase + '/api/htqt/de-xuat/' + deXuatId + '/khong-phe-duyet', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ ly_do: lyDo, thong_bao_den: ['phong_khcn', 'chu_nhiem'] })
+  })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (res.ok) { closeModal('modal-khong-duyet'); loadDeXuat(); alert(res.data.message || 'Đã ghi nhận.'); }
+      else { alert(res.data.message || 'Thất bại.'); }
+    })
+    .catch(function() { alert('Lỗi kết nối.'); });
+}
+
+document.addEventListener('DOMContentLoaded', loadDeXuat);
+</script>
+</body>
+</html>

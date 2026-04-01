@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản trị Hợp tác Quốc tế — Viện Tế bào gốc</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0f172a;
+  --ink-soft: #334155;
+  --ink-muted: #64748b;
+  --bg: #dfe7f2;
+  --card: #ffffff;
+  --accent: #2563eb;
+  --accent-light: #e8f0fe;
+  --red: #dc2626;
+  --red-light: #fef2f2;
+  --border: #b8c5d6;
+  --border-subtle: #e2e8f0;
+  --border-field: #94a3b8;
+  --shadow: 0 1px 2px rgba(15,23,42,.08), 0 4px 16px rgba(15,23,42,.07);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Be Vietnam Pro', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+.topbar {
+  background: var(--card);
+  border-bottom: 2px solid var(--border);
+  padding: 0 32px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: var(--shadow);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--ink-soft); font-size: 13px; cursor: pointer; text-decoration: none;
+  padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+.back-btn:hover { background: var(--bg); color: var(--ink); }
+.page-breadcrumb { font-size: 13px; color: var(--ink-muted); }
+.page-breadcrumb .current { color: var(--ink); font-weight: 600; }
+.user-chip { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+
+.main { max-width: 800px; margin: 0 auto; padding: 32px; }
+.page-header { margin-bottom: 24px; padding-bottom: 14px; border-bottom: 2px solid var(--border-subtle); }
+.page-header h1 { font-size: 24px; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+.page-header p { font-size: 14px; color: var(--ink-soft); }
+
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.card h2 { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.card .note { font-size: 13px; color: var(--ink-muted); margin-bottom: 20px; padding: 12px; background: var(--bg); border-radius: 8px; }
+
+.form-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 16px; }
+.form-group { flex: 1; min-width: 180px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+.form-group input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-field); border-radius: 8px; font-size: 14px; font-family: inherit; }
+.form-group input::placeholder { color: #64748b; opacity: 1; }
+.topic-options { margin-bottom: 20px; }
+.topic-options .label-row { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 10px; }
+.topic-options .checkboxes { display: flex; flex-wrap: wrap; gap: 12px 20px; }
+.topic-options label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); cursor: pointer; }
+.topic-options input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+.topic-options .topic-all { font-weight: 600; color: var(--accent); }
+.topic-badges { font-size: 12px; color: var(--ink-soft); }
+.topic-badges .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--accent-light); color: var(--accent); margin-right: 4px; margin-bottom: 4px; }
+.btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-danger { background: var(--red-light); color: var(--red); border: 1px solid var(--red); }
+.btn-danger:hover { background: var(--red); color: #fff; }
+.btn-outline-vt { background: #ecfdf5; color: #059669; border: 1px solid #059669; }
+.btn-outline-vt:hover { background: #059669; color: #fff; }
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-subtle); font-size: 14px; }
+th { font-weight: 600; color: #475569; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; background: #e8ecf4; border-bottom: 2px solid var(--border); }
+tbody tr:nth-child(even) td { background: #f4f7fb; }
+tbody tr:hover td { background: #eef2f9 !important; }
+.empty-state { color: var(--ink-muted); padding: 24px; text-align: center; font-size: 14px; }
+.msg { padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; display: none; }
+.msg.show { display: block; }
+.msg.success { background: #ecfdf5; color: #059669; }
+.msg.error { background: var(--red-light); color: var(--red); }
+
+.forbidden { text-align: center; padding: 60px 20px; }
+.forbidden h2 { font-size: 20px; color: var(--ink); margin-bottom: 12px; }
+.forbidden p { color: var(--ink-muted); margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <a href="module-hoatac-quocte.html" class="back-btn">← Hợp tác Quốc tế</a>
+    <div class="page-breadcrumb">
+      <span>Trang chủ</span> / <span>Hợp tác Quốc tế</span> / <span class="current">Quản trị</span>
+    </div>
+  </div>
+  <div class="user-chip">
+    <div class="avatar" id="user-avatar">AD</div>
+    <span style="font-size:13px;font-weight:600;" id="user-greeting">Admin</span>
+  </div>
+</div>
+
+<div class="main" id="main-content" style="display: none;">
+  <div class="page-header">
+    <h1>⚙️ Quản trị module Hợp tác Quốc tế</h1>
+    <p>Cấu hình danh sách email nhận thông báo khi có đề xuất tiếp nhận (đoàn ra, đoàn vào, MOU, đề tài YTNN, ...), và cảnh báo thỏa thuận đã ký sắp hết hiệu lực.</p>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+  <div class="card">
+    <h2>📅 Cảnh báo thỏa thuận đã ký (hết hiệu lực)</h2>
+    <p class="note">Thỏa thuận tại <strong>Hợp tác QT → Thỏa thuận</strong> có <strong>Hết hạn</strong>. <strong>Trước hạn:</strong> một email trong khoảng <strong>N tháng cuối</strong>. <strong>Sau hạn:</strong> nếu đã quá ngày hết hạn mà trạng thái vẫn Hiệu lực/Sắp hết hạn, gửi thêm tối đa <strong>M lần</strong>, cách nhau ít nhất <strong>D ngày</strong> (M = 0: không gửi sau hết hạn). Người nhận: topic <strong>Cảnh báo hết hạn thỏa thuận</strong> bên dưới hoặc <strong>Tất cả</strong>. Cần SMTP. «Chạy kiểm tra ngay» chỉ để thử.</p>
+    <div class="form-row" style="align-items:flex-end;flex-wrap:wrap;gap:12px;">
+      <div class="form-group" style="max-width:200px;">
+        <label for="tt-expiry-months">Tháng trước hạn (1–36)</label>
+        <input type="number" id="tt-expiry-months" min="1" max="36" value="3" style="width:100%;">
+      </div>
+      <div class="form-group" style="max-width:200px;">
+        <label for="tt-post-max">Lần gửi <em>sau</em> hết hạn (0–20)</label>
+        <input type="number" id="tt-post-max" min="0" max="20" value="3" style="width:100%;" title="0 = không nhắc sau khi quá hạn">
+      </div>
+      <div class="form-group" style="max-width:200px;">
+        <label for="tt-post-min-days">Cách nhau tối thiểu (1–90 ngày)</label>
+        <input type="number" id="tt-post-min-days" min="1" max="90" value="7" style="width:100%;">
+      </div>
+      <div class="form-group" style="flex:0 0 auto;">
+        <label>&nbsp;</label>
+        <button type="button" class="btn btn-primary" id="btn-save-expiry-months">Lưu cấu hình</button>
+      </div>
+      <div class="form-group" style="flex:0 0 auto;">
+        <label>&nbsp;</label>
+        <button type="button" class="btn btn-outline-vt" id="btn-run-expiry-check">Chạy kiểm tra ngay</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📧 Danh sách email nhận thông báo</h2>
+    <p class="note">Các địa chỉ email dưới đây sẽ nhận thông báo khi người dùng gửi đề xuất (đoàn ra, đoàn vào, <strong>đề xuất Thỏa thuận MOU</strong>, đăng ký đề tài có yếu tố nước ngoài, v.v.). Với <strong>thỏa thuận đã ký</strong> (danh sách tại mục Thỏa thuận), chọn thêm topic <strong>Cảnh báo hết hạn thỏa thuận</strong> để nhận email nhắc trước khi đến hạn. <strong>Viện trưởng và Admin</strong> nên thêm email vào topic <strong>MOU</strong> để nhận thông báo khi có đề xuất Thỏa thuận mới. Chỉ Admin có quyền thêm/xóa.</p>
+    <form id="form-add-recipient">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="add-email">Email *</label>
+          <input type="email" id="add-email" name="email" placeholder="vd: phongkhcn@sci.edu.vn" required>
+        </div>
+        <div class="form-group">
+          <label for="add-fullname">Họ tên (tùy chọn)</label>
+          <input type="text" id="add-fullname" name="fullname" placeholder="VD: Phòng KHCN">
+        </div>
+        <div class="form-group" style="flex: 0 0 auto;">
+          <label>&nbsp;</label>
+          <button type="submit" class="btn btn-primary" id="btn-add">Thêm</button>
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:12px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="add-role-vien-truong" name="role" value="vien_truong">
+          <span><strong>Là Viện trưởng</strong> — nhận email chính (To:), các người khác nhận CC</span>
+        </label>
+      </div>
+      <div class="topic-options">
+        <div class="label-row">Nhận thông báo khi có đề xuất:</div>
+        <div class="checkboxes">
+          <label class="topic-all">
+            <input type="checkbox" id="topic-all" name="topic" value="all" checked> Tất cả
+          </label>
+          <label><input type="checkbox" class="topic-item" name="topic" value="mou"> Ký kết Thỏa thuận / MOU</label>
+          <label><input type="checkbox" class="topic-item" name="topic" value="doan_ra"> Quản lý Đoàn ra</label>
+          <label><input type="checkbox" class="topic-item" name="topic" value="doan_vao"> Quản lý Đoàn vào</label>
+          <label><input type="checkbox" class="topic-item" name="topic" value="ytnn"> Đăng ký Đề tài YTNN</label>
+          <label><input type="checkbox" class="topic-item" name="topic" value="sukien"> Tổ chức Sự kiện Quốc tế</label>
+          <label><input type="checkbox" class="topic-item" name="topic" value="nghiem_thu"> Nghiệm thu & Thanh lý</label>
+          <label><input type="checkbox" class="topic-item" name="topic" value="thoa_thuan_het_han"> Cảnh báo hết hạn thỏa thuận (đã ký)</label>
+        </div>
+      </div>
+    </form>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Email</th><th>Họ tên</th><th>Nhận thông báo</th><th>Vai trò</th><th style="width:140px;">Thao tác</th></tr>
+        </thead>
+        <tbody id="recipients-tbody">
+          <tr><td colspan="5" class="empty-state">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="main forbidden" id="forbidden-content" style="display: none;">
+  <h2>Bạn cần quyền Admin</h2>
+  <p>Trang Quản trị module Hợp tác Quốc tế chỉ dành cho tài khoản Admin. Vui lòng đăng nhập bằng tài khoản có quyền Admin.</p>
+  <a href="module-hoatac-quocte.html" class="btn btn-primary">Quay lại Hợp tác Quốc tế</a>
+</div>
+
+<script>
+(function() {
+  var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : (window.location.origin || '');
+  var apiPrefix = apiBase && !/\/api\/?$/.test(apiBase.replace(/\?.*$/, '')) ? '/api' : '/api';
+  var token = localStorage.getItem('token');
+  var user = {};
+  try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) {}
+  var isAdmin = (user.role || '').toLowerCase() === 'admin';
+
+  var TOPIC_LABELS = { all: 'Tất cả', mou: 'MOU', doan_ra: 'Đoàn ra', doan_vao: 'Đoàn vào', ytnn: 'Đề tài YTNN', sukien: 'Sự kiện QT', nghiem_thu: 'Nghiệm thu & Thanh lý', thoa_thuan_het_han: 'Cảnh báo hết hạn TT' };
+
+  function getTopicsDisplay(topicsStr) {
+    if (!topicsStr || topicsStr === 'all') return '<span class="topic-badges"><span class="badge">Tất cả</span></span>';
+    var arr = (topicsStr || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+    return '<span class="topic-badges">' + arr.map(function(t) { return '<span class="badge">' + (TOPIC_LABELS[t] || t) + '</span>'; }).join('') + '</span>';
+  }
+
+  function getSelectedTopics() {
+    var allEl = document.getElementById('topic-all');
+    if (allEl && allEl.checked) return 'all';
+    var checked = [];
+    document.querySelectorAll('.topic-item:checked').forEach(function(cb) { checked.push(cb.value); });
+    return checked.length ? checked.join(',') : 'all';
+  }
+
+  function setTopicAll(checked) {
+    document.querySelectorAll('.topic-item').forEach(function(cb) { cb.disabled = checked; });
+    if (checked) document.querySelectorAll('.topic-item').forEach(function(cb) { cb.checked = false; });
+  }
+
+  function showMsg(text, isError) {
+    var el = document.getElementById('msg');
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'msg show ' + (isError ? 'error' : 'success');
+    setTimeout(function() { el.classList.remove('show'); }, 4000);
+  }
+
+  function setUserGreeting() {
+    var display = (user.fullname && user.fullname.trim()) ? user.fullname.trim() : (user.email || 'Admin');
+    var greetingEl = document.getElementById('user-greeting');
+    var avatarEl = document.getElementById('user-avatar');
+    if (greetingEl) greetingEl.textContent = display;
+    if (avatarEl) {
+      var initials = (user.fullname || user.email || 'AD').trim().split(/\s+/).map(function(s) { return (s[0] || '').toUpperCase(); }).slice(0, 2).join('') || 'AD';
+      avatarEl.textContent = initials;
+    }
+  }
+
+  function loadRecipients() {
+    var tbody = document.getElementById('recipients-tbody');
+    if (!tbody) return;
+    if (!token) { tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Vui lòng đăng nhập.</td></tr>'; return; }
+    var listUrl = apiBase + apiPrefix + '/admin/cooperation/notification-recipients';
+    fetch(listUrl, { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function(r) {
+        if (r.status === 404) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Không tìm thấy API. Đảm bảo backend đang chạy: <code>node server.js</code> (cổng 3000).</td></tr>';
+          return null;
+        }
+        return r.json();
+      })
+      .then(function(data) {
+        if (data === null) return;
+        var list = (data && data.recipients) ? data.recipients : [];
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có email nào. Thêm email để nhận thông báo khi có đề xuất.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = list.map(function(r) {
+          var fn = (r.fullname || '').trim() ? r.fullname : '—';
+          var topicsHtml = getTopicsDisplay(r.topics);
+          var isVT = (r.role || '').toLowerCase() === 'vien_truong';
+          var roleHtml = isVT ? '<span style="color:#059669;font-weight:600;">Viện trưởng (To)</span> <button type="button" class="btn-unset-vt" data-id="' + r.id + '" style="font-size:11px;margin-left:4px;color:var(--ink-muted);text-decoration:underline;cursor:pointer;background:none;border:none;">Bỏ</button>' : '<button type="button" class="btn btn-outline-vt" data-id="' + r.id + '" style="font-size:11px;padding:4px 8px;">Đặt làm VT</button>';
+          return '<tr><td>' + (r.email || '').replace(/</g, '&lt;') + '</td><td>' + fn.replace(/</g, '&lt;') + '</td><td>' + topicsHtml + '</td><td>' + roleHtml + '</td><td><button type="button" class="btn btn-danger" data-id="' + r.id + '">Xóa</button></td></tr>';
+        }).join('');
+        tbody.querySelectorAll('.btn-danger').forEach(function(btn) {
+          btn.addEventListener('click', function() { deleteRecipient(parseInt(btn.getAttribute('data-id'), 10)); });
+        });
+        tbody.querySelectorAll('.btn-outline-vt').forEach(function(btn) {
+          btn.addEventListener('click', function() { setVienTruong(parseInt(btn.getAttribute('data-id'), 10)); });
+        });
+        tbody.querySelectorAll('.btn-unset-vt').forEach(function(btn) {
+          btn.addEventListener('click', function() { unsetVienTruong(parseInt(btn.getAttribute('data-id'), 10)); });
+        });
+      })
+      .catch(function(err) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Không tải được danh sách. Kiểm tra backend đang chạy: <code>node server.js</code> (cổng 3000).</td></tr>';
+      });
+  }
+
+  function unsetVienTruong(id) {
+    if (!id || !token) return;
+    var patchUrl = apiBase + apiPrefix + '/admin/cooperation/notification-recipients/' + id;
+    fetch(patchUrl, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: null })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        showMsg(data.message || 'Đã bỏ vai trò Viện trưởng.', false);
+        loadRecipients();
+      })
+      .catch(function() { showMsg('Lỗi kết nối.', true); });
+  }
+
+  function setVienTruong(id) {
+    if (!id || !token) return;
+    if (!confirm('Đặt người này làm Viện trưởng (nhận email chính To:)? Các người khác sẽ nhận CC.')) return;
+    var patchUrl = apiBase + apiPrefix + '/admin/cooperation/notification-recipients/' + id;
+    fetch(patchUrl, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'vien_truong' })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        showMsg(data.message || 'Đã cập nhật.', false);
+        loadRecipients();
+      })
+      .catch(function() { showMsg('Lỗi kết nối.', true); });
+  }
+
+  function deleteRecipient(id) {
+    if (!id || !token) return;
+    if (!confirm('Bạn có chắc muốn xóa email này khỏi danh sách nhận thông báo?')) return;
+    var deleteUrl = apiBase + apiPrefix + '/admin/cooperation/notification-recipients/' + id;
+    fetch(deleteUrl, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        showMsg(data.message || 'Đã xóa.', false);
+        loadRecipients();
+      })
+      .catch(function() { showMsg('Lỗi kết nối.', true); });
+  }
+
+  if (!token || !isAdmin) {
+    document.getElementById('main-content').style.display = 'none';
+    document.getElementById('forbidden-content').style.display = 'block';
+    setUserGreeting();
+    return;
+  }
+
+  document.getElementById('main-content').style.display = 'block';
+  document.getElementById('forbidden-content').style.display = 'none';
+  setUserGreeting();
+  loadExpiryMonths();
+  loadRecipients();
+
+  function loadExpiryMonths() {
+    if (!token) return;
+    fetch(apiBase + apiPrefix + '/admin/cooperation/settings/thoa-thuan-expiry', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var m = document.getElementById('tt-expiry-months');
+        var p = document.getElementById('tt-post-max');
+        var day = document.getElementById('tt-post-min-days');
+        if (d && d.months != null && m) m.value = String(d.months);
+        if (d && d.post_expiry_max_emails != null && p) p.value = String(d.post_expiry_max_emails);
+        if (d && d.post_expiry_min_days != null && day) day.value = String(d.post_expiry_min_days);
+      })
+      .catch(function() {});
+  }
+
+  var btnSaveExpiry = document.getElementById('btn-save-expiry-months');
+  if (btnSaveExpiry) {
+    btnSaveExpiry.addEventListener('click', function() {
+      var m = parseInt(document.getElementById('tt-expiry-months') && document.getElementById('tt-expiry-months').value, 10);
+      var pmax = parseInt(document.getElementById('tt-post-max') && document.getElementById('tt-post-max').value, 10);
+      var dmin = parseInt(document.getElementById('tt-post-min-days') && document.getElementById('tt-post-min-days').value, 10);
+      if (!Number.isFinite(m) || m < 1 || m > 36) { showMsg('Tháng trước hạn: 1–36.', true); return; }
+      if (!Number.isFinite(pmax) || pmax < 0 || pmax > 20) { showMsg('Số lần sau hết hạn: 0–20.', true); return; }
+      if (!Number.isFinite(dmin) || dmin < 1 || dmin > 90) { showMsg('Khoảng cách tối thiểu: 1–90 ngày.', true); return; }
+      btnSaveExpiry.disabled = true;
+      fetch(apiBase + apiPrefix + '/admin/cooperation/settings/thoa-thuan-expiry', {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ months: m, post_expiry_max_emails: pmax, post_expiry_min_days: dmin })
+      })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+        .then(function(res) {
+          btnSaveExpiry.disabled = false;
+          if (res.ok) showMsg(res.data.message || 'Đã lưu cấu hình.', false);
+          else showMsg(res.data.message || 'Lưu thất bại.', true);
+        })
+        .catch(function() { btnSaveExpiry.disabled = false; showMsg('Lỗi kết nối.', true); });
+    });
+  }
+
+  var btnRunExpiry = document.getElementById('btn-run-expiry-check');
+  if (btnRunExpiry) {
+    btnRunExpiry.addEventListener('click', function() {
+      if (!token) return;
+      btnRunExpiry.disabled = true;
+      fetch(apiBase + apiPrefix + '/admin/cooperation/thoa-thuan/run-expiry-check', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          btnRunExpiry.disabled = false;
+          var s = (d && d.sent != null) ? d.sent : 0;
+          var msg = 'Kiểm tra xong. Đã gửi ' + s + ' email';
+          if (d && (d.sent_pre != null || d.sent_post != null)) msg += ' (trước hạn: ' + (d.sent_pre || 0) + ', sau hạn: ' + (d.sent_post || 0) + ').';
+          else msg += '.';
+          if (d && d.reason === 'no_smtp') msg = 'SMTP chưa cấu hình — không gửi được email.';
+          else if (d && d.reason === 'no_recipients') msg = 'Chưa có người nhận: thêm email với topic «Cảnh báo hết hạn thỏa thuận» hoặc «Tất cả».';
+          showMsg(msg, false);
+        })
+        .catch(function() { btnRunExpiry.disabled = false; showMsg('Lỗi kết nối.', true); });
+    });
+  }
+
+  document.getElementById('topic-all').addEventListener('change', function() { setTopicAll(this.checked); });
+  document.querySelectorAll('.topic-item').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      var any = false;
+      document.querySelectorAll('.topic-item:checked').forEach(function() { any = true; });
+      document.getElementById('topic-all').checked = !any;
+      setTopicAll(!any);
+    });
+  });
+  setTopicAll(document.getElementById('topic-all').checked);
+
+  document.getElementById('form-add-recipient').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var emailEl = document.getElementById('add-email');
+    var fullnameEl = document.getElementById('add-fullname');
+    var btn = document.getElementById('btn-add');
+    var email = (emailEl && emailEl.value || '').trim();
+    var fullname = (fullnameEl && fullnameEl.value || '').trim();
+    var topics = getSelectedTopics();
+    var roleEl = document.getElementById('add-role-vien-truong');
+    var role = (roleEl && roleEl.checked) ? 'vien_truong' : null;
+    if (!email) { showMsg('Vui lòng nhập email.', true); return; }
+    if (!token) { showMsg('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.', true); return; }
+    btn.disabled = true;
+    var postUrl = apiBase + apiPrefix + '/admin/cooperation/notification-recipients';
+    fetch(postUrl, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, fullname: fullname || undefined, topics: topics, role: role })
+    })
+      .then(function(r) {
+        return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }).catch(function() { return { ok: false, status: r.status, data: {} }; });
+      })
+      .then(function(res) {
+        btn.disabled = false;
+        if (res.ok) {
+          showMsg(res.data.message || 'Đã thêm.', false);
+          if (emailEl) emailEl.value = '';
+          if (fullnameEl) fullnameEl.value = '';
+          if (roleEl) roleEl.checked = false;
+          loadRecipients();
+        } else {
+          if (res.status === 404) {
+            showMsg('Không tìm thấy API: ' + postUrl + '. Đảm bảo backend đang chạy: node server.js (cổng 3000).', true);
+          } else {
+            showMsg(res.data.message || 'Thêm thất bại.', true);
+          }
+        }
+      })
+      .catch(function(err) {
+        btn.disabled = false;
+        showMsg('Lỗi kết nối. Đảm bảo backend đang chạy: node server.js (cổng 3000).', true);
+      });
+  });
+})();
+</script>
+</body>
+</html>

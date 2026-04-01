@@ -1,0 +1,98 @@
+═══════════════════════════════════════════════════════════
+    CẤU TRÚC WEBSITE SCI-ACE ĐÃ HOÀN CHỈNH
+═══════════════════════════════════════════════════════════
+
+📁 website/
+│
+├── 📄 index.html                    ← Trang chủ (BẮT ĐẦU TỪ ĐÂY)
+├── 📄 nhom-1.html                  ← Trang Nhóm 1: Hướng dẫn
+├── 📄 nhom-2.html                  ← Trang Nhóm 2: Nghiên cứu viên
+├── 📄 nhom-3.html                  ← Trang Nhóm 3: Hội đồng
+├── 📄 huong-dan.html               ← Trang Hướng dẫn sử dụng
+│
+├── 🎨 styles.css                   ← File CSS (định dạng)
+│
+├── 📖 README.md                    ← Hướng dẫn upload lên hosting
+├── 📖 HUONG_DAN_CAU_TRUC.md       ← Hướng dẫn cấu trúc (file này)
+├── 📋 CAU_TRUC_WEBSITE.txt        ← Sơ đồ cấu trúc
+│
+└── 📁 files/                       ← Thư mục chứa file tải về
+    ├── 00_MUC_LUC_HE_THONG.docx
+    ├── HUONG_DAN_TONG_HOP_HO_SO.docx
+    │
+    ├── NHOM_1_1_Huong_dan_van_tat_thao_tac_dong_vat.docx
+    ├── NHOM_1_2_Quy_che_to_chuc_va_hoat_dong_HDDD.docx
+    │
+    ├── NHOM_2_1_Don_de_nghi_xet_duyet_SCI-ACE-01.docx
+    ├── NHOM_2_2_Phieu_thuyet_minh_de_tai_SCI-ACE-02.docx
+    ├── NHOM_2_3_Bao_cao_tuan_thu_3R_SCI-ACE-03.docx
+    ├── NHOM_2_4_Bao_cao_giai_trinh_SCI-ACE-04.docx
+    ├── NHOM_2_5_Bao_cao_thay_doi_ke_hoach_SCI-ACE-06.docx
+    ├── NHOM_2_6_Bao_cao_ket_qua_tuan_thu_SCI-ACE-07.docx
+    │
+    ├── NHOM_3_1_Phieu_nhan_xet_SCI-ACE-PDG.docx
+    ├── NHOM_3_2_Bien_ban_hop_SCI-ACE-05.docx
+    ├── NHOM_3_3_Quyet_dinh_phe_duyet_SCI-ACE-QD_VN.docx
+    └── NHOM_3_3_Quyet_dinh_phe_duyet_SCI-ACE-QD_EN.docx
+
+═══════════════════════════════════════════════════════════
+    LIÊN KẾT GIỮA CÁC FILE
+═══════════════════════════════════════════════════════════
+
+1. NAVIGATION MENU (Có trong mọi trang HTML):
+   ┌─────────────────────────────────────────────┐
+   │  🏠 Trang chủ  │  📚 Nhóm 1  │  📝 Nhóm 2  │
+   │  👥 Nhóm 3     │  ❓ Hướng dẫn              │
+   └─────────────────────────────────────────────┘
+   
+   index.html ←→ nhom-1.html
+        ↕              ↕
+   huong-dan.html ←→ nhom-2.html
+        ↕              ↕
+        └────→ nhom-3.html
+
+2. DOWNLOAD LINKS (Trong các trang nhóm):
+   
+   nhom-1.html → files/NHOM_1_1_*.docx
+                → files/NHOM_1_2_*.docx
+   
+   nhom-2.html → files/NHOM_2_1_*.docx
+                → files/NHOM_2_2_*.docx
+                → files/NHOM_2_3_*.docx
+                → ... (6 files)
+   
+   nhom-3.html → files/NHOM_3_1_*.docx
+                → files/NHOM_3_2_*.docx
+                → files/NHOM_3_3_*_VN.docx
+                → files/NHOM_3_3_*_EN.docx
+
+═══════════════════════════════════════════════════════════
+    CÁCH SỬ DỤNG
+═══════════════════════════════════════════════════════════
+
+BƯỚC 1: MỞ WEBSITE
+• Nhấp đúp vào file: index.html
+• Website sẽ mở trong trình duyệt
+
+BƯỚC 2: DUYỆT WEB
+• Click menu để chuyển trang
+• Click "Tải xuống" để lưu file .docx
+
+BƯỚC 3: UPLOAD LÊN HOSTING (Tùy chọn)
+• Đọc file README.md để biết chi tiết
+• Hoặc đọc HUONG_DAN_CAU_TRUC.md
+
+═══════════════════════════════════════════════════════════
+    KIỂM TRA
+═══════════════════════════════════════════════════════════
+
+✅ Tất cả file HTML đã liên kết với nhau
+✅ Thư mục files/ chứa 14 file .docx
+✅ Navigation menu hoạt động
+✅ Nút download trỏ đến đúng file
+✅ CSS được load cho tất cả trang
+
+═══════════════════════════════════════════════════════════
+
+Sẵn sàng để sử dụng! 🚀
+

@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Quản lý KHCN & ĐMST - Viện Tế bào gốc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .header-logo {
+            flex-shrink: 0;
+        }
+
+        .header-logo img {
+            display: block;
+            height: 80px;
+            width: auto;
+        }
+
+        .header-text {
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .standard-badge {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 4px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #5a67d8;
+            background: rgba(102, 126, 234, 0.12);
+            border-radius: 8px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            margin-bottom: 10px;
+        }
+
+        .stat-icon-bg,
+        .module-icon-bg {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+        }
+
+        .stat-icon-bg svg,
+        .module-icon-bg svg {
+            display: block;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .modules-grid--admin-sort .module-card {
+            cursor: grab;
+        }
+
+        .modules-grid--admin-sort .module-card:active {
+            cursor: grabbing;
+        }
+
+        .module-card--sort-ghost {
+            opacity: 0.45;
+        }
+
+        .module-card--sort-chosen {
+            box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+        }
+
+        .module-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .module-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        .module-card--disabled {
+            cursor: default;
+        }
+
+        .module-card--disabled:hover {
+            transform: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .module-icon {
+            margin-bottom: 15px;
+        }
+
+        .module-title {
+            font-size: 22px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .module-description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .module-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .mini-stat {
+            flex: 1;
+            text-align: center;
+        }
+
+        .mini-stat-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .mini-stat-label {
+            font-size: 11px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        .btn-access {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .module-card:hover .btn-access {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .module-card--disabled .btn-access {
+            background: #999;
+            cursor: default;
+        }
+
+        .module-card--disabled .btn-access:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        @media (max-width: 768px) {
+            .modules-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        #auth-status .auth-user-info { font-size: 0.95rem; font-weight: 600; color: #667eea; }
+        #auth-status .auth-btn-login, #auth-status .auth-btn-logout { font-size: 0.95rem; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        #auth-status .auth-btn-login { background: rgba(102,126,234,0.15); color: #667eea; }
+        #auth-status .auth-btn-login:hover { background: rgba(102,126,234,0.25); }
+        #auth-status .auth-btn-logout { color: #666; }
+        #auth-status .auth-btn-logout:hover { color: #dc3545; }
+
+        a.header-home-link {
+            text-decoration: none;
+            color: inherit;
+            cursor: pointer;
+        }
+        .header-text a.header-home-link {
+            color: #667eea;
+        }
+        a.header-home-link:hover {
+            opacity: 0.92;
+        }
+        .header-logo a.header-home-link {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-inner">
+                <div class="header-logo">
+                    <a href="index.html" class="header-home-link" title="Tải lại trang chủ" aria-label="Tải lại trang chủ">
+                        <img src="images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc">
+                    </a>
+                </div>
+                <div class="header-text">
+                    <h1><a href="index.html" class="header-home-link header-home-title" title="Tải lại trang chủ">Hệ thống Quản lý KHCN & ĐMST</a></h1>
+                    <p>Viện Tế bào gốc - Trường ĐHKHTN, ĐHQG TP.HCM</p>
+                    <span id="standard-label-badge" class="standard-badge" style="display:none;"></span>
+                </div>
+                <div id="auth-status" style="margin-left: auto; display: flex; align-items: center; gap: 0.75rem;"></div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card" data-stat="missions">
+                <div class="stat-icon" aria-hidden="true"><span class="stat-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg></span></div>
+                <div class="stat-number">—</div>
+                <div class="stat-label">Nhiệm vụ KHCN</div>
+            </div>
+            <div class="stat-card" data-stat="personnel">
+                <div class="stat-icon" aria-hidden="true"><span class="stat-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg></span></div>
+                <div class="stat-number">—</div>
+                <div class="stat-label">Nhân lực KHCN</div>
+            </div>
+            <div class="stat-card" data-stat="ip">
+                <div class="stat-icon" aria-hidden="true"><span class="stat-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"></path><path d="M3 22h18"></path><path d="M14 22a7 7 0 1 0 0-14h-1"></path><path d="M9 14h2"></path><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"></path><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"></path></svg></span></div>
+                <div class="stat-number">—</div>
+                <div class="stat-label">Tài sản trí tuệ</div>
+            </div>
+            <div class="stat-card" data-stat="publications">
+                <div class="stat-icon" aria-hidden="true"><span class="stat-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg></span></div>
+                <div class="stat-number">—</div>
+                <div class="stat-label">Công bố khoa học</div>
+            </div>
+            <div class="stat-card" data-stat="cooperation">
+                <div class="stat-icon" aria-hidden="true"><span class="stat-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"></path><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"></path><path d="m21 3 1 11h-2"></path><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"></path><path d="M3 4h8"></path></svg></span></div>
+                <div class="stat-number">—</div>
+                <div class="stat-label">Hợp tác</div>
+            </div>
+        </div>
+
+        <div class="modules-grid" id="modules-grid">
+            <!-- 1. Quản lý nhiệm vụ KHCN (link) -->
+            <div class="module-card" data-module="missions">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg></span></div>
+                <div class="module-title">Quản lý nhiệm vụ KHCN</div>
+                <div class="module-description">
+                    Quản lý đề tài, dự án, chương trình KHCN các cấp (Nhà nước, Bộ, ĐHQG, Viện). Theo dõi từ đăng ký, xét chọn, phê duyệt đến nghiệm thu.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Đang thực hiện</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Đã hoàn thành</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Quá hạn</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-access" onclick="window.location.href='quan-ly-de-tai-co-so.html'">Truy cập →</button>
+            </div>
+
+            <!-- 2. Hội đồng đạo đức trên động vật (trang ACE) -->
+            <div class="module-card" data-module="ethics_ace">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"></circle><circle cx="18" cy="8" r="2"></circle><circle cx="20" cy="16" r="2"></circle><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z"></path></svg></span></div>
+                <div class="module-title">Hội đồng đạo đức trên động vật</div>
+                <div class="module-description">
+                    Hệ thống hồ sơ đạo đức nghiên cứu động vật (SCI-ACE). Nộp hồ sơ, xét duyệt, quyết định đạo đức. Truy cập trang ACE.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Hồ sơ đạo đức</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Đang xét duyệt</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Đã phê duyệt</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-access" onclick="window.location.href='sci-ace.html'">Truy cập →</button>
+            </div>
+
+            <!-- 3. Quản lý Nhân lực KHCN -->
+            <div class="module-card module-card--disabled" data-module="personnel">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg></span></div>
+                <div class="module-title">Quản lý Nhân lực KHCN</div>
+                <div class="module-description">
+                    Quản lý viên chức, nhóm nghiên cứu mạnh, nhóm chuyên gia, nhóm nghiên cứu trẻ tài năng, người học tham gia NCKH.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Nhóm NC mạnh</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Nhóm chuyên gia</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">SV NCKH</div>
+                    </div>
+                </div>
+                <button class="btn-access">Đang phát triển</button>
+            </div>
+
+            <!-- 4. Quản lý Tài sản Trí tuệ -->
+            <div class="module-card module-card--disabled" data-module="ip">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"></path><path d="M3 22h18"></path><path d="M14 22a7 7 0 1 0 0-14h-1"></path><path d="M9 14h2"></path><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"></path><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"></path></svg></span></div>
+                <div class="module-title">Quản lý Tài sản Trí tuệ</div>
+                <div class="module-description">
+                    Quản lý sáng chế, giải pháp hữu ích, thiết kế công nghiệp, bí mật kinh doanh. Xác lập và bảo vệ quyền SHTT.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Sáng chế</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">GPHU</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Sáng kiến</div>
+                    </div>
+                </div>
+                <button class="btn-access">Đang phát triển</button>
+            </div>
+
+            <!-- 5. Quản lý Tài chính KHCN -->
+            <div class="module-card module-card--disabled" data-module="finance">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path></svg></span></div>
+                <div class="module-title">Quản lý Tài chính KHCN</div>
+                <div class="module-description">
+                    Quản lý ngân sách, dự toán, tạm ứng, thanh quyết toán kinh phí. Theo dõi nguồn kinh phí và phân bổ chi tiêu.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Tổng kinh phí</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Đã giải ngân</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Chờ quyết toán</div>
+                    </div>
+                </div>
+                <button class="btn-access">Đang phát triển</button>
+            </div>
+
+            <!-- 6. Quản lý Công bố Khoa học -->
+            <div class="module-card" data-module="publications">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18h-5"></path><path d="M18 14h-8"></path><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"></path><rect width="8" height="4" x="10" y="6" rx="1"></rect></svg></span></div>
+                <div class="module-title">Quản lý Công bố Khoa học</div>
+                <div class="module-description">
+                    Quản lý bài báo khoa học, sách, giáo trình, kỷ yếu hội nghị. Theo dõi ISI/Scopus, Q1-Q4, hội nghị quốc tế.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">ISI/Scopus</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Hội nghị QT</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Sách</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-access" onclick="window.location.href='cong-bo-khoa-hoc.html'">Truy cập →</button>
+            </div>
+
+            <!-- 7. Quản lý Hợp tác (link tới module Hợp tác Quốc tế) -->
+            <div class="module-card" data-module="cooperation">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"></path><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"></path><path d="m21 3 1 11h-2"></path><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"></path><path d="M3 4h8"></path></svg></span></div>
+                <div class="module-title">Quản lý Hợp tác</div>
+                <div class="module-description">
+                    Quản lý hợp tác trong nước, quốc tế, doanh nghiệp, địa phương. Theo dõi MOU, hợp đồng, dự án hợp tác.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Quốc tế</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Doanh nghiệp</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Địa phương</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-access" onclick="window.location.href='module-hoatac-quocte.html'">Truy cập →</button>
+            </div>
+
+            <!-- 8. Quản lý Chuyển giao Công nghệ -->
+            <div class="module-card module-card--disabled" data-module="tech_transfer">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"></path><path d="M4 7h16"></path><path d="m16 21 4-4-4-4"></path><path d="M20 17H4"></path></svg></span></div>
+                <div class="module-title">Quản lý Chuyển giao Công nghệ</div>
+                <div class="module-description">
+                    Quản lý chuyển giao công nghệ, thương mại hóa kết quả KHCN, tập huấn công nghệ, doanh nghiệp spin-off.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Hợp đồng CGCN</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Thương mại hóa</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Tập huấn</div>
+                    </div>
+                </div>
+                <button class="btn-access">Đang phát triển</button>
+            </div>
+
+            <!-- 9. CRD Lab Booking -->
+            <div class="module-card" data-module="facilities">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12h4"></path><path d="M10 8h4"></path><path d="M14 21v-3a2 2 0 0 0-4 0v3"></path><path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"></path><path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"></path></svg></span></div>
+                <div class="module-title">CRD Lab Booking</div>
+                <div class="module-description">
+                    Đặt lịch sử dụng thiết bị phòng thí nghiệm CRD. Quản lý lịch đặt, thiết bị, người dùng.
+                    <span style="display:block;margin-top:8px;font-size:12px;font-weight:600;">Sinh viên / khách (email bất kỳ): <a href="crd-dang-ky.html" onclick="event.stopPropagation();">Đăng ký CRD</a></span>
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat" data-stat="facilities" data-facility-key="rooms">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Phòng TN</div>
+                    </div>
+                    <div class="mini-stat" data-stat="facilities" data-facility-key="machines">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Thiết bị</div>
+                    </div>
+                    <div class="mini-stat" data-stat="facilities" data-facility-key="utilization">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Tỷ lệ sử dụng</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-access" onclick="goCrdBookingV2()">Truy cập →</button>
+            </div>
+
+            <!-- 10. Đạo đức và Liêm chính khoa học (tách riêng với Hội đồng đạo đức) -->
+            <div class="module-card module-card--disabled" data-module="ethics_integrity">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"></path><path d="m19 8 3 8a5 5 0 0 1-6 0zV7"></path><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"></path><path d="m5 8 3 8a5 5 0 0 1-6 0zV7"></path><path d="M7 21h10"></path></svg></span></div>
+                <div class="module-title">Đạo đức và Liêm chính khoa học</div>
+                <div class="module-description">
+                    Quản lý đạo đức nghiên cứu, liêm chính khoa học, xử lý vi phạm đạo đức, gian lận. Khác với Hội đồng đạo đức trên động vật.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Vụ việc</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Vi phạm</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Đã xử lý</div>
+                    </div>
+                </div>
+                <button class="btn-access">Đang phát triển</button>
+            </div>
+
+            <!-- 11. Quản lý Khen thưởng & Đánh giá -->
+            <div class="module-card module-card--disabled" data-module="reward">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978"></path><path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978"></path><path d="M18 9h1.5a1 1 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z"></path><path d="M6 9H4.5a1 1 0 0 1 0-5H6"></path></svg></span></div>
+                <div class="module-title">Quản lý Khen thưởng & Đánh giá</div>
+                <div class="module-description">
+                    Quản lý thi đua khen thưởng, đánh giá hiệu quả KHCN, xử lý vi phạm, giờ chuẩn, hệ số KHCN.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Khen thưởng</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Giải thưởng</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Vi phạm</div>
+                    </div>
+                </div>
+                <button class="btn-access">Đang phát triển</button>
+            </div>
+        </div>
+    </div>
+    <script src="/node_modules/sortablejs/Sortable.min.js"></script>
+    <script src="js/auth-status.js"></script>
+    <script>
+        window.goCrdBookingV2 = function () {
+            try {
+                var raw = localStorage.getItem('user');
+                if (raw) {
+                    var u = JSON.parse(raw);
+                    if (u && u.id != null) {
+                        var name = (u.fullname || u.email || '').trim() || 'Người dùng';
+                        var avatar = name.charAt(0).toUpperCase() || '?';
+                        var role = (u.role || 'user').toLowerCase() === 'admin' ? 'admin' : 'user';
+                        localStorage.setItem('crd_user', JSON.stringify({
+                            id: String(u.id),
+                            name: name,
+                            email: u.email || '',
+                            role: role,
+                            avatar: avatar
+                        }));
+                    }
+                }
+            } catch (e) {}
+            window.location.href = 'crd-booking-v2.html';
+        };
+    </script>
+    <script>
+        (function() {
+            var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000'))
+                ? 'http://localhost:3000' : '';
+            var token = localStorage.getItem('token');
+            var isAdmin = false;
+            try {
+                var u = JSON.parse(localStorage.getItem('user') || '{}');
+                isAdmin = (u.role || '').toLowerCase() === 'admin';
+            } catch (e) {}
+            var LS_ORDER_KEY = 'homepage_module_order';
+            var HOMEPAGE_CODES = ['missions','ethics_ace','personnel','ip','finance','publications','cooperation','tech_transfer','facilities','ethics_integrity','reward'];
+            function distinctSortOrderCount(modules) {
+                var seen = {};
+                var n = 0;
+                for (var i = 0; i < modules.length; i++) {
+                    var v = modules[i].sort_order;
+                    var num = typeof v === 'number' ? v : parseInt(v, 10);
+                    if (isNaN(num)) num = 0;
+                    var k = String(num);
+                    if (!seen[k]) { seen[k] = true; n++; }
+                }
+                return n;
+            }
+            function isValidCodeOrder(arr) {
+                if (!Array.isArray(arr) || arr.length !== HOMEPAGE_CODES.length) return false;
+                var set = {};
+                for (var i = 0; i < HOMEPAGE_CODES.length; i++) set[HOMEPAGE_CODES[i]] = true;
+                for (var j = 0; j < arr.length; j++) {
+                    if (!set[arr[j]]) return false;
+                }
+                return true;
+            }
+            function isEqualOrder(a, b) {
+                if (!a || !b || a.length !== b.length) return false;
+                for (var i = 0; i < a.length; i++) { if (a[i] !== b[i]) return false; }
+                return true;
+            }
+            function isDefaultServerOrder(codes) {
+                if (!codes || codes.length !== HOMEPAGE_CODES.length) return false;
+                for (var i = 0; i < HOMEPAGE_CODES.length; i++) {
+                    if (codes[i] !== HOMEPAGE_CODES[i]) return false;
+                }
+                return true;
+            }
+            function applyOrderFromCodes(grid, codes) {
+                if (!grid || !codes || !codes.length) return;
+                for (var i = 0; i < codes.length; i++) {
+                    var card = grid.querySelector('.module-card[data-module="' + codes[i] + '"]');
+                    if (card) grid.appendChild(card);
+                }
+            }
+            function applyHomepageModulesLayout(data) {
+                var grid = document.getElementById('modules-grid');
+                if (!grid || !data || !data.modules || !data.modules.length) return;
+                var serverCodes = data.modules.map(function(m) { return m.code; });
+                var distinct = distinctSortOrderCount(data.modules);
+                var savedOrder = null;
+                try { savedOrder = JSON.parse(localStorage.getItem(LS_ORDER_KEY) || 'null'); } catch (e2) {}
+                var finalOrder = serverCodes;
+                if (distinct <= 1) {
+                    if (isValidCodeOrder(savedOrder)) finalOrder = savedOrder;
+                    else finalOrder = HOMEPAGE_CODES;
+                } else if (isAdmin && isValidCodeOrder(savedOrder) && isDefaultServerOrder(serverCodes) && !isEqualOrder(serverCodes, savedOrder)) {
+                    finalOrder = savedOrder;
+                    var tokSync = localStorage.getItem('token');
+                    if (tokSync) {
+                        fetch(apiBase + '/api/admin/homepage-modules/reorder', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tokSync },
+                            body: JSON.stringify({ order: finalOrder })
+                        }).catch(function() {});
+                    }
+                }
+                applyOrderFromCodes(grid, finalOrder);
+                try { localStorage.setItem(LS_ORDER_KEY, JSON.stringify(finalOrder)); } catch (e3) {}
+            }
+            function loadHomepageStats() {
+                fetch(apiBase + '/api/homepage-stats')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data) return;
+                        document.querySelectorAll('.stat-card[data-stat]').forEach(function(card) {
+                            var key = card.getAttribute('data-stat');
+                            var numEl = card.querySelector('.stat-number');
+                            if (!numEl) return;
+                            var val = data[key];
+                            // facilities là object {machines, rooms, utilization} — lấy sub-key từ data-facility-key
+                            if (typeof val === 'object' && val !== null && card.hasAttribute('data-facility-key')) {
+                                var subKey = card.getAttribute('data-facility-key');
+                                var subVal = val ? val[subKey] : undefined;
+                                numEl.textContent = (typeof subVal === 'number') ? subVal : (subVal != null ? subVal : '—');
+                            } else {
+                                numEl.textContent = (typeof val === 'number') ? val : (val != null ? val : '—');
+                            }
+                        });
+                    })
+                    .catch(function() {});
+            }
+            try {
+                fetch(apiBase + '/api/homepage-modules')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data || !data.modules) return;
+                        var grid = document.getElementById('modules-grid');
+                        if (grid) {
+                            applyHomepageModulesLayout(data);
+                        }
+                        var map = {};
+                        data.modules.forEach(function(m) { map[m.code] = !!m.enabled; });
+                        document.querySelectorAll('.module-card[data-module]').forEach(function(card) {
+                            var code = card.getAttribute('data-module');
+                            var enabled = map.hasOwnProperty(code) ? map[code] : true;
+                            if (code === 'cooperation') enabled = true;
+                            if (!enabled) {
+                                card.classList.add('module-card--disabled');
+                                card.style.opacity = '0.6';
+                                if (!isAdmin) card.style.pointerEvents = 'none';
+                                else card.style.pointerEvents = '';
+                                var btn = card.querySelector('.btn-access');
+                                if (btn) btn.textContent = 'Đang tạm khóa';
+                            } else {
+                                card.classList.remove('module-card--disabled');
+                                card.style.opacity = '';
+                                card.style.pointerEvents = '';
+                            }
+                        });
+                        if (isAdmin && typeof Sortable !== 'undefined' && grid && !grid._homepageSortable) {
+                            grid.classList.add('modules-grid--admin-sort');
+                            grid._homepageSortable = Sortable.create(grid, {
+                                animation: 150,
+                                draggable: '.module-card',
+                                filter: '.btn-access',
+                                preventOnFilter: true,
+                                ghostClass: 'module-card--sort-ghost',
+                                chosenClass: 'module-card--sort-chosen',
+                                onEnd: function() {
+                                    var order = Array.from(grid.querySelectorAll('.module-card[data-module]')).map(function(el) {
+                                        return el.getAttribute('data-module');
+                                    });
+                                    try { localStorage.setItem(LS_ORDER_KEY, JSON.stringify(order)); } catch (e4) {}
+                                    var tok = localStorage.getItem('token');
+                                    fetch(apiBase + '/api/admin/homepage-modules/reorder', {
+                                        method: 'PUT',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Authorization': 'Bearer ' + (tok || '')
+                                        },
+                                        body: JSON.stringify({ order: order })
+                                    }).then(function(res) {
+                                        if (!res.ok) {
+                                            return res.json().then(function(j) {
+                                                throw new Error(j && j.message ? j.message : ('HTTP ' + res.status));
+                                            });
+                                        }
+                                        return res.json();
+                                    }).catch(function(err) {
+                                        console.warn('[Trang chủ] Không lưu được thứ tự module lên máy chủ:', err && err.message ? err.message : err);
+                                    });
+                                }
+                            });
+                        }
+                    })
+                    .catch(function() {
+                        var grid = document.getElementById('modules-grid');
+                        if (!grid) return;
+                        try {
+                            var saved = JSON.parse(localStorage.getItem(LS_ORDER_KEY) || 'null');
+                            if (isValidCodeOrder(saved)) applyOrderFromCodes(grid, saved);
+                        } catch (e0) {}
+                    });
+                fetch(apiBase + '/api/settings/standard-label')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        var badge = document.getElementById('standard-label-badge');
+                        if (!badge) return;
+                        var label = (data && data.label != null) ? String(data.label).trim() : '';
+                        if (label) {
+                            badge.textContent = label;
+                            badge.style.display = 'inline-block';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    })
+                    .catch(function() {});
+                loadHomepageStats();
+                try { clearInterval(window._homepageStatsTimer); } catch (eH) {}
+                window._homepageStatsTimer = setInterval(loadHomepageStats, 90000);
+                document.addEventListener('visibilitychange', function() {
+                    if (document.visibilityState === 'visible') loadHomepageStats();
+                });
+            } catch (e) {
+                // bỏ qua lỗi
+            }
+        })();
+    </script>
+</body>
+</html>

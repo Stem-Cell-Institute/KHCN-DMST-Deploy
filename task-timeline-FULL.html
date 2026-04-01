@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiến trình Đề tài DT-2025-001 - Viện Tế bào gốc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .breadcrumb {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-export {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .btn-export:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .task-header {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .task-code {
+            font-family: monospace;
+            font-size: 14px;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .task-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .task-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .meta-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+        }
+
+        .meta-value {
+            font-size: 15px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .progress-overview {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .progress-bar-container {
+            margin-bottom: 10px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+            transition: width 0.5s;
+        }
+
+        .timeline-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-mini {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stat-mini-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .stat-mini-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .phase-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 30px 0 20px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .phase-header h3 {
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stage-card {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border-left: 5px solid #e0e0e0;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .stage-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .stage-card.completed {
+            border-left-color: #4caf50;
+        }
+
+        .stage-card.active {
+            border-left-color: #ff9800;
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+        }
+
+        .stage-card.pending {
+            border-left-color: #e0e0e0;
+        }
+
+        .stage-card.overdue {
+            border-left-color: #f44336;
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+        }
+
+        .overdue-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #f44336;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            z-index: 10;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .stage-header {
+            padding: 20px 25px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fafafa;
+            transition: all 0.3s;
+        }
+
+        .stage-card.completed .stage-header {
+            background: #f1f8f4;
+        }
+
+        .stage-card.active .stage-header {
+            background: #fff8e1;
+        }
+
+        .stage-card.overdue .stage-header {
+            background: #ffebee;
+        }
+
+        .stage-header:hover {
+            background: #f0f0f0;
+        }
+
+        .stage-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .stage-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            background: #e0e0e0;
+            color: #666;
+            flex-shrink: 0;
+        }
+
+        .stage-card.completed .stage-icon {
+            background: #4caf50;
+            color: white;
+        }
+
+        .stage-card.active .stage-icon {
+            background: #ff9800;
+            color: white;
+        }
+
+        .stage-card.overdue .stage-icon {
+            background: #f44336;
+            color: white;
+        }
+
+        .stage-info {
+            flex: 1;
+        }
+
+        .stage-info h3 {
+            font-size: 17px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .stage-subtitle {
+            font-size: 13px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stage-duration {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .stage-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stage-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-done {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .badge-progress {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .badge-pending {
+            background: #f5f5f5;
+            color: #999;
+        }
+
+        .badge-overdue {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .expand-icon {
+            font-size: 18px;
+            color: #999;
+            transition: transform 0.3s;
+        }
+
+        .stage-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .stage-content {
+            display: none;
+            padding: 25px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .stage-card.expanded .stage-content {
+            display: block;
+        }
+
+        .stage-timeline {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .stage-timeline::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e0e0e0;
+        }
+
+        .timeline-event {
+            position: relative;
+            margin-bottom: 20px;
+            padding-left: 20px;
+        }
+
+        .timeline-event::before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #667eea;
+        }
+
+        .timeline-event.success::before {
+            background: #4caf50;
+            box-shadow: 0 0 0 2px #4caf50;
+        }
+
+        .timeline-event.warning::before {
+            background: #ff9800;
+            box-shadow: 0 0 0 2px #ff9800;
+        }
+
+        .timeline-event.error::before {
+            background: #f44336;
+            box-shadow: 0 0 0 2px #f44336;
+        }
+
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .event-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .event-time {
+            font-size: 12px;
+            color: #999;
+            white-space: nowrap;
+        }
+
+        .event-content {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .event-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .files-section {
+            margin-top: 20px;
+        }
+
+        .files-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .file-item:hover {
+            background: #e8e9ea;
+            border-color: #667eea;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-icon {
+            font-size: 20px;
+        }
+
+        .file-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-name {
+            font-size: 13px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .file-meta {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .btn-download {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 6px 15px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+        }
+
+        .btn-download:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .parallel-stages {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .parallel-label {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f0f0ff;
+            border-radius: 8px;
+        }
+
+        .alert-box {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            color: #2e7d32;
+        }
+
+        .alert-warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            color: #e65100;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            color: #0d47a1;
+        }
+
+        .alert-error {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            color: #c62828;
+        }
+
+        .scroll-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #667eea;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .scroll-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .scroll-to-top:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+        }
+
+        @media (max-width: 968px) {
+            .parallel-stages {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .task-meta {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <button class="back-btn" onclick="window.history.back()">
+                ← Quay lại
+            </button>
+            <div class="breadcrumb">
+                Quản lý Đề tài → Đề tài cấp Viện → Tiến trình chi tiết
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-export" onclick="exportPDF()">📥 Xuất PDF</button>
+            <button class="btn-export" onclick="exportExcel()">📊 Xuất Excel</button>
+            <button class="btn-export" onclick="window.print()">🖨️ In</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Task Header -->
+        <div class="task-header">
+            <div class="task-code">Mã đề tài: DT-2025-001</div>
+            <h1 class="task-title">Nghiên cứu ứng dụng tế bào gốc trung mô trong điều trị bệnh tim mạch</h1>
+            
+            <div class="task-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Chủ nhiệm</span>
+                    <span class="meta-value">TS. Nguyễn Văn A</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Ngày nộp hồ sơ</span>
+                    <span class="meta-value">05/01/2025</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Thời gian thực hiện</span>
+                    <span class="meta-value">24 tháng (01/04/2025 - 31/03/2027)</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Kinh phí phê duyệt</span>
+                    <span class="meta-value">2,375,000,000 VNĐ</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Trạng thái hiện tại</span>
+                    <span class="meta-value" style="color: #4caf50;">✅ Đang thực hiện</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Tiến độ tổng thể</span>
+                    <span class="meta-value">11/18 bước (61%)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Overview -->
+        <div class="progress-overview">
+            <h3 style="margin-bottom: 15px;">Tổng quan tiến độ</h3>
+            <div class="progress-bar-container">
+                <div class="progress-label">
+                    <span>Hoàn thành các bước quản lý</span>
+                    <span><strong>11/18 bước</strong> đã hoàn thành</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 61%;">61%</div>
+                </div>
+            </div>
+
+            <div class="timeline-stats">
+                <div class="stat-mini">
+                    <div class="stat-mini-value" style="color: #4caf50;">11</div>
+                    <div class="stat-mini-label">Bước hoàn thành</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="stat-mini-value" style="color: #ff9800;">1</div>
+                    <div class="stat-mini-label">Đang thực hiện</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="stat-mini-value" style="color: #f44336;">0</div>
+                    <div class="stat-mini-label">Quá hạn</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="stat-mini-value" style="color: #999;">6</div>
+                    <div class="stat-mini-label">Chưa bắt đầu</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline Container -->
+        <div class="timeline-container">
+            
+            <!-- ========== GIAI ĐOẠN 1: ĐĂNG KÝ VÀ XÉT DUYỆT ========== -->
+            <div class="phase-header">
+                <h3>📋 GIAI ĐOẠN 1: ĐĂNG KÝ VÀ XÉT DUYỆT HỒ SƠ (Hoàn thành: 05/01 - 05/02/2025)</h3>
+            </div>
+
+            <!-- Bước 1 -->
+            <div class="stage-card completed">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">✓</div>
+                        <div class="stage-info">
+                            <h3>Bước 1: Nộp hồ sơ đề xuất</h3>
+                            <div class="stage-subtitle">
+                                <span>👤 Nghiên cứu viên</span>
+                                <span class="stage-duration">⏱️ Thực tế: 2 ngày</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-done">✓ Hoàn thành</span>
+                        <span style="font-size: 12px; color: #666;">05/01 → 07/01/2025</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="stage-timeline">
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">📝 Nghiên cứu viên nộp hồ sơ</div>
+                                <div class="event-time">05/01/2025 09:30</div>
+                            </div>
+                            <div class="event-content">
+                                Chủ nhiệm TS. Nguyễn Văn A nộp đầy đủ hồ sơ qua hệ thống online
+                            </div>
+                            <div class="event-user">
+                                <div class="user-avatar">NA</div>
+                                <span>TS. Nguyễn Văn A (nvana@sci.edu.vn)</span>
+                            </div>
+                        </div>
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">✅ Hệ thống tự động sinh mã</div>
+                                <div class="event-time">05/01/2025 09:31</div>
+                            </div>
+                            <div class="event-content">
+                                Mã đề tài: <strong>DT-2025-001</strong>
+                            </div>
+                        </div>
+                        <div class="timeline-event">
+                            <div class="event-header">
+                                <div class="event-title">📧 Email thông báo tự động</div>
+                                <div class="event-time">05/01/2025 09:32</div>
+                            </div>
+                            <div class="event-content">
+                                Gửi đến: Admin, Chủ tịch HĐKHCN, Thư ký, 7 thành viên Hội đồng
+                            </div>
+                        </div>
+                    </div>
+                    <div class="files-section">
+                        <div class="files-title">📎 Hồ sơ đã nộp (4 files):</div>
+                        <div class="file-list">
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📄</span>
+                                    <div class="file-details">
+                                        <div class="file-name">SCI-TASK-01_Don_de_xuat.pdf</div>
+                                        <div class="file-meta">245 KB • 05/01/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download" onclick="downloadFile('file1')">📥 Tải về</button>
+                            </div>
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📄</span>
+                                    <div class="file-details">
+                                        <div class="file-name">SCI-TASK-02_Thuyet_minh.docx</div>
+                                        <div class="file-meta">1.2 MB • 05/01/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download" onclick="downloadFile('file2')">📥 Tải về</button>
+                            </div>
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📊</span>
+                                    <div class="file-details">
+                                        <div class="file-name">SCI-TASK-03_Du_toan.xlsx</div>
+                                        <div class="file-meta">156 KB • 05/01/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download" onclick="downloadFile('file3')">📥 Tải về</button>
+                            </div>
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📄</span>
+                                    <div class="file-details">
+                                        <div class="file-name">CV_nhom_nghien_cuu.pdf</div>
+                                        <div class="file-meta">890 KB • 05/01/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download" onclick="downloadFile('file4')">📥 Tải về</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bước 2 -->
+            <div class="stage-card completed">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">✓</div>
+                        <div class="stage-info">
+                            <h3>Bước 2: Kiểm tra hồ sơ hành chính</h3>
+                            <div class="stage-subtitle">
+                                <span>👤 Thư ký HĐKHCN</span>
+                                <span class="stage-duration">⏱️ Quy định: 3-5 ngày • Thực tế: 3 ngày</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-done">✓ Hoàn thành</span>
+                        <span style="font-size: 12px; color: #666;">07/01 → 10/01/2025</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="stage-timeline">
+                        <div class="timeline-event">
+                            <div class="event-header">
+                                <div class="event-title">🔍 Thư ký kiểm tra hồ sơ</div>
+                                <div class="event-time">07/01/2025 10:00</div>
+                            </div>
+                            <div class="event-content">
+                                Kiểm tra tính đầy đủ, format, điều kiện chủ nhiệm
+                            </div>
+                            <div class="event-user">
+                                <div class="user-avatar">TB</div>
+                                <span>ThS. Trần Thị B - Thư ký HĐKHCN</span>
+                            </div>
+                        </div>
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">✅ Kết luận: Hợp lệ</div>
+                                <div class="event-time">10/01/2025 14:30</div>
+                            </div>
+                            <div class="event-content">
+                                ✓ Hồ sơ đầy đủ 4/4 file<br>
+                                ✓ Format đúng quy định<br>
+                                ✓ Chủ nhiệm đủ điều kiện (TS, 5 năm kinh nghiệm)<br>
+                                → Chuyển Bước 3
+                            </div>
+                        </div>
+                    </div>
+                    <div class="files-section">
+                        <div class="files-title">📎 File tạo ra (1 file):</div>
+                        <div class="file-list">
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📋</span>
+                                    <div class="file-details">
+                                        <div class="file-name">SCI-TASK-04_Phieu_kiem_tra.pdf</div>
+                                        <div class="file-meta">180 KB • 10/01/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bước 3 -->
+            <div class="stage-card completed">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">✓</div>
+                        <div class="stage-info">
+                            <h3>Bước 3: Phân công phản biện</h3>
+                            <div class="stage-subtitle">
+                                <span>👤 Chủ tịch HĐKHCN</span>
+                                <span class="stage-duration">⏱️ Quy định: 2-3 ngày • Thực tế: 2 ngày</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-done">✓ Hoàn thành</span>
+                        <span style="font-size: 12px; color: #666;">10/01 → 12/01/2025</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="stage-timeline">
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">👥 Phân công 2 phản biện</div>
+                                <div class="event-time">12/01/2025 10:15</div>
+                            </div>
+                            <div class="event-content">
+                                <strong>Phản biện 1:</strong> PGS.TS. Lê Văn C (Tế bào gốc)<br>
+                                <strong>Phản biện 2:</strong> PGS.TS. Phạm Thị D (Tim mạch)<br>
+                                Deadline: 22/01/2025
+                            </div>
+                            <div class="event-user">
+                                <div class="user-avatar">CT</div>
+                                <span>GS.TS. Nguyễn Văn X - Chủ tịch HĐKHCN</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bước 4 & 4A Song song -->
+            <div class="parallel-label">⚡ 2 BƯỚC THỰC HIỆN SONG SONG ⚡</div>
+            <div class="parallel-stages">
+                <!-- Bước 4 -->
+                <div class="stage-card completed">
+                    <div class="stage-header" onclick="toggleStage(this)">
+                        <div class="stage-left">
+                            <div class="stage-icon">✓</div>
+                            <div class="stage-info">
+                                <h3>Bước 4: Đánh giá phản biện</h3>
+                                <div class="stage-subtitle">
+                                    <span>👥 2 Phản biện</span>
+                                    <span class="stage-duration">⏱️ 7-10 ngày • Thực tế: 10 ngày</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stage-status">
+                            <span class="stage-badge badge-done">✓ Hoàn thành</span>
+                            <span style="font-size: 12px; color: #666;">12/01 → 22/01</span>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                    </div>
+                    <div class="stage-content">
+                        <div class="stage-timeline">
+                            <div class="timeline-event success">
+                                <div class="event-header">
+                                    <div class="event-title">✅ Phản biện 1 hoàn thành</div>
+                                    <div class="event-time">20/01/2025 16:45</div>
+                                </div>
+                                <div class="event-content">
+                                    <strong>Kết luận:</strong> Đồng ý (85/100 điểm)<br>
+                                    <strong>Nhận xét:</strong> Đề tài có tính khoa học cao
+                                </div>
+                                <div class="event-user">
+                                    <div class="user-avatar">LC</div>
+                                    <span>PGS.TS. Lê Văn C</span>
+                                </div>
+                            </div>
+                            <div class="timeline-event success">
+                                <div class="event-header">
+                                    <div class="event-title">✅ Phản biện 2 hoàn thành</div>
+                                    <div class="event-time">22/01/2025 14:20</div>
+                                </div>
+                                <div class="event-content">
+                                    <strong>Kết luận:</strong> Đồng ý (82/100 điểm)<br>
+                                    <strong>Nhận xét:</strong> Phương pháp rõ ràng, khả thi
+                                </div>
+                                <div class="event-user">
+                                    <div class="user-avatar">PD</div>
+                                    <span>PGS.TS. Phạm Thị D</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="files-section">
+                            <div class="files-title">📎 Phiếu đánh giá (2 files):</div>
+                            <div class="file-list">
+                                <div class="file-item">
+                                    <div class="file-info">
+                                        <span class="file-icon">📋</span>
+                                        <div class="file-details">
+                                            <div class="file-name">SCI-TASK-06_PB1_LeVanC.pdf</div>
+                                            <div class="file-meta">420 KB • 20/01/2025</div>
+                                        </div>
+                                    </div>
+                                    <button class="btn-download">📥 Tải về</button>
+                                </div>
+                                <div class="file-item">
+                                    <div class="file-info">
+                                        <span class="file-icon">📋</span>
+                                        <div class="file-details">
+                                            <div class="file-name">SCI-TASK-06_PB2_PhamThiD.pdf</div>
+                                            <div class="file-meta">385 KB • 22/01/2025</div>
+                                        </div>
+                                    </div>
+                                    <button class="btn-download">📥 Tải về</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bước 4A -->
+                <div class="stage-card completed">
+                    <div class="stage-header" onclick="toggleStage(this)">
+                        <div class="stage-left">
+                            <div class="stage-icon">✓</div>
+                            <div class="stage-info">
+                                <h3>Bước 4A: Thẩm định dự toán</h3>
+                                <div class="stage-subtitle">
+                                    <span>💰 Tổ Thẩm định TC</span>
+                                    <span class="stage-duration">⏱️ 5-7 ngày • Thực tế: 7 ngày</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stage-status">
+                            <span class="stage-badge badge-done">✓ Hoàn thành</span>
+                            <span style="font-size: 12px; color: #666;">15/01 → 22/01</span>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                    </div>
+                    <div class="stage-content">
+                        <div class="stage-timeline">
+                            <div class="timeline-event">
+                                <div class="event-header">
+                                    <div class="event-title">🔍 Bắt đầu thẩm định</div>
+                                    <div class="event-time">16/01/2025 09:00</div>
+                                </div>
+                                <div class="event-content">
+                                    Kiểm tra dự toán 2.5 tỷ VNĐ
+                                </div>
+                                <div class="event-user">
+                                    <div class="user-avatar">VE</div>
+                                    <span>ThS. Vũ Văn E - TP Tài chính</span>
+                                </div>
+                            </div>
+                            <div class="timeline-event warning">
+                                <div class="event-header">
+                                    <div class="event-title">⚠️ Yêu cầu bổ sung</div>
+                                    <div class="event-time">18/01/2025 11:30</div>
+                                </div>
+                                <div class="event-content">
+                                    Thiếu báo giá nhà cung cấp thứ 2
+                                </div>
+                            </div>
+                            <div class="timeline-event success">
+                                <div class="event-header">
+                                    <div class="event-title">✅ Chủ nhiệm bổ sung</div>
+                                    <div class="event-time">19/01/2025 15:20</div>
+                                </div>
+                                <div class="event-content">
+                                    Nộp thêm 2 báo giá hợp lệ
+                                </div>
+                            </div>
+                            <div class="timeline-event success">
+                                <div class="event-header">
+                                    <div class="event-title">✅ Kết luận thẩm định</div>
+                                    <div class="event-time">22/01/2025 16:00</div>
+                                </div>
+                                <div class="event-content">
+                                    <strong>Phê duyệt:</strong> 2,375,000,000 VNĐ (giảm 5%)<br>
+                                    <strong>Lý do:</strong> Tối ưu hóa chi phí thiết bị
+                                </div>
+                            </div>
+                        </div>
+                        <div class="files-section">
+                            <div class="files-title">📎 File thẩm định (2 files):</div>
+                            <div class="file-list">
+                                <div class="file-item">
+                                    <div class="file-info">
+                                        <span class="file-icon">📋</span>
+                                        <div class="file-details">
+                                            <div class="file-name">SCI-BUDGET-01_Phieu_tham_dinh.pdf</div>
+                                            <div class="file-meta">520 KB • 22/01/2025</div>
+                                        </div>
+                                    </div>
+                                    <button class="btn-download">📥 Tải về</button>
+                                </div>
+                                <div class="file-item">
+                                    <div class="file-info">
+                                        <span class="file-icon">📄</span>
+                                        <div class="file-details">
+                                            <div class="file-name">SCI-BUDGET-02_To_trinh.pdf</div>
+                                            <div class="file-meta">380 KB • 22/01/2025</div>
+                                        </div>
+                                    </div>
+                                    <button class="btn-download">📥 Tải về</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bước 5 -->
+            <div class="stage-card completed">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">✓</div>
+                        <div class="stage-info">
+                            <h3>Bước 5: Họp Hội đồng Khoa học Viện</h3>
+                            <div class="stage-subtitle">
+                                <span>👥 HĐKHCN (9 thành viên)</span>
+                                <span class="stage-duration">⏱️ Họp định kỳ</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-done">✓ Hoàn thành</span>
+                        <span style="font-size: 12px; color: #666;">30/01/2025</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="stage-timeline">
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">🏛️ Họp HĐKHCN</div>
+                                <div class="event-time">30/01/2025 14:00</div>
+                            </div>
+                            <div class="event-content">
+                                <strong>Địa điểm:</strong> Phòng họp Hội đồng<br>
+                                <strong>Tham dự:</strong> 9/9 thành viên<br>
+                                <strong>Tài liệu:</strong> Phiếu phản biện + Tờ trình TC<br>
+                                <strong>Kết quả biểu quyết:</strong> 9/9 phiếu Đồng ý<br>
+                                <strong>Quyết định:</strong> ✅ CHẤP THUẬN
+                            </div>
+                        </div>
+                    </div>
+                    <div class="files-section">
+                        <div class="files-title">📎 Biên bản (1 file):</div>
+                        <div class="file-list">
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📋</span>
+                                    <div class="file-details">
+                                        <div class="file-name">SCI-TASK-07_Bien_ban_hop_HDKHCN.pdf</div>
+                                        <div class="file-meta">890 KB • 30/01/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bước 6 -->
+            <div class="stage-card completed">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">✓</div>
+                        <div class="stage-info">
+                            <h3>Bước 6: Cấp Quyết định phê duyệt</h3>
+                            <div class="stage-subtitle">
+                                <span>👤 Viện trưởng</span>
+                                <span class="stage-duration">⏱️ 3-5 ngày • Thực tế: 4 ngày</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-done">✓ Hoàn thành</span>
+                        <span style="font-size: 12px; color: #666;">30/01 → 03/02/2025</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="stage-timeline">
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">✍️ Viện trưởng ký Quyết định</div>
+                                <div class="event-time">03/02/2025 10:30</div>
+                            </div>
+                            <div class="event-content">
+                                <strong>Số QĐ:</strong> 45/QĐ-VTB ngày 03/02/2025<br>
+                                <strong>Kinh phí:</strong> 2,375,000,000 VNĐ<br>
+                                <strong>Thời gian:</strong> 24 tháng (01/04/2025 - 31/03/2027)<br>
+                                <strong>Phí quản lý:</strong> 5% (118,750,000 VNĐ)
+                            </div>
+                            <div class="event-user">
+                                <div class="user-avatar">VT</div>
+                                <span>GS.TS. Nguyễn Văn Y - Viện trưởng</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="files-section">
+                        <div class="files-title">📎 Quyết định (2 files):</div>
+                        <div class="file-list">
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📄</span>
+                                    <div class="file-details">
+                                        <div class="file-name">SCI-ACE-QD_VN_45-2025.pdf</div>
+                                        <div class="file-meta">Tiếng Việt • 450 KB • 03/02/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📄</span>
+                                    <div class="file-details">
+                                        <div class="file-name">SCI-ACE-QD_EN_45-2025.pdf</div>
+                                        <div class="file-meta">English • 420 KB • 03/02/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== GIAI ĐOẠN 2: KÝ HỢP ĐỒNG VÀ TRIỂN KHAI ========== -->
+            <div class="phase-header">
+                <h3>📝 GIAI ĐOẠN 2: KÝ HỢP ĐỒNG VÀ TRIỂN KHAI (Hoàn thành: 03/02 - 25/03/2025)</h3>
+            </div>
+
+            <!-- Bước 7 -->
+            <div class="stage-card completed">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">✓</div>
+                        <div class="stage-info">
+                            <h3>Bước 7: Ký hợp đồng thực hiện</h3>
+                            <div class="stage-subtitle">
+                                <span>✍️ Viện trưởng & Chủ nhiệm</span>
+                                <span class="stage-duration">⏱️ 7-10 ngày • Thực tế: 12 ngày</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-done">✓ Hoàn thành</span>
+                        <span style="font-size: 12px; color: #666;">03/02 → 15/02/2025</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="stage-timeline">
+                        <div class="timeline-event">
+                            <div class="event-header">
+                                <div class="event-title">📝 Soạn thảo hợp đồng</div>
+                                <div class="event-time">05/02/2025 09:00</div>
+                            </div>
+                            <div class="event-content">
+                                Phòng KHCN soạn thảo hợp đồng dựa trên Quyết định
+                            </div>
+                        </div>
+                        <div class="timeline-event">
+                            <div class="event-header">
+                                <div class="event-title">🔍 Chủ nhiệm kiểm tra</div>
+                                <div class="event-time">10/02/2025 14:00</div>
+                            </div>
+                            <div class="event-content">
+                                Chủ nhiệm xác nhận nội dung hợp đồng
+                            </div>
+                        </div>
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">✍️ Ký kết hợp đồng</div>
+                                <div class="event-time">15/02/2025 10:00</div>
+                            </div>
+                            <div class="event-content">
+                                <strong>Bên A:</strong> Viện Tế bào gốc (Viện trưởng ký)<br>
+                                <strong>Bên B:</strong> TS. Nguyễn Văn A (Chủ nhiệm)<br>
+                                <strong>Số HĐ:</strong> 08/HĐ-VTB-2025<br>
+                                <strong>Hiệu lực:</strong> 24 tháng từ 01/04/2025
+                            </div>
+                        </div>
+                    </div>
+                    <div class="files-section">
+                        <div class="files-title">📎 Hợp đồng (1 file):</div>
+                        <div class="file-list">
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📄</span>
+                                    <div class="file-details">
+                                        <div class="file-name">SCI-CONTRACT-01_08-2025.pdf</div>
+                                        <div class="file-meta">1.2 MB • 15/02/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bước 8 -->
+            <div class="stage-card completed">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">✓</div>
+                        <div class="stage-info">
+                            <h3>Bước 8: Đăng ký đạo đức</h3>
+                            <div class="stage-subtitle">
+                                <span>⚖️ Hội đồng Đạo đức</span>
+                                <span class="stage-duration">⏱️ 14-21 ngày • Thực tế: 20 ngày</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-done">✓ Hoàn thành</span>
+                        <span style="font-size: 12px; color: #666;">05/02 → 25/02/2025</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="stage-timeline">
+                        <div class="timeline-event">
+                            <div class="event-header">
+                                <div class="event-title">📝 Nộp hồ sơ đạo đức</div>
+                                <div class="event-time">05/02/2025 11:00</div>
+                            </div>
+                            <div class="event-content">
+                                Đăng ký thí nghiệm trên 40 bệnh nhân tim mạch
+                            </div>
+                        </div>
+                        <div class="timeline-event">
+                            <div class="event-header">
+                                <div class="event-title">🔍 Hội đồng xem xét</div>
+                                <div class="event-time">18/02/2025 14:00</div>
+                            </div>
+                            <div class="event-content">
+                                Họp Hội đồng Đạo đức Viện Tế bào gốc
+                            </div>
+                        </div>
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">✅ Cấp mã đạo đức</div>
+                                <div class="event-time">25/02/2025 09:30</div>
+                            </div>
+                            <div class="event-content">
+                                <strong>Mã đạo đức:</strong> SCI-ETHICS-2025-003<br>
+                                <strong>Hiệu lực:</strong> 24 tháng<br>
+                                <strong>Quyết định:</strong> Chấp thuận
+                            </div>
+                        </div>
+                    </div>
+                    <div class="files-section">
+                        <div class="files-title">📎 Quyết định đạo đức (1 file):</div>
+                        <div class="file-list">
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📄</span>
+                                    <div class="file-details">
+                                        <div class="file-name">SCI-ETHICS-QD-2025-003.pdf</div>
+                                        <div class="file-meta">680 KB • 25/02/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bước 8A: Tạm ứng đợt 1 -->
+            <div class="stage-card completed">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">✓</div>
+                        <div class="stage-info">
+                            <h3>Bước 8A: Tạm ứng kinh phí đợt 1</h3>
+                            <div class="stage-subtitle">
+                                <span>💰 Phòng Tài chính</span>
+                                <span class="stage-duration">⏱️ 7-10 ngày • Thực tế: 10 ngày</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-done">✓ Hoàn thành</span>
+                        <span style="font-size: 12px; color: #666;">15/02 → 25/02/2025</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="stage-timeline">
+                        <div class="timeline-event">
+                            <div class="event-header">
+                                <div class="event-title">📝 Chủ nhiệm làm đơn</div>
+                                <div class="event-time">15/02/2025 10:00</div>
+                            </div>
+                            <div class="event-content">
+                                Đơn xin tạm ứng 40% kinh phí (950 triệu VNĐ)
+                            </div>
+                        </div>
+                        <div class="timeline-event">
+                            <div class="event-header">
+                                <div class="event-title">✅ Phòng TC duyệt</div>
+                                <div class="event-time">20/02/2025 14:00</div>
+                            </div>
+                            <div class="event-content">
+                                Kiểm tra hồ sơ, phê duyệt tạm ứng
+                            </div>
+                        </div>
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">💸 Chuyển tiền</div>
+                                <div class="event-time">25/02/2025 16:00</div>
+                            </div>
+                            <div class="event-content">
+                                <strong>Số tiền:</strong> 950,000,000 VNĐ<br>
+                                <strong>Tài khoản:</strong> TS. Nguyễn Văn A<br>
+                                <strong>Ngân hàng:</strong> Vietcombank
+                            </div>
+                        </div>
+                    </div>
+                    <div class="files-section">
+                        <div class="files-title">📎 Chứng từ (2 files):</div>
+                        <div class="file-list">
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📄</span>
+                                    <div class="file-details">
+                                        <div class="file-name">SCI-FINANCE-01_Don_tam_ung_dot1.pdf</div>
+                                        <div class="file-meta">280 KB • 15/02/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📄</span>
+                                    <div class="file-details">
+                                        <div class="file-name">Phieu_chi_950trieu.pdf</div>
+                                        <div class="file-meta">150 KB • 25/02/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== GIAI ĐOẠN 3: THỰC HIỆN VÀ BÁO CÁO ========== -->
+            <div class="phase-header">
+                <h3>⚙️ GIAI ĐOẠN 3: THỰC HIỆN VÀ BÁO CÁO (24 tháng: 01/04/2025 - 31/03/2027)</h3>
+            </div>
+
+            <!-- Bước 9 -->
+            <div class="stage-card active">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">⏳</div>
+                        <div class="stage-info">
+                            <h3>Bước 9: Thực hiện đề tài</h3>
+                            <div class="stage-subtitle">
+                                <span>👥 Nhóm nghiên cứu</span>
+                                <span class="stage-duration">⏱️ 24 tháng • Đang thực hiện tháng 11/24</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-progress">▶ Đang thực hiện (45%)</span>
+                        <span style="font-size: 12px; color: #ff9800;">01/04/2025 → nay</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="alert-box alert-info">
+                        <span style="font-size: 20px;">ℹ️</span>
+                        <div>
+                            <strong>Tiến độ hiện tại:</strong> Tháng 11/24 (45% thời gian)<br>
+                            <strong>Hoạt động chính:</strong> Thu thập mẫu bệnh nhân, nuôi cấy tế bào gốc, thử nghiệm in vitro<br>
+                            <strong>Kế hoạch tiếp theo:</strong> Bắt đầu thử nghiệm lâm sàng giai đoạn I
+                        </div>
+                    </div>
+
+                    <div class="stage-timeline">
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">🛒 Mua sắm thiết bị</div>
+                                <div class="event-time">15/04/2025</div>
+                            </div>
+                            <div class="event-content">
+                                Mua flow cytometer, tủ nuôi cấy CO2, các hóa chất cần thiết
+                            </div>
+                        </div>
+
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">🧬 Tách chiết tế bào gốc</div>
+                                <div class="event-time">01/06 - 30/09/2025</div>
+                            </div>
+                            <div class="event-content">
+                                Tách chiết từ 30 mẫu mô mỡ, nuôi cấy và mở rộng tế bào
+                            </div>
+                        </div>
+
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">🔬 Thử nghiệm in vitro</div>
+                                <div class="event-time">01/10/2025 - 31/01/2026</div>
+                            </div>
+                            <div class="event-content">
+                                Kiểm tra khả năng biệt hóa, tiết cytokine, tính an toàn
+                            </div>
+                        </div>
+
+                        <div class="timeline-event">
+                            <div class="event-header">
+                                <div class="event-title">👨‍⚕️ Tuyển bệnh nhân</div>
+                                <div class="event-time">01/02/2026 - nay</div>
+                            </div>
+                            <div class="event-content">
+                                Đã tuyển được 15/40 bệnh nhân suy tim độ II-III theo tiêu chí
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="files-section">
+                        <div class="files-title">📎 Lab notebook & Dữ liệu:</div>
+                        <div class="file-list">
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📊</span>
+                                    <div class="file-details">
+                                        <div class="file-name">Lab_notebook_2025.pdf</div>
+                                        <div class="file-meta">15.2 MB • Cập nhật liên tục</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📊</span>
+                                    <div class="file-details">
+                                        <div class="file-name">Du_lieu_flow_cytometry.xlsx</div>
+                                        <div class="file-meta">3.8 MB • 30/01/2026</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bước 10 -->
+            <div class="stage-card completed">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">✓</div>
+                        <div class="stage-info">
+                            <h3>Bước 10: Báo cáo tiến độ 6 tháng (lần 1)</h3>
+                            <div class="stage-subtitle">
+                                <span>📊 Chủ nhiệm báo cáo</span>
+                                <span class="stage-duration">⏱️ Định kỳ</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-done">✓ Hoàn thành</span>
+                        <span style="font-size: 12px; color: #666;">30/09/2025</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="stage-timeline">
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">📝 Nộp báo cáo tiến độ</div>
+                                <div class="event-time">25/09/2025</div>
+                            </div>
+                            <div class="event-content">
+                                Báo cáo 6 tháng đầu: Đạt 90% kế hoạch
+                            </div>
+                        </div>
+
+                        <div class="timeline-event success">
+                            <div class="event-header">
+                                <div class="event-title">🏛️ Họp báo cáo</div>
+                                <div class="event-time">30/09/2025</div>
+                            </div>
+                            <div class="event-content">
+                                <strong>Kết luận:</strong> Tiến độ tốt, cho phép tiếp tục<br>
+                                <strong>Phê duyệt:</strong> Tạm ứng đợt 2 (40% = 950 triệu VNĐ)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="files-section">
+                        <div class="files-title">📎 Báo cáo (2 files):</div>
+                        <div class="file-list">
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📄</span>
+                                    <div class="file-details">
+                                        <div class="file-name">SCI-ACE-07_Bao_cao_6thang_lan1.pdf</div>
+                                        <div class="file-meta">2.5 MB • 25/09/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                            <div class="file-item">
+                                <div class="file-info">
+                                    <span class="file-icon">📊</span>
+                                    <div class="file-details">
+                                        <div class="file-name">Bien_ban_hop_bao_cao.pdf</div>
+                                        <div class="file-meta">680 KB • 30/09/2025</div>
+                                    </div>
+                                </div>
+                                <button class="btn-download">📥 Tải về</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bước 10A: Báo cáo lần 2 (pending future) -->
+            <div class="stage-card pending">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">⏸</div>
+                        <div class="stage-info">
+                            <h3>Bước 10A: Báo cáo tiến độ 6 tháng (lần 2)</h3>
+                            <div class="stage-subtitle">
+                                <span>📊 Chủ nhiệm báo cáo</span>
+                                <span class="stage-duration">⏱️ Dự kiến: 31/03/2026</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-pending">⏸ Chưa đến hạn</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div style="padding: 30px; text-align: center; color: #999;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📅</div>
+                        <div style="font-size: 14px;">Báo cáo giữa kỳ lần 2 sẽ đến hạn vào <strong>31/03/2026</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bước 11: Điều chỉnh (nếu có) -->
+            <div class="stage-card pending">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">⏸</div>
+                        <div class="stage-info">
+                            <h3>Bước 11: Điều chỉnh nội dung/nhân sự (nếu cần)</h3>
+                            <div class="stage-subtitle">
+                                <span>📝 Chủ nhiệm đề xuất</span>
+                                <span class="stage-duration">⏱️ Khi cần thiết</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-pending">⏸ Chưa phát sinh</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div style="padding: 30px; text-align: center; color: #999;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">✏️</div>
+                        <div style="font-size: 14px;">
+                            Bước này chỉ kích hoạt khi cần điều chỉnh:<br>
+                            • Thay đổi nhân sự chính<br>
+                            • Điều chỉnh kế hoạch nghiên cứu<br>
+                            • Thay đổi dự toán (±10%)<br>
+                            • Gia hạn thời gian
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== GIAI ĐOẠN 4: NGHIỆM THU ========== -->
+            <div class="phase-header">
+                <h3>🎯 GIAI ĐOẠN 4: NGHIỆM THU (Dự kiến: 04-06/2027)</h3>
+            </div>
+
+            <!-- Bước 12-18: Tất cả pending -->
+            <div class="stage-card pending">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-left">
+                        <div class="stage-icon">⏸</div>
+                        <div class="stage-info">
+                            <h3>Bước 12: Nộp hồ sơ nghiệm thu</h3>
+                            <div class="stage-subtitle">
+                                <span>👤 Chủ nhiệm</span>
+                                <span class="stage-duration">⏱️ Dự kiến: 01/04/2027</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-pending">⏸ Chưa bắt đầu</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                <div class="stage-content">
+                    <div class="alert-box alert-info">
+                        <span style="font-size: 20px;">📋</span>
+                        <div>
+                            <strong>Hồ sơ nghiệm thu cần chuẩn bị:</strong><br>
+                            • Báo cáo tổng kết (30-40 trang)<br>
+                            • Báo cáo tài chính quyết toán + chứng từ<br>
+                            • Sản phẩm: Bài báo ISI/Scopus (đã nộp/xuất bản)<br>
+                            • Tóm tắt tiếng Anh (2-3 trang)<br>
+                            • Video giới thiệu công trình (nếu có)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stage-card pending">
+                <div class="stage-header">
+                    <div class="stage-left">
+                        <div class="stage-icon">⏸</div>
+                        <div class="stage-info">
+                            <h3>Bước 13-14: Phản biện nghiệm thu</h3>
+                            <div class="stage-subtitle">
+                                <span>⏱️ 10-14 ngày</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-pending">⏸ Chưa bắt đầu</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stage-card pending">
+                <div class="stage-header">
+                    <div class="stage-left">
+                        <div class="stage-icon">⏸</div>
+                        <div class="stage-info">
+                            <h3>Bước 15: Họp Hội đồng nghiệm thu</h3>
+                            <div class="stage-subtitle">
+                                <span>👥 HĐNT (≥7 thành viên, 2/3 ngoài Viện)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-pending">⏸ Chưa bắt đầu</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stage-card pending">
+                <div class="stage-header">
+                    <div class="stage-left">
+                        <div class="stage-icon">⏸</div>
+                        <div class="stage-info">
+                            <h3>Bước 16: Quyết định nghiệm thu</h3>
+                            <div class="stage-subtitle">
+                                <span>👤 Viện trưởng</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-pending">⏸ Chưa bắt đầu</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stage-card pending">
+                <div class="stage-header">
+                    <div class="stage-left">
+                        <div class="stage-icon">⏸</div>
+                        <div class="stage-info">
+                            <h3>Bước 17: Bàn giao sản phẩm & Lưu trữ</h3>
+                            <div class="stage-subtitle">
+                                <span>👤 Chủ nhiệm</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-pending">⏸ Chưa bắt đầu</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stage-card pending">
+                <div class="stage-header">
+                    <div class="stage-left">
+                        <div class="stage-icon">⏸</div>
+                        <div class="stage-info">
+                            <h3>Bước 18: Thanh lý hợp đồng</h3>
+                            <div class="stage-subtitle">
+                                <span>✍️ Viện trưởng & Chủ nhiệm</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stage-status">
+                        <span class="stage-badge badge-pending">⏸ Chưa bắt đầu</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scroll to top button -->
+    <div class="scroll-to-top" id="scrollToTop" onclick="scrollToTop()">
+        ↑
+    </div>
+
+    <script>
+        function toggleStage(element) {
+            const stageCard = element.closest('.stage-card');
+            stageCard.classList.toggle('expanded');
+        }
+
+        function downloadFile(fileId) {
+            console.log('Downloading file:', fileId);
+            alert('Tải file: ' + fileId);
+        }
+
+        function exportPDF() {
+            alert('Xuất PDF - Tính năng đang phát triển');
+        }
+
+        function exportExcel() {
+            alert('Xuất Excel - Tính năng đang phát triển');
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Show/hide scroll to top button
+        window.addEventListener('scroll', () => {
+            const scrollBtn = document.getElementById('scrollToTop');
+            if (window.pageYOffset > 300) {
+                scrollBtn.classList.add('visible');
+            } else {
+                scrollBtn.classList.remove('visible');
+            }
+        });
+
+        // Auto-expand active stages on load
+        window.addEventListener('load', () => {
+            const activeCards = document.querySelectorAll('.stage-card.active, .stage-card.overdue');
+            activeCards.forEach(card => {
+                card.classList.add('expanded');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Tài sản Trí tuệ - Viện Tế bào gốc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .breadcrumb {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .breadcrumb a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+        }
+
+        .menu-section {
+            padding: 20px;
+        }
+
+        .menu-title {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .menu-item {
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .menu-item:hover {
+            background: #f0f0f0;
+        }
+
+        .menu-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .menu-item .icon {
+            font-size: 18px;
+        }
+
+        .menu-item .badge {
+            margin-left: auto;
+            background: #ff4757;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            color: #333;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success { background: #6bcf7f; color: white; }
+        .btn-warning { background: #ffd93d; color: #333; }
+        .btn-danger { background: #ff4757; color: white; }
+        .btn-info { background: #6bceff; color: #333; }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .stat-change.up { color: #6bcf7f; }
+
+        .ip-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .ip-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+            border-top: 4px solid transparent;
+        }
+
+        .ip-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .ip-card.patent { border-top-color: #667eea; }
+        .ip-card.utility { border-top-color: #6bcf7f; }
+        .ip-card.design { border-top-color: #ffd93d; }
+        .ip-card.trademark { border-top-color: #ff4757; }
+        .ip-card.trade-secret { border-top-color: #6bceff; }
+
+        .ip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .ip-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .ip-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .ip-code {
+            font-size: 12px;
+            color: #999;
+            font-family: monospace;
+        }
+
+        .ip-info {
+            margin: 15px 0;
+        }
+
+        .ip-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .ip-info-label {
+            color: #666;
+        }
+
+        .ip-info-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-pending { background: #fff3e0; color: #f57c00; }
+        .status-registered { background: #e8f5e9; color: #388e3c; }
+        .status-granted { background: #e3f2fd; color: #1976d2; }
+        .status-expired { background: #ffebee; color: #c62828; }
+        .status-rejected { background: #fce4ec; color: #c2185b; }
+
+        .type-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .type-patent { background: #e3f2fd; color: #1976d2; }
+        .type-utility { background: #e8f5e9; color: #388e3c; }
+        .type-design { background: #fff3e0; color: #f57c00; }
+        .type-trademark { background: #fce4ec; color: #c2185b; }
+        .type-trade-secret { background: #e1f5fe; color: #0277bd; }
+
+        .filter-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f8f9fa;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            font-size: 14px;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .tab-container {
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .form-group-full {
+            grid-column: 1 / -1;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e0e0e0;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            padding-left: 20px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #667eea;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #667eea;
+        }
+
+        .timeline-date {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-info { background: #e3f2fd; color: #1976d2; }
+        .alert-warning { background: #fff3e0; color: #f57c00; }
+        .alert-success { background: #e8f5e9; color: #388e3c; }
+        .alert-danger { background: #ffebee; color: #c62828; }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+            }
+
+            .ip-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🔬 Quản lý Tài sản Trí tuệ</h1>
+            <div class="breadcrumb">
+                <a href="index.html">🏠 Trang chủ</a> / Tài sản Trí tuệ
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="menu-section">
+                <div class="menu-title">Quản lý SHTT</div>
+                <div class="menu-item active" onclick="showSection('overview')">
+                    <span class="icon">📊</span>
+                    <span>Tổng quan</span>
+                </div>
+                <div class="menu-item" onclick="showSection('register')">
+                    <span class="icon">➕</span>
+                    <span>Đăng ký SHTT mới</span>
+                </div>
+                <div class="menu-item" onclick="showSection('portfolio')">
+                    <span class="icon">📁</span>
+                    <span>Danh mục SHTT</span>
+                    <span class="badge">42</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Theo loại</div>
+                <div class="menu-item" onclick="filterByType('patent')">
+                    <span class="icon">🔬</span>
+                    <span>Sáng chế</span>
+                    <span class="badge">18</span>
+                </div>
+                <div class="menu-item" onclick="filterByType('utility')">
+                    <span class="icon">💡</span>
+                    <span>Giải pháp hữu ích</span>
+                    <span class="badge">24</span>
+                </div>
+                <div class="menu-item" onclick="filterByType('design')">
+                    <span class="icon">🎨</span>
+                    <span>Kiểu dáng công nghiệp</span>
+                    <span class="badge">5</span>
+                </div>
+                <div class="menu-item" onclick="filterByType('trademark')">
+                    <span class="icon">®️</span>
+                    <span>Nhãn hiệu</span>
+                    <span class="badge">3</span>
+                </div>
+                <div class="menu-item" onclick="filterByType('trade-secret')">
+                    <span class="icon">🔒</span>
+                    <span>Bí mật kinh doanh</span>
+                    <span class="badge">12</span>
+                </div>
+                <div class="menu-item" onclick="filterByType('innovation')">
+                    <span class="icon">⭐</span>
+                    <span>Sáng kiến</span>
+                    <span class="badge">35</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Theo trạng thái</div>
+                <div class="menu-item" onclick="filterByStatus('pending')">
+                    <span class="icon">⏳</span>
+                    <span>Đang xử lý</span>
+                    <span class="badge">8</span>
+                </div>
+                <div class="menu-item" onclick="filterByStatus('registered')">
+                    <span class="icon">📝</span>
+                    <span>Đã đăng ký</span>
+                    <span class="badge">12</span>
+                </div>
+                <div class="menu-item" onclick="filterByStatus('granted')">
+                    <span class="icon">✅</span>
+                    <span>Đã cấp bằng</span>
+                    <span class="badge">28</span>
+                </div>
+                <div class="menu-item" onclick="filterByStatus('expired')">
+                    <span class="icon">⏰</span>
+                    <span>Hết hạn</span>
+                    <span class="badge">3</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">Báo cáo</div>
+                <div class="menu-item" onclick="showSection('statistics')">
+                    <span class="icon">📈</span>
+                    <span>Thống kê SHTT</span>
+                </div>
+                <div class="menu-item" onclick="showSection('valuation')">
+                    <span class="icon">💰</span>
+                    <span>Định giá SHTT</span>
+                </div>
+                <div class="menu-item" onclick="showSection('exploitation')">
+                    <span class="icon">🔄</span>
+                    <span>Khai thác SHTT</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <!-- Overview Section -->
+            <div id="overview-section" class="section">
+                <div class="page-header">
+                    <h2 class="page-title">Tổng quan Tài sản Trí tuệ</h2>
+                    <button class="btn btn-primary" onclick="openRegisterIPModal()">
+                        ➕ Đăng ký SHTT mới
+                    </button>
+                </div>
+
+                <div class="alert alert-warning">
+                    <span>⚠️</span>
+                    <div>
+                        <strong>Lưu ý:</strong> Có 3 đơn sáng chế sắp hết hạn bảo hộ trong vòng 6 tháng tới. 
+                        <a href="#" style="color: #f57c00; text-decoration: underline;">Xem chi tiết</a>
+                    </div>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-label">Tổng số SHTT</div>
+                        <div class="stat-value">42</div>
+                        <div class="stat-change up">↗ +5 trong năm nay</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Sáng chế</div>
+                        <div class="stat-value">18</div>
+                        <div class="stat-change">15 đã cấp bằng</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Giải pháp hữu ích</div>
+                        <div class="stat-value">24</div>
+                        <div class="stat-change">20 đã cấp bằng</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Sáng kiến</div>
+                        <div class="stat-value">35</div>
+                        <div class="stat-change up">↗ +8 sáng kiến mới</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Giá trị ước tính</div>
+                        <div class="stat-value">28 tỷ</div>
+                        <div class="stat-change up">↗ +12% so với năm trước</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Đang khai thác</div>
+                        <div class="stat-value">12</div>
+                        <div class="stat-change">Thu 2.5 tỷ/năm</div>
+                    </div>
+                </div>
+
+                <div class="filter-bar">
+                    <h3 style="margin-bottom: 15px;">Tìm kiếm & Lọc</h3>
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label>Tìm kiếm</label>
+                            <input type="text" placeholder="Tên, mã số, tác giả..." id="searchInput">
+                        </div>
+                        <div class="form-group">
+                            <label>Loại SHTT</label>
+                            <select id="typeFilter">
+                                <option value="">Tất cả</option>
+                                <option value="patent">Sáng chế</option>
+                                <option value="utility">Giải pháp hữu ích</option>
+                                <option value="design">Kiểu dáng công nghiệp</option>
+                                <option value="trademark">Nhãn hiệu</option>
+                                <option value="trade-secret">Bí mật kinh doanh</option>
+                                <option value="innovation">Sáng kiến</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Trạng thái</label>
+                            <select id="statusFilter">
+                                <option value="">Tất cả</option>
+                                <option value="pending">Đang xử lý</option>
+                                <option value="registered">Đã đăng ký</option>
+                                <option value="granted">Đã cấp bằng</option>
+                                <option value="expired">Hết hạn</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Năm</label>
+                            <select id="yearFilter">
+                                <option value="">Tất cả</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="margin: 30px 0 20px;">Danh mục Tài sản Trí tuệ</h3>
+                <div class="ip-grid" id="ipGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register IP Modal -->
+    <div id="registerIPModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Đăng ký Tài sản Trí tuệ mới</h2>
+                <button class="close-btn" onclick="closeRegisterIPModal()">&times;</button>
+            </div>
+
+            <div class="tab-container">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab(event, 'ip-basic')">Thông tin cơ bản</button>
+                    <button class="tab" onclick="switchTab(event, 'ip-authors')">Tác giả</button>
+                    <button class="tab" onclick="switchTab(event, 'ip-technical')">Thông tin kỹ thuật</button>
+                    <button class="tab" onclick="switchTab(event, 'ip-documents')">Hồ sơ</button>
+                </div>
+
+                <div id="ip-basic" class="tab-content active">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Loại SHTT *</label>
+                            <select required>
+                                <option value="">Chọn loại...</option>
+                                <option value="patent">Sáng chế</option>
+                                <option value="utility">Giải pháp hữu ích</option>
+                                <option value="design">Kiểu dáng công nghiệp</option>
+                                <option value="trademark">Nhãn hiệu</option>
+                                <option value="trade-secret">Bí mật kinh doanh</option>
+                                <option value="innovation">Sáng kiến</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Mã nội bộ</label>
+                            <input type="text" placeholder="VD: IP-2025-001">
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Tên SHTT *</label>
+                            <input type="text" placeholder="Nhập tên đầy đủ của tài sản trí tuệ" required>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Tóm tắt</label>
+                            <textarea placeholder="Mô tắt ngắn gọn về SHTT" rows="3"></textarea>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Lĩnh vực ứng dụng</label>
+                            <input type="text" placeholder="VD: Y sinh học, Công nghệ tế bào gốc">
+                        </div>
+                        <div class="form-group">
+                            <label>Ngày hoàn thành</label>
+                            <input type="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Nguồn kinh phí</label>
+                            <select>
+                                <option value="">Chọn nguồn...</option>
+                                <option value="state">Ngân sách Nhà nước</option>
+                                <option value="institute">Ngân sách Viện</option>
+                                <option value="self">Tự có</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ip-authors" class="tab-content">
+                    <div class="form-grid">
+                        <div class="form-group form-group-full">
+                            <label>Tác giả chính *</label>
+                            <select required>
+                                <option value="">Chọn tác giả...</option>
+                                <option value="1">TS. Nguyễn Văn A</option>
+                                <option value="2">PGS.TS. Trần Thị B</option>
+                                <option value="3">TS. Lê Văn C</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Đồng tác giả</label>
+                            <textarea placeholder="Nhập danh sách đồng tác giả (mỗi người một dòng)" rows="4"></textarea>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Tỷ lệ đóng góp (%)</label>
+                            <textarea placeholder="Tác giả 1: 50%, Tác giả 2: 30%, Tác giả 3: 20%" rows="3"></textarea>
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label>Chủ sở hữu</label>
+                            <select>
+                                <option value="institute">Viện Tế bào gốc</option>
+                                <option value="university">ĐHQG TP.HCM</option>
+                                <option value="shared">Đồng sở hữu</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ip-technical" class="tab-content">
+                    <div class="form-group">
+                        <label>Mô tả kỹ thuật chi tiết</label>
+                        <textarea placeholder="Mô tả chi tiết về giải pháp kỹ thuật, quy trình, phương pháp..." rows="6"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Tính mới, tính sáng tạo</label>
+                        <textarea placeholder="Nêu rõ điểm mới, điểm khác biệt so với các giải pháp hiện có" rows="4"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Lợi ích, ứng dụng</label>
+                        <textarea placeholder="Lợi ích mang lại, phạm vi ứng dụng, khả năng thương mại hóa" rows="4"></textarea>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Giá trị ước tính (VNĐ)</label>
+                            <input type="number" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Thời hạn bảo hộ dự kiến</label>
+                            <select>
+                                <option value="20">20 năm (Sáng chế)</option>
+                                <option value="10">10 năm (GPHU)</option>
+                                <option value="5">5 năm (Kiểu dáng)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ip-documents" class="tab-content">
+                    <div class="alert alert-info">
+                        <span>ℹ️</span>
+                        <div>Vui lòng chuẩn bị đầy đủ hồ sơ theo quy định để đăng ký SHTT</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Tài liệu đính kèm</label>
+                        <input type="file" multiple>
+                        <small style="color: #999; display: block; margin-top: 5px;">
+                            Chấp nhận: PDF, DOC, DOCX, JPG, PNG (tối đa 10MB/file)
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>Ghi chú</label>
+                        <textarea placeholder="Ghi chú thêm về hồ sơ, tài liệu..." rows="4"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-warning" onclick="closeRegisterIPModal()">Hủy</button>
+                <button class="btn btn-info" onclick="saveDraftIP()">Lưu nháp</button>
+                <button class="btn btn-success" onclick="submitIP()">Đăng ký</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- IP Detail Modal -->
+    <div id="ipDetailModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="ipDetailTitle">Chi tiết Tài sản Trí tuệ</h2>
+                <button class="close-btn" onclick="closeIPDetailModal()">&times;</button>
+            </div>
+
+            <div class="tab-container">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab(event, 'detail-info')">Thông tin</button>
+                    <button class="tab" onclick="switchTab(event, 'detail-timeline')">Lịch sử</button>
+                    <button class="tab" onclick="switchTab(event, 'detail-exploitation')">Khai thác</button>
+                    <button class="tab" onclick="switchTab(event, 'detail-files')">Hồ sơ</button>
+                </div>
+
+                <div id="detail-info" class="tab-content active">
+                    <div id="ipDetailContent"></div>
+                </div>
+
+                <div id="detail-timeline" class="tab-content">
+                    <div class="timeline" id="ipTimeline"></div>
+                </div>
+
+                <div id="detail-exploitation" class="tab-content">
+                    <div id="exploitationContent"></div>
+                </div>
+
+                <div id="detail-files" class="tab-content">
+                    <div id="filesContent"></div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="editIP()">✏️ Chỉnh sửa</button>
+                <button class="btn btn-info" onclick="exportIPReport()">📥 Xuất báo cáo</button>
+                <button class="btn btn-success" onclick="registerProtection()">🔒 Đăng ký bảo hộ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data
+        const ipAssets = [
+            {
+                id: 1,
+                code: 'IP-2023-001',
+                name: 'Phương pháp nuôi cấy tế bào gốc trung mô từ mô mỡ',
+                type: 'patent',
+                status: 'granted',
+                authors: ['TS. Nguyễn Văn A', 'PGS.TS. Trần Thị B'],
+                registrationNumber: 'VN123456',
+                registrationDate: '2023-03-15',
+                grantDate: '2024-06-20',
+                expiryDate: '2043-03-15',
+                value: 2500000000
+            },
+            {
+                id: 2,
+                code: 'IP-2024-015',
+                name: 'Quy trình tách chiết và bảo quản tế bào gốc từ máu cuống rốn',
+                type: 'utility',
+                status: 'granted',
+                authors: ['PGS.TS. Lê Văn C'],
+                registrationNumber: 'VN234567',
+                registrationDate: '2024-01-10',
+                grantDate: '2024-08-15',
+                expiryDate: '2034-01-10',
+                value: 1500000000
+            },
+            {
+                id: 3,
+                code: 'IP-2024-028',
+                name: 'Thiết bị sinh học để nuôi cấy tế bào gốc',
+                type: 'design',
+                status: 'registered',
+                authors: ['TS. Phạm Thị D'],
+                registrationNumber: 'VN345678',
+                registrationDate: '2024-05-20',
+                grantDate: null,
+                expiryDate: '2029-05-20',
+                value: 800000000
+            },
+            {
+                id: 4,
+                code: 'IP-2025-003',
+                name: 'Quy trình sản xuất gel tế bào gốc ứng dụng trong điều trị vết thương',
+                type: 'trade-secret',
+                status: 'granted',
+                authors: ['TS. Hoàng Văn E', 'TS. Nguyễn Văn A'],
+                registrationNumber: 'TS-2025-003',
+                registrationDate: '2025-01-15',
+                grantDate: '2025-01-15',
+                expiryDate: null,
+                value: 3000000000
+            }
+        ];
+
+        function renderIPGrid() {
+            const grid = document.getElementById('ipGrid');
+            grid.innerHTML = ipAssets.map(ip => `
+                <div class="ip-card ${ip.type}" onclick="openIPDetail(${ip.id})">
+                    <div class="ip-header">
+                        <div>
+                            <div class="ip-icon">${getIPIcon(ip.type)}</div>
+                            <div class="ip-title">${ip.name}</div>
+                            <div class="ip-code">${ip.code}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin: 15px 0;">
+                        <span class="type-badge type-${ip.type}">${getIPTypeText(ip.type)}</span>
+                        <span class="status-badge status-${ip.status}">${getStatusText(ip.status)}</span>
+                    </div>
+
+                    <div class="ip-info">
+                        <div class="ip-info-item">
+                            <span class="ip-info-label">Số đơn/bằng:</span>
+                            <span class="ip-info-value">${ip.registrationNumber || 'Chưa có'}</span>
+                        </div>
+                        <div class="ip-info-item">
+                            <span class="ip-info-label">Ngày đăng ký:</span>
+                            <span class="ip-info-value">${formatDate(ip.registrationDate)}</span>
+                        </div>
+                        ${ip.grantDate ? `
+                        <div class="ip-info-item">
+                            <span class="ip-info-label">Ngày cấp bằng:</span>
+                            <span class="ip-info-value">${formatDate(ip.grantDate)}</span>
+                        </div>
+                        ` : ''}
+                        <div class="ip-info-item">
+                            <span class="ip-info-label">Tác giả:</span>
+                            <span class="ip-info-value">${ip.authors.length} người</span>
+                        </div>
+                        <div class="ip-info-item">
+                            <span class="ip-info-label">Giá trị ước tính:</span>
+                            <span class="ip-info-value">${formatCurrency(ip.value)}</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="event.stopPropagation(); openIPDetail(${ip.id})" style="flex: 1; padding: 8px;">
+                            Chi tiết
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getIPIcon(type) {
+            const icons = {
+                'patent': '🔬',
+                'utility': '💡',
+                'design': '🎨',
+                'trademark': '®️',
+                'trade-secret': '🔒',
+                'innovation': '⭐'
+            };
+            return icons[type] || '📄';
+        }
+
+        function getIPTypeText(type) {
+            const types = {
+                'patent': 'Sáng chế',
+                'utility': 'Giải pháp hữu ích',
+                'design': 'Kiểu dáng công nghiệp',
+                'trademark': 'Nhãn hiệu',
+                'trade-secret': 'Bí mật kinh doanh',
+                'innovation': 'Sáng kiến'
+            };
+            return types[type] || type;
+        }
+
+        function getStatusText(status) {
+            const statuses = {
+                'pending': 'Đang xử lý',
+                'registered': 'Đã đăng ký',
+                'granted': 'Đã cấp bằng',
+                'expired': 'Hết hạn',
+                'rejected': 'Bị từ chối'
+            };
+            return statuses[status] || status;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+        }
+
+        function formatCurrency(amount) {
+            if (!amount) return 'Chưa định giá';
+            return new Intl.NumberFormat('vi-VN').format(amount) + ' VNĐ';
+        }
+
+        function showSection(section) {
+            console.log('Showing section:', section);
+        }
+
+        function filterByType(type) {
+            console.log('Filter by type:', type);
+        }
+
+        function filterByStatus(status) {
+            console.log('Filter by status:', status);
+        }
+
+        function openRegisterIPModal() {
+            document.getElementById('registerIPModal').classList.add('active');
+        }
+
+        function closeRegisterIPModal() {
+            document.getElementById('registerIPModal').classList.remove('active');
+        }
+
+        function saveDraftIP() {
+            alert('Đã lưu nháp SHTT!');
+        }
+
+        function submitIP() {
+            alert('Đã gửi đăng ký SHTT!');
+            closeRegisterIPModal();
+        }
+
+        function openIPDetail(id) {
+            const ip = ipAssets.find(item => item.id === id);
+            if (!ip) return;
+
+            document.getElementById('ipDetailTitle').textContent = ip.name;
+            
+            const detailContent = `
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                    <div><strong>Mã SHTT:</strong> ${ip.code}</div>
+                    <div><strong>Loại:</strong> ${getIPTypeText(ip.type)}</div>
+                    <div><strong>Số đơn/bằng:</strong> ${ip.registrationNumber}</div>
+                    <div><strong>Trạng thái:</strong> 
+                        <span class="status-badge status-${ip.status}">${getStatusText(ip.status)}</span>
+                    </div>
+                    <div><strong>Ngày đăng ký:</strong> ${formatDate(ip.registrationDate)}</div>
+                    <div><strong>Ngày cấp bằng:</strong> ${formatDate(ip.grantDate)}</div>
+                    <div><strong>Ngày hết hạn:</strong> ${formatDate(ip.expiryDate)}</div>
+                    <div><strong>Giá trị ước tính:</strong> ${formatCurrency(ip.value)}</div>
+                    <div style="grid-column: 1 / -1;">
+                        <strong>Tác giả:</strong> ${ip.authors.join(', ')}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('ipDetailContent').innerHTML = detailContent;
+            document.getElementById('ipDetailModal').classList.add('active');
+        }
+
+        function closeIPDetailModal() {
+            document.getElementById('ipDetailModal').classList.remove('active');
+        }
+
+        function switchTab(event, tabId) {
+            const modal = event.target.closest('.modal-content');
+            modal.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            modal.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            modal.querySelector('#' + tabId).classList.add('active');
+        }
+
+        function editIP() {
+            alert('Chức năng chỉnh sửa đang được phát triển...');
+        }
+
+        function exportIPReport() {
+            alert('Chức năng xuất báo cáo đang được phát triển...');
+        }
+
+        function registerProtection() {
+            alert('Chức năng đăng ký bảo hộ đang được phát triển...');
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            renderIPGrid();
+        });
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đã nộp hồ sơ thành công - SCI-ACE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .success-page { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        .success-box { background: #d4edda; color: #155724; padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 4px solid var(--primary); margin-bottom: 1.5rem; }
+        .success-box h3 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem; font-size: 1.2rem; }
+        .success-box p { margin: 0; font-size: 1rem; }
+        .my-list-title { font-weight: 600; color: var(--primary); margin: 1rem 0 0.75rem; }
+        .submissions-list-inline { background: var(--white); border-radius: 12px; box-shadow: 0 4px 20px var(--shadow); overflow: hidden; margin-bottom: 1rem; }
+        .submission-item-inline { padding: 1rem 1.25rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+        .submission-item-inline:last-child { border-bottom: none; }
+        .submission-item-inline h4 { font-size: 1rem; color: var(--primary); margin-bottom: 0.2rem; }
+        .submission-item-inline .meta { font-size: 0.85rem; color: var(--gray); }
+        .btn-actions-inline { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+        .btn-download-inline { padding: 0.4rem 0.9rem; border-radius: 8px; font-size: 0.85rem; border: none; cursor: pointer; background: var(--accent); color: var(--white); font-weight: 500; }
+        .btn-download-inline:hover { background: #e67300; }
+        .btn-track-inline { display: inline-block; padding: 0.4rem 0.9rem; border-radius: 8px; font-size: 0.85rem; border: 2px solid var(--primary); background: transparent; color: var(--primary); font-weight: 600; text-decoration: none; }
+        .btn-track-inline:hover { background: rgba(26, 77, 46, 0.1); }
+        .link-full-list { display: inline-block; margin-top: 0.5rem; color: var(--primary); font-weight: 600; }
+        .link-full-list:hover { text-decoration: underline; }
+        .user-bar { background: rgba(26, 77, 46, 0.08); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+        .user-bar span { font-weight: 500; color: var(--primary); }
+        .user-bar a { color: var(--gray); font-size: 0.9rem; }
+        .btn-back { display: inline-block; margin-bottom: 1rem; color: var(--primary); font-weight: 500; }
+        .btn-back:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">ACE-SCI</a>
+                <div class="header-text">
+                    <h1>Đã nộp hồ sơ thành công</h1>
+                    <p>Nghiên cứu viên — Thông báo và danh sách hồ sơ đã nộp</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <nav>
+        <div class="container">
+            <a href="index.html">🏠 Trang chủ</a>
+            <a href="nhom-1.html">📚 Nhóm hồ sơ 1</a>
+            <a href="nhom-2.html">📝 Nhóm hồ sơ 2</a>
+            <a href="nhom-3.html">👥 Nhóm hồ sơ 3</a>
+            <div class="nav-dropdown">
+                <span class="nav-dropdown-trigger">📤 Nộp hồ sơ ▾</span>
+                <div class="nav-dropdown-menu">
+                    <a href="nop-ho-so.html">Nộp hồ sơ (Nghiên cứu viên)</a>
+                    <a href="hoi-dong.html">Khu vực Hội đồng (xem hồ sơ đã nộp)</a>
+                    <a href="quan-tri.html">Quản trị (Admin)</a>
+                </div>
+            </div>
+            <a href="dang-nhap.html">🔐 Đăng nhập</a>
+        </div>
+    </nav>
+    <main class="content-page">
+        <div class="success-page">
+            <div id="user-bar" class="user-bar" style="display: none;">
+                <span id="user-email"></span>
+                <div>
+                    <a href="nop-ho-so.html" style="margin-right: 1rem; color: var(--primary); font-weight: 500;">➕ Nộp hồ sơ mới</a>
+                    <a href="ho-so-cua-toi.html" style="margin-right: 1rem; color: var(--primary); font-weight: 500;">📁 Hồ sơ của tôi</a>
+                    <a href="#" id="btn-logout">Thoát đăng nhập</a>
+                </div>
+            </div>
+            <a href="nop-ho-so.html" class="btn-back">← Quay lại trang Nộp hồ sơ</a>
+
+            <div class="success-box">
+                <h3>✓ Đã nộp xong</h3>
+                <p>Hồ sơ của bạn đã được gửi thành công. <strong>Thông báo đã được gửi đến Hội đồng qua email.</strong> Hội đồng sẽ xem xét và phản hồi theo quy trình.</p>
+            </div>
+            <p class="my-list-title">Danh sách hồ sơ bạn đã nộp</p>
+            <div id="my-submissions-list" class="submissions-list-inline">
+                <div style="padding: 1rem; color: var(--gray);">Đang tải...</div>
+            </div>
+            <a href="ho-so-cua-toi.html" class="link-full-list">📁 Xem đầy đủ tại Hồ sơ của tôi →</a>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="footer-bottom"><p>&copy; 2026 SCI-ACE. Phiên bản 1.0</p></div>
+        </div>
+    </footer>
+    <script>
+        var token = localStorage.getItem('token');
+        var user = JSON.parse(localStorage.getItem('user') || '{}');
+        var listEl = document.getElementById('my-submissions-list');
+        var userBar = document.getElementById('user-bar');
+        var userEmail = document.getElementById('user-email');
+
+        if (token && user.email) {
+            userEmail.textContent = user.email;
+            userBar.style.display = 'flex';
+        } else {
+            listEl.innerHTML = '<div style="padding: 1rem; color: var(--gray);">Vui lòng <a href="dang-nhap.html">đăng nhập</a> để xem trang này.</div>';
+        }
+
+        if (document.getElementById('btn-logout')) {
+            document.getElementById('btn-logout').href = 'dang-nhap.html';
+            document.getElementById('btn-logout').addEventListener('click', function() {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+            });
+        }
+
+        function escapeHtml(s) {
+            if (!s) return '';
+            var div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        function loadMySubmissionsList() {
+            if (!token || !listEl) return;
+            fetch('/api/submissions', { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(function(res) {
+                    if (res.status === 401) {
+                        listEl.innerHTML = '<div class="submission-item-inline" style="color: var(--gray);">Phiên đăng nhập hết hạn. <a href="dang-nhap.html">Đăng nhập lại</a>.</div>';
+                        return null;
+                    }
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (data === null) return;
+                    var items = Array.isArray(data) ? data : (data.items || data.submissions || []);
+                    if (items.length === 0) {
+                        listEl.innerHTML = '<div class="submission-item-inline" style="color: var(--gray);">Bạn chưa nộp hồ sơ nào.</div>';
+                        return;
+                    }
+                    listEl.innerHTML = items.map(function(s) {
+                        var id = s.id || s._id;
+                        var title = s.title || 'Không tên';
+                        var date = s.createdAt || '';
+                        return '<div class="submission-item-inline">' +
+                            '<div><h4>' + escapeHtml(title) + '</h4><p class="meta">Ngày nộp: ' + escapeHtml(date) + '</p></div>' +
+                            '<div class="btn-actions-inline">' +
+                            '<a href="theo-doi-ho-so.html?id=' + id + '" class="btn-track-inline">📋 Tiến trình</a>' +
+                            '<button type="button" class="btn-download-inline" data-id="' + id + '">Tải về</button>' +
+                            '</div></div>';
+                    }).join('');
+                    listEl.querySelectorAll('.btn-download-inline').forEach(function(btn) {
+                        btn.addEventListener('click', function() {
+                            var id = this.getAttribute('data-id');
+                            fetch('/api/submissions/' + id + '/download', { headers: { 'Authorization': 'Bearer ' + token } })
+                                .then(function(r) {
+                                    if (!r.ok) throw new Error('Không tải được');
+                                    return r.blob();
+                                })
+                                .then(function(blob) {
+                                    var a = document.createElement('a');
+                                    a.href = URL.createObjectURL(blob);
+                                    a.download = 'ho-so-' + id + '.zip';
+                                    a.click();
+                                    URL.revokeObjectURL(a.href);
+                                })
+                                .catch(function() { alert('Không tải được hồ sơ.'); });
+                        });
+                    });
+                })
+                .catch(function() {
+                    listEl.innerHTML = '<div class="submission-item-inline" style="color: var(--gray);">Không tải được danh sách.</div>';
+                });
+        }
+
+        if (token) loadMySubmissionsList();
+    </script>
+</body>
+</html>
