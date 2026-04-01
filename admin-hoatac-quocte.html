@@ -312,6 +312,31 @@ textarea{resize:vertical;min-height:70px}
     </div>
   </div>
   <div class="card">
+    <div class="card-header"><h2>➕ Thêm tài khoản & vai trò</h2></div>
+    <div class="card-body">
+      <div id="tk-add-msg" class="alert hidden"></div>
+      <div class="form-row cols-4">
+        <div class="form-group"><label>Email *</label><input id="tk-add-email" type="email" placeholder="user@sci.edu.vn"></div>
+        <div class="form-group"><label>Họ tên</label><input id="tk-add-fullname" placeholder="Nguyễn Văn A"></div>
+        <div class="form-group"><label>Vai trò *</label>
+          <select id="tk-add-role">
+            <option value="researcher">Nghiên cứu viên</option>
+            <option value="phong_khcn">Phòng KHCN&QHĐN</option>
+            <option value="vien_truong">Viện trưởng</option>
+            <option value="admin">Admin</option>
+            <option value="chu_tich">Chủ tịch HĐ</option>
+            <option value="thu_ky">Thư ký</option>
+            <option value="thanh_vien">Thành viên HĐ</option>
+            <option value="totruong_tham_dinh_tc">Tổ trưởng thẩm định TC</option>
+            <option value="thanh_vien_tham_dinh_tc">TV thẩm định TC</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Mật khẩu (tùy chọn)</label><input id="tk-add-password" type="text" placeholder="Để trống: user tự đặt mật khẩu"></div>
+      </div>
+      <button type="button" class="btn btn-primary" onclick="addTkUser()">Thêm tài khoản</button>
+    </div>
+  </div>
+  <div class="card">
     <div class="card-header"><h2>Danh sách tài khoản</h2><button class="btn btn-outline btn-sm" onclick="loadTaiKhoanHtqt()">🔄 Làm mới</button></div>
     <div id="tk-table"><div class="loading"><div class="spin"></div>Đang tải...</div></div>
   </div>
@@ -436,8 +461,8 @@ var STATUS_CLASS = {
 };
 var ALL_STATUSES = ['cho_phong_duyet','yeu_cau_bo_sung','cho_vt_duyet','da_duyet','tu_choi'];
 
-var USER_ROLE_LABEL={researcher:'Nghiên cứu viên',phong_khcn:'Phòng KHCN&QHĐN',admin:'Admin',chu_tich:'Chủ tịch HĐ',thu_ky:'Thư ký',thanh_vien:'Thành viên HĐ',totruong_tham_dinh_tc:'Tổ trưởng thẩm định TC',thanh_vien_tham_dinh_tc:'TV thẩm định TC'};
-var TK_ROLE_OPTIONS=[['researcher','Nghiên cứu viên'],['phong_khcn','Phòng KHCN&QHĐN'],['admin','Admin'],['chu_tich','Chủ tịch HĐ'],['thu_ky','Thư ký'],['thanh_vien','Thành viên HĐ'],['totruong_tham_dinh_tc','Tổ trưởng thẩm định TC'],['thanh_vien_tham_dinh_tc','TV thẩm định TC']];
+var USER_ROLE_LABEL={researcher:'Nghiên cứu viên',phong_khcn:'Phòng KHCN&QHĐN',vien_truong:'Viện trưởng',admin:'Admin',chu_tich:'Chủ tịch HĐ',thu_ky:'Thư ký',thanh_vien:'Thành viên HĐ',totruong_tham_dinh_tc:'Tổ trưởng thẩm định TC',thanh_vien_tham_dinh_tc:'TV thẩm định TC'};
+var TK_ROLE_OPTIONS=[['researcher','Nghiên cứu viên'],['phong_khcn','Phòng KHCN&QHĐN'],['vien_truong','Viện trưởng'],['admin','Admin'],['chu_tich','Chủ tịch HĐ'],['thu_ky','Thư ký'],['thanh_vien','Thành viên HĐ'],['totruong_tham_dinh_tc','Tổ trưởng thẩm định TC'],['thanh_vien_tham_dinh_tc','TV thẩm định TC']];
 
 // ============================================================
 // AUTH
@@ -529,6 +554,7 @@ function gotoExpiryEmailConfig(){
 // ============================================================
 function fmtDate(s){if(!s)return'—';var d=String(s).slice(0,10).split('-');return d.length===3?d[2]+'/'+d[1]+'/'+d[0]:s;}
 function esc(s){return(s||'—').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escapeJsSq(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' ');}
 function v(id){var el=document.getElementById(id);return el?(el.value||'').trim():'';}
 function showMsg(id,txt,isErr){var el=document.getElementById(id);if(!el)return;el.textContent=txt;el.className='alert '+(isErr?'error':'success');}
 function toast(msg,type){
@@ -982,7 +1008,7 @@ async function loadTaiKhoanHtqt(){
   var d=await apiGet('/api/admin/users');
   var list=(d&&d.users)||[];
   if(!list.length){document.getElementById('tk-table').innerHTML='<div class="empty-state"><span class="icon">👤</span>Chưa có tài khoản</div>';return;}
-  document.getElementById('tk-table').innerHTML='<table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò hiện tại</th><th>Đổi vai trò</th><th></th></tr></thead><tbody>'
+  document.getElementById('tk-table').innerHTML='<table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò hiện tại</th><th>Đổi vai trò</th><th>Thao tác</th></tr></thead><tbody>'
     +list.map(function(u){
       var emB64=btoa(unescape(encodeURIComponent(u.email)));
       return '<tr><td><b>'+esc(u.email)+'</b></td><td>'+esc(u.fullname||'—')+'</td>'
@@ -990,7 +1016,10 @@ async function loadTaiKhoanHtqt(){
         +'<td><select id="tk-role-'+u.id+'" data-em64="'+emB64+'" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;min-width:200px">'
         +TK_ROLE_OPTIONS.map(function(ro){return '<option value="'+ro[0]+'"'+(u.role===ro[0]?' selected':'')+'>'+ro[1]+'</option>';}).join('')
         +'</select></td>'
-        +'<td><button type="button" class="btn btn-primary btn-sm" onclick="saveTkRole('+u.id+')">Lưu vai trò</button></td></tr>';
+        +'<td><div class="actions-col">'
+        +'<button type="button" class="btn btn-primary btn-sm" onclick="saveTkRole('+u.id+')">Lưu vai trò</button>'
+        +'<button type="button" class="btn btn-red btn-sm" onclick="deleteTkUser(\''+escapeJsSq(u.email)+'\')">Xóa TK</button>'
+        +'</div></td></tr>';
     }).join('')+'</tbody></table>';
 }
 
@@ -1004,6 +1033,45 @@ async function saveTkRole(userId){
   var r=await apiPut('/api/admin/users/role',{email:email,role:role});
   if(r&&r.ok){toast('Đã cập nhật vai trò đăng nhập','success');loadTaiKhoanHtqt();}
   else toast((r&&r.data&&r.data.message)||'Lỗi','error');
+}
+
+async function addTkUser(){
+  var email=v('tk-add-email').toLowerCase();
+  var fullname=v('tk-add-fullname');
+  var role=v('tk-add-role')||'researcher';
+  var password=v('tk-add-password');
+  if(!email){
+    showMsg('tk-add-msg','Vui lòng nhập email.',true);
+    document.getElementById('tk-add-msg').className='alert error';
+    return;
+  }
+  var r=await apiPost('/api/admin/users',{email:email,fullname:fullname,role:role,password:password});
+  if(r&&r.ok){
+    showMsg('tk-add-msg',(r.data&&r.data.message)||'Đã thêm tài khoản.',false);
+    document.getElementById('tk-add-msg').className='alert success';
+    toast('Đã thêm/cập nhật tài khoản','success');
+    document.getElementById('tk-add-email').value='';
+    document.getElementById('tk-add-fullname').value='';
+    document.getElementById('tk-add-password').value='';
+    document.getElementById('tk-add-role').value='researcher';
+    loadTaiKhoanHtqt();
+  }else{
+    showMsg('tk-add-msg',(r&&r.data&&r.data.message)||'Lỗi thêm tài khoản.',true);
+    document.getElementById('tk-add-msg').className='alert error';
+  }
+}
+
+async function deleteTkUser(email){
+  var em = String(email || '').trim().toLowerCase();
+  if (!em) return;
+  if (!confirmDel('Xóa tài khoản ' + em + '?')) return;
+  var r = await apiDel('/api/admin/users/' + encodeURIComponent(em));
+  if (r && r.ok) {
+    toast('Đã xóa tài khoản: ' + em, 'success');
+    loadTaiKhoanHtqt();
+  } else {
+    toast((r&&r.data&&r.data.message) || 'Không thể xóa tài khoản.', 'error');
+  }
 }
 
 // ============================================================

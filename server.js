@@ -2851,7 +2851,7 @@ function sendPasswordResetEmail(toEmail, resetToken) {
   }).catch(err => console.error('Email reset error:', err.message));
 }
 
-const ROLE_LABELS = { chu_tich: 'Chủ tịch', thu_ky: 'Thư ký', thanh_vien: 'Thành viên Hội đồng', researcher: 'Nghiên cứu viên', admin: 'Admin', phong_khcn: 'Phòng KHCN&QHĐN', totruong_tham_dinh_tc: 'Tổ trưởng Tổ thẩm định TC', thanh_vien_tham_dinh_tc: 'Thành viên Tổ thẩm định TC' };
+const ROLE_LABELS = { chu_tich: 'Chủ tịch', thu_ky: 'Thư ký', thanh_vien: 'Thành viên Hội đồng', researcher: 'Nghiên cứu viên', admin: 'Admin', phong_khcn: 'Phòng KHCN&QHĐN', vien_truong: 'Viện trưởng', totruong_tham_dinh_tc: 'Tổ trưởng Tổ thẩm định TC', thanh_vien_tham_dinh_tc: 'Thành viên Tổ thẩm định TC' };
 
 function sendRoleAssignmentEmail(toEmail, fullname, role, tempPassword) {
   if (!transporter) return Promise.resolve();
@@ -5359,7 +5359,7 @@ app.post('/api/admin/users', authMiddleware, adminOnly, async (req, res) => {
   const { email, fullname, role, password, academicTitle } = req.body || {};
   const em = (email || '').trim().toLowerCase();
   if (!em) return res.status(400).json({ message: 'Vui lòng nhập email' });
-  const allowed = ['researcher', 'thanh_vien', 'thu_ky', 'chu_tich', 'admin', 'phong_khcn', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
+  const allowed = ['researcher', 'thanh_vien', 'thu_ky', 'chu_tich', 'admin', 'phong_khcn', 'vien_truong', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
   const r = (role || 'researcher').toLowerCase().trim();
   if (!allowed.includes(r)) return res.status(400).json({ message: 'Vai trò không hợp lệ. Vui lòng khởi động lại server (node server.js) và thử lại.' });
   const councilRoles = ['chu_tich', 'thu_ky', 'thanh_vien'];
@@ -8638,7 +8638,7 @@ app.put('/api/admin/users/role', authMiddleware, adminOnly, (req, res) => {
   if (em === currentEmail && role !== 'admin') {
     return res.status(400).json({ message: 'Bạn không thể tự hạ vai trò của chính mình' });
   }
-  const allowed = ['researcher', 'thanh_vien', 'thu_ky', 'chu_tich', 'admin', 'phong_khcn', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
+  const allowed = ['researcher', 'thanh_vien', 'thu_ky', 'chu_tich', 'admin', 'phong_khcn', 'vien_truong', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
   if (!allowed.includes(role)) {
     return res.status(400).json({ message: 'Vai trò không hợp lệ' });
   }

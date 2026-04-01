@@ -34,12 +34,36 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--in
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;margin:2px 8px;border-radius:8px;cursor:pointer;font-size:13.5px;color:var(--ink-soft);font-weight:500;transition:all .2s;border:1px solid transparent;border-left:3px solid transparent}
 .nav-item:hover{background:#eef2f9;color:var(--ink);border-color:var(--border-subtle)}
 .nav-item.active{background:var(--accent-light);color:#1d4ed8;border-left-color:var(--accent);border-color:#bfdbfe;font-weight:600}
+.nav-item.mgr,
+.nav-item.vt-only{
+  background:#eefaf7;
+  border-color:#ccfbf1;
+}
+.nav-item.mgr:hover,
+.nav-item.vt-only:hover{
+  background:#dcfce7;
+  border-color:#86efac;
+  color:#065f46;
+}
+.nav-item.mgr.active,
+.nav-item.vt-only.active{
+  background:linear-gradient(180deg,#d1fae5 0%,#ecfdf5 100%);
+  color:#065f46;
+  border-left-color:#10b981;
+  border-color:#86efac;
+}
 .nav-item .icon{font-size:16px;width:20px;text-align:center}
 .nav-badge{margin-left:auto;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px;min-width:20px;text-align:center}
-.nav-badge.red{background:var(--red)}
-.nav-badge.amber{background:var(--amber)}
-.nav-badge.blue{background:var(--accent)}
-.nav-badge.green{background:var(--green)}
+.nav-badge.red{background:#f43f5e}
+.nav-badge.amber{background:#f59e0b}
+.nav-badge.blue{background:#3b82f6}
+.nav-badge.green{background:#22c55e}
+.nav-badge.pulse{animation:badgePulse 1.7s ease-in-out infinite;box-shadow:0 0 0 0 rgba(59,130,246,.45)}
+@keyframes badgePulse{
+  0%{transform:scale(1);box-shadow:0 0 0 0 rgba(59,130,246,.45)}
+  70%{transform:scale(1.06);box-shadow:0 0 0 8px rgba(59,130,246,0)}
+  100%{transform:scale(1);box-shadow:0 0 0 0 rgba(59,130,246,0)}
+}
 .nav-divider{height:1px;background:var(--border);margin:10px 16px}
 .hidden{display:none!important}
 .main{flex:1;overflow-y:auto}
@@ -57,11 +81,11 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--in
 .stat-card.green .num{color:var(--green)}
 .stat-card.red .num{color:var(--red)}
 .card{background:var(--card);border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:22px;overflow:hidden}
-.ev-mode-banner{display:none;padding:10px 12px;border-radius:10px;margin:0 0 12px 0;font-size:13px;font-weight:700;border:1px solid transparent}
+.ev-mode-banner{display:none;padding:12px 14px;border-radius:10px;margin:0 0 14px 0;font-size:18px;font-weight:900;border:2px solid transparent;letter-spacing:.2px;box-shadow:0 6px 18px rgba(15,23,42,.12)}
 #card-tao-sk.mode-new{border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.18),0 12px 30px rgba(14,165,233,.18)}
-#card-tao-sk.mode-new .ev-mode-banner{display:block;background:#ecfeff;color:#075985;border-color:#a5f3fc}
+#card-tao-sk.mode-new .ev-mode-banner{display:block;background:linear-gradient(180deg,#cffafe 0%,#ecfeff 100%);color:#0c4a6e;border-color:#67e8f9}
 #card-tao-sk.mode-open{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18),0 12px 30px rgba(34,197,94,.18)}
-#card-tao-sk.mode-open .ev-mode-banner{display:block;background:#f0fdf4;color:#166534;border-color:#bbf7d0}
+#card-tao-sk.mode-open .ev-mode-banner{display:block;background:linear-gradient(180deg,#dcfce7 0%,#f0fdf4 100%);color:#14532d;border-color:#86efac}
 .card-header{padding:16px 20px;border-bottom:2px solid var(--border-subtle);background:linear-gradient(180deg,#fafbfd 0%,#fff 100%);display:flex;align-items:center;justify-content:space-between}
 .card-header h2{font-size:15px;font-weight:700;color:var(--ink)}
 .card-body{padding:20px}
@@ -133,19 +157,30 @@ textarea{resize:vertical;min-height:80px}
 .ev-history-timeline{padding-left:24px;border-left:3px solid #86efac;background:#f8fffb;border-radius:8px;padding-top:6px;padding-bottom:6px}
 .ev-history-item{position:relative;padding:8px 10px 8px 14px;background:#fff;border:1px solid #dcfce7;border-radius:10px;margin-bottom:10px;box-shadow:0 3px 12px rgba(34,197,94,.08)}
 .ev-history-item::before{content:'';position:absolute;left:-18px;top:13px;width:10px;height:10px;background:#16a34a;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #86efac}
+.ev-editor{display:flex;flex-direction:column;gap:14px}
+.ev-section{border:1px solid var(--border-subtle);border-radius:12px;background:#fbfdff;padding:14px}
+.ev-section-title{font-size:18px;font-weight:900;color:#1e40af;margin:0 0 12px 0;padding:8px 10px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:8px;letter-spacing:.2px}
+.ev-section .form-grid{gap:12px}
+.ev-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.ev-session-box{border:1px solid #cbd5e1;border-radius:10px;background:#fff;overflow:hidden}
+.ev-session-head{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid var(--border-subtle);background:#f8fafc}
+.ev-session-body{padding:10px}
+.ev-upload-grid{display:grid;grid-template-columns:240px 1fr;gap:12px}
+@media(max-width:900px){.ev-upload-grid{grid-template-columns:1fr}}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.hidden{display:none}
 .modal{background:#fff;border-radius:16px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
-.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:2}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid #bfdbfe;display:flex;align-items:flex-start;justify-content:space-between;position:sticky;top:0;background:linear-gradient(180deg,#eff6ff 0%,#ffffff 100%);z-index:2}
 .modal-header h3{font-size:16px;font-weight:700}
 .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-muted);padding:2px 8px;border-radius:6px;line-height:1}
 .modal-close:hover{background:var(--bg)}
 .modal-body{padding:20px 24px}
 .modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
-.detail-grid{display:grid;grid-template-columns:150px 1fr;border:1px solid var(--border);border-radius:8px;overflow:hidden;font-size:13px;box-shadow:0 1px 2px rgba(15,23,42,.06)}
-.dk{padding:8px 12px;background:#e8ecf4;border-bottom:1px solid var(--border-subtle);font-weight:600;font-size:12px;color:#475569}
-.dv{padding:8px 12px;border-bottom:1px solid var(--border-subtle);color:var(--ink)}
+.detail-grid{display:grid;grid-template-columns:150px 1fr;border:1px solid #bfdbfe;border-radius:10px;overflow:hidden;font-size:13px;box-shadow:0 8px 20px rgba(37,99,235,.08)}
+.dk{padding:9px 12px;background:#dbeafe;border-bottom:1px solid #bfdbfe;font-weight:700;font-size:12px;color:#1e3a8a}
+.dv{padding:9px 12px;border-bottom:1px solid #dbeafe;color:var(--ink);background:#f8fbff}
 .detail-grid .dk:last-of-type,.detail-grid .dv:last-of-type{border-bottom:none}
+.tt-scan-link{display:inline-block;padding:4px 10px;border-radius:999px;background:#ecfeff;border:1px solid #a5f3fc;color:#0c4a6e;font-weight:700}
 .tabs{display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:20px;padding-bottom:0;background:#f1f5f9;border-radius:8px 8px 0 0;padding:6px 6px 0}
 .tab{padding:10px 18px;font-size:13px;font-weight:600;color:var(--ink-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;border-radius:8px 8px 0 0}
 .tab.active{color:#1d4ed8;border-bottom-color:var(--accent);background:var(--card);box-shadow:0 -1px 0 var(--card)}
@@ -182,6 +217,59 @@ textarea{resize:vertical;min-height:80px}
 .dr-sent-title{font-size:1.35rem;font-weight:800;color:var(--ink);letter-spacing:-.02em;line-height:1.3;margin:0}
 @media(max-width:900px){.dr-sent-title{font-size:1.2rem}}
 /* Nhấp nháy dòng mới: thực hiện bằng JS (pulseDoanRaRowFlash) — Edge không vẽ ổn inset-shadow quá lớn trên td */
+
+/* Tone riêng cho panel Thỏa thuận: tươi và vui hơn */
+#panel-thoa-thuan{
+  background:linear-gradient(180deg,#e6fffb 0%,#f0fdf4 42%,#fff7ed 100%);
+  border-radius:14px;
+}
+#panel-thoa-thuan .page-header{
+  border-bottom:2px solid #99f6e4;
+}
+#panel-thoa-thuan .page-header h1{
+  color:#0f766e;
+}
+#panel-thoa-thuan .page-header p{
+  color:#0f766e;
+}
+#panel-thoa-thuan .card{
+  border:1px solid #99f6e4;
+  box-shadow:0 8px 24px rgba(13,148,136,.12);
+}
+#panel-thoa-thuan .card-header{
+  background:linear-gradient(180deg,#ccfbf1 0%,#ffffff 100%);
+  border-bottom:2px solid #a7f3d0;
+}
+#panel-thoa-thuan th{
+  background:#d1fae5;
+  color:#065f46;
+  border-bottom:2px solid #86efac;
+}
+#panel-thoa-thuan tbody tr:nth-child(even) td{background:#f0fdf4}
+#panel-thoa-thuan tbody tr:hover td{background:#dcfce7!important}
+#panel-thoa-thuan .btn-primary{
+  background:linear-gradient(180deg,#14b8a6 0%,#0d9488 100%);
+}
+#panel-thoa-thuan .btn-primary:hover{
+  background:linear-gradient(180deg,#0d9488 0%,#0f766e 100%);
+}
+
+/* Tone riêng cho panel Tất cả đề xuất */
+#panel-tat-ca{
+  background:linear-gradient(180deg,#eef4ff 0%,#f8fbff 55%,#f3fff9 100%);
+  border-radius:14px;
+}
+#panel-tat-ca .page-header{
+  border-bottom:2px solid #bfdbfe;
+}
+#panel-tat-ca .card{
+  border:1px solid #bfdbfe;
+  box-shadow:0 8px 20px rgba(59,130,246,.10);
+}
+#panel-tat-ca th{
+  background:#dbeafe;
+  color:#1e3a8a;
+}
 </style>
 </head>
 <body>
@@ -432,50 +520,66 @@ textarea{resize:vertical;min-height:80px}
     <div class="card-body">
       <div id="msg-sk" class="alert hidden"></div>
       <div id="ev-mode-banner" class="ev-mode-banner"></div>
-      <div class="form-grid">
-        <div class="form-group"><label>Số văn bản</label><input id="sk-so-vb" placeholder="58/SCI-KHCN&QHĐN"></div>
-        <div class="form-group"><label>Trạng thái</label><input id="sk-status-view" disabled></div>
-        <div class="form-group full"><label>Tên sự kiện *</label><input id="sk-tieu-de"></div>
-        <div class="form-group"><label>Loại</label><select id="sk-loai"><option>Hội thảo</option><option>Hội nghị</option><option>Webinar</option><option>Tập huấn</option><option>Khác</option></select></div>
-        <div class="form-group"><label>Hình thức</label><select id="sk-hinh-thuc"><option>Trực tiếp</option><option>Trực tuyến (Zoom)</option><option>Hybrid</option></select></div>
-        <div class="form-group"><label>Địa điểm</label><input id="sk-dia-diem"></div>
-        <div class="form-group"><label>Đơn vị tổ chức</label><input id="sk-don-vi"></div>
-        <div class="form-group"><label>Ngày bắt đầu *</label><input id="sk-ngay-bd" type="date"></div>
-        <div class="form-group"><label>Ngày kết thúc</label><input id="sk-ngay-kt" type="date"></div>
-        <div class="form-group"><label>Hạn đăng ký</label><input id="sk-han-dk" type="date"></div>
-        <div class="form-group"><label>Kinh phí dự kiến (VND)</label><input id="sk-kinh-phi" type="number" min="0" step="1000"></div>
-        <div class="form-group"><label>Nguồn kinh phí</label><select id="sk-nguon"><option>Kinh phí VTB gốc</option><option>Bên ngoài</option><option>Kết hợp</option></select></div>
-        <div class="form-group"><label>Quy mô dự kiến</label><input id="sk-quy-mo" type="number" min="0"></div>
-        <div class="form-group"><label>Link sự kiện</label><input id="sk-link" type="url"></div>
-        <div class="form-group"><label>Người phụ trách</label><input id="sk-phu-trach"></div>
-        <div class="form-group"><label>Liên hệ</label><input id="sk-lien-he" placeholder="SĐT / Email"></div>
-        <div class="form-group full"><label>Mục tiêu</label><textarea id="sk-muc-tieu" rows="2"></textarea></div>
-        <div class="form-group full"><label>Thành phần tham dự</label><textarea id="sk-thanh-phan" rows="2"></textarea></div>
-        <div class="form-group full">
-          <label>Lịch trình (STT | Giờ bắt đầu | Giờ kết thúc | Ngày | Nội dung)</label>
-          <div class="card" style="margin:0;box-shadow:none;border:1px solid var(--border)">
-            <div class="card-body" style="padding:10px">
-              <div class="form-actions" style="margin:0 0 8px 0"><button type="button" class="btn btn-outline btn-sm" onclick="addEventSessionRow()">+ Thêm phiên</button></div>
+      <div class="ev-editor">
+        <div class="ev-section">
+          <div class="ev-section-title">1) Thông tin sự kiện</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Số văn bản</label><input id="sk-so-vb" placeholder="58/SCI-KHCN&QHĐN"></div>
+            <div class="form-group"><label>Trạng thái</label><input id="sk-status-view" disabled></div>
+            <div class="form-group full"><label>Tên sự kiện *</label><input id="sk-tieu-de"></div>
+            <div class="form-group"><label>Loại</label><select id="sk-loai"><option>Hội thảo</option><option>Hội nghị</option><option>Webinar</option><option>Tập huấn</option><option>Khác</option></select></div>
+            <div class="form-group"><label>Hình thức</label><select id="sk-hinh-thuc"><option>Trực tiếp</option><option>Trực tuyến (Zoom)</option><option>Hybrid</option></select></div>
+            <div class="form-group"><label>Địa điểm</label><input id="sk-dia-diem"></div>
+            <div class="form-group"><label>Đơn vị tổ chức</label><input id="sk-don-vi"></div>
+            <div class="form-group"><label>Ngày bắt đầu *</label><input id="sk-ngay-bd" type="date"></div>
+            <div class="form-group"><label>Ngày kết thúc</label><input id="sk-ngay-kt" type="date"></div>
+            <div class="form-group"><label>Hạn đăng ký</label><input id="sk-han-dk" type="date"></div>
+            <div class="form-group"><label>Kinh phí dự kiến (VND)</label><input id="sk-kinh-phi" type="number" min="0" step="1000"></div>
+            <div class="form-group"><label>Nguồn kinh phí</label><select id="sk-nguon"><option>Kinh phí VTB gốc</option><option>Bên ngoài</option><option>Kết hợp</option></select></div>
+            <div class="form-group"><label>Quy mô dự kiến</label><input id="sk-quy-mo" type="number" min="0"></div>
+            <div class="form-group"><label>Link sự kiện</label><input id="sk-link" type="url"></div>
+            <div class="form-group"><label>Người phụ trách</label><input id="sk-phu-trach"></div>
+            <div class="form-group"><label>Liên hệ</label><input id="sk-lien-he" placeholder="SĐT / Email"></div>
+            <div class="form-group full"><label>Mục tiêu</label><textarea id="sk-muc-tieu" rows="2"></textarea></div>
+            <div class="form-group full"><label>Thành phần tham dự</label><textarea id="sk-thanh-phan" rows="2"></textarea></div>
+            <div class="form-group full"><label>Ghi chú</label><textarea id="sk-mo-ta" rows="2"></textarea></div>
+          </div>
+        </div>
+
+        <div class="ev-section">
+          <div class="ev-section-title">2) Lịch trình chi tiết</div>
+          <div class="ev-session-box">
+            <div class="ev-session-head">
+              <div style="font-size:12px;color:var(--ink-soft)">STT | Giờ bắt đầu | Giờ kết thúc | Ngày | Nội dung</div>
+              <button type="button" class="btn btn-outline btn-sm" onclick="addEventSessionRow()">+ Thêm phiên</button>
+            </div>
+            <div class="ev-session-body">
               <div style="overflow:auto">
                 <table><thead><tr><th style="width:60px">STT</th><th style="width:140px">Giờ bắt đầu</th><th style="width:140px">Giờ kết thúc</th><th style="width:170px">Ngày</th><th>Nội dung</th><th style="width:80px"></th></tr></thead><tbody id="sk-session-body"></tbody></table>
               </div>
             </div>
           </div>
         </div>
-        <div class="form-group full"><label>Ghi chú</label><textarea id="sk-mo-ta" rows="2"></textarea></div>
+
+        <div class="ev-section">
+          <div class="ev-section-title">3) Tác vụ hồ sơ</div>
+          <div class="ev-actions">
+            <button class="btn btn-primary" type="button" onclick="saveEventDetail()">Lưu hồ sơ</button>
+            <button class="btn btn-outline" type="button" onclick="exportEventDoc('to-trinh')">Xuất Word tờ trình</button>
+            <button class="btn btn-outline" type="button" onclick="exportEventDoc('bao-cao')">Xuất Word báo cáo</button>
+          </div>
+          <div id="ev-step-actions" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>
+        </div>
+
+        <div class="ev-section">
+          <div class="ev-section-title">4) Upload và lưu trữ hồ sơ</div>
+          <div class="ev-upload-grid">
+            <div class="form-group"><label>Loại file upload</label><select id="ev-file-type"><option value="to_trinh_xin_phep">Tờ trình xin phép</option><option value="quyet_dinh_cho_phep">Quyết định cho phép</option><option value="tai_lieu_dinh_kem">Tài liệu đính kèm</option><option value="bao_cao_su_kien">Báo cáo sự kiện</option><option value="quyet_dinh_bao_cao">Quyết định báo cáo</option><option value="khac">Khác</option></select></div>
+            <div class="form-group"><label>File đính kèm (PDF/DOCX/JPG/PNG, tối đa 20MB)</label><input id="ev-files-input" type="file" multiple></div>
+          </div>
+          <div class="ev-actions"><button class="btn btn-outline" type="button" onclick="uploadEventFiles()">Upload file</button></div>
+        </div>
       </div>
-      <div class="form-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary" type="button" onclick="saveEventDetail()">Lưu hồ sơ</button>
-        <button class="btn btn-outline" type="button" onclick="exportEventDoc('to-trinh')">Xuất Word tờ trình</button>
-        <button class="btn btn-outline" type="button" onclick="exportEventDoc('bao-cao')">Xuất Word báo cáo</button>
-      </div>
-      <div id="ev-step-actions" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>
-      <hr style="margin:14px 0;border:none;border-top:1px solid var(--border)">
-      <div class="form-grid">
-        <div class="form-group"><label>Loại file upload</label><select id="ev-file-type"><option value="to_trinh_xin_phep">Tờ trình xin phép</option><option value="quyet_dinh_cho_phep">Quyết định cho phép</option><option value="tai_lieu_dinh_kem">Tài liệu đính kèm</option><option value="bao_cao_su_kien">Báo cáo sự kiện</option><option value="quyet_dinh_bao_cao">Quyết định báo cáo</option><option value="khac">Khác</option></select></div>
-        <div class="form-group full"><label>File đính kèm (PDF/DOCX/JPG/PNG, tối đa 20MB)</label><input id="ev-files-input" type="file" multiple></div>
-      </div>
-      <div class="form-actions"><button class="btn btn-outline" type="button" onclick="uploadEventFiles()">Upload file</button></div>
       <div id="ev-files-wrap" style="margin-top:8px"></div>
       <div id="ev-files-by-step" style="margin-top:12px"></div>
       <div id="ev-history-wrap" style="margin-top:12px"></div>
@@ -785,7 +889,13 @@ function setBadge(id, n) {
   var el = document.getElementById(id);
   if (!el) return;
   el.textContent = n;
-  if (n > 0) el.classList.remove('hidden'); else el.classList.add('hidden');
+  if (n > 0) {
+    el.classList.remove('hidden');
+    el.classList.add('pulse');
+  } else {
+    el.classList.add('hidden');
+    el.classList.remove('pulse');
+  }
 }
 
 // ============================================================
@@ -2346,6 +2456,9 @@ async function openThoaThuanDetail(id){
   var r = await apiGet('/api/cooperation/thoa-thuan/' + id);
   if (!(r && r.ok && r.item)) { toast((r&&r.message)||'Không tải được chi tiết thỏa thuận', 'error'); return; }
   var it = r.item;
+  var ttl = { hieu_luc:'badge-green', sap_het_han:'badge-amber', het_han:'badge-red', dang_tham_dinh:'badge-blue' };
+  var ttlb = { hieu_luc:'Hiệu lực', sap_het_han:'Sắp hết hạn', het_han:'Hết hạn', dang_tham_dinh:'Đang thẩm định' };
+  var st = String(it.trang_thai||'').toLowerCase();
   document.getElementById('modal-title').textContent = 'Chi tiết thỏa thuận';
   document.getElementById('modal-ma').textContent = 'ID #' + it.id;
   document.getElementById('modal-body').innerHTML = '<div class="detail-grid">'
@@ -2354,8 +2467,8 @@ async function openThoaThuanDetail(id){
     + '<div class="dk">Loại</div><div class="dv">' + esc(it.loai||'') + '</div>'
     + '<div class="dk">Quốc gia</div><div class="dv">' + esc(it.quoc_gia||'—') + '</div>'
     + '<div class="dk">Hết hạn</div><div class="dv">' + fmtDate(it.het_han) + '</div>'
-    + '<div class="dk">Trạng thái</div><div class="dv">' + esc(it.trang_thai||'') + '</div>'
-    + '<div class="dk">Bản scan</div><div class="dv">' + (it.scan_file_path ? '<a target="_blank" href="' + esc(it.scan_file_path) + '">' + esc(it.scan_file_name || 'Mở file scan') + '</a>' : 'Chưa có') + '</div>'
+    + '<div class="dk">Trạng thái</div><div class="dv"><span class="badge ' + (ttl[st] || 'badge-gray') + '">' + esc(ttlb[st] || it.trang_thai || '—') + '</span></div>'
+    + '<div class="dk">Bản scan</div><div class="dv">' + (it.scan_file_path ? '<a class="tt-scan-link" target="_blank" href="' + esc(it.scan_file_path) + '">📎 ' + esc(it.scan_file_name || 'Mở file scan') + '</a>' : 'Chưa có') + '</div>'
     + '</div>';
   document.getElementById('modal-footer').innerHTML = '<button class="btn btn-outline btn-sm" onclick="closeModal()">Đóng</button>';
   document.getElementById('modal').classList.remove('hidden');
