@@ -345,15 +345,15 @@
                     Quản lý đề tài, dự án, chương trình KHCN các cấp (Nhà nước, Bộ, ĐHQG, Viện). Theo dõi từ đăng ký, xét chọn, phê duyệt đến nghiệm thu.
                 </div>
                 <div class="module-stats">
-                    <div class="mini-stat">
+                    <div class="mini-stat" data-stat="missionMini" data-facility-key="inProgress">
                         <div class="mini-stat-number">—</div>
                         <div class="mini-stat-label">Đang thực hiện</div>
                     </div>
-                    <div class="mini-stat">
+                    <div class="mini-stat" data-stat="missionMini" data-facility-key="completed">
                         <div class="mini-stat-number">—</div>
                         <div class="mini-stat-label">Đã hoàn thành</div>
                     </div>
-                    <div class="mini-stat">
+                    <div class="mini-stat" data-stat="missionMini" data-facility-key="overdue">
                         <div class="mini-stat-number">—</div>
                         <div class="mini-stat-label">Quá hạn</div>
                     </div>
@@ -465,17 +465,17 @@
                     Quản lý bài báo khoa học, sách, giáo trình, kỷ yếu hội nghị. Theo dõi ISI/Scopus, Q1-Q4, hội nghị quốc tế.
                 </div>
                 <div class="module-stats">
-                    <div class="mini-stat">
+                    <div class="mini-stat" data-stat="publicationMini" data-facility-key="indexedScopusWos">
                         <div class="mini-stat-number">—</div>
-                        <div class="mini-stat-label">ISI/Scopus</div>
+                        <div class="mini-stat-label">Scopus / WoS</div>
                     </div>
-                    <div class="mini-stat">
+                    <div class="mini-stat" data-stat="publicationMini" data-facility-key="conferences">
                         <div class="mini-stat-number">—</div>
-                        <div class="mini-stat-label">Hội nghị QT</div>
+                        <div class="mini-stat-label">Hội nghị / kỷ yếu</div>
                     </div>
-                    <div class="mini-stat">
+                    <div class="mini-stat" data-stat="publicationMini" data-facility-key="books">
                         <div class="mini-stat-number">—</div>
-                        <div class="mini-stat-label">Sách</div>
+                        <div class="mini-stat-label">Sách &amp; chương sách</div>
                     </div>
                 </div>
                 <button type="button" class="btn-access" onclick="window.location.href='cong-bo-khoa-hoc.html'">Truy cập →</button>
@@ -489,15 +489,15 @@
                     Quản lý hợp tác trong nước, quốc tế, doanh nghiệp, địa phương. Theo dõi MOU, hợp đồng, dự án hợp tác.
                 </div>
                 <div class="module-stats">
-                    <div class="mini-stat">
+                    <div class="mini-stat" data-stat="cooperationMini" data-facility-key="quoc_te">
                         <div class="mini-stat-number">—</div>
                         <div class="mini-stat-label">Quốc tế</div>
                     </div>
-                    <div class="mini-stat">
+                    <div class="mini-stat" data-stat="cooperationMini" data-facility-key="doanh_nghiep">
                         <div class="mini-stat-number">—</div>
                         <div class="mini-stat-label">Doanh nghiệp</div>
                     </div>
-                    <div class="mini-stat">
+                    <div class="mini-stat" data-stat="cooperationMini" data-facility-key="dia_phuong">
                         <div class="mini-stat-number">—</div>
                         <div class="mini-stat-label">Địa phương</div>
                     </div>
@@ -538,17 +538,17 @@
                     <span style="display:block;margin-top:8px;font-size:12px;font-weight:600;">Sinh viên / khách (email bất kỳ): <a href="crd-dang-ky.html" onclick="event.stopPropagation();">Đăng ký CRD</a></span>
                 </div>
                 <div class="module-stats">
-                    <div class="mini-stat" data-stat="facilities" data-facility-key="rooms">
+                    <div class="mini-stat" data-stat="facilities" data-facility-key="activeBookings">
                         <div class="mini-stat-number">—</div>
-                        <div class="mini-stat-label">Phòng TN</div>
+                        <div class="mini-stat-label">Số lịch đang được đặt</div>
                     </div>
                     <div class="mini-stat" data-stat="facilities" data-facility-key="machines">
                         <div class="mini-stat-number">—</div>
-                        <div class="mini-stat-label">Thiết bị</div>
+                        <div class="mini-stat-label">Số thiết bị</div>
                     </div>
-                    <div class="mini-stat" data-stat="facilities" data-facility-key="utilization">
+                    <div class="mini-stat" data-stat="facilities" data-facility-key="activeUsers">
                         <div class="mini-stat-number">—</div>
-                        <div class="mini-stat-label">Tỷ lệ sử dụng</div>
+                        <div class="mini-stat-label">Người dùng được đặt lịch</div>
                     </div>
                 </div>
                 <button type="button" class="btn-access" onclick="goCrdBookingV2()">Truy cập →</button>
@@ -705,6 +705,16 @@
                 applyOrderFromCodes(grid, finalOrder);
                 try { localStorage.setItem(LS_ORDER_KEY, JSON.stringify(finalOrder)); } catch (e3) {}
             }
+            function fillStatElement(numEl, data, key, subKey) {
+                if (!numEl) return;
+                var val = data[key];
+                if (typeof val === 'object' && val !== null && subKey) {
+                    var subVal = val[subKey];
+                    numEl.textContent = (typeof subVal === 'number') ? subVal : (subVal != null ? subVal : '—');
+                } else {
+                    numEl.textContent = (typeof val === 'number') ? val : (val != null ? val : '—');
+                }
+            }
             function loadHomepageStats() {
                 fetch(apiBase + '/api/homepage-stats')
                     .then(function(r) { return r.json(); })
@@ -713,16 +723,14 @@
                         document.querySelectorAll('.stat-card[data-stat]').forEach(function(card) {
                             var key = card.getAttribute('data-stat');
                             var numEl = card.querySelector('.stat-number');
-                            if (!numEl) return;
-                            var val = data[key];
-                            // facilities là object {machines, rooms, utilization} — lấy sub-key từ data-facility-key
-                            if (typeof val === 'object' && val !== null && card.hasAttribute('data-facility-key')) {
-                                var subKey = card.getAttribute('data-facility-key');
-                                var subVal = val ? val[subKey] : undefined;
-                                numEl.textContent = (typeof subVal === 'number') ? subVal : (subVal != null ? subVal : '—');
-                            } else {
-                                numEl.textContent = (typeof val === 'number') ? val : (val != null ? val : '—');
-                            }
+                            var subKey = card.getAttribute('data-facility-key');
+                            fillStatElement(numEl, data, key, subKey);
+                        });
+                        document.querySelectorAll('.mini-stat[data-stat]').forEach(function(mini) {
+                            var key = mini.getAttribute('data-stat');
+                            var numEl = mini.querySelector('.mini-stat-number');
+                            var subKey = mini.getAttribute('data-facility-key');
+                            fillStatElement(numEl, data, key, subKey);
                         });
                     })
                     .catch(function() {});

@@ -31,6 +31,7 @@
         .admin-sections #section-missions { order: 6; }
         .admin-sections #section-homepage { order: 7; }
         .admin-sections #section-notify-recipients { order: 8; }
+        .admin-sections #section-audit { order: 9; }
         @media (max-width: 960px) {
             .admin-layout { flex-direction: column; }
             .admin-sidebar { position: relative; top: 0; width: 100%; flex: none; }
@@ -80,13 +81,14 @@
         .section-members .method-card { border-left-color: #0d47a1; }
         .section-categories .method-card { border-left-color: #0d47a1; }
         .section-missions .method-card { border-left-color: #2e7d32; }
+        .section-audit .method-card { border-left-color: #37474f; }
         .btn-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
         .btn-row .btn-sm { flex-shrink: 0; }
         .btn-delete { background: #dc3545 !important; color: #fff !important; }
         .btn-delete:hover { background: #c82333 !important; }
     </style>
 </head>
-<body class="theme-cap-vien">
+<body class="theme-cap-vien" data-activity-module="quan_tri_cap_vien">
     <header>
         <div class="container">
             <div class="header-content">
@@ -101,10 +103,11 @@
     <nav>
         <div class="container">
             <a href="index.html">🏠 Trang chủ</a>
-            <a href="de-tai-cap-vien.html">📋 Đề tài cấp Viện</a>
+            <a href="tai-mau-ho-so-de-tai-cap-vien.html">📥 Tải mẫu hồ sơ đề tài cấp Viện</a>
             <div class="nav-dropdown">
                 <span class="nav-dropdown-trigger">📤 Nộp hồ sơ / Theo dõi ▾</span>
                 <div class="nav-dropdown-menu">
+                    <a href="de-tai-cap-vien.html">📋 Trang giới thiệu &amp; quy trình</a>
                     <a href="nop-de-tai-cap-vien.html">📝 Nộp đề tài cấp Viện</a>
                     <a href="theo-doi-de-tai-cap-vien.html">📁 Theo dõi hồ sơ của tôi</a>
                     <a href="hoi-dong-de-tai-cap-vien.html">👥 Khu vực Hội đồng</a>
@@ -131,6 +134,7 @@
                         <a href="#section-missions">Nhiệm vụ KHCN</a>
                         <a href="#section-homepage">Cấu hình trang chủ &amp; hệ thống</a>
                         <a href="#section-notify-recipients">Email thông báo</a>
+                        <a href="#section-audit">Nhật ký hệ thống</a>
                     </nav>
                 </aside>
                 <div class="admin-main">
@@ -519,6 +523,57 @@
             </div>
             </section>
 
+            <section id="section-audit" class="section-block section-audit">
+            <h2 class="page-title">📜 Nhật ký hệ thống</h2>
+            <div class="method-card">
+                <h3>Giám sát hoạt động người dùng</h3>
+                <ol class="method-steps">
+                    <li><strong>Đăng nhập / đăng xuất:</strong> Ghi tự động khi đăng nhập thành công hoặc gọi đăng xuất (kèm IP, trình duyệt).</li>
+                    <li><strong>Đăng nhập thất bại:</strong> Ghi khi sai mật khẩu, email không tồn tại, tài khoản chưa kích hoạt hoặc bị khóa (không lưu mật khẩu).</li>
+                    <li><strong>Truy cập trang (module Đề tài cấp Viện):</strong> Các trang có gắn theo dõi ghi <em>Xem trang</em> khi người dùng đã đăng nhập mở trang.</li>
+                    <li><strong>Mở rộng:</strong> Ứng dụng có thể gọi <code>POST /api/activity/track</code> để ghi thêm hành động tùy chỉnh.</li>
+                </ol>
+            </div>
+            <div id="msg-audit" class="msg" style="display:none;"></div>
+            <div class="card">
+                <h3>Bộ lọc</h3>
+                <div class="add-role-form" style="margin-bottom:0;">
+                    <div class="form-row">
+                        <div class="form-group"><label for="audit-from">Từ ngày</label><input type="date" id="audit-from"></div>
+                        <div class="form-group"><label for="audit-to">Đến ngày</label><input type="date" id="audit-to"></div>
+                        <div class="form-group"><label for="audit-email">Email</label><input type="text" id="audit-email" placeholder="Lọc theo email" autocomplete="off"></div>
+                        <div class="form-group">
+                            <label for="audit-action">Hành động</label>
+                            <select id="audit-action">
+                                <option value="">Tất cả</option>
+                                <option value="login">Đăng nhập</option>
+                                <option value="logout">Đăng xuất</option>
+                                <option value="login_failed">Đăng nhập thất bại</option>
+                                <option value="page_view">Xem trang</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="audit-module">Module</label>
+                            <select id="audit-module">
+                                <option value="">Tất cả</option>
+                                <option value="auth">auth</option>
+                                <option value="cap_vien">cap_vien</option>
+                                <option value="quan_tri_cap_vien">quan_tri_cap_vien</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-group-btn">
+                            <button type="button" class="btn-submit-role" id="btn-audit-apply">Tải nhật ký</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Danh sách sự kiện</h3>
+                <p class="note" id="audit-summary" style="margin-top:0;"></p>
+                <div id="audit-table-wrap" class="accounts-table-wrap"><div class="empty-state">Chọn bộ lọc và nhấn «Tải nhật ký».</div></div>
+            </div>
+            </section>
+
                         </div>
                     </div>
                 </div>
@@ -535,6 +590,7 @@
         </div>
     </footer>
     <script src="js/auth-status.js"></script>
+    <script src="js/activity-tracker.js"></script>
     <script>
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -1275,6 +1331,88 @@
             }
         }
 
+        const auditActionLabels = {
+            login: 'Đăng nhập',
+            logout: 'Đăng xuất',
+            login_failed: 'Đăng nhập thất bại',
+            page_view: 'Xem trang',
+        };
+
+        function escAudit(val) {
+            if (val == null || val === '') return '';
+            return String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        }
+
+        async function loadAuditLog() {
+            const wrap = document.getElementById('audit-table-wrap');
+            const summary = document.getElementById('audit-summary');
+            if (!isAdmin || !token || !wrap) return;
+            const from = document.getElementById('audit-from').value;
+            const to = document.getElementById('audit-to').value;
+            const email = document.getElementById('audit-email').value.trim();
+            const action = document.getElementById('audit-action').value;
+            const module = document.getElementById('audit-module').value;
+            const params = new URLSearchParams({ limit: '200', offset: '0' });
+            if (from) params.set('from', from);
+            if (to) params.set('to', to);
+            if (email) params.set('email', email);
+            if (action) params.set('action', action);
+            if (module) params.set('module', module);
+            wrap.innerHTML = '<div class="empty-state">Đang tải...</div>';
+            if (summary) summary.textContent = '';
+            try {
+                const res = await fetch(apiBase + '/api/admin/activity-log?' + params.toString(), {
+                    headers: { Authorization: 'Bearer ' + token },
+                });
+                if (res.status === 401 || res.status === 403) {
+                    wrap.innerHTML = '<div class="empty-state">Không đủ quyền hoặc phiên hết hạn.</div>';
+                    return;
+                }
+                const data = await res.json().catch(function () { return {}; });
+                const rows = data.rows || [];
+                const total = typeof data.total === 'number' ? data.total : rows.length;
+                if (summary) {
+                    summary.textContent = 'Tổng khớp điều kiện: ' + total + ' (hiển thị tối đa ' + (data.limit || 200) + ' mục).';
+                }
+                if (rows.length === 0) {
+                    wrap.innerHTML = '<div class="empty-state">Không có bản ghi.</div>';
+                    return;
+                }
+                wrap.innerHTML =
+                    '<table><thead><tr><th>Thời gian</th><th>Email / Họ tên</th><th>Hành động</th><th>Module</th><th>Trang / đường dẫn</th><th>IP</th><th>Chi tiết</th></tr></thead><tbody>' +
+                    rows
+                        .map(function (r) {
+                            const act = auditActionLabels[r.action] || r.action || '—';
+                            const who = escAudit(r.email || '—') + (r.fullname ? ' (' + escAudit(r.fullname) + ')' : '');
+                            return (
+                                '<tr><td>' +
+                                escAudit(r.created_at) +
+                                '</td><td>' +
+                                who +
+                                '</td><td>' +
+                                escAudit(act) +
+                                '</td><td>' +
+                                escAudit(r.module || '—') +
+                                '</td><td>' +
+                                escAudit(r.path || '—') +
+                                '</td><td>' +
+                                escAudit(r.ip_address || '—') +
+                                '</td><td style="max-width:220px;word-break:break-word;">' +
+                                escAudit(r.detail || '—') +
+                                '</td></tr>'
+                            );
+                        })
+                        .join('') +
+                    '</tbody></table>';
+            } catch (err) {
+                wrap.innerHTML = '<div class="empty-state">Lỗi tải dữ liệu.</div>';
+            }
+        }
+
+        window.addEventListener('hashchange', function () {
+            if (isAdmin && window.location.hash === '#section-audit') loadAuditLog();
+        });
+
         if (isAdmin) {
             document.getElementById('form-add-recipient').addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -1532,6 +1670,9 @@
                 }
                 btn.disabled = false;
             });
+
+            document.getElementById('btn-audit-apply').addEventListener('click', function () { loadAuditLog(); });
+            if (window.location.hash === '#section-audit') loadAuditLog();
         }
     </script>
 </body>

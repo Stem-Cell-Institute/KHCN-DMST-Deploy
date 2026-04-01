@@ -62,6 +62,7 @@
         .template-list li {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 10px;
             padding: 10px 14px;
             margin-bottom: 8px;
@@ -71,22 +72,59 @@
             transition: all 0.2s;
         }
         .template-list li:hover { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.05); }
-        .template-list a {
-            flex: 1;
-            color: var(--dark);
+        .template-code { font-family: monospace; font-size: 12px; color: var(--accent); background: #fff3e0; padding: 2px 8px; border-radius: 4px; flex-shrink: 0; }
+        .template-title { flex: 1; min-width: 140px; font-weight: 500; color: var(--dark); }
+        .template-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+        .btn-download {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
             text-decoration: none;
-            font-weight: 500;
+            display: inline-block;
         }
-        .template-list a:hover { color: var(--primary); }
-        .template-code { font-family: monospace; font-size: 12px; color: var(--accent); background: #fff3e0; padding: 2px 8px; border-radius: 4px; }
-        .btn-download { background: var(--accent); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; text-decoration: none; display: inline-block; }
-        .btn-download:hover { background: #c2410c; color: white; }
+        .btn-download:hover:not(:disabled) { background: #c2410c; color: white; }
+        .btn-download:disabled { opacity: 0.45; cursor: not-allowed; }
+        .admin-template-tools {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        body.is-admin .admin-template-tools { display: inline-flex; }
+        .admin-template-tools input[type="file"] { font-size: 11px; max-width: 200px; }
+        .btn-upload {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .btn-upload:hover { background: var(--primary-light); }
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .btn-delete:hover { background: #b02a37; }
+        .file-meta { font-size: 11px; color: var(--gray); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         footer { background: var(--dark); color: var(--white); padding: 1.5rem 0; margin-top: 2rem; text-align: center; }
         footer p { color: var(--gray-light); font-size: 0.9rem; }
         .intro-box { background: #e3f2fd; border-left: 4px solid var(--primary); padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+        .admin-note { background: #fff8e6; border-left: 4px solid var(--accent); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; display: none; }
+        body.is-admin .admin-note { display: block; }
     </style>
 </head>
-<body class="theme-cap-vien">
+<body class="theme-cap-vien" data-activity-module="cap_vien">
     <header>
         <div class="container">
             <div class="header-content">
@@ -104,7 +142,7 @@
     <nav>
         <div class="container">
             <a href="index.html">🏠 Trang chủ</a>
-            <a href="de-tai-cap-vien.html">📋 Đề tài cấp Viện</a>
+            <a href="de-tai-cap-vien.html">📋 Giới thiệu &amp; quy trình</a>
             <a href="nop-de-tai-cap-vien.html">📝 Nộp đề tài</a>
             <a href="theo-doi-de-tai-cap-vien.html">📁 Theo dõi hồ sơ</a>
             <a href="hoi-dong-de-tai-cap-vien.html">👥 Hội đồng</a>
@@ -116,47 +154,48 @@
             <div class="guide-section">
                 <h2>📥 Hướng dẫn nghiên cứu viên và Hội đồng</h2>
                 <div class="intro-box">
-                    <p><strong>Nghiên cứu viên</strong> và <strong>thành viên Hội đồng</strong> tải mẫu hồ sơ theo từng giai đoạn và bước bên dưới. Sau khi điền xong, truy cập trang <strong>Theo dõi tiến trình</strong> của đề tài và thực hiện upload tại nút hành động tương ứng.</p>
+                    <p><strong>Nghiên cứu viên</strong> và <strong>thành viên Hội đồng</strong> tải mẫu hồ sơ theo từng giai đoạn và bước bên dưới (nút cam chỉ hoạt động khi Quản trị đã đăng tải file). Sau khi điền xong, truy cập trang <strong>Theo dõi tiến trình</strong> của đề tài và thực hiện upload tại nút hành động tương ứng.</p>
                 </div>
+                <p class="admin-note"><strong>Admin:</strong> Chọn file bất kỳ (Word, PDF, …) ở cột bên phải, bấm «Gửi lên» để thay thế mẫu; «Xóa» để gỡ file (người dùng sẽ không tải được cho đến khi upload lại).</p>
 
                 <div class="phase-block">
                     <h3>📋 GIAI ĐOẠN 1: ĐĂNG KÝ VÀ XÉT DUYỆT HỒ SƠ</h3>
                     <div class="step-group">
                         <h4>Bước 1 — Nộp hồ sơ đề xuất (Nghiên cứu viên)</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-TASK-01</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-01_ ĐƠN ĐỀ XUẤT ĐỀ TÀI.md" target="_blank" download>Đơn đề xuất đề tài</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-01_ ĐƠN ĐỀ XUẤT ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
-                            <li><span class="template-code">SCI-TASK-02</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-02_ THUYẾT MINH ĐỀ TÀI NGHIÊN CỨU KHOA HỌC.md" target="_blank" download>Thuyết minh đề tài nghiên cứu khoa học</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-02_ THUYẾT MINH ĐỀ TÀI NGHIÊN CỨU KHOA HỌC.md" class="btn-download" download>📥 Tải</a></li>
-                            <li><span class="template-code">SCI-TASK-03</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-03_ DỰ TOÁN KINH PHÍ CHI TIẾT ĐỀ TÀI.md" target="_blank" download>Dự toán kinh phí chi tiết</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-03_ DỰ TOÁN KINH PHÍ CHI TIẾT ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-TASK-01"><span class="template-code">SCI-TASK-01</span><span class="template-title">Đơn đề xuất đề tài</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
+                            <li class="template-row" data-task-code="SCI-TASK-02"><span class="template-code">SCI-TASK-02</span><span class="template-title">Thuyết minh đề tài nghiên cứu khoa học</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
+                            <li class="template-row" data-task-code="SCI-TASK-03"><span class="template-code">SCI-TASK-03</span><span class="template-title">Dự toán kinh phí chi tiết</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                     <div class="step-group">
                         <h4>Bước 2 — Kiểm tra hồ sơ hành chính (Thư ký HĐKHCN)</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-TASK-04</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-04_ PHIẾU KIỂM TRA HỒ SƠ HÀNH CHÍNH ĐỀ TÀI.md" target="_blank" download>Phiếu kiểm tra hồ sơ hành chính</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-04_ PHIẾU KIỂM TRA HỒ SƠ HÀNH CHÍNH ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-TASK-04"><span class="template-code">SCI-TASK-04</span><span class="template-title">Phiếu kiểm tra hồ sơ hành chính</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                     <div class="step-group">
                         <h4>Bước 3 — Phân công phản biện (Chủ tịch HĐKHCN)</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-TASK-05</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-05_ PHIẾU PHÂN CÔNG PHẢN BIỆN ĐỀ TÀI.md" target="_blank" download>Phiếu phân công phản biện</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-05_ PHIẾU PHÂN CÔNG PHẢN BIỆN ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-TASK-05"><span class="template-code">SCI-TASK-05</span><span class="template-title">Phiếu phân công phản biện</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                     <div class="step-group">
                         <h4>Bước 4 — Đánh giá phản biện (2 Phản biện)</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-TASK-06</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-06_ PHIẾU ĐÁNH GIÁ CỦA CHUYÊN GIA PHẢN BIỆN ĐỀ TÀI.md" target="_blank" download>Phiếu đánh giá của chuyên gia phản biện</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-06_ PHIẾU ĐÁNH GIÁ CỦA CHUYÊN GIA PHẢN BIỆN ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-TASK-06"><span class="template-code">SCI-TASK-06</span><span class="template-title">Phiếu đánh giá của chuyên gia phản biện</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                     <div class="step-group">
                         <h4>Bước 5 — Họp Hội đồng Khoa học Viện</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-TASK-07</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-07_ BIÊN BẢN HỌP HỘI ĐỒNG KHOA HỌC XÉT DUYỆT ĐỀ TÀI.md" target="_blank" download>Biên bản họp Hội đồng Khoa học xét duyệt đề tài</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-TASK-07_ BIÊN BẢN HỌP HỘI ĐỒNG KHOA HỌC XÉT DUYỆT ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-TASK-07"><span class="template-code">SCI-TASK-07</span><span class="template-title">Biên bản họp Hội đồng Khoa học xét duyệt đề tài</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                     <div class="step-group">
                         <h4>Bước 6 — Cấp Quyết định phê duyệt (Viện trưởng)</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-INST-QĐ</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-INST-QĐ_ QUYẾT ĐỊNH PHÊ DUYỆT ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ CẤP VIỆN.md" target="_blank" download>Quyết định phê duyệt đề tài KHCN cấp Viện</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-INST-QĐ_ QUYẾT ĐỊNH PHÊ DUYỆT ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ CẤP VIỆN.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-INST-QĐ"><span class="template-code">SCI-INST-QĐ</span><span class="template-title">Quyết định phê duyệt đề tài KHCN cấp Viện</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                 </div>
@@ -166,7 +205,7 @@
                     <div class="step-group">
                         <h4>Bước 7 — Ký hợp đồng thực hiện</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-CONTRACT-01</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-CONTRACT-01_ HỢP ĐỒNG THỰC HIỆN NHIỆM VỤ KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Hợp đồng thực hiện nhiệm vụ khoa học và công nghệ</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-CONTRACT-01_ HỢP ĐỒNG THỰC HIỆN NHIỆM VỤ KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-CONTRACT-01"><span class="template-code">SCI-CONTRACT-01</span><span class="template-title">Hợp đồng thực hiện nhiệm vụ khoa học và công nghệ</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                 </div>
@@ -174,15 +213,15 @@
                 <div class="phase-block">
                     <h3>⚙️ GIAI ĐOẠN 3: THỰC HIỆN VÀ BÁO CÁO</h3>
                     <div class="step-group">
-                        <h4>Bước 10 & 10A — Báo cáo tiến độ 6 tháng</h4>
+                        <h4>Bước 10 &amp; 10A — Báo cáo tiến độ 6 tháng</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-INST-07</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-INST-07_ BÁO CÁO TIẾN ĐỘ THỰC HIỆN ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Báo cáo tiến độ thực hiện đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-INST-07_ BÁO CÁO TIẾN ĐỘ THỰC HIỆN ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-INST-07"><span class="template-code">SCI-INST-07</span><span class="template-title">Báo cáo tiến độ thực hiện đề tài KHCN</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                     <div class="step-group">
                         <h4>Bước 11 — Điều chỉnh nội dung/nhân sự/thời gian</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-ACE-06</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-ACE-06_ ĐƠN XIN ĐIỀU CHỈNH NỘI DUNG/NHÂN SỰ/THỜI GIAN THỰC HIỆN ĐỀ TÀI.md" target="_blank" download>Đơn xin điều chỉnh nội dung/nhân sự/thời gian</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-ACE-06_ ĐƠN XIN ĐIỀU CHỈNH NỘI DUNG/NHÂN SỰ/THỜI GIAN THỰC HIỆN ĐỀ TÀI.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-ACE-06"><span class="template-code">SCI-ACE-06</span><span class="template-title">Đơn xin điều chỉnh nội dung/nhân sự/thời gian</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                 </div>
@@ -192,34 +231,34 @@
                     <div class="step-group">
                         <h4>Bước 12 — Nộp hồ sơ nghiệm thu (Chủ nhiệm)</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-FINAL-01</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-01_ ĐƠN ĐỀ NGHỊ NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Đơn đề nghị nghiệm thu đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-01_ ĐƠN ĐỀ NGHỊ NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
-                            <li><span class="template-code">SCI-FINAL-02</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-02_ BÁO CÁO TỔNG KẾT ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Báo cáo tổng kết đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-02_ BÁO CÁO TỔNG KẾT ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
-                            <li><span class="template-code">SCI-FINAL-03</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-03_ BÁO CÁO TÀI CHÍNH QUYẾT TOÁN ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Báo cáo tài chính quyết toán đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-03_ BÁO CÁO TÀI CHÍNH QUYẾT TOÁN ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-FINAL-01"><span class="template-code">SCI-FINAL-01</span><span class="template-title">Đơn đề nghị nghiệm thu đề tài KHCN</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
+                            <li class="template-row" data-task-code="SCI-FINAL-02"><span class="template-code">SCI-FINAL-02</span><span class="template-title">Báo cáo tổng kết đề tài KHCN</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
+                            <li class="template-row" data-task-code="SCI-FINAL-03"><span class="template-code">SCI-FINAL-03</span><span class="template-title">Báo cáo tài chính quyết toán đề tài KHCN</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                     <div class="step-group">
                         <h4>Bước 13-14 — Phản biện nghiệm thu</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-FINAL-04</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-04_ PHIẾU ĐÁNH GIÁ PHẢN BIỆN NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Phiếu đánh giá phản biện nghiệm thu đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-04_ PHIẾU ĐÁNH GIÁ PHẢN BIỆN NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-FINAL-04"><span class="template-code">SCI-FINAL-04</span><span class="template-title">Phiếu đánh giá phản biện nghiệm thu đề tài KHCN</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                     <div class="step-group">
                         <h4>Bước 15 — Họp Hội đồng nghiệm thu</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-FINAL-05</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-05_ BIÊN BẢN HỌP HỘI ĐỒNG NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Biên bản họp Hội đồng nghiệm thu đề tài KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-05_ BIÊN BẢN HỌP HỘI ĐỒNG NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
-                            <li><span class="template-code">SCI-FINAL-06</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-06_ PHIẾU NHẬN XÉT VÀ CHẤM ĐIỂM CỦA THÀNH VIÊN HỘI ĐỒNG NGHIỆM THU.md" target="_blank" download>Phiếu nhận xét và chấm điểm của thành viên Hội đồng nghiệm thu</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-06_ PHIẾU NHẬN XÉT VÀ CHẤM ĐIỂM CỦA THÀNH VIÊN HỘI ĐỒNG NGHIỆM THU.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-FINAL-05"><span class="template-code">SCI-FINAL-05</span><span class="template-title">Biên bản họp Hội đồng nghiệm thu đề tài KHCN</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
+                            <li class="template-row" data-task-code="SCI-FINAL-06"><span class="template-code">SCI-FINAL-06</span><span class="template-title">Phiếu nhận xét và chấm điểm của thành viên Hội đồng nghiệm thu</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                     <div class="step-group">
                         <h4>Bước 16 — Quyết định nghiệm thu (Viện trưởng)</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-FINAL-07</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-07_ QUYẾT ĐỊNH CÔNG NHẬN KẾT QUẢ NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ CẤP VIỆN.md" target="_blank" download>Quyết định công nhận kết quả nghiệm thu đề tài KHCN cấp Viện</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-07_ QUYẾT ĐỊNH CÔNG NHẬN KẾT QUẢ NGHIỆM THU ĐỀ TÀI KHOA HỌC VÀ CÔNG NGHỆ CẤP VIỆN.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-FINAL-07"><span class="template-code">SCI-FINAL-07</span><span class="template-title">Quyết định công nhận kết quả nghiệm thu đề tài KHCN cấp Viện</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                     <div class="step-group">
                         <h4>Bước 18 — Thanh lý hợp đồng</h4>
                         <ul class="template-list">
-                            <li><span class="template-code">SCI-FINAL-08</span><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-08_ BIÊN BẢN THANH LÝ HỢP ĐỒNG THỰC HIỆN NHIỆM VỤ KHOA HỌC VÀ CÔNG NGHỆ.md" target="_blank" download>Biên bản thanh lý hợp đồng thực hiện nhiệm vụ KHCN</a><a href="Lập biểu mẫu cho toàn bộ quy trình đề tài cấp Viện/SCI-FINAL-08_ BIÊN BẢN THANH LÝ HỢP ĐỒNG THỰC HIỆN NHIỆM VỤ KHOA HỌC VÀ CÔNG NGHỆ.md" class="btn-download" download>📥 Tải</a></li>
+                            <li class="template-row" data-task-code="SCI-FINAL-08"><span class="template-code">SCI-FINAL-08</span><span class="template-title">Biên bản thanh lý hợp đồng thực hiện nhiệm vụ KHCN</span><span class="template-actions"><span class="file-meta"></span><button type="button" class="btn-download" disabled>📥 Tải</button><span class="admin-template-tools"><input type="file" class="tpl-file" aria-label="Chọn file mẫu"><button type="button" class="btn-upload">Gửi lên</button><button type="button" class="btn-delete" disabled>Xóa</button></span></span></li>
                         </ul>
                     </div>
                 </div>
@@ -232,5 +271,159 @@
             <p>&copy; 2026 Viện Tế bào gốc — Đề tài cấp Viện</p>
         </div>
     </footer>
+
+    <script src="js/auth-status.js"></script>
+    <script src="js/activity-tracker.js"></script>
+    <script>
+(function () {
+  var API = '/api/cap-vien/public-templates';
+
+  function getToken() {
+    try { return localStorage.getItem('token') || ''; } catch (_) { return ''; }
+  }
+
+  function applyRowState(li, task) {
+    var btn = li.querySelector('.btn-download');
+    var meta = li.querySelector('.file-meta');
+    var delBtn = li.querySelector('.btn-delete');
+    if (!btn) return;
+    if (task && task.hasFile) {
+      btn.disabled = false;
+      if (meta) meta.textContent = task.originalName || '';
+      if (delBtn) delBtn.disabled = false;
+    } else {
+      btn.disabled = true;
+      if (meta) meta.textContent = '';
+      if (delBtn) delBtn.disabled = true;
+    }
+  }
+
+  function downloadBlob(taskCode) {
+    var url = API + '/' + encodeURIComponent(taskCode) + '/file';
+    return fetch(url).then(function (res) {
+      if (!res.ok) return res.json().then(function (j) { throw new Error(j.message || ('HTTP ' + res.status)); });
+      return res.blob().then(function (blob) {
+        var disp = res.headers.get('Content-Disposition') || '';
+        var name = taskCode;
+        var m = /filename\*=UTF-8''([^;\n]+)|filename="([^"]+)"/i.exec(disp);
+        if (m) {
+          try { name = decodeURIComponent((m[1] || m[2] || '').trim()); } catch (_) {}
+        }
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+    });
+  }
+
+  function refreshList() {
+    return fetch(API, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (data) {
+      var map = {};
+      (data.tasks || []).forEach(function (t) { map[t.taskCode] = t; });
+      document.querySelectorAll('.template-row').forEach(function (li) {
+        var code = li.getAttribute('data-task-code');
+        applyRowState(li, map[code]);
+      });
+    });
+  }
+
+  function uploadFile(taskCode, file) {
+    var tok = getToken();
+    if (!tok) return Promise.reject(new Error('Chưa đăng nhập'));
+    var fd = new FormData();
+    fd.append('file', file);
+    return fetch(API + '/' + encodeURIComponent(taskCode), {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + tok },
+      body: fd,
+      credentials: 'include'
+    }).then(function (res) {
+      return res.json().then(function (j) {
+        if (!res.ok) throw new Error(j.message || ('HTTP ' + res.status));
+        return j;
+      });
+    });
+  }
+
+  function deleteFile(taskCode) {
+    var tok = getToken();
+    if (!tok) return Promise.reject(new Error('Chưa đăng nhập'));
+    return fetch(API + '/' + encodeURIComponent(taskCode), {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + tok },
+      credentials: 'include'
+    }).then(function (res) {
+      return res.json().then(function (j) {
+        if (!res.ok) throw new Error(j.message || ('HTTP ' + res.status));
+        return j;
+      });
+    });
+  }
+
+  function init() {
+    var tok = getToken();
+    if (tok) {
+      fetch('/api/me', { headers: { Authorization: 'Bearer ' + tok }, cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (u) {
+          if (u && String(u.role || '').toLowerCase() === 'admin') {
+            document.body.classList.add('is-admin');
+          }
+        })
+        .catch(function () {});
+    }
+
+    document.querySelectorAll('.template-row').forEach(function (li) {
+      var code = li.getAttribute('data-task-code');
+      var btnDl = li.querySelector('.btn-download');
+      var btnUp = li.querySelector('.btn-upload');
+      var btnDel = li.querySelector('.btn-delete');
+      var inp = li.querySelector('.tpl-file');
+
+      if (btnDl) {
+        btnDl.addEventListener('click', function () {
+          if (btnDl.disabled) return;
+          downloadBlob(code).catch(function (e) { alert(e.message || String(e)); });
+        });
+      }
+      if (btnUp && inp) {
+        btnUp.addEventListener('click', function () {
+          if (!inp.files || !inp.files[0]) {
+            alert('Chọn file trước khi gửi.');
+            return;
+          }
+          btnUp.disabled = true;
+          uploadFile(code, inp.files[0])
+            .then(function () {
+              inp.value = '';
+              return refreshList();
+            })
+            .then(function () { alert('Đã cập nhật mẫu.'); })
+            .catch(function (e) { alert(e.message || String(e)); })
+            .finally(function () { btnUp.disabled = false; });
+        });
+      }
+      if (btnDel) {
+        btnDel.addEventListener('click', function () {
+          if (!confirm('Xóa file mẫu đã đăng tải cho ' + code + '?')) return;
+          btnDel.disabled = true;
+          deleteFile(code)
+            .then(function () { return refreshList(); })
+            .then(function () { alert('Đã xóa.'); })
+            .catch(function (e) { alert(e.message || String(e)); })
+            .finally(function () { btnDel.disabled = false; });
+        });
+      }
+    });
+
+    refreshList().catch(function () {});
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+    </script>
 </body>
 </html>

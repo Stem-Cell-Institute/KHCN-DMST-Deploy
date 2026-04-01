@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quản trị đặt lịch thiết bị CRD | Admin</title>
+<link rel="stylesheet" href="public/css/equipmentAnalytics.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);min-height:100vh;padding:20px;color:#e8e8f0;}
@@ -148,6 +150,98 @@ table.data tr:hover td{background:#fafbff;}
         </div>
       </div>
     </div>
+    <div id="pane-analytics" class="pane">
+      <div class="ea-wrap" id="ea-root">
+        <div id="ea-error"></div>
+        <div id="ea-skeleton" class="ea-skel" style="display:none;min-height:200px;"></div>
+        <div id="ea-content">
+          <div class="ea-toolbar">
+            <div class="ea-field">
+              <label>Từ ngày</label>
+              <input type="date" id="ea-from" />
+            </div>
+            <div class="ea-field">
+              <label>Đến ngày</label>
+              <input type="date" id="ea-to" />
+            </div>
+            <div class="ea-field">
+              <label>Thiết bị</label>
+              <select id="ea-equip"><option value="">Tất cả thiết bị</option></select>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" id="ea-apply">Áp dụng</button>
+            <div class="ea-actions">
+              <button type="button" class="btn btn-ghost btn-sm" style="color:var(--text);border:1px solid var(--border);" id="ea-export-xlsx">⬇ Xuất Excel</button>
+              <button type="button" class="btn btn-ghost btn-sm" style="color:var(--text);border:1px solid var(--border);" id="ea-export-docx">⬇ Xuất Word</button>
+            </div>
+          </div>
+          <div class="ea-cards">
+            <div class="ea-card"><b id="ea-card-util">—</b><span>Utilization TB (%)</span></div>
+            <div class="ea-card"><b id="ea-card-hours">—</b><span>Giờ đặt TB / thiết bị</span></div>
+            <div class="ea-card"><b id="ea-card-cancel">—</b><span>Tỷ lệ hủy</span></div>
+            <div class="ea-card"><b id="ea-card-maint">—</b><span>Thiết bị cần bảo trì</span></div>
+          </div>
+          <div class="ea-subtabs">
+            <button type="button" class="ea-subtab active" data-ea-sub="overview" onclick="switchEaSub('overview')">Tổng quan</button>
+            <button type="button" class="ea-subtab" data-ea-sub="users" onclick="switchEaSub('users')">Người dùng</button>
+            <button type="button" class="ea-subtab" data-ea-sub="maint" onclick="switchEaSub('maint')">Bảo trì</button>
+          </div>
+          <div class="ea-panel active" id="ea-panel-overview">
+            <div class="ea-charts">
+              <div class="ea-chart-box"><h4>Utilization theo thiết bị</h4><canvas id="ea-chart-bar" height="220"></canvas></div>
+              <div class="ea-chart-box"><h4>Xu hướng utilization (TB)</h4><canvas id="ea-chart-line" height="220"></canvas></div>
+            </div>
+            <h4 style="margin:8px 0 10px;font-size:14px;">Heatmap sử dụng (07:00–22:00)</h4>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Màu đậm = mức sử dụng cao trong khung giờ (tối đa 1 giờ/ô).</p>
+            <div class="ea-heatmap-wrap" id="ea-heatmap"></div>
+          </div>
+          <div class="ea-panel" id="ea-panel-users">
+            <div class="ea-chart-box" style="margin-bottom:18px;max-width:520px;height:300px;">
+              <h4>Phân bố giờ theo nhóm NC</h4>
+              <canvas id="ea-chart-pie"></canvas>
+            </div>
+            <h4 style="margin-bottom:10px;font-size:14px;">Top người dùng</h4>
+            <div class="ea-table-wrap">
+              <table class="data ea-sortable" id="ea-users-table" style="width:100%;">
+                <thead>
+                  <tr>
+                    <th data-sort="user_id">User</th>
+                    <th data-sort="full_name">Họ tên</th>
+                    <th data-sort="group">Nhóm</th>
+                    <th data-sort="total_hours" style="text-align:right;">Tổng giờ</th>
+                    <th data-sort="booking_count" style="text-align:right;">Số lịch</th>
+                    <th data-sort="cancellation_rate" style="text-align:right;">Hủy %</th>
+                  </tr>
+                </thead>
+                <tbody id="ea-users-tbody"></tbody>
+              </table>
+            </div>
+            <h4 style="margin:20px 0 10px;font-size:14px;">Thống kê hủy lịch</h4>
+            <div id="ea-cancel-stats"></div>
+          </div>
+          <div class="ea-panel" id="ea-panel-maint">
+            <h4 style="margin-bottom:12px;font-size:14px;">Trạng thái bảo trì</h4>
+            <div id="ea-maint-list"></div>
+            <h4 style="margin:22px 0 10px;font-size:14px;">Lịch sử bảo trì (trong kỳ lọc)</h4>
+            <div class="ea-table-wrap">
+              <table class="data" style="width:100%;">
+                <thead>
+                  <tr>
+                    <th>Thiết bị</th>
+                    <th>Ngày</th>
+                    <th style="text-align:right;" title="Giờ tích lũy trong chu kỳ trước khi reset">Giờ chu kỳ</th>
+                    <th>Loại</th>
+                    <th>Thực hiện</th>
+                    <th style="text-align:right;">Chi phí</th>
+                    <th>Ghi chú</th>
+                  </tr>
+                </thead>
+                <tbody id="ea-maint-logs-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div id="pane-bookings" class="pane">
       <div class="toolbar">
         <input type="text" class="search" id="bk-filter" placeholder="Lọc theo thiết bị, người, ngày…" oninput="renderBookings()">
@@ -275,7 +369,7 @@ table.data tr:hover td{background:#fafbff;}
     <div class="field"><label>Nhóm nghiên cứu</label><input type="text" id="bm-rg"></div>
     <div class="field"><label>Mục đích</label><textarea id="bm-purpose"></textarea></div>
     <div class="field"><label>Trạng thái</label>
-      <select id="bm-status"><option value="confirmed">confirmed</option><option value="cancelled">cancelled</option></select>
+      <select id="bm-status"><option value="confirmed">confirmed</option><option value="completed">completed</option><option value="cancelled">cancelled</option></select>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
       <button type="button" class="btn btn-ghost" style="color:var(--text);border:1px solid var(--border);" onclick="closeModal('modal-booking')">Đóng</button>
@@ -284,6 +378,31 @@ table.data tr:hover td{background:#fafbff;}
   </div>
 </div>
 
+<div class="modal" id="modal-ea-maint">
+  <div class="modal-box">
+    <h3>Ghi nhận bảo trì</h3>
+    <p style="font-size:12px;color:var(--muted,#666);margin:0 0 10px;">Ghi lịch sử, lưu giờ tích lũy chu kỳ, reset thanh về 0.</p>
+    <div id="ea-mt-alert"></div>
+    <input type="hidden" id="ea-mt-eid" />
+    <div class="field"><label>Ngày bảo trì *</label><input type="date" id="ea-mt-date" /></div>
+    <div class="field"><label>Loại</label>
+      <select id="ea-mt-type">
+        <option value="preventive">preventive</option>
+        <option value="corrective">corrective</option>
+        <option value="calibration">calibration</option>
+      </select>
+    </div>
+    <div class="field"><label>Thực hiện bởi</label><input type="text" id="ea-mt-by" placeholder="Họ tên / đơn vị" /></div>
+    <div class="field"><label>Chi phí (VNĐ)</label><input type="number" id="ea-mt-cost" min="0" step="0.01" /></div>
+    <div class="field"><label>Ghi chú</label><textarea id="ea-mt-notes"></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+      <button type="button" class="btn btn-ghost" style="color:var(--text);border:1px solid var(--border);" onclick="closeEaMaintModal()">Huỷ</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="submitEaMaint()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script src="public/js/equipmentAnalytics.js"></script>
 <script>
 'use strict';
 let snapshot = null;
@@ -341,6 +460,10 @@ function switchTab(id) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
   document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + id));
   if (id === 'users' && !sysUsers.length) loadSysUsers();
+  if (id === 'analytics' && window.EquipmentAnalytics && snapshot) {
+    window.EquipmentAnalytics.setMachineOptions(snapshot.machines || []);
+    window.EquipmentAnalytics.init();
+  }
 }
 
 function renderTabs() {
@@ -348,6 +471,7 @@ function renderTabs() {
     ['overview', '📊 Tổng quan'],
     ['machines', '🔬 Thiết bị'],
     ['users', '👥 Người dùng CRD'],
+    ['analytics', '📈 Phân tích'],
     ['bookings', '📋 Lịch đặt'],
     ['complaints', '⚖️ Kiện cáo'],
     ['chats', '💬 Chat']
@@ -705,7 +829,8 @@ function openBookingModal(id) {
   document.getElementById('bm-eh').value = b.endH;
   document.getElementById('bm-rg').value = b.researchGroup || '';
   document.getElementById('bm-purpose').value = b.purpose || '';
-  document.getElementById('bm-status').value = b.status === 'cancelled' ? 'cancelled' : 'confirmed';
+  var st = (b.status || 'confirmed').toLowerCase();
+  document.getElementById('bm-status').value = st === 'cancelled' ? 'cancelled' : st === 'completed' ? 'completed' : 'confirmed';
   openModal('modal-booking');
 }
 

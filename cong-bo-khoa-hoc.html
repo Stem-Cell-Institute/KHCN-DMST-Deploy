@@ -1090,6 +1090,9 @@
 <header class="page-header">
   <div class="page-header-brand">
     <a href="index.html" class="header-home-btn" aria-label="Về trang chủ SCI-KHCN">Trang chủ</a>
+    <span id="headerNavPubAnalyticsWrap" style="display:none;margin-left:8px;">
+      <a href="publication-dashboard.html" class="header-home-btn">Phân tích công bố</a>
+    </span>
     <h1>Quản lý Công bố Khoa học</h1>
     <div class="subtitle">Hệ thống RIMS/CRIS — Viện Tế bào gốc - Trường Đại học khoa học tự nhiên - ĐHQG HCM</div>
   </div>
@@ -1209,6 +1212,16 @@
       </div>
     </div>
 
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section" id="sidebarNavPubAnalyticsWrap" style="display:none" aria-hidden="true">
+      <span class="sidebar-label">Phân tích</span>
+      <a href="publication-dashboard.html" class="sidebar-item" id="sidebarNavPubAnalyticsLink" style="text-decoration:none;color:inherit;">
+        <span class="si-icon">📈</span> Phân tích công bố
+        <span class="si-count" id="sidebarNavPubAnalyticsCount" title="Tổng công bố (CSDL, không gồm retracted)">—</span>
+      </a>
+    </div>
+
     <div class="pub-admin-only pub-admin-stack" style="gap:0">
       <hr class="sidebar-divider">
       <div class="sidebar-section">
@@ -1260,7 +1273,6 @@
         <div class="sc-num" id="dashCardCites">—</div>
         <div class="sc-lbl">Tổng trích dẫn</div>
         <div class="sc-sub" id="dashCardCitesSub">Trong phạm vi lọc</div>
-        <span class="sc-trend" id="dashCardCitesTrend">—</span>
       </div>
       <div class="stat-card" style="--card-color:#7c3aed">
         <div class="sc-num" id="dashCardTotal">—</div>
@@ -1914,6 +1926,7 @@ async function apiFetch(path, options = {}) {
   if (token && !headers['Authorization']) headers['Authorization'] = 'Bearer ' + token;
   const res = await fetch(API_BASE + path, {
     credentials: 'include',
+    cache: 'no-store',
     headers: headers,
     ...options,
   });
@@ -2528,7 +2541,6 @@ function applyPublicationDashboard(data) {
   setText('dashCardPatentsSub', pend ? pend + ' đang xử lý' : '—');
 
   applyStatTrend(document.getElementById('dashCardTotalTrend'), yoyFromByYear(byYear, 'count'), ' bài (2 năm gần nhất)');
-  applyStatTrend(document.getElementById('dashCardCitesTrend'), yoyFromByYear(byYear, 'citations'), ' trích dẫn');
   applyStatTrend(document.getElementById('dashCardQ1Trend'), null);
   applyStatTrend(document.getElementById('dashCardQ2Trend'), null);
   applyStatTrend(document.getElementById('dashCardPatentsTrend'), null);
@@ -2899,6 +2911,49 @@ function persistPubs() {
 
 function applyPubAdminChrome() {
   document.body.classList.toggle('pub-is-admin', isPubAdmin());
+}
+
+/** Phần D: hiện link Phân tích công bố (sidebar + header) nếu admin hoặc có quyền dashboard pub_analytics; badge = tổng bài từ /publications/stats */
+async function initPubAnalyticsNavUi() {
+  var wrap = document.getElementById('sidebarNavPubAnalyticsWrap');
+  var countEl = document.getElementById('sidebarNavPubAnalyticsCount');
+  var headerWrap = document.getElementById('headerNavPubAnalyticsWrap');
+  if (!wrap || !countEl) return;
+  if (!localStorage.getItem('token')) {
+    wrap.style.display = 'none';
+    wrap.setAttribute('aria-hidden', 'true');
+    if (headerWrap) headerWrap.style.display = 'none';
+    return;
+  }
+  try {
+    var res = await fetch(API_BASE + '/dashboard-perms/pub_analytics/check', {
+      credentials: 'include',
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token'), Accept: 'application/json' }
+    });
+    var j = await res.json().catch(function () { return {}; });
+    if (!res.ok || !j.allowed) {
+      wrap.style.display = 'none';
+      wrap.setAttribute('aria-hidden', 'true');
+      if (headerWrap) headerWrap.style.display = 'none';
+      return;
+    }
+    wrap.style.display = '';
+    wrap.removeAttribute('aria-hidden');
+    if (headerWrap) headerWrap.style.display = 'inline-block';
+    var st = await apiFetch('/publications/stats');
+    var total = '—';
+    if (st && st.data) {
+      if (st.data.header && st.data.header.total != null) total = String(st.data.header.total);
+      else if (st.data.sidebar && st.data.sidebar.types && st.data.sidebar.types.total != null) {
+        total = String(st.data.sidebar.types.total);
+      }
+    }
+    countEl.textContent = total;
+  } catch (e) {
+    wrap.style.display = 'none';
+    wrap.setAttribute('aria-hidden', 'true');
+    if (headerWrap) headerWrap.style.display = 'none';
+  }
 }
 
 function escHtmlPub(s) {
@@ -4104,6 +4159,7 @@ if (PUB_INSTITUTE_OK) {
       });
     }
     applyPubAdminChrome();
+    initPubAnalyticsNavUi().catch(function () {});
     renderPubTable();
     filterTable();
     hydratePubsFromServerAndRender().catch(function () {});

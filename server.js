@@ -28,6 +28,10 @@ const Docxtemplater = require('docxtemplater');
 // Database - tự động chọn SQLite hoặc Turso dựa trên .env
 // Sử dụng ./lib/db-bridge.js thay vì better-sqlite3 trực tiếp
 const db = require('./lib/db-bridge');
+const {
+  CAP_VIEN_PUBLIC_TEMPLATE_CATALOG,
+  isAllowedTaskCode,
+} = require('./lib/capVienPublicTemplatesCatalog');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -69,6 +73,8 @@ const ADMIN_EMAIL = 'ntsinh0409@gmail.com'; // Admin mặc định khi khởi t�
 fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
 fs.mkdirSync(path.join(__dirname, 'uploads'), { recursive: true });
 fs.mkdirSync(path.join(__dirname, 'uploads-cap-vien'), { recursive: true });
+const capVienPublicTemplatesFsDir = path.join(__dirname, 'uploads-cap-vien', 'public-templates');
+fs.mkdirSync(capVienPublicTemplatesFsDir, { recursive: true });
 fs.mkdirSync(path.join(__dirname, 'uploads', 'htqt-doan-ra'), { recursive: true });
 fs.mkdirSync(path.join(__dirname, 'uploads', 'htqt-doan-vao'), { recursive: true });
 fs.mkdirSync(path.join(__dirname, 'uploads', 'htqt-mou'), { recursive: true });
@@ -92,6 +98,13 @@ db.exec(`
     originalName TEXT NOT NULL,
     path TEXT NOT NULL,
     FOREIGN KEY (submissionId) REFERENCES cap_vien_submissions(id)
+  );
+  CREATE TABLE IF NOT EXISTS cap_vien_public_template_files (
+    task_code TEXT PRIMARY KEY,
+    stored_path TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    uploaded_at TEXT NOT NULL,
+    uploaded_by_id INTEGER
   );
 `);
 try { db.prepare('ALTER TABLE cap_vien_submissions ADD COLUMN reviewNote TEXT').run(); } catch (e) { /* đã tồn tại */ }
@@ -402,6 +415,11 @@ try {
   /* cột đã tồn tại */
 }
 try {
+  db.prepare("ALTER TABLE crd_bookings ADD COLUMN created_at TEXT DEFAULT (datetime('now','localtime'))").run();
+} catch (e) {
+  /* cột đã tồn tại */
+}
+try {
   db.prepare('ALTER TABLE crd_persons ADD COLUMN is_banned INTEGER DEFAULT 0').run();
 } catch (e) {
   /* cột đã tồn tại */
@@ -435,6 +453,73 @@ try {
   db.prepare('ALTER TABLE crd_chats ADD COLUMN is_deleted INTEGER DEFAULT 0').run();
 } catch (e) {
   /* cột đã tồn tại */
+}
+/** CRD — giờ tích lũy & nhật ký bảo trì (migrations/003_crd_maintenance_and_utilization.sql) */
+try {
+  db.prepare('ALTER TABLE crd_machines ADD COLUMN accumulated_hours REAL DEFAULT 0').run();
+} catch (e) {
+  /* cột đã tồn tại */
+}
+try {
+  db.prepare('ALTER TABLE crd_machines ADD COLUMN maintenance_threshold_hours REAL DEFAULT 500').run();
+} catch (e) {
+  /* cột đã tồn tại */
+}
+try {
+  db.prepare('ALTER TABLE crd_machines ADD COLUMN last_maintenance_date TEXT').run();
+} catch (e) {
+  /* cột đã tồn tại */
+}
+try {
+  db.prepare('ALTER TABLE crd_machines ADD COLUMN maintenance_notes TEXT').run();
+} catch (e) {
+  /* cột đã tồn tại */
+}
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS crd_maintenance_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      machine_id TEXT NOT NULL,
+      maintenance_date TEXT NOT NULL,
+      hours_at_maintenance REAL,
+      type TEXT CHECK(type IS NULL OR type IN ('preventive','corrective','calibration')),
+      performed_by TEXT,
+      cost REAL,
+      notes TEXT,
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY (machine_id) REFERENCES crd_machines(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_crd_maint_log_machine ON crd_maintenance_log(machine_id);
+    CREATE INDEX IF NOT EXISTS idx_crd_maint_log_date ON crd_maintenance_log(maintenance_date);
+  `);
+} catch (e) {
+  console.warn('[CRD] crd_maintenance_log:', e.message);
+}
+try {
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS crd_trg_booking_accum_after_update
+    AFTER UPDATE OF status ON crd_bookings
+    FOR EACH ROW
+    WHEN NEW.status = 'completed'
+      AND IFNULL(OLD.status, '') != 'completed'
+      AND NEW.end_h > NEW.start_h
+    BEGIN
+      UPDATE crd_machines
+      SET accumulated_hours = COALESCE(accumulated_hours, 0) + (NEW.end_h - NEW.start_h)
+      WHERE id = NEW.machine_id;
+    END;
+    CREATE TRIGGER IF NOT EXISTS crd_trg_booking_accum_after_insert
+    AFTER INSERT ON crd_bookings
+    FOR EACH ROW
+    WHEN NEW.status = 'completed' AND NEW.end_h > NEW.start_h
+    BEGIN
+      UPDATE crd_machines
+      SET accumulated_hours = COALESCE(accumulated_hours, 0) + (NEW.end_h - NEW.start_h)
+      WHERE id = NEW.machine_id;
+    END;
+  `);
+} catch (e) {
+  console.warn('[CRD] triggers accumulated_hours:', e.message);
 }
 try {
   db.prepare('ALTER TABLE users ADD COLUMN crd_email_notif INTEGER DEFAULT 1').run();
@@ -681,6 +766,29 @@ db.exec(`
     value TEXT
   );
 `);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    email TEXT,
+    action TEXT NOT NULL,
+    module TEXT,
+    path TEXT,
+    detail TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+  )
+`);
+try {
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_user_activity_log_created ON user_activity_log(created_at DESC)').run();
+} catch (e) {}
+try {
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_user_activity_log_user ON user_activity_log(user_id)').run();
+} catch (e) {}
+try {
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_user_activity_log_action ON user_activity_log(action)').run();
+} catch (e) {}
 
 (function backfillCapVienHistory() {
   const allSubs = db.prepare('SELECT id, status, createdAt, submittedById, reviewedAt, reviewedById, reviewNote, assignedAt, assignedById, assignedReviewerIds FROM cap_vien_submissions').all();
@@ -1365,6 +1473,23 @@ const storageCapVien = multer.diskStorage({
 const uploadCapVien = multer({
   storage: storageCapVien,
   limits: { fileSize: 20 * 1024 * 1024 }
+});
+
+/** Mẫu hồ sơ công khai (trang tải mẫu đề tài cấp Viện) — mọi định dạng, tối đa 80MB */
+const storageCapVienPublicTemplate = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, capVienPublicTemplatesFsDir);
+  },
+  filename: function (req, file, cb) {
+    const tc = ((req.params && req.params.taskCode) || '').trim();
+    const ext = path.extname(file.originalname || '') || '';
+    const safe = tc.replace(/[^A-Za-z0-9\-_]/g, '_') || 'task';
+    cb(null, safe + '_' + Date.now() + ext);
+  },
+});
+const uploadCapVienPublicTemplate = multer({
+  storage: storageCapVienPublicTemplate,
+  limits: { fileSize: 80 * 1024 * 1024 },
 });
 
 const htqtDoanRaDir = path.join(__dirname, 'uploads', 'htqt-doan-ra');
@@ -2707,6 +2832,36 @@ function clearAuthCookie(res) {
   res.append('Set-Cookie', 'auth_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
 }
 
+function clientIpFromReq(req) {
+  const xf = req.headers['x-forwarded-for'];
+  if (typeof xf === 'string' && xf.trim()) return xf.split(',')[0].trim().slice(0, 128);
+  const addr = req.socket && req.socket.remoteAddress;
+  return typeof addr === 'string' ? addr.slice(0, 128) : '';
+}
+
+/** Ghi nhật ký hoạt động (đăng nhập, truy cập trang, v.v.). Không throw. */
+function insertUserActivityLog(req, row) {
+  try {
+    const ua = (req && req.headers && req.headers['user-agent']) || '';
+    const ip = clientIpFromReq(req);
+    db.prepare(
+      `INSERT INTO user_activity_log (user_id, email, action, module, path, detail, ip_address, user_agent)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      row.userId != null ? Number(row.userId) : null,
+      row.email != null ? String(row.email).slice(0, 320) : null,
+      String(row.action).slice(0, 120),
+      row.module != null ? String(row.module).slice(0, 120) : null,
+      row.path != null ? String(row.path).slice(0, 500) : null,
+      row.detail != null ? String(row.detail).slice(0, 2000) : null,
+      ip || null,
+      ua ? String(ua).slice(0, 500) : null
+    );
+  } catch (e) {
+    console.warn('[user_activity_log]', e.message);
+  }
+}
+
 function userIdIsBanned(userId) {
   if (userId == null) return false;
   try {
@@ -2726,6 +2881,7 @@ function isApiPathAllowedForCrdOnlyUser(urlPath) {
   const p = (urlPath || '').split('?')[0];
   if (p.startsWith('/api/crd/')) return true;
   if (p === '/api/me' || p === '/api/logout') return true;
+  if (p === '/api/activity/track') return true;
   if (p === '/api/health') return true;
   return false;
 }
@@ -2920,12 +3076,36 @@ app.post('/api/login', async (req, res) => {
   const em = (email || '').trim().toLowerCase();
   const row = db.prepare('SELECT id, email, password, fullname, role, COALESCE(is_banned, 0) AS is_banned FROM users WHERE email = ?').get(em);
   if (!row) {
+    insertUserActivityLog(req, {
+      userId: null,
+      email: em || null,
+      action: 'login_failed',
+      module: 'auth',
+      path: '/api/login',
+      detail: 'unknown_email',
+    });
     return res.status(401).json({ message: 'Email hoặc mật khẩu không đúng' });
   }
   if (Number(row.is_banned) === 1) {
+    insertUserActivityLog(req, {
+      userId: row.id,
+      email: row.email,
+      action: 'login_failed',
+      module: 'auth',
+      path: '/api/login',
+      detail: 'account_banned',
+    });
     return res.status(403).json({ message: 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.' });
   }
   if (!userHasLoginPassword(row.password)) {
+    insertUserActivityLog(req, {
+      userId: row.id,
+      email: row.email,
+      action: 'login_failed',
+      module: 'auth',
+      path: '/api/login',
+      detail: 'not_activated',
+    });
     return res.status(401).json({
       message:
         'Tài khoản chưa kích hoạt. Vui lòng mở trang Đăng ký, nhập cùng email @sci.edu.vn và đặt mật khẩu lần đầu.',
@@ -2933,16 +3113,69 @@ app.post('/api/login', async (req, res) => {
   }
   const ok = await bcrypt.compare(password, row.password);
   if (!ok) {
+    insertUserActivityLog(req, {
+      userId: row.id,
+      email: row.email,
+      action: 'login_failed',
+      module: 'auth',
+      path: '/api/login',
+      detail: 'wrong_password',
+    });
     return res.status(401).json({ message: 'Email hoặc mật khẩu không đúng' });
   }
   const user = { id: row.id, email: row.email, fullname: row.fullname, role: row.role };
   const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
   setAuthCookie(res, token);
+  insertUserActivityLog(req, {
+    userId: row.id,
+    email: row.email,
+    action: 'login',
+    module: 'auth',
+    path: '/api/login',
+  });
   return res.json({ token, user });
 });
 
 app.post('/api/logout', (req, res) => {
+  try {
+    const token = getTokenFromReq(req);
+    if (token) {
+      try {
+        const p = jwt.verify(token, JWT_SECRET);
+        insertUserActivityLog(req, {
+          userId: p.id,
+          email: p.email,
+          action: 'logout',
+          module: 'auth',
+          path: '/api/logout',
+        });
+      } catch (_) {
+        /* token hết hạn — không ghi logout */
+      }
+    }
+  } catch (_) {}
   clearAuthCookie(res);
+  return res.json({ ok: true });
+});
+
+// Client ghi nhận mở trang / hành động (đã đăng nhập). Module CRD-only cũng được phép (whitelist API).
+app.post('/api/activity/track', authMiddleware, (req, res) => {
+  const b = req.body || {};
+  const action = String(b.action || 'page_view').slice(0, 120);
+  const moduleName = b.module != null ? String(b.module).slice(0, 120) : '';
+  const pathStr = b.path != null ? String(b.path).slice(0, 500) : '';
+  const detail = b.detail != null ? String(b.detail).slice(0, 2000) : null;
+  if (!moduleName.trim() && !pathStr.trim()) {
+    return res.status(400).json({ message: 'Cần ít nhất module hoặc path' });
+  }
+  insertUserActivityLog(req, {
+    userId: req.user.id,
+    email: req.user.email,
+    action,
+    module: moduleName.trim() || null,
+    path: pathStr.trim() || null,
+    detail,
+  });
   return res.json({ ok: true });
 });
 
@@ -3014,7 +3247,7 @@ app.post('/api/reset-password', async (req, res) => {
   if (!token || !password || password.length < 6) {
     return res.status(400).json({ message: 'Link không hợp lệ hoặc mật khẩu mới ít nhất 6 ký tự' });
   }
-  const row = db.prepare('SELECT email FROM password_reset_tokens WHERE token = ? AND datetime(expiresAt) > datetime("now")').get(token);
+  const row = db.prepare("SELECT email FROM password_reset_tokens WHERE token = ? AND datetime(expiresAt) > datetime('now')").get(token);
   if (!row) {
     return res.status(400).json({ message: 'Link đã hết hạn hoặc không hợp lệ. Vui lòng yêu cầu quên mật khẩu lại.' });
   }
@@ -3957,6 +4190,117 @@ app.get('/api/cap-vien/khoan-muc-chi', (req, res) => {
   return res.json({ items: rows || [] });
 });
 
+// ── Mẫu hồ sơ công khai (trang tai-mau-ho-so-de-tai-cap-vien) — Admin upload; mọi người tải khi đã có file ──
+app.get('/api/cap-vien/public-templates', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT task_code, original_name, uploaded_at FROM cap_vien_public_template_files').all();
+    const byCode = new Map((rows || []).map((r) => [r.task_code, r]));
+    const tasks = CAP_VIEN_PUBLIC_TEMPLATE_CATALOG.map((item) => {
+      const row = byCode.get(item.code);
+      return {
+        taskCode: item.code,
+        label: item.label,
+        hasFile: !!row,
+        originalName: row ? row.original_name : null,
+        uploadedAt: row ? row.uploaded_at : null,
+      };
+    });
+    res.set('Cache-Control', 'no-store');
+    return res.json({ tasks });
+  } catch (e) {
+    console.error('[public-templates list]', e);
+    return res.status(500).json({ message: e.message || 'Lỗi CSDL' });
+  }
+});
+
+app.get('/api/cap-vien/public-templates/:taskCode/file', (req, res) => {
+  const taskCode = (req.params.taskCode || '').trim();
+  if (!isAllowedTaskCode(taskCode)) {
+    return res.status(404).json({ message: 'Mã mẫu không hợp lệ' });
+  }
+  const row = db.prepare('SELECT stored_path, original_name FROM cap_vien_public_template_files WHERE task_code = ?').get(taskCode);
+  if (!row) {
+    return res.status(404).json({ message: 'Chưa có file mẫu cho mã này. Vui lòng liên hệ quản trị hoặc thử lại sau.' });
+  }
+  const abs = path.resolve(__dirname, row.stored_path);
+  const baseDir = path.resolve(capVienPublicTemplatesFsDir);
+  if (!abs.startsWith(baseDir) || !fs.existsSync(abs)) {
+    return res.status(404).json({ message: 'File không còn trên máy chủ' });
+  }
+  res.set('Cache-Control', 'no-store');
+  return res.download(abs, row.original_name || path.basename(abs));
+});
+
+app.post(
+  '/api/cap-vien/public-templates/:taskCode',
+  authMiddleware,
+  adminOnly,
+  uploadCapVienPublicTemplate.single('file'),
+  (req, res) => {
+    const taskCode = (req.params.taskCode || '').trim();
+    if (!isAllowedTaskCode(taskCode)) {
+      return res.status(400).json({ message: 'Mã mẫu không hợp lệ' });
+    }
+    const f = req.file;
+    if (!f) {
+      return res.status(400).json({ message: 'Thiếu file (form field: file)' });
+    }
+    const relStored = path.relative(__dirname, f.path);
+    const orig = fixFilenameEncoding(f.originalname) || path.basename(f.path);
+    try {
+      const prev = db.prepare('SELECT stored_path FROM cap_vien_public_template_files WHERE task_code = ?').get(taskCode);
+      if (prev && prev.stored_path) {
+        const oldAbs = path.resolve(__dirname, prev.stored_path);
+        if (fs.existsSync(oldAbs)) {
+          try {
+            fs.unlinkSync(oldAbs);
+          } catch (_) {}
+        }
+      }
+      db.prepare(
+        `INSERT INTO cap_vien_public_template_files (task_code, stored_path, original_name, uploaded_at, uploaded_by_id)
+         VALUES (?, ?, ?, datetime('now'), ?)
+         ON CONFLICT(task_code) DO UPDATE SET
+           stored_path = excluded.stored_path,
+           original_name = excluded.original_name,
+           uploaded_at = excluded.uploaded_at,
+           uploaded_by_id = excluded.uploaded_by_id`
+      ).run(taskCode, relStored, orig, req.user.id);
+      return res.json({ ok: true, message: 'Đã cập nhật mẫu', taskCode, originalName: orig });
+    } catch (e) {
+      try {
+        if (f.path && fs.existsSync(f.path)) fs.unlinkSync(f.path);
+      } catch (_) {}
+      console.error('[public-templates upload]', e);
+      return res.status(500).json({ message: e.message || 'Lỗi lưu' });
+    }
+  }
+);
+
+app.delete('/api/cap-vien/public-templates/:taskCode', authMiddleware, adminOnly, (req, res) => {
+  const taskCode = (req.params.taskCode || '').trim();
+  if (!isAllowedTaskCode(taskCode)) {
+    return res.status(400).json({ message: 'Mã mẫu không hợp lệ' });
+  }
+  const row = db.prepare('SELECT stored_path FROM cap_vien_public_template_files WHERE task_code = ?').get(taskCode);
+  if (!row) {
+    return res.status(404).json({ message: 'Không có file để xóa' });
+  }
+  try {
+    const p = path.resolve(__dirname, row.stored_path);
+    if (fs.existsSync(p)) {
+      try {
+        fs.unlinkSync(p);
+      } catch (_) {}
+    }
+    db.prepare('DELETE FROM cap_vien_public_template_files WHERE task_code = ?').run(taskCode);
+    return res.json({ ok: true, message: 'Đã xóa mẫu' });
+  } catch (e) {
+    console.error('[public-templates delete]', e);
+    return res.status(500).json({ message: e.message || 'Lỗi xóa' });
+  }
+});
+
 // Admin: CRUD ô đánh dấu
 app.get('/api/admin/cap-vien/submission-options', authMiddleware, adminOnly, (req, res) => {
   const rows = db.prepare('SELECT id, code, label, affects_code, sort_order FROM cap_vien_submission_options ORDER BY sort_order ASC, id ASC').all();
@@ -4860,6 +5204,61 @@ app.get('/api/admin/users', authMiddleware, adminOnly, (req, res) => {
   return res.json({ users });
 });
 
+// Admin: nhật ký đăng nhập / truy cập / hành động (bảng user_activity_log)
+app.get('/api/admin/activity-log', authMiddleware, adminOnly, (req, res) => {
+  const q = req.query || {};
+  const limit = Math.min(Math.max(parseInt(String(q.limit || '100'), 10) || 100, 1), 500);
+  const offset = Math.max(parseInt(String(q.offset || '0'), 10) || 0, 0);
+  const from = q.from ? String(q.from).trim() : '';
+  const to = q.to ? String(q.to).trim() : '';
+  const emailFilter = q.email ? String(q.email).trim().toLowerCase() : '';
+  const actionFilter = q.action ? String(q.action).trim() : '';
+  const moduleFilter = q.module ? String(q.module).trim() : '';
+
+  const conds = [];
+  const params = [];
+  if (from) {
+    conds.push('l.created_at >= ?');
+    params.push(/^\d{4}-\d{2}-\d{2}$/.test(from) ? from + ' 00:00:00' : from);
+  }
+  if (to) {
+    const toVal = /^\d{4}-\d{2}-\d{2}$/.test(to) ? to + ' 23:59:59' : to;
+    conds.push('l.created_at <= ?');
+    params.push(toVal);
+  }
+  if (emailFilter) {
+    const safe = emailFilter.replace(/%/g, '').replace(/_/g, '');
+    conds.push('LOWER(TRIM(COALESCE(l.email, ""))) LIKE ?');
+    params.push('%' + safe + '%');
+  }
+  if (actionFilter) {
+    conds.push('l.action = ?');
+    params.push(actionFilter);
+  }
+  if (moduleFilter) {
+    conds.push('l.module = ?');
+    params.push(moduleFilter);
+  }
+  const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+
+  const rows = db
+    .prepare(
+      `SELECT l.id, l.user_id, l.email, l.action, l.module, l.path, l.detail, l.ip_address, l.user_agent, l.created_at,
+              u.fullname AS fullname
+       FROM user_activity_log l
+       LEFT JOIN users u ON u.id = l.user_id
+       ${where}
+       ORDER BY l.id DESC
+       LIMIT ? OFFSET ?`
+    )
+    .all(...params, limit, offset);
+
+  const countRow = db.prepare(`SELECT COUNT(1) AS c FROM user_activity_log l ${where}`).get(...params);
+  const total = countRow && typeof countRow.c === 'number' ? countRow.c : 0;
+
+  return res.json({ rows, total, limit, offset });
+});
+
 // Admin: thêm tài khoản mới hoặc cập nhật họ tên + vai trò (gõ họ tên, email, chọn vai trò)
 app.post('/api/admin/users', authMiddleware, adminOnly, async (req, res) => {
   const { email, fullname, role, password, academicTitle } = req.body || {};
@@ -4977,10 +5376,49 @@ function dbCount(sql) {
 app.get('/api/homepage-stats', (req, res) => {
   syncMissionsFromCapVien();
   const missions = dbCount('SELECT COUNT(*) as c FROM missions');
+  /** Thẻ module «Nhiệm vụ KHCN» — cùng quy tắc với /api/missions/stats (hoàn thành / quá hạn / đang thực hiện) */
+  const missionMini = { inProgress: 0, completed: 0, overdue: 0 };
+  try {
+    const mRows = db.prepare('SELECT status, end_date FROM missions').all();
+    const now = new Date().toISOString().slice(0, 10);
+    for (const m of mRows || []) {
+      const st = (m.status || 'planning').toLowerCase();
+      const isCompleted = st === 'completed' || st === 'hoan_thanh';
+      const ed = m.end_date ? String(m.end_date).slice(0, 10) : '';
+      const isPastEnd = ed && ed < now;
+      if (isCompleted) missionMini.completed += 1;
+      else if (isPastEnd) missionMini.overdue += 1;
+      else missionMini.inProgress += 1;
+    }
+  } catch (e) {
+    /* bảng missions thiếu cột hoặc lỗi DB — giữ 0 */
+  }
   /** Nhân lực KHCN: bảng module `personnel`, không phải số tài khoản `users` */
   const personnel = dbCount('SELECT COUNT(*) as c FROM personnel');
   const ip = dbCount('SELECT COUNT(*) as c FROM ip_assets');
-  const publications = dbCount('SELECT COUNT(*) as c FROM publications');
+  const publications = dbCount(
+    "SELECT COUNT(*) as c FROM publications WHERE COALESCE(status, '') != 'retracted'"
+  );
+  /** Thẻ module «Công bố KHCN» — đồng bộ logic lọc với module (không tính retracted) */
+  const publicationMini = {
+    indexedScopusWos: dbCount(
+      `SELECT COUNT(*) as c FROM publications
+       WHERE COALESCE(status, '') != 'retracted'
+       AND (
+         LOWER(COALESCE(index_db, '')) LIKE '%scopus%'
+         OR LOWER(COALESCE(index_db, '')) LIKE '%web of science%'
+         OR LOWER(COALESCE(index_db, '')) LIKE '%wos%'
+       )`
+    ),
+    conferences: dbCount(
+      `SELECT COUNT(*) as c FROM publications
+       WHERE COALESCE(status, '') != 'retracted' AND pub_type = 'conference'`
+    ),
+    books: dbCount(
+      `SELECT COUNT(*) as c FROM publications
+       WHERE COALESCE(status, '') != 'retracted' AND pub_type IN ('book_chapter', 'book')`
+    ),
+  };
   const cooperation =
     dbCount('SELECT COUNT(*) as c FROM cooperation_doan_ra') +
     dbCount('SELECT COUNT(*) as c FROM cooperation_doan_vao') +
@@ -4988,18 +5426,47 @@ app.get('/api/homepage-stats', (req, res) => {
     dbCount('SELECT COUNT(*) as c FROM htqt_de_xuat') +
     dbCount('SELECT COUNT(*) as c FROM cooperation_thoa_thuan') +
     dbCount('SELECT COUNT(*) as c FROM cooperation_su_kien');
-  // CRD Lab Booking — truy vấn trực tiếp từ bảng CRD
+  // CRD Lab Booking — truy vấn trực tiếp từ bảng CRD (đồng bộ với thẻ module trên trang chủ)
   const crdMachines = dbCount('SELECT COUNT(*) as c FROM crd_machines');
-  const crdBookings = dbCount('SELECT COUNT(*) as c FROM crd_bookings');
-  const crdRooms = dbCount('SELECT COUNT(DISTINCT location) as c FROM crd_machines WHERE location IS NOT NULL AND location != ""');
+  /** Lịch còn hiệu lực: từ ngày hôm nay trở đi, không tính đã hủy */
+  const crdActiveBookings = dbCount(
+    `SELECT COUNT(*) as c FROM crd_bookings
+     WHERE COALESCE(NULLIF(TRIM(status), ''), 'confirmed') != 'cancelled'
+     AND date >= date('now')`
+  );
+  /** Người có hồ sơ CRD còn được đặt lịch (chưa gỡ quyền, chưa bị khoá) */
+  const crdActivePersons = dbCount(
+    `SELECT COUNT(*) as c FROM crd_persons
+     WHERE COALESCE(crd_access_revoked, 0) = 0 AND COALESCE(is_banned, 0) = 0`
+  );
   const facilities = {
+    activeBookings: crdActiveBookings,
     machines: crdMachines,
-    bookings: crdBookings,
-    rooms: crdRooms,
-    // Tỷ lệ sử dụng = số booking / số máy (bình thường hóa theo số máy)
-    utilization: crdMachines > 0 ? Math.round((crdBookings / crdMachines) * 10) / 10 : 0
+    activeUsers: crdActivePersons,
   };
-  return res.json({ missions, personnel, ip, publications, cooperation, facilities });
+  /** Thẻ module «Hợp tác» — đếm đối tác theo loại (cùng logic /api/cooperation/doi-tac) */
+  let cooperationMini = { quoc_te: 0, doanh_nghiep: 0, dia_phuong: 0 };
+  try {
+    const { stats } = cooperationComputePartnerStats();
+    cooperationMini = {
+      quoc_te: stats.quoc_te || 0,
+      doanh_nghiep: stats.doanh_nghiep || 0,
+      dia_phuong: stats.dia_phuong || 0,
+    };
+  } catch (e) {
+    /* bảng hợp tác chưa có hoặc lỗi */
+  }
+  return res.json({
+    missions,
+    missionMini,
+    personnel,
+    ip,
+    publications,
+    publicationMini,
+    cooperation,
+    cooperationMini,
+    facilities,
+  });
 });
 
 // ========== Nhiệm vụ KHCN (Dashboard): trích xuất thống kê + danh sách tìm kiếm ==========
@@ -7879,74 +8346,80 @@ app.get('/api/cooperation/overview', (req, res) => {
   }
 });
 
+/** Đối tác hợp tác — cùng logic với GET /api/cooperation/doi-tac (dùng cho trang chủ + module) */
+function cooperationComputePartnerStats() {
+  const thoaThuans = db.prepare('SELECT id, ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac FROM cooperation_thoa_thuan').all();
+  const mouDeXuats = db.prepare('SELECT id, ten_doi_tac, quoc_gia, loai_thoa_thuan, status FROM cooperation_mou_de_xuat').all();
+  let missions = [];
+  try {
+    missions = db.prepare('SELECT id, cooperating_units, status FROM missions WHERE cooperating_units IS NOT NULL AND cooperating_units != \'\'').all();
+  } catch (e) { /* bảng missions có thể chưa có cột */ }
+  const partnerMap = new Map();
+  const normalize = (s) => (s || '').trim().toLowerCase();
+  const addPartner = (name, source, extra) => {
+    const key = normalize(name);
+    if (!key) return;
+    if (!partnerMap.has(key)) {
+      partnerMap.set(key, { name: (name || '').trim(), country: '', loai_doi_tac: null, agreements: [], proposals: [], projectCount: 0 });
+    }
+    const p = partnerMap.get(key);
+    if (source === 'thoa_thuan' && extra) {
+      p.agreements.push(extra);
+      if (extra.quoc_gia) p.country = extra.quoc_gia;
+      if (extra.loai_doi_tac) p.loai_doi_tac = extra.loai_doi_tac;
+    }
+    if (source === 'mou' && extra) {
+      p.proposals.push(extra);
+      if (extra.quoc_gia) p.country = extra.quoc_gia;
+    }
+  };
+  for (const r of thoaThuans || []) {
+    addPartner(r.doi_tac, 'thoa_thuan', { loai: r.loai, trang_thai: r.trang_thai, het_han: r.het_han, ten: r.ten, quoc_gia: r.quoc_gia, loai_doi_tac: r.loai_doi_tac });
+  }
+  for (const r of mouDeXuats || []) {
+    addPartner(r.ten_doi_tac, 'mou', { quoc_gia: r.quoc_gia, loai: r.loai_thoa_thuan, status: r.status });
+  }
+  for (const p of partnerMap.values()) {
+    const name = (p.name || '').toLowerCase();
+    for (const m of missions) {
+      const cu = (m.cooperating_units || '').toLowerCase();
+      if (cu && name && (cu.includes(name) || name.split(/\s+/).some(w => w.length > 3 && cu.includes(w)))) {
+        p.projectCount++;
+      }
+    }
+  }
+  const partners = Array.from(partnerMap.values()).map(p => ({
+    name: p.name,
+    country: p.country,
+    loai_doi_tac: p.loai_doi_tac,
+    agreements: p.agreements,
+    proposals: p.proposals,
+    projectCount: p.projectCount,
+    bestAgreementStatus: p.agreements.length ? (p.agreements.find(a => a.trang_thai === 'hieu_luc') ? 'hieu_luc' : p.agreements.find(a => a.trang_thai === 'sap_het_han') ? 'sap_het_han' : p.agreements[0].trang_thai) : null,
+    bestAgreementLoai: p.agreements.length ? p.agreements[0].loai : null,
+    hasProposal: p.proposals.length > 0
+  })).sort((a, b) => (b.agreements.length + b.proposals.length + b.projectCount) - (a.agreements.length + a.proposals.length + a.projectCount));
+  const inferLoai = (p) => {
+    if (p.loai_doi_tac) return p.loai_doi_tac;
+    const q = (p.country || '').toLowerCase();
+    if (q.includes('việt nam') || q.includes('viet nam') || q.includes('vn')) return 'trong_nuoc';
+    return 'quoc_te';
+  };
+  const stats = {
+    quoc_te: partners.filter(p => inferLoai(p) === 'quoc_te').length,
+    trong_nuoc: partners.filter(p => inferLoai(p) === 'trong_nuoc').length,
+    doanh_nghiep: partners.filter(p => inferLoai(p) === 'doanh_nghiep').length,
+    dia_phuong: partners.filter(p => inferLoai(p) === 'dia_phuong').length
+  };
+  const countries = new Set(partners.map(p => (p.country || '').trim()).filter(Boolean));
+  return { partners, stats: { ...stats, so_quoc_gia: countries.size }, total: partners.length };
+}
+
 // Danh sách Đối tác Quốc tế — tổng hợp từ thỏa thuận, đề xuất MOU, dự án (missions)
 app.get('/api/cooperation/doi-tac', (req, res) => {
   try {
-    const thoaThuans = db.prepare('SELECT id, ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac FROM cooperation_thoa_thuan').all();
-    const mouDeXuats = db.prepare('SELECT id, ten_doi_tac, quoc_gia, loai_thoa_thuan, status FROM cooperation_mou_de_xuat').all();
-    let missions = [];
-    try {
-      missions = db.prepare('SELECT id, cooperating_units, status FROM missions WHERE cooperating_units IS NOT NULL AND cooperating_units != \'\'').all();
-    } catch (e) { /* bảng missions có thể chưa có cột */ }
-    const partnerMap = new Map();
-    const normalize = (s) => (s || '').trim().toLowerCase();
-    const addPartner = (name, source, extra) => {
-      const key = normalize(name);
-      if (!key) return;
-      if (!partnerMap.has(key)) {
-        partnerMap.set(key, { name: (name || '').trim(), country: '', loai_doi_tac: null, agreements: [], proposals: [], projectCount: 0 });
-      }
-      const p = partnerMap.get(key);
-      if (source === 'thoa_thuan' && extra) {
-        p.agreements.push(extra);
-        if (extra.quoc_gia) p.country = extra.quoc_gia;
-        if (extra.loai_doi_tac) p.loai_doi_tac = extra.loai_doi_tac;
-      }
-      if (source === 'mou' && extra) {
-        p.proposals.push(extra);
-        if (extra.quoc_gia) p.country = extra.quoc_gia;
-      }
-    };
-    for (const r of thoaThuans || []) {
-      addPartner(r.doi_tac, 'thoa_thuan', { loai: r.loai, trang_thai: r.trang_thai, het_han: r.het_han, ten: r.ten, quoc_gia: r.quoc_gia, loai_doi_tac: r.loai_doi_tac });
-    }
-    for (const r of mouDeXuats || []) {
-      addPartner(r.ten_doi_tac, 'mou', { quoc_gia: r.quoc_gia, loai: r.loai_thoa_thuan, status: r.status });
-    }
-    for (const p of partnerMap.values()) {
-      const name = (p.name || '').toLowerCase();
-      for (const m of missions) {
-        const cu = (m.cooperating_units || '').toLowerCase();
-        if (cu && name && (cu.includes(name) || name.split(/\s+/).some(w => w.length > 3 && cu.includes(w)))) {
-          p.projectCount++;
-        }
-      }
-    }
-    const partners = Array.from(partnerMap.values()).map(p => ({
-      name: p.name,
-      country: p.country,
-      loai_doi_tac: p.loai_doi_tac,
-      agreements: p.agreements,
-      proposals: p.proposals,
-      projectCount: p.projectCount,
-      bestAgreementStatus: p.agreements.length ? (p.agreements.find(a => a.trang_thai === 'hieu_luc') ? 'hieu_luc' : p.agreements.find(a => a.trang_thai === 'sap_het_han') ? 'sap_het_han' : p.agreements[0].trang_thai) : null,
-      bestAgreementLoai: p.agreements.length ? p.agreements[0].loai : null,
-      hasProposal: p.proposals.length > 0
-    })).sort((a, b) => (b.agreements.length + b.proposals.length + b.projectCount) - (a.agreements.length + a.proposals.length + a.projectCount));
-    const inferLoai = (p) => {
-      if (p.loai_doi_tac) return p.loai_doi_tac;
-      const q = (p.country || '').toLowerCase();
-      if (q.includes('việt nam') || q.includes('viet nam') || q.includes('vn')) return 'trong_nuoc';
-      return 'quoc_te';
-    };
-    const stats = {
-      quoc_te: partners.filter(p => inferLoai(p) === 'quoc_te').length,
-      trong_nuoc: partners.filter(p => inferLoai(p) === 'trong_nuoc').length,
-      doanh_nghiep: partners.filter(p => inferLoai(p) === 'doanh_nghiep').length,
-      dia_phuong: partners.filter(p => inferLoai(p) === 'dia_phuong').length
-    };
-    const countries = new Set(partners.map(p => (p.country || '').trim()).filter(Boolean));
-    return res.json({ partners, stats: { ...stats, so_quoc_gia: countries.size }, total: partners.length });
+    const { partners, stats, total } = cooperationComputePartnerStats();
+    return res.json({ partners, stats, total });
   } catch (e) {
     console.error('[API] cooperation/doi-tac error:', e.message);
     return res.json({ partners: [], stats: { quoc_te: 0, trong_nuoc: 0, doanh_nghiep: 0, dia_phuong: 0, so_quoc_gia: 0 }, total: 0 });
@@ -8369,7 +8842,7 @@ app.post('/api/crd/bookings', authMiddleware, (req, res) => {
     }
     const id = 'b_' + crypto.randomBytes(6).toString('hex');
     db.prepare(
-      'INSERT INTO crd_bookings (id,machine_id,person_id,date,start_h,end_h,purpose,status,research_group) VALUES (?,?,?,?,?,?,?,?,?)'
+      'INSERT INTO crd_bookings (id,machine_id,person_id,date,start_h,end_h,purpose,status,research_group,created_at) VALUES (?,?,?,?,?,?,?,?,?,datetime(\'now\',\'localtime\'))'
     ).run(id, mid, mePersonId, d, sh, eh, pur, 'confirmed', rg);
     return res.status(201).json({ booking: crdBookingToClient(db.prepare('SELECT * FROM crd_bookings WHERE id = ?').get(id)) });
   } catch (e) {
@@ -8989,6 +9462,83 @@ app.delete('/api/crd/admin/bookings/:id', authMiddleware, adminOnly, (req, res) 
     return res.json({ ok: true });
   } catch (e) {
     return res.status(500).json({ message: e.message || 'Lỗi' });
+  }
+});
+
+/** Phân tích sử dụng thiết bị CRD — routes/equipmentAnalytics.js (entry: server.js, không dùng app.js) */
+try {
+  const createEquipmentAnalyticsRouter = require('./routes/equipmentAnalytics');
+  app.use('/api/equipment-analytics', authMiddleware, adminOnly, createEquipmentAnalyticsRouter({ db }));
+  console.log('[CRD] Đã mount /api/equipment-analytics (admin)');
+} catch (e) {
+  console.warn('[CRD] Không mount equipment-analytics:', e.message);
+}
+
+/** Bảng dashboard_permissions (migrations/004_dashboard_permissions.sql) */
+try {
+  const dashPermSql = path.join(__dirname, 'migrations', '004_dashboard_permissions.sql');
+  if (fs.existsSync(dashPermSql)) {
+    db.exec(fs.readFileSync(dashPermSql, 'utf8'));
+  }
+} catch (e) {
+  console.warn('[migrations/004_dashboard_permissions]', e.message);
+}
+
+/** Nhật ký truy cập dashboard (migrations/005_dashboard_access_log.sql) */
+try {
+  const dashLogSql = path.join(__dirname, 'migrations', '005_dashboard_access_log.sql');
+  if (fs.existsSync(dashLogSql)) {
+    db.exec(fs.readFileSync(dashLogSql, 'utf8'));
+  }
+} catch (e) {
+  console.warn('[migrations/005_dashboard_access_log]', e.message);
+}
+
+/** CRUD quyền xem dashboard — routes/dashboardPermissions.js */
+try {
+  const createDashboardPermissionsRouter = require('./routes/dashboardPermissions');
+  app.use('/api/dashboard-perms', authMiddleware, createDashboardPermissionsRouter({ db }));
+  console.log('[DASH] Đã mount /api/dashboard-perms');
+} catch (e) {
+  console.warn('[DASH] Không mount dashboard-perms:', e.message);
+}
+
+/** Thống kê công bố — admin hoặc user được cấp trong dashboard_permissions (pub_analytics) */
+try {
+  const createPublicationAnalyticsRouter = require('./routes/publicationAnalytics');
+  const { createCheckDashboardPermission } = require('./middleware/checkDashboardPermission');
+  const checkPubAnalytics = createCheckDashboardPermission(db, { dashboardId: 'pub_analytics' });
+  app.use('/api/pub-analytics', authMiddleware, checkPubAnalytics, createPublicationAnalyticsRouter({ db }));
+  console.log('[PUB] Đã mount /api/pub-analytics (admin + quyền dashboard)');
+} catch (e) {
+  console.warn('[PUB] Không mount pub-analytics:', e.message);
+}
+
+/** Tìm user (autocomplete phân quyền dashboard) — chỉ Admin */
+app.get('/api/users/search', authMiddleware, adminOnly, (req, res) => {
+  try {
+    const raw = String(req.query.q || '').trim();
+    if (raw.length < 1) {
+      return res.json({ ok: true, success: true, data: [] });
+    }
+    const safe = raw.replace(/[%_]/g, '').slice(0, 80);
+    if (!safe) {
+      return res.json({ ok: true, success: true, data: [] });
+    }
+    const like = `%${safe.toLowerCase()}%`;
+    const rows = db
+      .prepare(
+        `SELECT id, email, fullname, role FROM users
+         WHERE lower(COALESCE(fullname,'')) LIKE ?
+            OR lower(COALESCE(email,'')) LIKE ?
+         ORDER BY fullname COLLATE NOCASE
+         LIMIT 30`
+      )
+      .all(like, like);
+    return res.json({ ok: true, success: true, data: rows });
+  } catch (e) {
+    console.error('[GET /api/users/search]', e);
+    return res.status(500).json({ ok: false, success: false, error: e.message || 'Lỗi' });
   }
 });
 

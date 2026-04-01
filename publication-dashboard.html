@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Phân tích công bố KHCN | SCI</title>
+  <link rel="stylesheet" href="/public/css/publicationDashboard.css" />
+  <style>
+    body { font-family: system-ui, 'Segoe UI', Roboto, sans-serif; background: #f5f3ee; margin: 0; color: #1a1916; }
+    .pd-page-header {
+      background: #1c4f8a;
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .pd-page-header h1 { font-size: 1.15rem; font-weight: 600; margin: 0; }
+    .pd-page-header a { color: #fff; text-decoration: underline; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header class="pd-page-header">
+    <h1>Phân tích công bố Khoa học — Viện Tế bào gốc (SCI)</h1>
+    <nav>
+      <a href="/cong-bo-khoa-hoc.html">← Quản lý công bố</a>
+    </nav>
+  </header>
+
+  <div id="pd-denied" class="pd-denied pd-root" hidden>
+    <p style="font-size:1.05rem;font-weight:600;">Bạn chưa được cấp quyền xem trang này.</p>
+    <p style="margin-top:10px;">Liên hệ quản trị viên để được cấp quyền xem dashboard phân tích công bố.</p>
+  </div>
+
+  <div id="pd-main" class="pd-root" hidden>
+    <div class="pd-tabs">
+      <button type="button" class="pd-tab active" id="pd-tab-btn-dash">Thống kê</button>
+      <button type="button" class="pd-tab" id="pd-tab-btn-perms" hidden>Phân quyền</button>
+    </div>
+
+    <div id="pd-panel-dash" class="pd-panel">
+      <div class="pd-toolbar">
+        <label>Năm từ
+          <input type="number" id="pd-filter-from" min="1990" max="2100" step="1" />
+        </label>
+        <label>đến
+          <input type="number" id="pd-filter-to" min="1990" max="2100" step="1" />
+        </label>
+        <button type="button" class="pd-btn" id="pd-btn-apply">Áp dụng</button>
+        <button type="button" class="pd-btn pd-btn-ghost" id="pd-btn-word">Xuất Word</button>
+        <button type="button" class="pd-btn pd-btn-ghost" id="pd-btn-excel">Xuất Excel</button>
+      </div>
+
+      <div class="pd-kpi-grid">
+        <div class="pd-kpi-card">
+          <div class="v" id="pd-kpi-papers">—</div>
+          <div class="l">Tổng công bố</div>
+        </div>
+        <div class="pd-kpi-card">
+          <div class="v" id="pd-kpi-tier">—</div>
+          <div class="l">Q1 + Q2</div>
+        </div>
+        <div class="pd-kpi-card">
+          <div class="v" id="pd-kpi-if">—</div>
+          <div class="l">IF trung bình</div>
+        </div>
+        <div class="pd-kpi-card">
+          <div class="v" id="pd-kpi-cite">—</div>
+          <div class="l">Tổng trích dẫn</div>
+        </div>
+      </div>
+
+      <div class="pd-charts">
+        <div class="pd-chart-box">
+          <h3>Sản lượng theo năm</h3>
+          <canvas id="pd-chart-bar" height="260"></canvas>
+        </div>
+        <div class="pd-chart-box">
+          <h3>Phân bố phân hạng Q (tổng trong kỳ)</h3>
+          <canvas id="pd-chart-doughnut" height="260"></canvas>
+        </div>
+        <div class="pd-chart-box pd-line-full">
+          <h3>IF trung bình theo năm</h3>
+          <canvas id="pd-chart-line" height="220"></canvas>
+        </div>
+      </div>
+
+      <div class="pd-table-wrap">
+        <h3>Top 10 bài được trích dẫn nhiều nhất</h3>
+        <table class="pd-table" id="pd-table-top-cited">
+          <thead>
+            <tr>
+              <th>STT</th>
+              <th>Tiêu đề</th>
+              <th>Tạp chí</th>
+              <th>Năm</th>
+              <th>Q</th>
+              <th>IF</th>
+              <th>Trích dẫn</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="pd-table-wrap">
+        <h3>Top 10 tạp chí</h3>
+        <table class="pd-table" id="pd-table-top-journals">
+          <thead>
+            <tr>
+              <th>STT</th>
+              <th>Tạp chí</th>
+              <th>Số bài</th>
+              <th>Tổng trích dẫn</th>
+              <th>IF TB</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="pd-panel-perms" class="pd-panel" hidden>
+      <h2 style="font-size:1.05rem;margin-bottom:12px;">Quản lý quyền xem — Dashboard phân tích công bố</h2>
+      <p style="font-size:13px;color:#5c5c6e;margin-bottom:14px;">Chỉ quản trị viên. Người được cấp có thể xem thống kê và xuất báo cáo (không cần role admin).</p>
+
+      <div class="dp-search-row">
+        <div class="dp-ac" style="flex:1;min-width:220px;">
+          <input type="search" id="dp-search" placeholder="Tìm theo tên hoặc email…" autocomplete="off" />
+          <div id="dp-ac-list" class="dp-ac-list" hidden></div>
+        </div>
+        <label style="font-size:12px;color:#5c5c6e;">Hết hạn (tuỳ chọn)
+          <input type="date" id="dp-expires" style="display:block;margin-top:4px;padding:8px;border:1px solid #d0cdc4;border-radius:8px;" />
+        </label>
+      </div>
+      <p style="font-size:12px;color:#888;margin:-8px 0 12px;">Chọn một gợi ý dưới ô tìm kiếm để cấp quyền cho user đó.</p>
+
+      <div id="dp-list" class="dp-list"></div>
+
+      <div class="dp-actions">
+        <select id="dp-group" title="Cấp theo nhóm">
+          <option value="">— Cấp theo nhóm —</option>
+          <option value="ncv">Tất cả NCV (researcher)</option>
+          <option value="leadership">Ban lãnh đạo / HĐ</option>
+          <option value="accounting">Kế toán (role ke_toan)</option>
+        </select>
+        <button type="button" class="pd-btn" id="dp-btn-grant-group">Cấp nhóm</button>
+        <button type="button" class="pd-btn pd-btn-ghost" id="dp-btn-revoke-selected">Thu hồi đã chọn</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/public/js/publicationDashboard.js"></script>
+  <script src="/public/js/dashboardPermissions.js"></script>
+</body>
+</html>

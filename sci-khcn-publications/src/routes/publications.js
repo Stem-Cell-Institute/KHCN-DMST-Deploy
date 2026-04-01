@@ -104,6 +104,7 @@ function rowsToExclusiveMap(rows) {
 //   order     — asc | desc (default desc)
 publicationsRouter.get('/', async (req, res, next) => {
   try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     const db = await getDB();
     const {
       q, year, pub_type, quartile, status, index_db, project,
@@ -167,6 +168,7 @@ publicationsRouter.get('/', async (req, res, next) => {
 // ── GET /api/publications/stats ───────────────────────────────────────────────
 publicationsRouter.get('/stats', async (req, res, next) => {
   try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     const db = await getDB();
     const { active: yearFilterActive, yf, yt } = parseStatsYearFilter(req.query);
     const yClause = yearFilterActive
@@ -340,6 +342,7 @@ publicationsRouter.get('/stats', async (req, res, next) => {
 // ── GET /api/publications/:id ─────────────────────────────────────────────────
 publicationsRouter.get('/:id', async (req, res, next) => {
   try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     const db = await getDB();
     const [row] = await queryAll(db,
       `SELECT * FROM publications WHERE id = ?`,
