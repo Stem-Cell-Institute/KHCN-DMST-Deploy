@@ -3,7 +3,7 @@
 :root {
   --color-ticker-bg: #1e1b4b;
   --color-ticker-border: #2d2a5e;
-  --color-ticker-label-bg: #059669;
+  --color-ticker-label-bg: #00945e;
   --color-ticker-text: #d1fae5;
 }
 
@@ -49,7 +49,7 @@
 }
 
 .sci-ticker-label {
-  background: var(--color-ticker-label-bg, #059669);
+  background: var(--color-ticker-label-bg, #00945e);
   color: #ffffff;
   padding: 0 16px;
   flex-shrink: 0;
