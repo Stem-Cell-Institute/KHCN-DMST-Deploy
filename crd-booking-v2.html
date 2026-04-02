@@ -49,6 +49,14 @@ body {
 /* ── Animations ─────────────────────────────── */
 @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes bkPopIn {
+  from { opacity:0; transform: translateY(14px) scale(.985); }
+  to   { opacity:1; transform: translateY(0) scale(1); }
+}
+@keyframes bkPopOut {
+  from { opacity:1; transform: translateY(0) scale(1); }
+  to   { opacity:0; transform: translateY(-8px) scale(.985); }
+}
 .fade-up { animation: fadeUp .28s ease both; }
 
 /* ── Layout ─────────────────────────────────── */
@@ -173,6 +181,44 @@ body {
 /* ── Timeline ───────────────────────────────── */
 /* padding-bottom: chỗ cho tooltip phía dưới hàng cuối (ô lịch dùng ::after bên dưới thanh) */
 .tl-wrap  { overflow-x:auto; padding-bottom:72px; }
+.calendar-layout { display:flex; gap:18px; align-items:flex-start; }
+.calendar-layout .tl-wrap { flex:1 1 auto; min-width:0; }
+.bk-activity-wrap {
+  flex: 0 0 330px;
+  width: 330px;
+  padding: 10px 0 0 10px;
+}
+.bk-activity-hdr {
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+  margin-bottom:10px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.bk-activity-feed {
+  min-height: 520px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  overflow-y:auto;
+  max-height: 520px; /* Khi nhiều hơn thì dồn lên (scroll) */
+}
+.bk-activity-item {
+  background:var(--white);
+  border:1.5px solid var(--border);
+  border-radius:12px;
+  padding:10px 12px;
+  box-shadow:0 12px 30px rgba(102,126,234,.10);
+  animation:bkPopIn .28s ease both;
+}
+/* Không auto-exit: pop-up giữ lại sau khi hiện */
+.bk-activity-top { display:flex; align-items:center; gap:8px; }
+.bk-act-dot { width:10px; height:10px; border-radius:50%; background:var(--primary); flex-shrink:0; }
+.bk-activity-action { font-size:12.5px; font-weight:900; color:var(--text); }
+.bk-activity-when { margin-left:auto; font-size:10px; color:var(--light); font-weight:800; }
+.bk-activity-detail { margin-top:4px; font-size:11.5px; color:var(--muted); line-height:1.3; }
+.bk-activity-detail strong { color:var(--primary); }
 /* fixed + colgroup: cột thead/tbody khớp; colspan+flex không còn lệch lưới so với hàng giờ */
 .tl-table { table-layout:fixed; border-collapse:collapse; min-width:max-content; width:max-content; }
 .tl-label {
@@ -349,6 +395,9 @@ body {
   .chat-panel { width:100%; right:0; bottom:0; border-radius:var(--r) var(--r) 0 0; }
   .modal-box  { max-width:100% !important; }
   .search-input { width:100%; }
+  .calendar-layout { flex-direction:column; gap:14px; }
+  .bk-activity-wrap { width:100%; flex:0 0 auto; padding: 0; }
+  .bk-activity-feed { min-height: 220px; }
 }
 </style>
 </head>
@@ -412,8 +461,14 @@ body {
         <button class="btn btn-primary btn-sm" id="new-bk-btn" onclick="openBookingModal(null,9)">+ Đặt lịch mới</button>
       </div>
       <div class="legend-wrap" id="machine-legend"></div>
-      <div class="tl-wrap">
-        <table class="tl-table" id="tl-table"></table>
+      <div class="calendar-layout">
+        <div class="tl-wrap">
+          <table class="tl-table" id="tl-table"></table>
+        </div>
+        <div class="bk-activity-wrap" id="bk-activity-wrap" aria-live="polite">
+          <div class="bk-activity-hdr">🧾 Hoạt động đặt lịch</div>
+          <div class="bk-activity-feed" id="bk-activity-feed"></div>
+        </div>
       </div>
       <div style="margin-top:10px;font-size:12px;font-weight:600;color:#4a4f5c;display:flex;gap:18px;flex-wrap:wrap;align-items:center;">
         <span>🖱️ Mỗi ô = 1 giờ; nửa trái = :00, nửa phải = :30 — click để đặt (bước 30 phút)</span>
@@ -1378,6 +1433,7 @@ function initApp() {
 
   renderAll();
   initBkTooltipPortal();
+  initBkActivityFeed();
 
   /* Sub-tabs người dùng (admin) */
   if (isAdmin) {
@@ -1497,6 +1553,199 @@ function renderAll() {
 }
 
 /* ════════════════════════════════════════════
+   BOOKING ACTIVITY FEED (pop-up right)
+════════════════════════════════════════════ */
+let bkActivityTimer = null;
+let bkActivityInitialized = false;
+let bkActivityCurrentDate = null;
+let bkActivityLastSnap = new Map(); // Map<bookingId, { booking, hash }>
+let bkActivityPollRunning = false;
+const bkActivityRecent = new Map(); // key = `${action}|${bookingId}` -> ts
+const BK_ACTIVITY_POLL_MS = 4000;
+const BK_ACTIVITY_DEDUP_MS = 9000;
+
+function bkActivityKey(action, bookingId) {
+  return `${action}|${bookingId}`;
+}
+
+function bkActivityIsCalendarActive() {
+  const el = document.getElementById('tab-calendar');
+  return !!(el && el.classList && el.classList.contains('active'));
+}
+
+function bkActivityShouldSkip(action, bookingId) {
+  const key = bkActivityKey(action, bookingId);
+  const ts = bkActivityRecent.get(key);
+  return ts != null && (Date.now() - ts) < BK_ACTIVITY_DEDUP_MS;
+}
+
+function bkActivityMarkSeen(action, bookingId) {
+  bkActivityRecent.set(bkActivityKey(action, bookingId), Date.now());
+}
+
+function bkActivityMakeHash(b) {
+  // Chỉ dùng để so sánh thay đổi; id nằm ngoài map key.
+  return [
+    b.machineId,
+    b.userId,
+    b.date,
+    String(b.startH),
+    String(b.endH),
+    (b.purpose || '').trim(),
+    (b.researchGroup || '').trim(),
+    b.status || 'confirmed'
+  ].join('|');
+}
+
+function bkActivityMakeSnap(bookings, dateStr) {
+  const d = String(dateStr || '').trim();
+  const map = new Map();
+  (bookings || []).forEach(b => {
+    if (!b || b.date !== d) return;
+    const copy = { ...b };
+    map.set(copy.id, { booking: copy, hash: bkActivityMakeHash(copy) });
+  });
+  return map;
+}
+
+function bkActivityClearFeed() {
+  const feed = document.getElementById('bk-activity-feed');
+  if (!feed) return;
+  feed.innerHTML = '';
+}
+
+function bkActivitySyncLastSnapFromDB() {
+  bkActivityLastSnap = bkActivityMakeSnap(DB.bookings, currentDate);
+  bkActivityCurrentDate = currentDate;
+}
+
+function bkActivityPushItem(action, booking, oldBooking) {
+  if (!bkActivityIsCalendarActive()) return;
+  const feed = document.getElementById('bk-activity-feed');
+  if (!feed || !booking || !booking.id) return;
+  if (bkActivityShouldSkip(action, booking.id)) return;
+
+  bkActivityMarkSeen(action, booking.id);
+
+  const m = DB.machines.find(x => x.id === booking.machineId);
+  const u = DB.users.find(x => x.id === booking.userId);
+  const uname = (u && u.name) ? u.name : '—';
+  const dotColor = m?.color || '#667eea';
+
+  const actionCfg = action === 'create'
+    ? { emoji: '✅', label: 'Đặt lịch' }
+    : action === 'update'
+      ? { emoji: '✏️', label: 'Sửa lịch' }
+      : { emoji: '🗑️', label: 'Xoá lịch' };
+
+  const t1 = fmtT(booking.startH);
+  const t2 = fmtT(booking.endH);
+  const rg = (booking.researchGroup || '').trim();
+  const rgTxt = rg ? `Nhóm: ${rg}` : '';
+  const p = (booking.purpose || '').trim();
+  const pTxt = p ? (p.length > 30 ? (p.slice(0, 30) + '…') : p) : '';
+
+  const when = new Date().toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' });
+
+  const el = document.createElement('div');
+  el.className = 'bk-activity-item';
+  el.innerHTML = `
+    <div class="bk-activity-top">
+      <span class="bk-act-dot" style="background:${escHtml(dotColor)};"></span>
+      <span class="bk-activity-action">${escHtml(actionCfg.emoji)} ${escHtml(actionCfg.label)}</span>
+      <span class="bk-activity-when">${escHtml(when)}</span>
+    </div>
+    <div class="bk-activity-detail">
+      <strong>${escHtml(m?.name || 'Thiết bị')}</strong> · ${escHtml(t1)}–${escHtml(t2)}
+      <br>👤 ${escHtml(uname)}${rgTxt ? ` · ${escHtml(rgTxt)}` : ''}${pTxt ? ` · ${escHtml(pTxt)}` : ''}
+    </div>
+  `;
+
+  // Xếp kề nhau: mục sau nằm dưới mục trước.
+  // Khi quá chiều cao: feed tự scroll lên để “dồn lên”.
+  feed.appendChild(el);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function bkActivityDiffSnaps(oldSnap, newSnap) {
+  const events = [];
+  if (!oldSnap) oldSnap = new Map();
+  if (!newSnap) newSnap = new Map();
+
+  for (const [id, newItem] of newSnap.entries()) {
+    const oldItem = oldSnap.get(id);
+    if (!oldItem) {
+      events.push({ action: 'create', booking: newItem.booking });
+      continue;
+    }
+    if (oldItem.hash !== newItem.hash) {
+      events.push({ action: 'update', booking: newItem.booking, oldBooking: oldItem.booking });
+    }
+  }
+
+  for (const [id, oldItem] of oldSnap.entries()) {
+    if (!newSnap.has(id)) {
+      events.push({ action: 'delete', booking: oldItem.booking });
+    }
+  }
+
+  // Limit để tránh spam nếu có nhiều thay đổi cùng lúc
+  return events.slice(0, 6);
+}
+
+async function bkActivityPollTick() {
+  if (!bkActivityInitialized) return;
+  if (!bkActivityIsCalendarActive()) return;
+  if (bkActivityPollRunning) return;
+  if (!currentDate) return;
+
+  bkActivityPollRunning = true;
+  try {
+    const fetcher = appRole === 'admin' ? API.getAdminSnap : API.getState;
+    const data = await fetcher();
+    const bookings = data?.bookings || [];
+
+    // Update DB để các UI khác (timeline/stats) phản ánh gần thực tế
+    if (data?.users) DB.users = data.users;
+    if (data?.machines) DB.machines = mergeMachinesFromApi(data.machines);
+    DB.bookings = bookings;
+
+    const newSnap = bkActivityMakeSnap(bookings, currentDate);
+    const diff = bkActivityDiffSnaps(bkActivityLastSnap, newSnap);
+    bkActivityLastSnap = newSnap;
+
+    if (diff.length) {
+      renderStats();
+      renderTimeline(); // timeline đang nằm cùng tab-calendar; renderTimeline sẽ không clear feed vì không đổi date
+      diff.forEach(ev => {
+        const b = ev.booking;
+        if (!b || !b.id) return;
+        bkActivityPushItem(ev.action, b, ev.oldBooking);
+      });
+    }
+  } catch (e) {
+    // silent
+  } finally {
+    bkActivityPollRunning = false;
+  }
+}
+
+function initBkActivityFeed() {
+  if (bkActivityInitialized) return;
+  const feed = document.getElementById('bk-activity-feed');
+  if (!feed) return;
+
+  bkActivityInitialized = true;
+  bkActivityCurrentDate = currentDate;
+  bkActivityLastSnap = bkActivityMakeSnap(DB.bookings, currentDate);
+  if (bkActivityTimer) clearInterval(bkActivityTimer);
+  bkActivityTimer = setInterval(() => {
+    // Fire-and-forget, bên trong có lock bkActivityPollRunning
+    bkActivityPollTick();
+  }, BK_ACTIVITY_POLL_MS);
+}
+
+/* ════════════════════════════════════════════
    STATS
 ════════════════════════════════════════════ */
 function renderStats() {
@@ -1522,6 +1771,11 @@ function renderStats() {
 function renderTimeline() {
   hideBkTooltipPortal();
   currentDate = document.getElementById('date-picker').value;
+  if (bkActivityCurrentDate !== currentDate) {
+    bkActivityCurrentDate = currentDate;
+    if (bkActivityInitialized) bkActivityClearFeed();
+    bkActivityLastSnap = bkActivityMakeSnap(DB.bookings, currentDate);
+  }
   /* Cột 6→23 (đủ cho availTo tới 24); mỗi thiết bị tô ngoài giờ theo af/at riêng */
   const hours   = HOURS.slice(6, 24);
 
@@ -1716,13 +1970,19 @@ function confirmBooking() {
   if (!purpose)  return setErr('Vui lòng nhập mục đích sử dụng');
 
   API.createBooking({ machineId: m.id, date: currentDate, startH, endH, purpose, researchGroup })
-    .then(() => {
-  closeModal('modal-booking');
-      return appRole === 'admin' ? API.getAdminSnap() : API.getState();
+    .then(resp => {
+      const created = resp && resp.booking ? resp.booking : null;
+      closeModal('modal-booking');
+      return (appRole === 'admin' ? API.getAdminSnap() : API.getState())
+        .then(data => ({ data, created }));
     })
-    .then(data => {
+    .then(({ data, created }) => {
       DB.bookings = data.bookings || [];
-  renderAll();
+      if (data?.users) DB.users = data.users;
+      if (data?.machines) DB.machines = mergeMachinesFromApi(data.machines);
+      renderAll();
+      if (created) bkActivityPushItem('create', created);
+      bkActivitySyncLastSnapFromDB();
     })
     .catch(err => {
       errEl.innerHTML = `<div class="alert alert-error">⚠️ ${err.message}</div>`;
@@ -1808,6 +2068,7 @@ function saveBookingEdit() {
   if (!editingBookingId) return;
   const bk = DB.bookings.find(b => b.id === editingBookingId);
   if (!bk) return;
+  const prev = { ...bk };
 
   const m = DB.machines.find(x => x.id === bk.machineId);
   if (!m) return;
@@ -1836,13 +2097,20 @@ function saveBookingEdit() {
   };
 
   API.updateBooking(editingBookingId, body)
-    .then(() => {
+    .then(resp => {
+      const updated = resp && resp.booking ? resp.booking : null;
       closeModal('modal-booking-edit');
-      return appRole === 'admin' ? API.getAdminSnap() : API.getState();
+      return (appRole === 'admin' ? API.getAdminSnap() : API.getState())
+        .then(data => ({ data, updated, prev }));
     })
-    .then(data => {
+    .then(({ data, updated }) => {
       DB.bookings = data.bookings || [];
+      if (data?.users) DB.users = data.users;
+      if (data?.machines) DB.machines = mergeMachinesFromApi(data.machines);
       renderAll();
+      const newest = DB.bookings.find(b => b.id === editingBookingId) || updated || prev;
+      if (newest) bkActivityPushItem('update', newest, prev);
+      bkActivitySyncLastSnapFromDB();
     })
     .catch(err => {
       errEl.innerHTML = `<div class="alert alert-error">⚠️ ${err.message}</div>`;
@@ -1852,6 +2120,10 @@ function saveBookingEdit() {
 function deleteBookingFromEdit() {
   if (!editingBookingId) return;
   if (!confirm('Huỷ lịch đặt này?')) return;
+  const prev = (() => {
+    const bk = DB.bookings.find(b => b.id === editingBookingId);
+    return bk ? { ...bk } : null;
+  })();
   API.deleteBooking(editingBookingId)
     .then(() => {
       closeModal('modal-booking-edit');
@@ -1859,7 +2131,11 @@ function deleteBookingFromEdit() {
     })
     .then(data => {
       DB.bookings = data.bookings || [];
+      if (data?.users) DB.users = data.users;
+      if (data?.machines) DB.machines = mergeMachinesFromApi(data.machines);
       renderAll();
+      if (prev) bkActivityPushItem('delete', prev);
+      bkActivitySyncLastSnapFromDB();
     })
     .catch(err => {
       document.getElementById('be-err').innerHTML =
@@ -1953,9 +2229,17 @@ function deleteBooking(id) {
   if (!b) return;
   if (appRole !== 'admin' && b.userId !== currentUser.id) return;
   if (!confirm('Huỷ lịch đặt này?')) return;
+  const prev = { ...b };
   API.deleteBooking(id)
     .then(() => appRole === 'admin' ? API.getAdminSnap() : API.getState())
-    .then(data => { DB.bookings = data.bookings || []; renderAll(); })
+    .then(data => {
+      DB.bookings = data.bookings || [];
+      if (data?.users) DB.users = data.users;
+      if (data?.machines) DB.machines = mergeMachinesFromApi(data.machines);
+      renderAll();
+      if (prev) bkActivityPushItem('delete', prev);
+      bkActivitySyncLastSnapFromDB();
+    })
     .catch(err => alert('Lỗi: ' + err.message));
 }
 
