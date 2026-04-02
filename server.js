@@ -424,10 +424,41 @@ try {
 } catch (e) {
   /* cột đã tồn tại */
 }
+function crdEnsureColumn(tableName, columnName, columnDefSql) {
+  // Better-sqlite3: PRAGMA table_info trả về danh sách cột
+  try {
+    const cols = db.prepare(`PRAGMA table_info(${tableName})`).all();
+    const exists = (cols || []).some(c => String(c.name) === String(columnName));
+    if (exists) return true;
+    db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefSql}`).run();
+    return true;
+  } catch (e) {
+    console.warn(`[CRD] Ensure column failed: ${tableName}.${columnName}:`, e && e.message ? e.message : String(e));
+    return false;
+  }
+}
+
+crdEnsureColumn(
+  'crd_bookings',
+  'created_at',
+  // SQLite chỉ cho phép default kiểu hằng số khi dùng ALTER TABLE ADD COLUMN.
+  // Với datetime('now',...) sẽ fail => thêm cột TEXT trống rồi update sau.
+  'TEXT'
+);
+
+crdEnsureColumn(
+  'crd_bookings',
+  'research_group',
+  'TEXT'
+);
+
+// Nếu bảng đã có created_at (dạng TEXT) nhưng dữ liệu cũ chưa được set, ta điền giá trị hiện tại.
 try {
-  db.prepare("ALTER TABLE crd_bookings ADD COLUMN created_at TEXT DEFAULT (datetime('now','localtime'))").run();
+  db.prepare(
+    "UPDATE crd_bookings SET created_at = datetime('now','localtime') WHERE created_at IS NULL OR trim(created_at) = ''"
+  ).run();
 } catch (e) {
-  /* cột đã tồn tại */
+  /* ignore */
 }
 try {
   db.prepare('ALTER TABLE crd_persons ADD COLUMN is_banned INTEGER DEFAULT 0').run();
@@ -7060,6 +7091,78 @@ app.post('/api/admin/missions/import', authMiddleware, adminOnly, upload.single(
   });
 });
 
+// Admin: Thêm thủ công 1 đề tài vào bảng missions (upsert theo code)
+app.post('/api/admin/missions/manual', authMiddleware, adminOnly, (req, res) => {
+  const body = req.body || {};
+  const code = String(body.code || '').trim();
+  const title = String(body.title || '').trim();
+  const principal = String(body.principal || '').trim() || null;
+  const level = String(body.level || '').trim().toLowerCase();
+  const status = String(body.status || 'planning').trim().toLowerCase();
+
+  if (!code) return res.status(400).json({ message: 'Thiếu mã đề tài (code).' });
+  if (!title) return res.status(400).json({ message: 'Thiếu tên đề tài (title).' });
+  if (!['national', 'ministry', 'university', 'institute'].includes(level)) {
+    return res.status(400).json({ message: 'Cấp đề tài không hợp lệ. Hãy chọn: national | ministry | university | institute.' });
+  }
+
+  const normalizeDate = (v) => {
+    if (!v) return null;
+    const s = String(v).trim();
+    if (!s) return null;
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) return s.slice(0, 10);
+    // chấp nhận DD/MM/YYYY hoặc MM/DD/YYYY để đỡ sai khi admin nhập tay
+    const parts = s.split(/[/\-.]/).map(p => p.trim()).filter(Boolean);
+    if (parts.length < 3) return null;
+    const a = parseInt(parts[0], 10);
+    const b = parseInt(parts[1], 10);
+    const c = parseInt(parts[2], 10);
+    if (!isNaN(a) && !isNaN(b) && !isNaN(c)) {
+      const year = c;
+      const month = Math.max(1, Math.min(12, a));
+      const day = Math.max(1, Math.min(31, b));
+      return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+    }
+    return null;
+  };
+
+  const start_date = normalizeDate(body.start_date || body.startDate || null);
+  const end_date = normalizeDate(body.end_date || body.endDate || null);
+
+  let progress = 0;
+  if (body.progress != null && body.progress !== '') {
+    progress = parseInt(body.progress, 10);
+    if (!isNaN(progress)) progress = Math.max(0, Math.min(100, progress));
+    else progress = 0;
+  }
+
+  let budget = null;
+  if (body.budget != null && String(body.budget).trim() !== '') {
+    const n = parseFloat(String(body.budget).replace(/,/g, '.'));
+    if (!isNaN(n)) budget = n;
+  }
+
+  const existing = db.prepare('SELECT id FROM missions WHERE code = ?').get(code);
+  try {
+    if (existing) {
+      db.prepare(
+        'UPDATE missions SET title=?, principal=?, level=?, status=?, start_date=?, end_date=?, progress=?, budget=? WHERE code=?'
+      ).run(title, principal, level, status, start_date, end_date, progress, budget, code);
+      return res.json({ ok: true, message: 'Đã cập nhật đề tài.', id: existing.id, updated: true });
+    }
+
+    db.prepare(
+      `INSERT INTO missions
+        (code, title, principal, level, status, start_date, end_date, progress, budget, source_id, source_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'manual')`
+    ).run(code, title, principal, level, status, start_date, end_date, progress, budget);
+    const id = db.prepare('SELECT id FROM missions WHERE code=? ORDER BY id DESC LIMIT 1').get(code).id;
+    return res.status(201).json({ ok: true, message: 'Đã thêm đề tài thủ công.', id, updated: false });
+  } catch (e) {
+    return res.status(500).json({ message: 'Lỗi thêm thủ công: ' + (e.message || String(e)) });
+  }
+});
+
 // Admin: cấu hình bật/tắt module trên trang chủ
 app.get('/api/admin/homepage-modules', authMiddleware, adminOnly, (req, res) => {
   // Nếu bảng trống thì seed mặc định
@@ -9069,8 +9172,10 @@ app.post('/api/crd/bookings', authMiddleware, (req, res) => {
       return res.status(409).json({ message: 'Khung giờ này đã có người đặt' });
     }
     const id = 'b_' + crypto.randomBytes(6).toString('hex');
+    // created_at: không phụ thuộc vào cột này để tránh lỗi migration schema
+    // (vẫn có thể hiển thị/track theo created_at nếu cột tồn tại ở DB).
     db.prepare(
-      'INSERT INTO crd_bookings (id,machine_id,person_id,date,start_h,end_h,purpose,status,research_group,created_at) VALUES (?,?,?,?,?,?,?,?,?,datetime(\'now\',\'localtime\'))'
+      'INSERT INTO crd_bookings (id,machine_id,person_id,date,start_h,end_h,purpose,status,research_group) VALUES (?,?,?,?,?,?,?,?,?)'
     ).run(id, mid, mePersonId, d, sh, eh, pur, 'confirmed', rg);
     return res.status(201).json({ booking: crdBookingToClient(db.prepare('SELECT * FROM crd_bookings WHERE id = ?').get(id)) });
   } catch (e) {

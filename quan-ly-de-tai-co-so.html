@@ -567,6 +567,9 @@
             <button type="button" class="btn btn-add-task" onclick="openAddTaskModal()">
                 Đăng ký đề tài mới
             </button>
+            <button id="btn-admin-add-manual-mission" type="button" class="btn btn-add-task" style="display:none;" onclick="openAdminManualAddModal()">
+                Admin: Thêm thủ công
+            </button>
         </div>
     </div>
 
@@ -1009,6 +1012,98 @@
                 <button class="btn btn-warning" onclick="closeAddTaskModal()">Hủy</button>
                 <button class="btn btn-success" id="btnSubmitLuongB">Đăng ký</button>
             </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Admin thêm thủ công đề tài -->
+    <div id="adminManualAddModal" class="modal">
+        <div class="modal-content" style="max-width: 760px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Admin thêm thủ công đề tài</h2>
+                <button class="close-btn" onclick="closeAdminManualAddModal()">&times;</button>
+            </div>
+
+            <div style="padding: 10px 0 0;">
+                <form id="adminManualAddForm" onsubmit="return false;">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Mã đề tài (code) *</label>
+                            <input type="text" id="admin-manual-code" placeholder="VD: DT-BL-2026-001">
+                        </div>
+                        <div class="form-group">
+                            <label>Cấp đề tài *</label>
+                            <select id="admin-manual-level">
+                                <option value="national">Cấp Nhà nước</option>
+                                <option value="ministry">Cấp Bộ</option>
+                                <option value="university">Cấp ĐHQG</option>
+                                <option value="institute" selected>Cấp Viện</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Tên đề tài (title) *</label>
+                            <input type="text" id="admin-manual-title" placeholder="Nhập tên đầy đủ của đề tài KHCN">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Chủ nhiệm (principal) *</label>
+                            <input type="text" id="admin-manual-principal" placeholder="VD: TS. Nguyễn Văn A">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Trạng thái *</label>
+                            <select id="admin-manual-status">
+                                <option value="planning" selected>Lập kế hoạch</option>
+                                <option value="cho_vien_xet_chon">Chờ HĐ Viện xét chọn</option>
+                                <option value="cho_ct_hd_xet_duyet">Chờ CT HĐ KHCN xét duyệt</option>
+                                <option value="buoc4a">Bước 4A (Nhánh A)</option>
+                                <option value="buoc4b">Bước 4B (Nhánh B)</option>
+                                <option value="cho_bo_tham_dinh">Chờ Bộ thẩm định</option>
+                                <option value="cho_ngoai_xet_chon">Chờ cơ quan ngoài xét chọn</option>
+                                <option value="cho_phe_duyet_ngoai">Chờ phê duyệt ngoài</option>
+                                <option value="da_phe_duyet">Đã phê duyệt</option>
+                                <option value="cho_ky_hop_dong">Chờ ký hợp đồng</option>
+                                <option value="dang_thuc_hien">Đang thực hiện</option>
+                                <option value="xin_dieu_chinh">Xin điều chỉnh nội dung</option>
+                                <option value="cho_nghiem_thu_co_so">Chờ nghiệm thu cơ sở</option>
+                                <option value="nghiem_thu_trung_gian">Nghiệm thu cơ sở (Viện)</option>
+                                <option value="cho_nghiem_thu_bo_nn">Chờ nghiệm thu cấp Bộ/NN</option>
+                                <option value="nghiem_thu_tong_ket">Nghiệm thu cấp Bộ/NN</option>
+                                <option value="hoan_thien_sau_nghiem_thu">Hoàn thiện sau nghiệm thu</option>
+                                <option value="thanh_ly_hop_dong">Thanh lý hợp đồng</option>
+                                <option value="hoan_thanh">Hoàn thành</option>
+                                <option value="khong_duoc_phe_duyet">Không được phê duyệt</option>
+                                <option value="overdue">Quá hạn</option>
+                                <option value="approved">Đã phê duyệt (approved)</option>
+                                <option value="ongoing">Đang thực hiện (ongoing)</option>
+                                <option value="review">Nghiệm thu (review)</option>
+                                <option value="completed">Hoàn thành (completed)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tiến độ (%)</label>
+                            <input type="number" id="admin-manual-progress" min="0" max="100" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Ngày bắt đầu</label>
+                            <input type="date" id="admin-manual-start-date">
+                        </div>
+                        <div class="form-group">
+                            <label>Ngày kết thúc</label>
+                            <input type="date" id="admin-manual-end-date">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Kinh phí (budget - VNĐ)</label>
+                            <input type="number" id="admin-manual-budget" placeholder="VD: 500000000">
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-warning" type="button" onclick="closeAdminManualAddModal()">Hủy</button>
+                <button class="btn btn-success" type="button" id="btn-admin-manual-submit" onclick="submitAdminManualAddMission()">
+                    Thêm vào bảng
+                </button>
             </div>
         </div>
     </div>
@@ -1524,6 +1619,85 @@
                 });
         }
 
+        // ============================================================
+        // Admin: Thêm thủ công 1 đề tài vào bảng missions
+        // ============================================================
+        function openAdminManualAddModal() {
+            if (!isAdmin) {
+                alert('Chỉ Admin mới được thêm thủ công.');
+                return;
+            }
+            var m = document.getElementById('adminManualAddModal');
+            if (!m) return;
+            // reset form nhẹ để admin nhập lại dễ hơn
+            var f = document.getElementById('adminManualAddForm');
+            if (f) f.reset();
+            m.classList.add('active');
+        }
+
+        function closeAdminManualAddModal() {
+            var m = document.getElementById('adminManualAddModal');
+            if (m) m.classList.remove('active');
+        }
+
+        function submitAdminManualAddMission() {
+            if (!isAdmin) {
+                alert('Chỉ Admin mới được thêm thủ công.');
+                return;
+            }
+            var token = localStorage.getItem('token');
+            if (!token) {
+                alert('Vui lòng đăng nhập (Admin) để thêm thủ công.');
+                return;
+            }
+
+            var payload = {
+                code: (document.getElementById('admin-manual-code') || {}).value,
+                title: (document.getElementById('admin-manual-title') || {}).value,
+                principal: (document.getElementById('admin-manual-principal') || {}).value,
+                level: (document.getElementById('admin-manual-level') || {}).value,
+                status: (document.getElementById('admin-manual-status') || {}).value,
+                start_date: (document.getElementById('admin-manual-start-date') || {}).value,
+                end_date: (document.getElementById('admin-manual-end-date') || {}).value,
+                progress: (document.getElementById('admin-manual-progress') || {}).value,
+                budget: (document.getElementById('admin-manual-budget') || {}).value
+            };
+
+            if (!payload.code || !payload.title) {
+                alert('Vui lòng nhập ít nhất `code` và `title`.');
+                return;
+            }
+            if (!payload.level) payload.level = 'institute';
+            if (!payload.status) payload.status = 'planning';
+
+            var btn = document.getElementById('btn-admin-manual-submit');
+            if (btn) btn.disabled = true;
+
+            fetch(apiBase + '/api/admin/missions/manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(payload)
+            })
+                .then(function (r) {
+                    return r.json().then(function (d) { return { ok: r.ok, data: d }; }).catch(function () { return { ok: r.ok, data: {} }; });
+                })
+                .then(function (res) {
+                    if (btn) btn.disabled = false;
+                    if (res.ok) {
+                        alert(res.data && res.data.message ? res.data.message : 'Đã thêm/cập nhật đề tài.');
+                        closeAdminManualAddModal();
+                        loadStats();
+                        loadMissions();
+                    } else {
+                        alert((res.data && res.data.message) ? res.data.message : 'Thêm thủ công thất bại.');
+                    }
+                })
+                .catch(function () {
+                    if (btn) btn.disabled = false;
+                    alert('Lỗi kết nối. Kiểm tra máy chủ.');
+                });
+        }
+
         function deleteTask(id, code) {
             if (!id) return;
             var token = localStorage.getItem('token');
@@ -1877,6 +2051,8 @@
                 if (exportImportSection) exportImportSection.style.display = isAdmin ? '' : 'none';
                 var btnEditTask = document.getElementById('btn-edit-task');
                 if (btnEditTask) btnEditTask.style.display = isAdmin ? '' : 'none';
+                var btnManualAdd = document.getElementById('btn-admin-add-manual-mission');
+                if (btnManualAdd) btnManualAdd.style.display = isAdmin ? '' : 'none';
             }
 
             function finishInit() {
