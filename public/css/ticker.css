@@ -1,0 +1,140 @@
+/* Ticker Thông Báo — không dùng position:fixed (theo flow sau header) */
+
+@keyframes sci-pulse {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes scroll-ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Trùng cạnh ngang với .container trên từng trang (vd. index 1400px); không giới hạn 1200px + padding gây thụt lọt */
+#sci-ticker-container {
+  width: 100%;
+  max-width: none;
+  margin: 0 auto 12px;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.sci-ticker-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  min-height: 50px;
+  border-radius: 12px;
+  background: #fff;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.sci-ticker-label {
+  background: #4f46e5;
+  color: #fff;
+  padding: 0 16px;
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  border-radius: 12px 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sci-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.85;
+  animation: sci-pulse 1.5s ease-in-out infinite;
+}
+
+.sci-ticker-track {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.sci-ticker-track::before,
+.sci-ticker-track::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.sci-ticker-track::before {
+  left: 0;
+  background: linear-gradient(to right, #fff, rgba(255, 255, 255, 0));
+}
+
+.sci-ticker-track::after {
+  right: 0;
+  background: linear-gradient(to left, #fff, rgba(255, 255, 255, 0));
+}
+
+.sci-ticker-inner {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  width: max-content;
+  font-size: 13px;
+  animation: scroll-ticker 30s linear infinite;
+  will-change: transform;
+}
+
+.sci-ticker-inner.paused {
+  animation-play-state: paused;
+}
+
+.sci-t-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 24px;
+  font-size: inherit;
+  color: #1e293b;
+}
+
+.sci-t-item a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.sci-t-item a:hover {
+  text-decoration: underline;
+}
+
+.sci-t-tag {
+  font-size: 0.78em;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 100px;
+  flex-shrink: 0;
+}
+
+.sci-t-sep {
+  width: 1px;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}

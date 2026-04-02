@@ -40,6 +40,8 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
 
 // Route kiểm tra sớm nhất (trước middleware)
 app.get('/api/health', (req, res) => {
@@ -798,6 +800,12 @@ try {
   db.prepare('CREATE INDEX IF NOT EXISTS idx_user_activity_log_action ON user_activity_log(action)').run();
 } catch (e) {}
 
+try {
+  require('./database/migrations/add_ticker')(db);
+} catch (e) {
+  console.error('[Ticker migration]', e.message || e);
+}
+
 (function backfillCapVienHistory() {
   const allSubs = db.prepare('SELECT id, status, createdAt, submittedById, reviewedAt, reviewedById, reviewNote, assignedAt, assignedById, assignedReviewerIds FROM cap_vien_submissions').all();
   for (const sub of allSubs) {
@@ -1468,6 +1476,66 @@ function syncMissionsFromCapVien() {
       db.prepare(
         `INSERT INTO missions (code, title, principal, level, status, start_date, end_date, progress, budget, source_id, source_type) VALUES (?, ?, ?, 'institute', ?, ?, ?, ?, NULL, ?, 'cap_vien')`
       ).run(code, r.title || '', principalName, status, startDate, endDate, progress, r.id);
+    }
+  }
+}
+
+/**
+ * Xóa đề tài khỏi dashboard và mọi bản ghi phụ thuộc (SQLite foreign_keys = ON).
+ * Thứ tự: bảng tham chiếu missions(id) trước, cuối cùng missions.
+ */
+function deleteMissionCascade(missionId) {
+  const mid = parseInt(missionId, 10);
+  if (!mid || isNaN(mid)) throw new Error('INVALID_MISSION_ID');
+  const pathsToRemove = [];
+  try {
+    const mf = db.prepare('SELECT path FROM missions_files WHERE mission_id = ?').all(mid);
+    for (const r of mf) {
+      if (r && r.path) pathsToRemove.push(String(r.path));
+    }
+  } catch (e) {
+    /* bảng có thể chưa tồn tại trên DB cũ */
+  }
+  try {
+    const hs = db.prepare('SELECT path FROM missions_ho_so_ngoai WHERE mission_id = ?').all(mid);
+    for (const r of hs) {
+      if (r && r.path) pathsToRemove.push(String(r.path));
+    }
+  } catch (e) {}
+  const stmts = [
+    'DELETE FROM lich_su_buoc4a WHERE mission_id = ?',
+    'DELETE FROM buoc4a WHERE mission_id = ?',
+    'DELETE FROM lich_su_buoc3 WHERE mission_id = ?',
+    'DELETE FROM buoc4b WHERE mission_id = ?',
+    'DELETE FROM lich_su_doi_nhanh WHERE mission_id = ?',
+    'DELETE FROM lich_su_buoc WHERE mission_id = ?',
+    'DELETE FROM buoc5_thuyet_minh_ls WHERE mission_id = ?',
+    'DELETE FROM buoc5 WHERE mission_id = ?',
+    'DELETE FROM buoc6 WHERE mission_id = ?',
+    'DELETE FROM missions_files WHERE mission_id = ?',
+    'DELETE FROM missions_ho_so_ngoai WHERE mission_id = ?',
+    'DELETE FROM missions WHERE id = ?',
+  ];
+  db.transaction(() => {
+    for (const sql of stmts) {
+      try {
+        db.prepare(sql).run(mid);
+      } catch (e) {
+        const msg = e && e.message ? String(e.message) : '';
+        if (msg.includes('no such table')) continue;
+        throw e;
+      }
+    }
+  })();
+  const projRoot = path.resolve(__dirname);
+  for (const rel of pathsToRemove) {
+    try {
+      const full = path.isAbsolute(rel) ? path.resolve(rel) : path.resolve(__dirname, rel);
+      const norm = path.normalize(full);
+      if (norm !== projRoot && !norm.startsWith(projRoot + path.sep)) continue;
+      if (fs.existsSync(norm)) fs.unlinkSync(norm);
+    } catch (eUn) {
+      /* bỏ qua file không xóa được */
     }
   }
 }
@@ -3087,6 +3155,20 @@ function canUserAccessMissionHoSoNgoai(req, missionRow) {
   if ((req.user.role || '').toLowerCase() === 'admin') return true;
   return missionPrincipalMatchesUser(missionRow.principal, req.user);
 }
+
+const createTickerRouter = require('./routes/ticker');
+app.use(
+  '/',
+  createTickerRouter({
+    db,
+    authMiddleware,
+    jwt,
+    JWT_SECRET,
+    getTokenFromReq,
+    userIdIsBanned,
+    clearAuthCookie,
+  })
+);
 
 // --- API ---
 
@@ -6500,19 +6582,41 @@ app.put('/api/admin/missions/:id', authMiddleware, adminOnly, (req, res) => {
   return res.json({ message: 'Đã cập nhật đề tài.', mission: updated });
 });
 
-// Admin: xóa một nhiệm vụ (đề tài) khỏi dashboard
+// Admin: xóa một nhiệm vụ (đề tài) khỏi dashboard (cascade DB + ghi nhật ký)
 app.delete('/api/admin/missions/:id', authMiddleware, adminOnly, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) return res.status(400).json({ message: 'ID không hợp lệ.' });
-  const row = db.prepare('SELECT id, code, source_type, source_id FROM missions WHERE id = ?').get(id);
+  const row = db.prepare('SELECT id, code, title, source_type, source_id FROM missions WHERE id = ?').get(id);
   if (!row) return res.status(404).json({ message: 'Không tìm thấy đề tài.' });
-  db.prepare('DELETE FROM missions WHERE id = ?').run(id);
+  try {
+    deleteMissionCascade(id);
+  } catch (e) {
+    console.error('[admin/missions DELETE]', e.message || e);
+    return res.status(500).json({ message: 'Không thể xóa đề tài (lỗi cơ sở dữ liệu). ' + (e.message || '') });
+  }
   if (row.source_type === 'cap_vien' && row.source_id != null) {
     try {
       db.prepare('INSERT OR IGNORE INTO missions_hidden (source_type, source_id) VALUES (?, ?)').run('cap_vien', row.source_id);
     } catch (e) {}
   }
-  return res.json({ message: 'Đã xóa đề tài "' + (row.code || '') + '" khỏi danh sách.', deletedId: id });
+  try {
+    insertUserActivityLog(req, {
+      userId: req.user.id,
+      email: req.user.email,
+      action: 'admin_delete_mission',
+      module: 'missions_dashboard',
+      path: '/api/admin/missions/' + id,
+      detail: JSON.stringify({
+        code: row.code || '',
+        title: (row.title || '').slice(0, 500),
+        source_type: row.source_type || null,
+        source_id: row.source_id != null ? row.source_id : null,
+      }),
+    });
+  } catch (eLog) {
+    /* không chặn phản hồi */
+  }
+  return res.json({ message: 'Đã xóa đề tài "' + (row.code || '') + '" khỏi hệ thống.', deletedId: id });
 });
 
 // CSV helper: escape field for CSV (quote if contains comma, newline or quote)

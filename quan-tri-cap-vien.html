@@ -126,6 +126,7 @@
                 <aside class="admin-sidebar" aria-label="Danh mục quản trị">
                     <div class="admin-sidebar-title">Danh mục</div>
                     <nav class="admin-sidebar-nav">
+                        <a href="/admin/ticker" id="nav-ticker-admin" style="display:none;">📢 Ticker Thông Báo</a>
                         <a href="#section-accounts">Quản lý tài khoản</a>
                         <a href="#section-hdkhcn">Hội đồng KHCN</a>
                         <a href="#section-budget">Tổ thẩm định tài chính</a>
@@ -603,6 +604,8 @@
         } else {
             document.getElementById('user-email').textContent = user.email || '';
             document.getElementById('user-bar').style.display = 'block';
+            var navTicker = document.getElementById('nav-ticker-admin');
+            if (navTicker) navTicker.style.display = '';
         }
 
         const roleLabels = { chu_tich: 'Chủ tịch HĐKHCN', thu_ky: 'Thư ký HĐKHCN', thanh_vien: 'Thành viên HĐKHCN', researcher: 'Nghiên cứu viên', admin: 'Admin', phong_khcn: 'Phòng KHCN', totruong_tham_dinh_tc: 'Tổ trưởng Tổ thẩm định TC', thanh_vien_tham_dinh_tc: 'Thành viên Tổ thẩm định TC' };

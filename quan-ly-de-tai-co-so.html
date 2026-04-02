@@ -1528,18 +1528,35 @@
             if (!id) return;
             var token = localStorage.getItem('token');
             if (!token) { alert('Vui lòng đăng nhập (Admin) để xóa đề tài.'); return; }
-            if (!confirm('Bạn có chắc muốn xóa đề tài này?\n\nMã: ' + (code || id) + '\n\nHành động không thể hoàn tác.')) return;
+            var row = tasks.find(function(t) { return t.id === id; });
+            var title = (row && row.name) ? String(row.name) : '';
+            var warn = 'Bạn có chắc muốn XÓA VĨNH VIỄN đề tài khỏi hệ thống?\n\n' +
+                'Mã: ' + (code || id) +
+                (title ? ('\nTên: ' + title) : '') +
+                '\n\nToàn bộ dòng tiến trình / hồ sơ đính kèm trên dashboard (nếu có) sẽ bị xóa theo. Hành động không thể hoàn tác.';
+            if (!confirm(warn)) return;
             fetch(apiBase + '/api/admin/missions/' + id, {
                 method: 'DELETE',
-                headers: { 'Authorization': 'Bearer ' + token }
+                headers: { 'Authorization': 'Bearer ' + token },
+                credentials: 'same-origin'
             })
-                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }).catch(function() { return { ok: false, data: {} }; }); })
+                .then(function(r) {
+                    return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }).catch(function() { return { ok: r.ok, status: r.status, data: {} }; });
+                })
                 .then(function(res) {
                     if (res.ok) {
+                        alert(res.data.message || 'Đã xóa đề tài.');
                         loadStats();
                         loadMissions();
+                        if (currentTask && currentTask.id === id) {
+                            try { document.getElementById('taskDetailModal').classList.remove('active'); } catch (e) {}
+                            currentTask = null;
+                        }
                     } else {
-                        alert(res.data.message || 'Không thể xóa đề tài.');
+                        var msg = res.data && res.data.message;
+                        if (res.status === 401) msg = 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
+                        else if (res.status === 403) msg = msg || 'Chỉ tài khoản Admin mới xóa được đề tài.';
+                        alert(msg || 'Không thể xóa đề tài.');
                     }
                 })
                 .catch(function() { alert('Lỗi kết nối. Kiểm tra máy chủ.'); });
@@ -1854,17 +1871,40 @@
             if (!enforceInstituteAccess()) return;
             var token = localStorage.getItem('token');
             try { currentUser = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) { currentUser = {}; }
-            isAdmin = (currentUser.role || '').toLowerCase() === 'admin';
-            updateHeaderGreeting();
-            loadStats();
-            loadMissions();
+
+            function applyAdminUiVisibility() {
+                var exportImportSection = document.getElementById('export-import-section');
+                if (exportImportSection) exportImportSection.style.display = isAdmin ? '' : 'none';
+                var btnEditTask = document.getElementById('btn-edit-task');
+                if (btnEditTask) btnEditTask.style.display = isAdmin ? '' : 'none';
+            }
+
+            function finishInit() {
+                isAdmin = (currentUser.role || '').toLowerCase() === 'admin';
+                updateHeaderGreeting();
+                applyAdminUiVisibility();
+                loadStats();
+                loadMissions();
+            }
+
+            if (token) {
+                fetch(apiBase + '/api/me', { headers: { 'Authorization': 'Bearer ' + token } })
+                    .then(function(r) { return r.ok ? r.json() : null; })
+                    .then(function(data) {
+                        if (data && data.id) {
+                            currentUser = data;
+                            try { localStorage.setItem('user', JSON.stringify(data)); } catch (e2) {}
+                        }
+                        finishInit();
+                    })
+                    .catch(function() { finishInit(); });
+            } else {
+                finishInit();
+            }
+
             document.getElementById('btn-save-edit-task')?.addEventListener('click', saveEditTask);
             document.getElementById('btnAddTaskStep0Next')?.addEventListener('click', onAddTaskStep0Next);
             document.getElementById('btnSubmitLuongB')?.addEventListener('click', submitLuongB);
-            var exportImportSection = document.getElementById('export-import-section');
-            if (exportImportSection) exportImportSection.style.display = isAdmin ? '' : 'none';
-            var btnEditTask = document.getElementById('btn-edit-task');
-            if (btnEditTask) btnEditTask.style.display = isAdmin ? '' : 'none';
             var btnTpl = document.getElementById('btn-export-template');
             if (btnTpl) btnTpl.href = apiBase + '/api/missions/export-template';
             document.getElementById('btn-export-excel')?.addEventListener('click', function() {

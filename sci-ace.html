@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hồ sơ Đạo đức Nghiên cứu Động vật - SCI-ACE</title>
+    <link rel="stylesheet" href="/public/css/ticker.css">
     <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -862,6 +863,20 @@
         </div>
     </nav>
 
+    <div id="sci-ticker-container" style="display:none;">
+        <div class="container">
+            <div class="sci-ticker-wrap">
+                <div class="sci-ticker-label">
+                    <div class="sci-live-dot"></div>
+                    <span>THÔNG BÁO</span>
+                </div>
+                <div class="sci-ticker-track" id="sciTickerTrack">
+                    <div class="sci-ticker-inner" id="sciTickerInner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <main>
         <section class="hero">
             <div class="container">
@@ -1201,6 +1216,7 @@
 
     <script src="js/auth-status.js"></script>
     <script src="js/system-access.js"></script>
+    <script src="/public/js/ticker.js" defer></script>
     <script>
         const INSTITUTE_DOMAIN = '@sci.edu.vn';
         function enforceInstituteAccess() {
@@ -1216,6 +1232,8 @@
             document.querySelectorAll('header, nav, main, footer').forEach(function(el) {
                 el.style.display = 'none';
             });
+            var tkr = document.getElementById('sci-ticker-container');
+            if (tkr) tkr.style.display = 'none';
             return false;
         }
 

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title : 'SCI-ACE' %></title>
+  <link rel="stylesheet" href="/public/css/ticker.css">
+  <% if (typeof blockHead !== 'undefined') { %><%- blockHead %><% } %>
+</head>
+<body>
+  <% if (typeof user !== 'undefined' && user) { %>
+  <%- include('partials/ticker') %>
+  <% } %>
+  <main class="sci-main-content">
+    <%- typeof body !== 'undefined' ? body : '' %>
+  </main>
+  <% if (typeof user !== 'undefined' && user) { %>
+  <script src="/public/js/ticker.js" defer></script>
+  <% } %>
+  <% if (typeof blockScripts !== 'undefined') { %><%- blockScripts %><% } %>
+</body>
+</html>

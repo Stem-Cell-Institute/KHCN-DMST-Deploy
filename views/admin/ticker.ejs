@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> — SCI-ACE</title>
+  <link rel="stylesheet" href="/public/css/ticker.css">
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; background: #f1f5f9; color: #0f172a; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+    h1 { font-size: 1.35rem; margin: 0 0 8px; }
+    .sub { color: #64748b; font-size: 0.9rem; margin-bottom: 20px; }
+    .preview-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .preview-toolbar button { padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; font-size: 13px; }
+    .preview-toolbar button:hover { background: #f8fafc; }
+    .preview-toolbar .toolbar-spacer { flex: 1; min-width: 8px; }
+    .btn-ticker-global { font-weight: 600; padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; }
+    .btn-ticker-global--hide { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .btn-ticker-global--hide:hover { background: #fee2e2; }
+    .btn-ticker-global--show { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .btn-ticker-global--show:hover { background: #d1fae5; }
+    #adminTickerHiddenBanner {
+      display: none;
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    .tabs { display: flex; gap: 4px; border-bottom: 2px solid #e2e8f0; margin-bottom: 16px; flex-wrap: wrap; }
+    .tabs button {
+      padding: 10px 16px; border: none; background: transparent; cursor: pointer;
+      font-weight: 600; font-size: 14px; color: #64748b; border-radius: 8px 8px 0 0;
+    }
+    .tabs button[aria-selected="true"] { background: #fff; color: #4f46e5; box-shadow: 0 -2px 0 #4f46e5 inset; }
+    .panel { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    th { font-weight: 600; color: #334155; }
+    .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; }
+    .btn-toggle { background: #e0e7ff; color: #3730a3; }
+    .btn-edit { background: #ecfdf5; color: #047857; margin-right: 4px; }
+    .btn-del { background: #fee2e2; color: #991b1b; margin-left: 4px; }
+    .st-on { color: #15803d; font-weight: 600; }
+    .st-off { color: #64748b; }
+    .badge-link { font-size: 12px; background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 999px; }
+    .form-grid { display: grid; gap: 12px; max-width: 480px; }
+    .form-grid label { display: block; font-weight: 500; font-size: 13px; margin-bottom: 4px; }
+    .form-grid input[type="text"], .form-grid input[type="url"], .form-grid select {
+      width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box;
+    }
+    .form-actions { margin-top: 8px; }
+    .btn-primary { background: #4f46e5; color: #fff; padding: 10px 18px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: #4338ca; }
+    .cat-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+    .cat-key { font-size: 12px; color: #64748b; }
+    .settings-row { margin-bottom: 18px; max-width: 520px; }
+    .settings-row label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+    input[type="range"] { width: 100%; max-width: 400px; }
+    .switch-row { display: flex; align-items: center; gap: 10px; }
+    .td-actions { white-space: nowrap; }
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(15, 23, 42, 0.45); align-items: center; justify-content: center;
+      padding: 16px; box-sizing: border-box;
+    }
+    .modal-overlay.is-open { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: 12px; padding: 22px; max-width: 520px; width: 100%;
+      box-shadow: 0 20px 50px rgba(0,0,0,.15); max-height: 90vh; overflow-y: auto;
+    }
+    .modal-box h3 { margin: 0 0 16px; font-size: 1.1rem; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+    .btn-secondary { background: #f1f5f9; color: #334155; padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-secondary:hover { background: #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>📢 <%= title %></h1>
+    <p class="sub">Quản lý dải thông báo chạy ngang (preview giống giao diện người dùng).</p>
+
+    <div class="preview-toolbar">
+      <span style="font-weight:600;font-size:14px;">Preview</span>
+      <button type="button" id="btn-preview-pause" title="Tạm dừng">Pause</button>
+      <button type="button" id="btn-preview-play" style="display:none;" title="Chạy tiếp">Play</button>
+      <span class="toolbar-spacer" aria-hidden="true"></span>
+      <button type="button" id="btn-ticker-toggle-global" class="btn-ticker-global" title="Bật/tắt thanh ticker trên toàn bộ giao diện người dùng"></button>
+    </div>
+    <div id="adminTickerPreview">
+      <div class="sci-ticker-wrap">
+        <div class="sci-ticker-label">
+          <div class="sci-live-dot"></div>
+          <span>THÔNG BÁO</span>
+        </div>
+        <div class="sci-ticker-track" id="sciTickerTrackPreview">
+          <div class="sci-ticker-inner" id="sciTickerInnerPreview"></div>
+        </div>
+      </div>
+    </div>
+    <div id="adminTickerHiddenBanner">⚠ Ticker đang bị ẩn với người dùng</div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" id="tab-btn-list" role="tab" aria-selected="true">Danh sách</button>
+      <button type="button" id="tab-btn-add" role="tab" aria-selected="false">Thêm mới</button>
+      <button type="button" id="tab-btn-cats" role="tab" aria-selected="false">Loại thông báo</button>
+      <button type="button" id="tab-btn-settings" role="tab" aria-selected="false">Cài đặt</button>
+    </div>
+
+    <div id="tab-panel-list" class="panel" role="tabpanel">
+      <table>
+        <thead>
+          <tr>
+            <th>Loại</th>
+            <th>Nội dung</th>
+            <th>Liên kết</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="items-table-body">
+          <tr><td colspan="5">Đang tải…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="tab-panel-add" class="panel" style="display:none;" role="tabpanel">
+      <form id="form-add-item" class="form-grid">
+        <div>
+          <label for="add-item-category">Loại thông báo</label>
+          <select id="add-item-category" required></select>
+        </div>
+        <div>
+          <label for="add-item-content">Nội dung</label>
+          <input type="text" id="add-item-content" required maxlength="500" placeholder="Nội dung hiển thị trên ticker">
+        </div>
+        <div>
+          <label for="add-item-link">Liên kết (tuỳ chọn)</label>
+          <input type="url" id="add-item-link" placeholder="https://...">
+        </div>
+        <div class="switch-row">
+          <input type="checkbox" id="add-item-active" checked>
+          <label for="add-item-active" style="margin:0;font-weight:500;">Hiển thị ngay</label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Thêm vào ticker</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="tab-panel-cats" class="panel" style="display:none;" role="tabpanel">
+      <div id="categories-list" style="margin-bottom:20px;"></div>
+      <h3 style="font-size:1rem;margin:0 0 12px;">Thêm loại mới</h3>
+      <form id="form-new-category" class="form-grid">
+        <div>
+          <label for="new-cat-label">Tên loại</label>
+          <input type="text" id="new-cat-label" required placeholder="Ví dụ: Thông báo chung">
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div>
+            <label for="new-cat-bg">Màu nền</label>
+            <input type="color" id="new-cat-bg" value="#ede9fe">
+          </div>
+          <div>
+            <label for="new-cat-fg">Màu chữ</label>
+            <input type="color" id="new-cat-fg" value="#5b21b6">
+          </div>
+          <div style="align-self:flex-end;">
+            <span id="new-cat-preview" class="sci-t-tag" style="background:#ede9fe;color:#5b21b6;">Xem trước</span>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Thêm loại</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="tab-panel-settings" class="panel" style="display:none;" role="tabpanel">
+      <div class="settings-row">
+        <label for="setting-speed">Tốc độ chạy (áp dụng ngay)</label>
+        <input type="range" id="setting-speed" min="10" max="80" step="10" value="<%= settings.speed %>">
+        <div id="setting-speed-label" style="margin-top:6px;font-size:13px;color:#64748b;"></div>
+      </div>
+      <div class="settings-row">
+        <label for="setting-font-size">Cỡ chữ nội dung trên thanh (px)</label>
+        <input type="range" id="setting-font-size" min="11" max="20" step="1" value="<%= Number(settings.content_font_size != null ? settings.content_font_size : 13) %>">
+        <div id="setting-font-size-label" style="margin-top:6px;font-size:13px;color:#64748b;"></div>
+      </div>
+      <div class="settings-row switch-row">
+        <input type="checkbox" id="setting-visible" <%= Number(settings.is_visible) === 1 ? 'checked' : '' %>>
+        <label for="setting-visible" style="margin:0;">Hiển thị ticker với người dùng</label>
+      </div>
+      <div class="settings-row switch-row">
+        <input type="checkbox" id="setting-links" <%= Number(settings.links_enabled) === 1 ? 'checked' : '' %>>
+        <label for="setting-links" style="margin:0;">Cho phép click liên kết</label>
+      </div>
+      <div class="settings-row switch-row">
+        <input type="checkbox" id="setting-hover" <%= Number(settings.hover_pause) === 1 ? 'checked' : '' %>>
+        <label for="setting-hover" style="margin:0;">Dừng khi hover (trang người dùng)</label>
+      </div>
+    </div>
+
+    <p style="margin-top:24px;font-size:14px;"><a href="/index.html">← Trang chủ</a> · <a href="/quan-tri.html">Quản trị hệ thống</a> · <a href="/quan-tri-cap-vien.html">Quản trị Đề tài cấp Viện</a></p>
+  </div>
+
+  <div id="modal-edit-item" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-edit-title">
+    <div class="modal-box">
+      <h3 id="modal-edit-title">Chỉnh sửa thông báo</h3>
+      <form id="form-edit-item" class="form-grid">
+        <input type="hidden" id="edit-item-id" value="">
+        <div>
+          <label for="edit-item-category">Loại thông báo</label>
+          <select id="edit-item-category" required></select>
+        </div>
+        <div>
+          <label for="edit-item-content">Nội dung</label>
+          <input type="text" id="edit-item-content" required maxlength="500" placeholder="Nội dung hiển thị trên ticker">
+        </div>
+        <div>
+          <label for="edit-item-link">Liên kết (tuỳ chọn)</label>
+          <input type="url" id="edit-item-link" placeholder="https://...">
+        </div>
+        <div class="switch-row">
+          <input type="checkbox" id="edit-item-active">
+          <label for="edit-item-active" style="margin:0;font-weight:500;">Hiển thị trên ticker</label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="btn-edit-cancel">Hủy</button>
+          <button type="submit" class="btn-primary">Lưu thay đổi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    window.__TICKER_ADMIN__ = { apiBase: '' };
+    window.__TICKER_PAGE_SETTINGS__ = <%- JSON.stringify({
+      is_visible: Number(settings.is_visible),
+      speed: Number(settings.speed),
+      links_enabled: Number(settings.links_enabled),
+      hover_pause: Number(settings.hover_pause),
+      content_font_size: Number(settings.content_font_size != null ? settings.content_font_size : 13)
+    }) %>;
+  </script>
+  <script src="/public/js/ticker.js"></script>
+  <script src="/public/js/admin-ticker.js"></script>
+</body>
+</html>

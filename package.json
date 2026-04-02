@@ -34,6 +34,7 @@
     "docx": "^9.6.1",
     "docxtemplater": "^3.68.3",
     "dotenv": "^16.6.1",
+    "ejs": "^5.0.1",
     "exceljs": "^4.4.0",
     "express": "^4.22.1",
     "jsonwebtoken": "^9.0.2",
