@@ -1,0 +1,69 @@
+/* Design tokens — KHCN & ĐMST dashboard */
+:root {
+  /* ── Brand ── */
+  --color-brand-primary: #4f46e5;
+  --color-brand-accent: #059669;
+  --color-brand-accent-lt: #d1fae5;
+  --color-brand-accent-dk: #065f46;
+
+  /* ── Header/Navbar ── */
+  --color-header-bg: #1e1b4b;
+  --color-header-text: #e0e7ff;
+  --color-header-sub: #a5b4fc;
+  --color-header-link: #34d399;
+
+  /* ── Ticker ── */
+  --color-ticker-bg: #1e1b4b;
+  --color-ticker-border: #2d2a5e;
+  --color-ticker-label-bg: #059669;
+  --color-ticker-text: #d1fae5;
+
+  /* ── Page background ── */
+  --color-page-bg: #f0fdf8;
+
+  /* ── Stat cards ── */
+  --color-stat-bg: #ffffff;
+  --color-stat-border: #a7f3d0;
+  --color-stat-num: #059669;
+
+  /* ── Module cards ── */
+  --color-card-bg: #ffffff;
+  --color-card-border: #e5e7eb;
+  --color-card-border-top: #059669;
+  --color-card-icon-bg: #d1fae5;
+  --color-card-icon-color: #059669;
+
+  /* ── Buttons ── */
+  --color-btn-primary-bg: #059669;
+  --color-btn-primary-text: #ffffff;
+  --color-btn-primary-hover: #047857;
+
+  /* ── Text ── */
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+}
+
+/* Progress bar (trang khác có thể dùng class này) */
+.progress-bar-fill,
+.progress-fill {
+  background: var(--color-brand-accent);
+}
+
+.progress-bar-track,
+.progress-track {
+  background: var(--color-brand-accent-lt);
+}
+
+/* Icon cạnh chữ trong khu auth (mọi trang dùng auth-status.js) */
+#auth-status .icon-wrap {
+  display: inline-flex;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+}
+
+#auth-status .icon-wrap svg {
+  display: block;
+}

@@ -16,14 +16,32 @@
     return '';
   }
 
+  /** Ánh xạ key danh mục trong DB → class theme (t-pub / t-news / t-event) */
+  function themeClassForCategoryKey(key) {
+    const k = String(key || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    if (k === 'pub' || k.indexOf('cong_bo') !== -1) return 't-pub';
+    if (k === 'news' || k.indexOf('tin') !== -1) return 't-news';
+    if (k === 'event' || k.indexOf('su_kien') !== -1 || k.indexOf('sukien') !== -1) return 't-event';
+    return '';
+  }
+
   function buildItemEl(item, settings) {
     const wrap = document.createElement('span');
     wrap.className = 'sci-t-item';
     const tag = document.createElement('span');
-    tag.className = 'sci-t-tag';
+    const themeCls = themeClassForCategoryKey(item.category && item.category.key);
+    tag.className = 'sci-t-tag' + (themeCls ? ' ' + themeCls : '');
     tag.textContent = item.category.label;
-    tag.style.backgroundColor = item.category.bg_color;
-    tag.style.color = item.category.fg_color;
+    if (themeCls) {
+      tag.style.backgroundColor = '';
+      tag.style.color = '';
+    } else {
+      tag.style.backgroundColor = item.category.bg_color;
+      tag.style.color = item.category.fg_color;
+    }
     const sep = document.createElement('span');
     sep.className = 'sci-t-sep';
     sep.setAttribute('aria-hidden', 'true');
