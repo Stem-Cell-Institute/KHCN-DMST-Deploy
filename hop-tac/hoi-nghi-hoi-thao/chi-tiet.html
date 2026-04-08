@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chi tiết đăng ký HN/HT</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0f172a;--muted:#64748b;--border:#cbd5e1;--accent:#2563eb;--card:#fff;--bg:#e8eef5}
+body{margin:0;font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px}
+.topbar a{color:var(--muted);text-decoration:none;font-size:13px;margin-right:16px}
+main{max-width:900px;margin:0 auto;padding:24px}
+h1{font-size:20px}
+dl{display:grid;grid-template-columns:200px 1fr;gap:8px 16px}
+dt{color:var(--muted);font-weight:600}dd{margin:0}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
+.card h2{font-size:15px;margin:0 0 12px}
+.timeline{border-left:2px solid var(--border);padding-left:14px;margin-left:6px}
+.tl-item{margin-bottom:12px}
+.tl-meta{font-size:12px;color:var(--muted)}
+.btn{padding:8px 14px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;margin:4px 4px 0 0;font:inherit}
+.btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-r{background:#dc2626;color:#fff;border-color:#dc2626}
+textarea,input[type=file]{width:100%;max-width:420px}
+.hidden{display:none!important}
+.err{color:#b91c1c;font-size:13px;margin:8px 0}
+</style>
+<script src="../../js/system-access.js"></script>
+</head>
+<body>
+<div class="topbar">
+  <a href="cua-toi.html">← Danh sách của tôi</a>
+  <a href="../../module-hoatac-quocte.html">Module Hợp tác</a>
+</div>
+<main>
+  <h1 id="title">Chi tiết đăng ký</h1>
+  <p id="code"></p>
+  <div id="err" class="err hidden"></div>
+  <div id="content" class="loading">Đang tải...</div>
+  <div id="actions" class="card hidden"><h2>Thao tác</h2><div id="act_inner"></div></div>
+  <div id="evidence" class="card hidden"><h2>Nộp minh chứng (sau sự kiện)</h2>
+    <p style="font-size:13px;color:var(--muted)">Tối đa 5 file, mỗi file 20MB, PDF/DOC/DOCX.</p>
+    <label>Ghi chú</label><textarea id="ev_note" rows="2"></textarea>
+    <label>File</label><input type="file" id="ev_files" multiple accept=".pdf,.doc,.docx">
+    <div><button type="button" class="btn btn-p" id="btn_ev">Gửi minh chứng</button></div>
+    <div id="ev_err" class="err hidden"></div>
+  </div>
+  <div class="card"><h2>Nhật ký thao tác</h2><div id="audit" class="timeline"></div></div>
+</main>
+<script>
+(function(){
+  var API = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000'))
+    ? 'http://localhost:3000' : (window.location.origin || '');
+  var id = parseInt(new URLSearchParams(location.search).get('id')||'0',10);
+  function tok(){ return localStorage.getItem('token'); }
+  function h(ct){
+    var o = { 'Authorization': 'Bearer ' + tok() };
+    if (ct) o['Content-Type'] = ct;
+    return o;
+  }
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+  async function load(){
+    if (!id || !tok()) { location.href = '/dang-nhap.html'; return; }
+    var meR = await fetch(API + '/api/me', { headers: h() });
+    var me = meR.ok ? await meR.json() : {};
+    var r = await fetch(API + '/api/conference-registrations/' + id, { headers: h() });
+    if (r.status === 403 || r.status === 404) {
+      document.getElementById('content').innerHTML = '<p>Không có quyền hoặc không tìm thấy.</p>';
+      return;
+    }
+    var j = await r.json();
+    var d = j.data;
+    var atts = j.attachments || [];
+    var cap = j.capabilities || {};
+    document.getElementById('title').textContent = d.conf_name || 'Chi tiết';
+    document.getElementById('code').innerHTML = '<strong>Mã:</strong> ' + esc(d.submission_code);
+
+    var rows = [
+      ['Đơn vị', d.unit], ['Nhóm NC', d.research_group], ['Chức danh', d.job_title],
+      ['Loại HN', d.conf_type], ['Đơn vị tổ chức', d.conf_organizer],
+      ['Từ ngày', d.conf_start_date], ['Đến ngày', d.conf_end_date], ['Địa điểm', d.conf_location],
+      ['Quốc gia', d.conf_country], ['Website', d.conf_website], ['Thư mời', d.invitation_status],
+      ['Có bài', Number(d.has_paper)?'Có':'Không'], ['Tiêu đề bài', d.paper_title], ['Tác giả', d.paper_authors],
+      ['Hình thức bài', d.paper_type], ['Tóm tắt', d.paper_abstract], ['Mục đích', d.purpose],
+      ['Kinh phí', d.funding_type], ['Đề nghị VNĐ', d.funding_requested_vnd], ['Ghi chú KP', d.funding_note],
+      ['Trạng thái', d.status], ['Ý kiến Phòng', d.khcn_comment], ['Ý kiến Viện trưởng', d.director_comment],
+    ];
+    var html = '<div class="card"><h2>Thông tin</h2><dl>' + rows.map(function(x){
+      return '<dt>'+esc(x[0])+'</dt><dd>'+esc(x[1])+'</dd>';
+    }).join('') + '</dl></div>';
+    html += '<div class="card"><h2>File đính kèm</h2><ul>';
+    if (!atts.length) html += '<li>Không có file</li>';
+    atts.forEach(function(a){
+      html += '<li><a href="'+API+'/api/conference-registrations/'+id+'/attachments/'+a.id+'/file" target="_blank">'+esc(a.original_name)+'</a> ('+esc(a.file_type)+')</li>';
+    });
+    html += '</ul></div>';
+    document.getElementById('content').innerHTML = html;
+
+    var act = document.getElementById('actions');
+    var inner = document.getElementById('act_inner');
+    inner.innerHTML = '';
+    if (cap.khcn_approve) {
+      act.classList.remove('hidden');
+      inner.innerHTML = '<input id="c_k" placeholder="Ý kiến (tùy chọn)" style="width:100%;max-width:400px;padding:6px"><br>' +
+        '<button type="button" class="btn btn-p" id="ap_k">Phê duyệt (Phòng)</button>' +
+        '<button type="button" class="btn btn-r" id="rj_k">Từ chối (Phòng)</button>';
+      document.getElementById('ap_k').onclick = async function(){
+        var c = document.getElementById('c_k').value;
+        var x = await fetch(API + '/api/conference-registrations/' + id + '/khcn-approve', { method:'POST', headers:h('application/json'), body: JSON.stringify({ comment: c }) });
+        location.reload();
+      };
+      document.getElementById('rj_k').onclick = async function(){
+        var c = document.getElementById('c_k').value.trim();
+        if (!c) { alert('Nhập lý do từ chối'); return; }
+        await fetch(API + '/api/conference-registrations/' + id + '/khcn-reject', { method:'POST', headers:h('application/json'), body: JSON.stringify({ comment: c }) });
+        location.reload();
+      };
+    }
+    if (cap.director_approve) {
+      act.classList.remove('hidden');
+      inner.innerHTML += '<input id="c_d" placeholder="Ý kiến (tùy chọn)" style="width:100%;max-width:400px;padding:6px;margin-top:8px"><br>' +
+        '<button type="button" class="btn btn-p" id="ap_d">Phê duyệt (Viện trưởng)</button>' +
+        '<button type="button" class="btn btn-r" id="rj_d">Từ chối (Viện trưởng)</button>';
+      document.getElementById('ap_d').onclick = async function(){
+        var c = document.getElementById('c_d').value;
+        await fetch(API + '/api/conference-registrations/' + id + '/director-approve', { method:'POST', headers:h('application/json'), body: JSON.stringify({ comment: c }) });
+        location.reload();
+      };
+      document.getElementById('rj_d').onclick = async function(){
+        var c = document.getElementById('c_d').value.trim();
+        if (!c) { alert('Nhập lý do'); return; }
+        await fetch(API + '/api/conference-registrations/' + id + '/director-reject', { method:'POST', headers:h('application/json'), body: JSON.stringify({ comment: c }) });
+        location.reload();
+      };
+    }
+
+    if (cap.upload_evidence) {
+      document.getElementById('evidence').classList.remove('hidden');
+      document.getElementById('btn_ev').onclick = async function(){
+        document.getElementById('ev_err').classList.add('hidden');
+        var fd = new FormData();
+        fd.append('evidence_note', document.getElementById('ev_note').value);
+        var fs = document.getElementById('ev_files').files;
+        for (var i = 0; i < fs.length && i < 5; i++) fd.append('evidence_files', fs[i]);
+        var x = await fetch(API + '/api/conference-registrations/' + id + '/upload-evidence', { method:'POST', headers:{ 'Authorization':'Bearer '+tok() }, body: fd });
+        var jj = await x.json().catch(function(){ return {}; });
+        if (!x.ok) {
+          document.getElementById('ev_err').textContent = jj.message || 'Lỗi upload';
+          document.getElementById('ev_err').classList.remove('hidden');
+          return;
+        }
+        location.reload();
+      };
+    }
+
+    var ar = await fetch(API + '/api/conference-registrations/' + id + '/audit-log', { headers: h() });
+    if (ar.ok) {
+      var aj = await ar.json();
+      var logs = aj.list || [];
+      document.getElementById('audit').innerHTML = logs.length ? logs.map(function(l){
+        return '<div class="tl-item"><strong>'+esc(l.action)+'</strong> <span class="tl-meta">'+esc(l.created_at)+' — '+esc(l.actor_name||'')+'</span>'+
+          (l.comment?'<div>'+esc(l.comment)+'</div>':'')+
+          (l.old_status||l.new_status?'<div class="tl-meta">'+esc(l.old_status||'')+' → '+esc(l.new_status||'')+'</div>':'')+'</div>';
+      }).join('') : '<p>Chưa có nhật ký.</p>';
+    }
+  }
+  load();
+})();
+</script>
+</body>
+</html>

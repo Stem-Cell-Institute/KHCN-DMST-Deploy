@@ -1,8 +1,11 @@
 /**
- * Ticker Thông Báo — client (user đã đăng nhập: có token trong localStorage)
- * Gọi /api/ticker/public, build .sci-t-item, nhân đôi nội dung để loop.
+ * Ticker Thông Báo — gọi /api/ticker/public, build .sci-t-item, nhân đôi nội dung để loop.
+ * Hiển thị theo cài đặt admin: người đăng nhập / khách (chưa đăng nhập).
  */
 (function () {
+  const HEX6 = /^#[0-9a-fA-F]{6}$/;
+  const DEFAULT_TEXT_COLOR = '#1e293b';
+
   function escapeHtml(s) {
     return String(s)
       .replace(/&/g, '&amp;')
@@ -56,9 +59,15 @@
     inner.style.fontSize = fz + 'px';
   }
 
+  function applyContentTextColor(inner, settings) {
+    const c = String(settings.content_text_color || '').trim();
+    inner.style.color = HEX6.test(c) ? c : DEFAULT_TEXT_COLOR;
+  }
+
   function buildSequence(inner, settings, items) {
     inner.innerHTML = '';
     applyContentFontSize(inner, settings);
+    applyContentTextColor(inner, settings);
     if (!items || !items.length) {
       const empty = document.createElement('span');
       empty.className = 'sci-t-item';
@@ -78,6 +87,26 @@
   function applyAnimation(inner, speedSeconds) {
     const sec = Math.max(10, Math.min(80, parseInt(speedSeconds, 10) || 30));
     inner.style.animationDuration = sec + 's';
+  }
+
+  function isLoggedInViewer() {
+    try {
+      return !!localStorage.getItem('token');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /** @param {Record<string, unknown>} settings */
+  function shouldShowTickerForViewer(settings) {
+    var loggedIn = isLoggedInViewer();
+    var hasSplit =
+      settings.visible_logged_in !== undefined && settings.visible_guest !== undefined;
+    if (!hasSplit) {
+      return loggedIn && Number(settings.is_visible) === 1;
+    }
+    if (loggedIn) return Number(settings.visible_logged_in) === 1;
+    return Number(settings.visible_guest) === 1;
   }
 
   function setupHoverPause(track, inner, settings) {
@@ -110,7 +139,7 @@
         if (!json || !json.success || !json.data) return;
         const settings = json.data.settings;
         const items = json.data.items || [];
-        if (Number(settings.is_visible) !== 1) {
+        if (!shouldShowTickerForViewer(settings)) {
           containerEl.style.display = 'none';
           return;
         }
@@ -125,16 +154,7 @@
       });
   }
 
-  function shouldRun() {
-    try {
-      return !!localStorage.getItem('token');
-    } catch (e) {
-      return false;
-    }
-  }
-
   function run() {
-    if (!shouldRun()) return;
     var el = document.getElementById('sci-ticker-container');
     if (!el) return;
     initContainer(el);
@@ -145,6 +165,7 @@
     buildSequence: buildSequence,
     applyAnimation: applyAnimation,
     applyContentFontSize: applyContentFontSize,
+    applyContentTextColor: applyContentTextColor,
     setupHoverPause: setupHoverPause,
     apiBase: apiBase,
   };

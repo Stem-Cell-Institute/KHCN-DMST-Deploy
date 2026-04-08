@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giám sát Hợp tác Quốc tế</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --navy: #1e1b4b;
+      --navy-soft: #312e81;
+      --emerald: #059669;
+      --emerald-soft: #d1fae5;
+      --ink: #e2e8f0;
+      --ink-muted: #94a3b8;
+      --card: #25214a;
+      --card-hover: #2d2858;
+      --border: rgba(148, 163, 184, 0.25);
+      --accent-bar: #185FA5;
+      --accent-bar-muted: #B5D4F4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(165deg, var(--navy) 0%, #0f172a 55%, #064e3b 120%);
+      color: var(--ink);
+      font-size: 14px;
+    }
+    a { color: #7dd3fc; }
+    .db-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 20px 48px; }
+    .db-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .db-title { font-size: 1.65rem; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.02em; }
+    .db-ts { font-size: 12px; color: var(--ink-muted); }
+    .btn-refresh {
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--emerald);
+      background: rgba(5, 150, 105, 0.15);
+      color: #a7f3d0;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.12s;
+    }
+    .btn-refresh:hover:not(:disabled) { background: rgba(5, 150, 105, 0.28); transform: translateY(-1px); }
+    .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 900px) { .metric-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .metric-grid { grid-template-columns: 1fr; } }
+    .metric-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 18px 18px 16px;
+      border: 1px solid var(--border);
+      border-left-width: 3px;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .metric-card:hover { transform: translateY(-2px); background: var(--card-hover); }
+    .metric-card .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); margin-bottom: 6px; }
+    .metric-card .num { font-size: 28px; font-weight: 500; line-height: 1.15; color: #f8fafc; }
+    .metric-card .sub { font-size: 12px; color: var(--ink-muted); margin-top: 8px; line-height: 1.35; }
+    .metric-card.mc-blue { border-left-color: #3b82f6; }
+    .metric-card.mc-green { border-left-color: var(--emerald); }
+    .metric-card.mc-gray { border-left-color: #64748b; }
+    .metric-card.mc-gray2 { border-left-color: #475569; }
+    .pip-section { margin-bottom: 28px; }
+    .pip-section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-muted); margin: 0 0 14px; font-weight: 700; }
+    .pip-track {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 8px 4px;
+    }
+    .pip-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0;
+      margin: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+      transition: transform 0.15s;
+    }
+    .pip-step .pip-box {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      min-width: 118px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      transition: transform 0.15s, background 0.15s, border-color 0.15s;
+    }
+    .pip-step:hover .pip-box { transform: translateY(-3px); border-color: rgba(24, 95, 165, 0.45); }
+    .pip-step.active .pip-box { background: #E6F1FB; border-color: #185FA5; color: #0f172a; }
+    .pip-step.active .pip-box .pip-lbl { color: #334155; }
+    .pip-step.active .pip-box .pip-count { color: #185FA5; }
+    .pip-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-muted); }
+    .pip-count { font-size: 22px; font-weight: 600; margin-top: 4px; color: #e2e8f0; }
+    .pip-arrow { color: var(--ink-muted); font-size: 14px; padding: 0 2px; user-select: none; }
+    .pip-detail {
+      display: none;
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid var(--border);
+    }
+    .pip-detail h3 { margin: 0 0 12px; font-size: 15px; color: #f1f5f9; }
+    .pip-detail table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .pip-detail th, .pip-detail td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    .pip-detail th { color: var(--ink-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+    .pip-detail .empty { color: var(--ink-muted); font-size: 13px; padding: 12px 0; }
+    .pip-detail a { font-weight: 600; }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+    .panel-card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 18px;
+    }
+    .panel-card h2 { margin: 0 0 14px; font-size: 16px; font-weight: 700; }
+    .alert-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 10px;
+      border-radius: 8px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .alert-row:last-child { border-bottom: none; }
+    .alert-row:hover { background: rgba(255, 255, 255, 0.04); }
+    .alert-row:hover .alert-dot { transform: scale(1.4); }
+    .alert-left { display: flex; align-items: center; gap: 12px; }
+    .alert-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: transform 0.2s;
+    }
+    .alert-dot--green { background: var(--emerald); box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.25); }
+    .alert-dot--blue { background: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+    .alert-dot--amber { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2); }
+    .alert-dot--red { background: #f43f5e; box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.2); }
+    .alert-lbl { font-weight: 600; color: #e2e8f0; font-size: 13px; }
+    .alert-val { font-size: 22px; font-weight: 600; color: #f8fafc; }
+    .alert-val.pulse-soft { animation: pulseSoft 2s ease-in-out infinite; }
+    @keyframes pulseSoft {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.72; }
+    }
+    .chart-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .filter-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .filter-btn {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--ink-muted);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .filter-btn:hover { border-color: #185FA5; color: #cbd5e1; }
+    .filter-btn.active { background: #185FA5; color: white; border-color: #185FA5; }
+    .chart-canvas-wrap { position: relative; height: 280px; }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes popScale {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); color: #185FA5; }
+      100% { transform: scale(1); }
+    }
+    .pop-anim { animation: popScale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .nav-back { margin-bottom: 12px; }
+    .nav-back a { text-decoration: none; font-size: 13px; color: #a5b4fc; }
+    .nav-back a:hover { text-decoration: underline; }
+    @media (prefers-reduced-motion: reduce) {
+      .metric-card, .pip-step .pip-box, .filter-btn, .alert-row, .alert-dot { transition: none; }
+      .pip-step:hover .pip-box, .metric-card:hover { transform: none; }
+      .alert-val.pulse-soft { animation: none; }
+      .pop-anim { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="db-wrap">
+    <div class="nav-back"><a href="/module-hoatac-quocte.html">← Về module Hợp tác quốc tế</a></div>
+    <div class="db-header">
+      <div>
+        <h1 class="db-title">Giám sát Hợp tác Quốc tế</h1>
+        <span class="db-ts" id="dbTs">Cập nhật lúc <%= lastUpdated %></span>
+      </div>
+      <button type="button" class="btn-refresh" id="btnRefresh">Làm mới</button>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric-card mc-blue">
+        <div class="lbl">Tổng đề xuất</div>
+        <div class="num" id="cTotal" data-target="<%= stats.total %>">0</div>
+        <div class="sub">Đoàn ra + Đoàn vào + Thỏa thuận (MOU)</div>
+      </div>
+      <div class="metric-card mc-green">
+        <div class="lbl">Đoàn ra</div>
+        <div class="num" id="cDra" data-target="<%= stats.doanRa %>">0</div>
+        <div class="sub">Tổng hồ sơ đăng ký Đoàn ra</div>
+      </div>
+      <div class="metric-card mc-gray">
+        <div class="lbl">Đoàn vào</div>
+        <div class="num" id="cDva" data-target="<%= stats.doanVao %>">0</div>
+        <div class="sub">Tổng hồ sơ Đoàn vào</div>
+      </div>
+      <div class="metric-card mc-gray2">
+        <div class="lbl">Thỏa thuận MOU</div>
+        <div class="num" id="cMou" data-target="<%= stats.mou %>">0</div>
+        <div class="sub">Đề xuất / hồ sơ MOU</div>
+      </div>
+    </div>
+
+    <section class="pip-section">
+      <h2>Luồng xử lý đề xuất</h2>
+      <div class="pip-track" id="pipTrack" role="tablist">
+        <button type="button" class="pip-step" data-status="cho_phong" aria-selected="false">
+          <span class="pip-box">
+            <span class="pip-lbl">Chờ P.KHCN</span>
+            <span class="pip-count" id="pipChoPhong" data-target="<%= stats.choPhong %>">0</span>
+          </span>
+        </button>
+        <span class="pip-arrow" aria-hidden="true">→</span>
+        <button type="button" class="pip-step" data-status="cho_vt" aria-selected="false">
+          <span class="pip-box">
+            <span class="pip-lbl">Chờ Viện trưởng</span>
+            <span class="pip-count" id="pipChoVT" data-target="<%= stats.choVT %>">0</span>
+          </span>
+        </button>
+        <span class="pip-arrow" aria-hidden="true">→</span>
+        <button type="button" class="pip-step" data-status="dang_xu_ly" aria-selected="false">
+          <span class="pip-box">
+            <span class="pip-lbl">Đang xử lý</span>
+            <span class="pip-count" id="pipDangXuLy" data-target="<%= stats.dangXuLy %>">0</span>
+          </span>
+        </button>
+        <span class="pip-arrow" aria-hidden="true">→</span>
+        <button type="button" class="pip-step" data-status="da_duyet" aria-selected="false">
+          <span class="pip-box">
+            <span class="pip-lbl">Đã phê duyệt</span>
+            <span class="pip-count" id="pipDaDuyet" data-target="<%= stats.daDuyet %>">0</span>
+          </span>
+        </button>
+        <span class="pip-arrow" aria-hidden="true">→</span>
+        <button type="button" class="pip-step" data-status="tu_choi" aria-selected="false">
+          <span class="pip-box">
+            <span class="pip-lbl">Từ chối</span>
+            <span class="pip-count" id="pipTuChoi" data-target="<%= stats.tuChoi %>">0</span>
+          </span>
+        </button>
+        <span class="pip-arrow" aria-hidden="true">→</span>
+        <button type="button" class="pip-step" data-status="ket_thuc" aria-selected="false">
+          <span class="pip-box">
+            <span class="pip-lbl">Kết thúc</span>
+            <span class="pip-count" id="pipKetThuc" data-target="<%= stats.ketThuc %>">0</span>
+          </span>
+        </button>
+      </div>
+      <div class="pip-detail" id="pipDetail" role="region" aria-live="polite"></div>
+    </section>
+
+    <div class="two-col">
+      <div class="panel-card">
+        <h2>Cảnh báo &amp; theo dõi</h2>
+        <div class="alert-list">
+          <div class="alert-row">
+            <div class="alert-left">
+              <span class="alert-dot alert-dot--green"></span>
+              <span class="alert-lbl">Thỏa thuận hiệu lực</span>
+            </div>
+            <span class="alert-val <%= canhBao.thoaThuanHieuLuc > 0 ? 'pulse-soft' : '' %>" id="alThoa"><%= canhBao.thoaThuanHieuLuc %></span>
+          </div>
+          <div class="alert-row">
+            <div class="alert-left">
+              <span class="alert-dot alert-dot--blue"></span>
+              <span class="alert-lbl">Sự kiện sắp diễn ra</span>
+            </div>
+            <span class="alert-val <%= canhBao.suKienSapDienRa > 0 ? 'pulse-soft' : '' %>" id="alSk"><%= canhBao.suKienSapDienRa %></span>
+          </div>
+          <div class="alert-row">
+            <div class="alert-left">
+              <span class="alert-dot alert-dot--amber"></span>
+              <span class="alert-lbl">HN/HT sắp diễn ra (30 ngày)</span>
+            </div>
+            <span class="alert-val <%= canhBao.hnhtSap30 > 0 ? 'pulse-soft' : '' %>" id="alHn30"><%= canhBao.hnhtSap30 %></span>
+          </div>
+          <div class="alert-row">
+            <div class="alert-left">
+              <span class="alert-dot alert-dot--red"></span>
+              <span class="alert-lbl">HN/HT quá hạn minh chứng (15 ngày)</span>
+            </div>
+            <span class="alert-val <%= canhBao.hnhtQuaHan15 > 0 ? 'pulse-soft' : '' %>" id="alHn15"><%= canhBao.hnhtQuaHan15 %></span>
+          </div>
+          <div class="alert-row">
+            <div class="alert-left">
+              <span class="alert-dot alert-dot--amber"></span>
+              <span class="alert-lbl">Đề xuất YTNN trong luồng phê duyệt</span>
+            </div>
+            <span class="alert-val <%= canhBao.deTaiYTNN > 0 ? 'pulse-soft' : '' %>" id="alYtnn"><%= canhBao.deTaiYTNN %></span>
+          </div>
+        </div>
+      </div>
+      <div class="panel-card">
+        <div class="chart-head">
+          <h2 style="margin:0">Đề xuất mới theo tháng</h2>
+          <div class="filter-group" id="chartFilters">
+            <button type="button" class="filter-btn active" data-type="all">Tất cả</button>
+            <button type="button" class="filter-btn" data-type="dra">Đoàn ra</button>
+            <button type="button" class="filter-btn" data-type="dva">Đoàn vào</button>
+            <button type="button" class="filter-btn" data-type="mou">Thỏa thuận</button>
+          </div>
+        </div>
+        <div class="chart-canvas-wrap">
+          <canvas id="monthlyChart" aria-label="Biểu đồ đề xuất theo tháng"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="application/json" id="chartBootstrap"><%-
+    JSON.stringify({
+      labels: monthly.map(function (m) { return 'T' + m.thang + '/' + String(m.nam).slice(2); }),
+      all: monthly.map(function (m) { return m.tong; }),
+      dra: monthly.map(function (m) { return m.doan_ra; }),
+      dva: monthly.map(function (m) { return m.doan_vao; }),
+      mou: monthly.map(function (m) { return m.mou; })
+    }).replace(/</g, '\\u003c')
+  %></script>
+
+  <script>
+(function () {
+  var bootEl = document.getElementById('chartBootstrap');
+  var boot = JSON.parse(bootEl ? bootEl.textContent : '{}');
+  var labels = boot.labels || [];
+  var chartData = {
+    all: boot.all || [],
+    dra: boot.dra || [],
+    dva: boot.dva || [],
+    mou: boot.mou || []
+  };
+
+  var reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function animateCount(el, target, duration, delay) {
+    if (!el) return;
+    var t = Math.max(0, Math.floor(Number(target) || 0));
+    if (reduceMotion) {
+      el.textContent = String(t);
+      return;
+    }
+    duration = duration == null ? 600 : duration;
+    delay = delay || 0;
+    setTimeout(function () {
+      var start = performance.now();
+      function update(now) {
+        var p = Math.min((now - start) / duration, 1);
+        var ease = 1 - Math.pow(1 - p, 3);
+        el.textContent = String(Math.round(ease * t));
+        if (p < 1) requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+    }, delay);
+  }
+
+  var metricEls = [
+    document.getElementById('cTotal'),
+    document.getElementById('cDra'),
+    document.getElementById('cDva'),
+    document.getElementById('cMou')
+  ];
+  metricEls.forEach(function (el, i) {
+    if (!el) return;
+    animateCount(el, el.getAttribute('data-target'), 600, i * 80);
+  });
+
+  var pipCounts = [
+    document.getElementById('pipChoPhong'),
+    document.getElementById('pipChoVT'),
+    document.getElementById('pipDangXuLy'),
+    document.getElementById('pipDaDuyet'),
+    document.getElementById('pipTuChoi'),
+    document.getElementById('pipKetThuc')
+  ];
+  pipCounts.forEach(function (el, i) {
+    if (!el) return;
+    animateCount(el, el.getAttribute('data-target'), 600, i * 60);
+  });
+
+  var BAR_ON = '#185FA5';
+  var BAR_OFF = '#B5D4F4';
+  var ctx = document.getElementById('monthlyChart');
+  var chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: chartData.all.slice(),
+        backgroundColor: chartData.all.map(function (v) { return v > 0 ? BAR_ON : BAR_OFF; }),
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: reduceMotion ? false : { duration: 520 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            label: function (c) { return ' ' + c.parsed.y + ' đề xuất'; }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 0 },
+          grid: { color: 'rgba(148,163,184,0.12)' }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#94a3b8', precision: 0 },
+          grid: { color: 'rgba(148,163,184,0.12)' }
+        }
+      }
+    }
+  });
+
+  var filterBtns = document.querySelectorAll('#chartFilters .filter-btn');
+  filterBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      filterBtns.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var type = btn.getAttribute('data-type');
+      var arr = type === 'dra' ? chartData.dra : type === 'dva' ? chartData.dva : type === 'mou' ? chartData.mou : chartData.all;
+      chart.data.datasets[0].data = arr.slice();
+      chart.data.datasets[0].backgroundColor = arr.map(function (v) { return v > 0 ? BAR_ON : BAR_OFF; });
+      chart.update();
+    });
+  });
+
+  var pipSteps = document.querySelectorAll('.pip-step');
+  var detailPanel = document.getElementById('pipDetail');
+  var pipTitles = {
+    cho_phong: 'Đề xuất chờ Phòng KHCN',
+    cho_vt: 'Đề xuất chờ Viện trưởng',
+    dang_xu_ly: 'Đề xuất đang xử lý (bổ sung / chuẩn bị)',
+    da_duyet: 'Đề xuất đã phê duyệt',
+    tu_choi: 'Đề xuất bị từ chối',
+    ket_thuc: 'Đề xuất kết thúc (người gửi đóng)'
+  };
+  var loaiLabel = { doan_ra: 'Đoàn ra', doan_vao: 'Đoàn vào', mou: 'MOU', ytnn: 'YTNN' };
+
+  function esc(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function buildDetailHTML(status, rows) {
+    var title = pipTitles[status] || status;
+    if (!rows || !rows.length) {
+      return '<h3>' + esc(title) + '</h3><p class="empty">Không có đề xuất ở bước này (hoặc chưa tải).</p>';
+    }
+    var thead = '<tr><th>Tên / nội dung</th><th>Loại</th><th>Người gửi</th><th>Ngày</th><th></th></tr>';
+    var body = rows.map(function (r) {
+      return '<tr><td>' + esc(r.ten_de_xuat) + '</td><td>' + esc(loaiLabel[r.loai] || r.loai) + '</td><td>' + esc(r.nguoi_tao) + '</td><td>' + esc(r.ngay_tao) + '</td><td><a href="' + esc(r.link || '#') + '">Xem</a></td></tr>';
+    }).join('');
+    return '<h3>' + esc(title) + '</h3><table><thead>' + thead + '</thead><tbody>' + body + '</tbody></table>';
+  }
+
+  pipSteps.forEach(function (step) {
+    step.addEventListener('click', function () {
+      var st = step.getAttribute('data-status');
+      var isActive = step.classList.contains('active');
+      pipSteps.forEach(function (s) {
+        s.classList.remove('active');
+        s.setAttribute('aria-selected', 'false');
+      });
+      detailPanel.style.display = 'none';
+      detailPanel.innerHTML = '';
+      if (!isActive) {
+        step.classList.add('active');
+        step.setAttribute('aria-selected', 'true');
+        detailPanel.style.display = 'block';
+        detailPanel.innerHTML = '<p class="empty">Đang tải…</p>';
+        detailPanel.style.animation = 'none';
+        void detailPanel.offsetHeight;
+        detailPanel.style.animation = 'slideDown .2s ease';
+        fetch('/ytnn/api/dashboard/detail?status=' + encodeURIComponent(st))
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var rows = Array.isArray(data) ? data : [];
+            detailPanel.innerHTML = buildDetailHTML(st, rows);
+          })
+          .catch(function () {
+            detailPanel.innerHTML = '<h3>' + esc(pipTitles[st]) + '</h3><p class="empty">Không tải được danh sách.</p>';
+          });
+      }
+    });
+  });
+
+  function updateMetric(id, newVal) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('pop-anim');
+    setTimeout(function () {
+      el.textContent = String(Math.max(0, Math.floor(Number(newVal) || 0)));
+      el.setAttribute('data-target', String(newVal));
+      el.classList.remove('pop-anim');
+    }, 150);
+  }
+
+  function updatePipCount(id, newVal) {
+    updateMetric(id, newVal);
+  }
+
+  document.getElementById('btnRefresh').addEventListener('click', async function () {
+    var btn = document.getElementById('btnRefresh');
+    btn.textContent = 'Đang cập nhật...';
+    btn.disabled = true;
+    try {
+      var res = await fetch('/ytnn/api/dashboard/stats');
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Lỗi');
+      updateMetric('cTotal', data.total);
+      updateMetric('cDra', data.doanRa);
+      updateMetric('cDva', data.doanVao);
+      updateMetric('cMou', data.mou);
+      updatePipCount('pipChoPhong', data.choPhong);
+      updatePipCount('pipChoVT', data.choVT);
+      updatePipCount('pipDangXuLy', data.dangXuLy);
+      updatePipCount('pipDaDuyet', data.daDuyet);
+      updatePipCount('pipTuChoi', data.tuChoi);
+      updatePipCount('pipKetThuc', data.ketThuc);
+      document.getElementById('dbTs').textContent = 'Cập nhật lúc ' + new Date().toLocaleString('vi-VN');
+    } catch (e) {
+      document.getElementById('dbTs').textContent = 'Lỗi làm mới — ' + new Date().toLocaleString('vi-VN');
+    }
+    btn.textContent = 'Làm mới';
+    btn.disabled = false;
+  });
+})();
+  </script>
+</body>
+</html>

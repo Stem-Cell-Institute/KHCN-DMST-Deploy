@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lọc định danh NCV — BibTeX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --surface: #fff;
+    --border: #d0cdc4;
+    --text: #1a1916;
+    --text-2: #4a4842;
+    --text-3: #787470;
+    --accent: #1c4f8a;
+    --accent-light: #e8f0fb;
+    --green: #1a5c3a;
+    --green-bg: #e8f5ee;
+    --amber: #8a5a00;
+    --amber-bg: #fdf5e0;
+    --red: #a32020;
+    --red-bg: #fdeaea;
+    --radius: 10px;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.55; min-height: 100vh; }
+  .top { background: var(--accent); color: #fff; padding: 14px 22px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .top h1 { font-size: 1.1rem; font-weight: 600; }
+  .top a { color: #fff; opacity: 0.9; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 18px 14px 40px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .btn { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; cursor: pointer; font-family: inherit; margin: 4px 6px 4px 0; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-ok { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-warn { background: var(--amber); color: #fff; border-color: var(--amber); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .hint { font-size: 12px; color: var(--text-3); margin-top: 8px; }
+  table.grid { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  table.grid th, table.grid td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; vertical-align: top; }
+  table.grid th { background: #f2f0eb; font-weight: 600; }
+  .mono { font-family: var(--mono); font-size: 11px; }
+  .tag-high { background: var(--green-bg); color: var(--green); padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .tag-manual { background: var(--amber-bg); color: var(--amber); padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .tag-excl { background: var(--red-bg); color: var(--red); padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .section-title { font-size: 15px; margin: 16px 0 8px; color: var(--text-2); }
+  .msg { padding: 10px 12px; border-radius: 8px; margin-top: 10px; font-size: 13px; }
+  .msg.ok { background: var(--green-bg); border: 1px solid #b8d4c4; }
+  .msg.err { background: var(--red-bg); border: 1px solid #e8b4b4; }
+  .stash-summary {
+    margin: 12px 0 14px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(28, 79, 138, 0.25);
+    background: linear-gradient(180deg, #f0f6ff 0%, #fafcff 100%);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .stash-summary strong { color: var(--accent); }
+  .run-progress {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #f8fafc;
+  }
+  .run-progress-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .run-progress .spinner {
+    width: 22px;
+    height: 22px;
+    border: 3px solid var(--accent-light);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: nv-spin 0.75s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes nv-spin {
+    to { transform: rotate(360deg); }
+  }
+  .run-elapsed {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-3);
+    font-family: var(--mono);
+  }
+  .run-progress-bar-wrap {
+    height: 10px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+  }
+  .run-progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), #3b82f6);
+    transition: width 0.25s ease-out;
+  }
+  .run-detail { margin-top: 8px; font-size: 12px; color: var(--text-2); line-height: 1.45; }
+  .manual-score-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #faf9f7;
+    font-size: 12px;
+  }
+  .manual-score-toolbar > span.lbl { color: var(--text-2); margin-right: 4px; font-weight: 500; }
+  .manual-score-toolbar .btn { margin: 0; }
+  .nv-band-block {
+    margin: 0 0 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(28, 79, 138, 0.18);
+    background: var(--surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .nv-band-block:hover {
+    box-shadow: 0 4px 16px rgba(28, 79, 138, 0.12);
+    border-color: rgba(28, 79, 138, 0.28);
+  }
+  .nv-band-block[data-nv-band='b5'] { border-left: 5px solid #c2410c; }
+  .nv-band-block[data-nv-band='b10'] { border-left: 5px solid #ca8a04; }
+  .nv-band-block[data-nv-band='b1520'] { border-left: 5px solid #2563eb; }
+  .nv-band-block[data-nv-band='b2530'] { border-left: 5px solid #059669; }
+  .nv-band-block[data-nv-band='bgt30'] { border-left: 5px solid #047857; }
+  .nv-band-block[data-nv-band='other'] { border-left: 5px solid #787470; }
+  .nv-band-header {
+    padding: 14px 16px 12px;
+    background: linear-gradient(180deg, #f0f5fb 0%, #f8fafc 100%);
+    border-bottom: 1px solid rgba(28, 79, 138, 0.12);
+  }
+  .nv-band-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin: 0 0 12px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    line-height: 1.35;
+  }
+  .nv-band-heading-text { flex: 1; min-width: 200px; }
+  .nv-band-count-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(28, 79, 138, 0.25);
+    white-space: nowrap;
+  }
+  .nv-band-block[data-nv-band='b5'] .nv-band-count-pill { background: #c2410c; }
+  .nv-band-block[data-nv-band='b10'] .nv-band-count-pill { background: #ca8a04; }
+  .nv-band-block[data-nv-band='b1520'] .nv-band-count-pill { background: #2563eb; }
+  .nv-band-block[data-nv-band='b2530'] .nv-band-count-pill { background: #059669; }
+  .nv-band-block[data-nv-band='bgt30'] .nv-band-count-pill { background: #047857; }
+  .nv-band-block[data-nv-band='other'] .nv-band-count-pill { background: #57534e; }
+  .nv-band-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(28, 79, 138, 0.15);
+    background: #fff;
+    font-size: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+  .nv-band-actions .btn {
+    margin: 0;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .nv-band-actions .btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+  .nv-band-actions .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .nv-band-table-wrap {
+    padding: 0 12px 14px;
+    background: var(--surface);
+  }
+  .nv-band-table-wrap .grid { margin-top: 4px; }
+  .run-progress.nv-done .spinner { display: none; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--text-2); }
+  .form-group select,
+  .form-group input[type='text'] {
+    width: 100%; max-width: 520px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+    font-family: inherit; font-size: 13px; background: var(--surface);
+  }
+  .run-progress.nv-done .run-progress-header::before {
+    content: '✓';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--green);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Lọc định danh nghiên cứu viên (Trust_Score)</h1>
+  <nav>
+    <a href="/bibtex-import-review.html">← Quay lại so sánh BibTeX</a>
+    ·
+    <a href="/cong-bo-khoa-hoc.html">Quản lý công bố</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div id="gate" class="card" style="display:none">
+    <p>Chưa có công bố nào được chọn để Lọc định danh NCV. Quay lại <a href="/bibtex-import-review.html">trang so sánh BibTeX</a>, tick các dòng (nhóm Sẵn sàng hoặc Nghi ngờ) rồi bấm <strong>«Chuyển sang bước Lọc định danh NCV»</strong>, sau đó bấm <strong>«Mở trang lọc NCV»</strong>. Hoặc dùng <strong>«Tiếp → Lọc NCV»</strong> để lưu và mở trang trong một bước.</p>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="card">
+      <p><strong>Bước kế tiếp:</strong> chấm điểm theo từ khóa tiêu đề, năm, và (nếu có) tải <code>detail_url</code> trên máy chủ để tìm đơn vị / đồng tác giả. Không có URL thì chỉ dùng bước 1–2.</p>
+      <p id="stashSummaryEl" class="stash-summary" role="status"></p>
+      <div class="form-group">
+        <label for="researcher-input">Nghiên cứu viên đang dò tìm</label>
+        <input
+          type="text"
+          id="researcher-input"
+          name="researcherKey"
+          autocomplete="off"
+          placeholder="Ví dụ: Phạm Văn Phúc, Pham Van Phuc, hoặc mã pham_van_phuc"
+        />
+        <p class="hint">
+          Gõ tên đầy đủ, biến thể Latin, hoặc mã cấu hình (vd. <code>pham_van_phuc</code>) theo
+          <code>config/researcherProfiles.json</code>. Để trống = chỉ dùng cấu hình chung Viện.
+        </p>
+      </div>
+      <button type="button" class="btn btn-primary" id="btnRun">Chạy lọc định danh NCV</button>
+      <p class="hint">Crawl tuần tự trên máy chủ, có delay giữa các URL — file lớn có thể vài phút. Tiến trình hiển thị bên dưới theo từng lô gọi API.</p>
+      <div id="runProgress" class="run-progress" style="display:none" aria-live="polite">
+        <div class="run-progress-header">
+          <span class="spinner" aria-hidden="true"></span>
+          <span id="runStatusText">Đang kết nối máy chủ…</span>
+          <span id="runElapsed" class="run-elapsed">0s</span>
+        </div>
+        <div class="run-progress-bar-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="runProgressBar">
+          <div id="runProgressFill" class="run-progress-fill"></div>
+        </div>
+        <p id="runDetail" class="run-detail"></p>
+      </div>
+      <div id="runMsg"></div>
+    </div>
+
+    <div id="resultsWrap" style="display:none">
+      <div class="card">
+        <h2 class="section-title">Tóm tắt</h2>
+        <p id="summaryEl"></p>
+        <button type="button" class="btn btn-ok" id="btnImpHigh">Nhập CSDL: toàn bộ «High Confidence»</button>
+        <button type="button" class="btn btn-warn" id="btnImpManualSel">Nhập CSDL: các dòng «Manual» đã tick</button>
+      </div>
+      <div id="tablesEl"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var API_BASE = '/api';
+  var STASH_KEY = 'bib_nv_staging_v1';
+  var NV_FLAG_KEY = 'bib_nv_staged_ok_v1';
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  function escAttr(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
+  function getToken() {
+    return localStorage.getItem('token');
+  }
+
+  async function apiJson(path, opts) {
+    var token = getToken();
+    var headers = Object.assign({ 'Content-Type': 'application/json' }, (opts && opts.headers) || {});
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    var res = await fetch(API_BASE + path, Object.assign({ credentials: 'include', cache: 'no-store' }, opts, { headers: headers }));
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error(data.message || data.error || ('HTTP ' + res.status));
+    return data;
+  }
+
+  var stash = null;
+  var scored = [];
+
+  function renderStashSummary() {
+    var el = document.getElementById('stashSummaryEl');
+    if (!el || !stash || !stash.items || !stash.items.length) return;
+    var items = stash.items;
+    var total = items.length;
+    var ready = 0;
+    var susp = 0;
+    var unknown = 0;
+    items.forEach(function (it) {
+      var c = it.bib_review_category;
+      if (c === 'ready') ready += 1;
+      else if (c === 'suspicious') susp += 1;
+      else unknown += 1;
+    });
+    var bits = [];
+    if (ready) bits.push('«Sẵn sàng nhập» (so sánh BibTeX): <strong>' + ready + '</strong> bài');
+    if (susp) bits.push('«Nghi ngờ (kiểm tra)»: <strong>' + susp + '</strong> bài');
+    if (unknown)
+      bits.push('chưa ghi nhóm (lưu cũ): <strong>' + unknown + '</strong> bài');
+    var tail = '';
+    if (bits.length) tail = '. Phân theo nhóm kết quả so sánh BibTeX: ' + bits.join(' · ') + '.';
+    else if (unknown === total)
+      tail =
+        '. <em>Chưa có thông tin nhóm</em> trong bản lưu — nên bấm lại «Chuyển sang bước Lọc định danh NCV» trên trang so sánh nếu cần xem đúng nhóm.';
+    el.innerHTML =
+      '<strong>Chuẩn bị lọc định danh NCV:</strong> tổng <strong>' +
+      total +
+      '</strong> bài' +
+      tail;
+  }
+
+  function tagClass(c) {
+    if (c && c.indexOf('High') !== -1) return 'tag-high';
+    if (c && c.indexOf('Manual') !== -1) return 'tag-manual';
+    return 'tag-excl';
+  }
+
+  /** Khoảng Trust_Score cho nhóm Manual (theo yêu cầu hiển thị). */
+  function manualTrustBand(ts) {
+    var n = Number(ts);
+    if (!Number.isFinite(n)) return 'other';
+    if (n === 5) return 'b5';
+    if (n === 10) return 'b10';
+    if (n >= 15 && n <= 20) return 'b1520';
+    if (n >= 25 && n <= 30) return 'b2530';
+    if (n > 30) return 'bgt30';
+    return 'other';
+  }
+
+  function manualToolbarHtml() {
+    var scoreBtns = [5, 10, 15, 20, 25, 30];
+    var h = '<div class="manual-score-toolbar" role="group" aria-label="Tick theo Trust_Score">';
+    h += '<span class="lbl">Tick cùng điểm:</span>';
+    scoreBtns.forEach(function (s) {
+      h +=
+        '<button type="button" class="btn nv-pick-score" data-score="' +
+        s +
+        '" title="Chỉ tick các dòng Manual có Trust_Score = ' +
+        s +
+        '">' +
+        s +
+        '</button>';
+    });
+    h +=
+      '<button type="button" class="btn nv-pick-score" data-score="gt30" title="Tick các dòng Manual có Trust_Score &gt; 30">&gt;30</button>';
+    h += '<span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>';
+    h +=
+      '<button type="button" class="btn nv-manual-pick-all" title="Tick toàn bộ nhóm Manual">Chọn tất cả Manual</button>';
+    h +=
+      '<button type="button" class="btn nv-manual-pick-none" title="Bỏ tick toàn bộ nhóm Manual">Bỏ chọn Manual</button>';
+    h += '</div>';
+    return h;
+  }
+
+  function buildResultTableFragment(rows, showPick) {
+    var h = '<div style="overflow:auto"><table class="grid"><thead><tr>';
+    if (showPick) h += '<th>Chọn</th>';
+    h += '<th>#</th><th>Tiêu đề</th><th>Năm</th><th>URL</th><th>Trust_Score</th><th>Phân loại</th><th>Chi tiết điểm</th><th>Ghi chú crawl</th><th>Nhập</th></tr></thead><tbody>';
+    rows.forEach(function (r) {
+      var ts = r.trust_score;
+      var tsNum = ts != null && ts !== '' && !Number.isNaN(Number(ts)) ? Number(ts) : null;
+      var tsAttr = tsNum != null ? String(tsNum) : '';
+      h += '<tr>';
+      if (showPick) {
+        h +=
+          '<td><input type="checkbox" class="pick-manual" data-id="' +
+          esc(String(r.id)) +
+          '" data-trust-score="' +
+          escAttr(tsAttr) +
+          '"></td>';
+      }
+      h += '<td class="mono">' + (Number(r.id) + 1) + '</td>';
+      h += '<td>' + esc(r.title) + '</td>';
+      h += '<td class="mono">' + esc(r.year != null ? String(r.year) : '—') + '</td>';
+      h += '<td class="mono" style="max-width:120px;word-break:break-all">';
+      if (r.detail_url) h += '<a href="' + escAttr(r.detail_url) + '" target="_blank" rel="noopener">Mở</a>';
+      else h += '—';
+      h += '</td>';
+      h += '<td class="mono"><strong>' + esc(String(r.trust_score)) + '</strong></td>';
+      h += '<td><span class="' + tagClass(r.classification) + '">' + esc(r.classification) + '</span></td>';
+      var sf = r.score_flags || {};
+      var tip =
+        'Affiliation: ' +
+        (sf.affiliation_confirmed != null ? String(sf.affiliation_confirmed) : 'không khớp') +
+        ' | Keywords: ' +
+        (sf.keyword_match_count != null ? String(sf.keyword_match_count) : '0') +
+        ' | Đồng tác giả: ' +
+        (sf.coauthor_match_count != null ? String(sf.coauthor_match_count) : '0') +
+        ' | ISSN: ' +
+        (sf.journal_match != null ? String(sf.journal_match) : 'không khớp') +
+        ' | Penalty TK: ' +
+        (sf.keyword_penalty ? 'có' : 'không');
+      h +=
+        '<td><span class="mono" style="cursor:help" title="' +
+        escAttr(tip) +
+        '">[?]</span></td>';
+      h += '<td class="mono" style="max-width:200px">' + esc(r.crawl_note || '') + '</td>';
+      h += '<td><button type="button" class="btn btn-primary btn-imp-one" data-id="' + esc(String(r.id)) + '" style="font-size:11px;padding:4px 8px">Nhập</button></td>';
+      h += '</tr>';
+    });
+    h += '</tbody></table></div>';
+    return h;
+  }
+
+  function manualReviewGroupedHtml(manualRows) {
+    if (!manualRows.length) return '';
+    var by = { b5: [], b10: [], b1520: [], b2530: [], bgt30: [], other: [] };
+    manualRows.forEach(function (r) {
+      by[manualTrustBand(r.trust_score)].push(r);
+    });
+    var order = [
+      ['b5', 'Trust score 5 điểm'],
+      ['b10', 'Trust score 10 điểm'],
+      ['b1520', 'Trust score 15–20 điểm'],
+      ['b2530', 'Trust score 25–30 điểm'],
+      ['bgt30', 'Trust score trên 30 điểm'],
+      ['other', 'Manual — khoảng điểm khác (0–4, 6–9, 11–14, 21–24, …)']
+    ];
+    var h =
+      '<div class="card nv-manual-bands"><h3 class="section-title">Manual Review Needed (' +
+      manualRows.length +
+      ')</h3>';
+    h += manualToolbarHtml();
+    order.forEach(function (pair) {
+      var rows = by[pair[0]];
+      if (!rows.length) return;
+      h += '<div class="nv-band-block" data-nv-band="' + escAttr(pair[0]) + '">';
+      h += '<header class="nv-band-header">';
+      h += '<h4 class="nv-band-title" id="nv-head-' + escAttr(pair[0]) + '">';
+      h += '<span class="nv-band-heading-text">' + esc(pair[1]) + '</span>';
+      h +=
+        '<span class="nv-band-count-pill" title="Số bài trong nhóm này">' +
+        rows.length +
+        ' bài</span>';
+      h += '</h4>';
+      h +=
+        '<div class="nv-band-actions" role="toolbar" aria-labelledby="nv-head-' +
+        escAttr(pair[0]) +
+        '">';
+      h +=
+        '<button type="button" class="btn nv-band-select-all" title="Tick tất cả dòng trong nhóm này">Chọn hết nhóm</button>';
+      h +=
+        '<button type="button" class="btn nv-band-select-none" title="Bỏ tick tất cả dòng trong nhóm này">Bỏ chọn nhóm</button>';
+      h +=
+        '<button type="button" class="btn btn-ok nv-band-import-selected" title="Nhập vào CSDL module quản lý công bố (các dòng đã tick trong nhóm)">Nhập CSDL đã chọn</button>';
+      h += '</div>';
+      h += '</header>';
+      h += '<div class="nv-band-table-wrap">' + buildResultTableFragment(rows, true) + '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+    return h;
+  }
+
+  function renderTables() {
+    var host = document.getElementById('tablesEl');
+    var groups = { high: [], manual: [], excl: [] };
+    scored.forEach(function (r) {
+      if (r.classification && r.classification.indexOf('High') !== -1) groups.high.push(r);
+      else if (r.classification && r.classification.indexOf('Manual') !== -1) groups.manual.push(r);
+      else groups.excl.push(r);
+    });
+
+    function tableFor(label, rows, showPick) {
+      if (!rows.length) return '';
+      var h = '<div class="card"><h3 class="section-title">' + esc(label) + ' (' + rows.length + ')</h3>';
+      if (showPick) h += manualToolbarHtml();
+      h += buildResultTableFragment(rows, showPick);
+      h += '</div>';
+      return h;
+    }
+
+    host.innerHTML =
+      tableFor('High Confidence - Keep', groups.high, false) +
+      manualReviewGroupedHtml(groups.manual) +
+      tableFor('Exclude', groups.excl, false);
+
+    host.querySelectorAll('.btn-imp-one').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = Number(btn.getAttribute('data-id'));
+        if (Number.isFinite(id)) doImport([id]);
+      });
+    });
+  }
+
+  document.getElementById('tablesEl').addEventListener('click', function (ev) {
+    var bandAll = ev.target.closest('.nv-band-select-all');
+    if (bandAll) {
+      var block = bandAll.closest('.nv-band-block');
+      if (block) {
+        block.querySelectorAll('.pick-manual').forEach(function (cb) {
+          cb.checked = true;
+        });
+      }
+      return;
+    }
+    var bandNone = ev.target.closest('.nv-band-select-none');
+    if (bandNone) {
+      var blockN = bandNone.closest('.nv-band-block');
+      if (blockN) {
+        blockN.querySelectorAll('.pick-manual').forEach(function (cb) {
+          cb.checked = false;
+        });
+      }
+      return;
+    }
+    var bandImp = ev.target.closest('.nv-band-import-selected');
+    if (bandImp) {
+      var blockI = bandImp.closest('.nv-band-block');
+      var idsBand = [];
+      if (blockI) {
+        blockI.querySelectorAll('.pick-manual:checked').forEach(function (cb) {
+          var id = Number(cb.getAttribute('data-id'));
+          if (Number.isFinite(id)) idsBand.push(id);
+        });
+      }
+      if (!idsBand.length) {
+        alert('Chọn ít nhất một bài trong nhóm này (ô Chọn).');
+        return;
+      }
+      doImport(idsBand);
+      return;
+    }
+    var pickScore = ev.target.closest('.nv-pick-score');
+    if (pickScore) {
+      var mode = pickScore.getAttribute('data-score');
+      document.querySelectorAll('#tablesEl .pick-manual').forEach(function (cb) {
+        var raw = cb.getAttribute('data-trust-score');
+        var ts = raw !== '' && raw != null ? Number(raw) : NaN;
+        if (mode === 'gt30') cb.checked = Number.isFinite(ts) && ts > 30;
+        else {
+          var want = Number(mode);
+          cb.checked = Number.isFinite(ts) && Number.isFinite(want) && ts === want;
+        }
+      });
+      return;
+    }
+    if (ev.target.closest('.nv-manual-pick-all')) {
+      document.querySelectorAll('#tablesEl .pick-manual').forEach(function (cb) {
+        cb.checked = true;
+      });
+      return;
+    }
+    if (ev.target.closest('.nv-manual-pick-none')) {
+      document.querySelectorAll('#tablesEl .pick-manual').forEach(function (cb) {
+        cb.checked = false;
+      });
+    }
+  });
+
+  async function doImport(entryIds) {
+    if (!stash || !entryIds || !entryIds.length) return;
+    try {
+      var data = await apiJson('/publications/import-bibtex-selected', {
+        method: 'POST',
+        body: JSON.stringify({
+          bibtex: stash.bibtex,
+          import_source: stash.import_source || 'google_scholar',
+          entry_ids: entryIds,
+        }),
+      });
+      alert('Nhập xong: ' + (data.imported || 0) + ' bài (bỏ qua ' + (data.skipped || 0) + ').');
+    } catch (e) {
+      alert('Lỗi nhập: ' + (e.message || String(e)));
+    }
+  }
+
+  document.getElementById('btnImpHigh').addEventListener('click', function () {
+    var ids = scored.filter(function (r) { return r.classification && r.classification.indexOf('High') !== -1; }).map(function (r) { return r.id; });
+    if (!ids.length) {
+      alert('Không có bài High Confidence.');
+      return;
+    }
+    doImport(ids);
+  });
+
+  document.getElementById('btnImpManualSel').addEventListener('click', function () {
+    var ids = [];
+    document.querySelectorAll('#tablesEl .pick-manual:checked').forEach(function (cb) {
+      var id = Number(cb.getAttribute('data-id'));
+      if (Number.isFinite(id)) ids.push(id);
+    });
+    if (!ids.length) {
+      alert('Tick ít nhất một bài trong nhóm Manual Review.');
+      return;
+    }
+    doImport(ids);
+  });
+
+  var BATCH_NV = 8;
+
+  function formatElapsed(ms) {
+    var s = Math.floor(ms / 1000);
+    var m = Math.floor(s / 60);
+    s = s % 60;
+    return (m > 0 ? m + ' phút ' : '') + s + ' giây';
+  }
+
+  function setRunProgress(pct, statusText, detailText) {
+    var fill = document.getElementById('runProgressFill');
+    var bar = document.getElementById('runProgressBar');
+    var st = document.getElementById('runStatusText');
+    var det = document.getElementById('runDetail');
+    if (fill) fill.style.width = Math.min(100, Math.max(0, pct)) + '%';
+    if (bar) bar.setAttribute('aria-valuenow', String(Math.round(Math.min(100, Math.max(0, pct)))));
+    if (st && statusText != null) st.textContent = statusText;
+    if (det && detailText != null) det.textContent = detailText;
+  }
+
+  document.getElementById('btnRun').addEventListener('click', async function () {
+    var btn = document.getElementById('btnRun');
+    var msg = document.getElementById('runMsg');
+    var prog = document.getElementById('runProgress');
+    msg.innerHTML = '';
+    if (!stash || !stash.items || !stash.items.length) return;
+    var rkEl = document.getElementById('researcher-input');
+    var researcherKey = rkEl && rkEl.value ? String(rkEl.value).trim() : '';
+    btn.disabled = true;
+    prog.style.display = 'block';
+    prog.classList.remove('nv-done');
+    var items = stash.items.slice();
+    var total = items.length;
+    var batches = Math.ceil(total / BATCH_NV);
+    var start = Date.now();
+    var elapsedEl = document.getElementById('runElapsed');
+    var tick = setInterval(function () {
+      if (elapsedEl) elapsedEl.textContent = formatElapsed(Date.now() - start);
+    }, 400);
+    setRunProgress(0, 'Chuẩn bị gửi ' + total + ' bài tới API /publications/disambiguate-nv-researcher…', 'Chia thành ' + batches + ' lô (' + BATCH_NV + ' bài/lô) để bạn thấy tiến trình; mỗi lô máy chủ vẫn crawl tuần tự.');
+    scored = [];
+    try {
+      for (var bi = 0; bi < batches; bi++) {
+        var slice = items.slice(bi * BATCH_NV, bi * BATCH_NV + BATCH_NV);
+        var doneBefore = bi * BATCH_NV;
+        setRunProgress(
+          total ? (doneBefore / total) * 100 : 0,
+          'Đang chạy lô ' + (bi + 1) + '/' + batches + ' trên máy chủ…',
+          'POST đang xử lý ' + slice.length + ' bài (crawl URL + chấm điểm). Đã hoàn thành ' + doneBefore + '/' + total + ' bài.'
+        );
+        var data = await apiJson('/publications/disambiguate-nv-researcher', {
+          method: 'POST',
+          body: JSON.stringify({ items: slice, researcherKey: researcherKey || undefined }),
+        });
+        if (data.researcher_query !== undefined || data.researcher_resolved_key !== undefined) {
+          window.__nvDisambLastMeta = {
+            researcher_query: data.researcher_query,
+            researcher_resolved_key: data.researcher_resolved_key,
+          };
+        }
+        var part = data.results || [];
+        for (var j = 0; j < part.length; j++) scored.push(part[j]);
+        var done = Math.min(total, doneBefore + slice.length);
+        setRunProgress(total ? (done / total) * 100 : 100, 'Hoàn thành lô ' + (bi + 1) + '/' + batches + ' — ' + done + '/' + total + ' bài', 'Máy chủ đã trả kết quả lô này. ' + (bi + 1 < batches ? 'Đang gửi lô tiếp theo…' : 'Gom kết quả và hiển thị bảng.'));
+      }
+      if (elapsedEl) elapsedEl.textContent = formatElapsed(Date.now() - start);
+      setRunProgress(100, 'Xong — đã xử lý ' + total + ' bài trong ' + formatElapsed(Date.now() - start), 'Bảng kết quả bên dưới. Bạn có thể chạy lại để tính lại (ví dụ sau khi sửa URL trong BibTeX).');
+      prog.classList.add('nv-done');
+      document.getElementById('resultsWrap').style.display = 'block';
+      var hi = scored.filter(function (r) { return r.classification && r.classification.indexOf('High') !== -1; }).length;
+      var mid = scored.filter(function (r) { return r.classification && r.classification.indexOf('Manual') !== -1; }).length;
+      var lo = scored.length - hi - mid;
+      var lastMeta = window.__nvDisambLastMeta || {};
+      var profileLine = '';
+      if (lastMeta.researcher_query) {
+        if (lastMeta.researcher_resolved_key) {
+          profileLine =
+            ' Profile NCV: <code>' +
+            esc(String(lastMeta.researcher_resolved_key)) +
+            '</code> (khớp từ «' +
+            esc(String(lastMeta.researcher_query)) +
+            '»).';
+        } else {
+          profileLine =
+            ' <em>Không khớp key nào trong researcherProfiles — dùng cấu hình chung Viện.</em> (bạn gõ: «' +
+            esc(String(lastMeta.researcher_query)) +
+            '»)';
+        }
+      } else {
+        profileLine = ' Chỉ dùng cấu hình chung Viện (ô NCV để trống).';
+      }
+      document.getElementById('summaryEl').innerHTML =
+        'Tổng <strong>' +
+        scored.length +
+        '</strong> — High: <strong>' +
+        hi +
+        '</strong>, Manual: <strong>' +
+        mid +
+        '</strong>, Exclude: <strong>' +
+        lo +
+        '</strong>.' +
+        profileLine;
+      renderTables();
+    } catch (e) {
+      if (elapsedEl) elapsedEl.textContent = formatElapsed(Date.now() - start);
+      setRunProgress(0, 'Lỗi', '');
+      msg.innerHTML = '<div class="msg err">' + esc(e.message || String(e)) + '</div>';
+    } finally {
+      clearInterval(tick);
+      btn.disabled = false;
+    }
+  });
+
+  (function init() {
+    if (!getToken()) {
+      document.getElementById('gate').style.display = 'block';
+      document.getElementById('gate').innerHTML = '<p>Cần <a href="dang-nhap.html?returnUrl=bibtex-nv-disambiguation.html">đăng nhập</a>.</p>';
+      return;
+    }
+    var raw = null;
+    try {
+      raw = sessionStorage.getItem(STASH_KEY);
+    } catch (_) {}
+    var gate = document.getElementById('gate');
+    var flagOk = false;
+    try {
+      flagOk = sessionStorage.getItem(NV_FLAG_KEY) === '1';
+    } catch (_) {}
+    if (!raw || !flagOk) {
+      gate.style.display = 'block';
+      return;
+    }
+    try {
+      stash = JSON.parse(raw);
+    } catch (_) {
+      gate.style.display = 'block';
+      return;
+    }
+    if (!stash || !stash.bibtex || !stash.items || !stash.items.length) {
+      gate.style.display = 'block';
+      return;
+    }
+    document.getElementById('app').style.display = 'block';
+    renderStashSummary();
+  })();
+})();
+</script>
+</body>
+</html>

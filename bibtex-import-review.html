@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>So sánh & nhập BibTeX có chọn lọc — SCI-KHCN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --surface: #fff;
+    --border: #d0cdc4;
+    --text: #1a1916;
+    --text-2: #4a4842;
+    --text-3: #787470;
+    --accent: #1c4f8a;
+    --accent-light: #e8f0fb;
+    --green: #1a5c3a;
+    --green-bg: #e8f5ee;
+    --amber: #8a5a00;
+    --amber-bg: #fdf5e0;
+    --red: #a32020;
+    --red-bg: #fdeaea;
+    --radius: 10px;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+  .top {
+    background: var(--accent);
+    color: #fff;
+    padding: 16px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .top h1 { font-size: 1.15rem; font-weight: 600; }
+  .top a { color: #fff; opacity: 0.9; text-decoration: underline; font-size: 13px; }
+  html { scroll-behavior: smooth; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 20px 16px 48px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .card h2 { font-size: 15px; margin-bottom: 10px; color: var(--text-2); }
+  label.lbl { display: block; font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+  textarea.bib {
+    width: 100%;
+    min-height: 160px;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    resize: vertical;
+  }
+  .bib-actions { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+  .bib-actions-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+    align-items: end;
+  }
+  @media (max-width: 700px) {
+    .bib-actions-row { grid-template-columns: 1fr; }
+  }
+  .bib-actions-submit {
+    grid-template-columns: 1fr;
+  }
+  .bib-actions-submit .btn-primary { justify-self: start; }
+  .field-min { min-width: 0; }
+  select, input[type="file"] {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    background: var(--surface);
+    max-width: 100%;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn:hover { filter: brightness(0.97); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .btn-ok { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-warn { background: var(--amber); color: #fff; border-color: var(--amber); }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .stat {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .stat strong { display: block; font-size: 1.35rem; font-weight: 600; margin-top: 2px; }
+  .stat.total { background: var(--accent-light); }
+  .stat.dup-db { background: #eef2f7; }
+  .stat.dup-file { background: #f0eef8; }
+  .stat.ready { background: var(--green-bg); }
+  .stat.susp { background: var(--amber-bg); }
+  .stat.err { background: var(--red-bg); }
+  .section {
+    margin-top: 18px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+  .section h3 {
+    font-size: 14px;
+    margin-bottom: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    background: linear-gradient(180deg, #e8f0fb 0%, #f2f6fc 100%);
+    border-radius: 8px;
+    border: 1px solid rgba(28, 79, 138, 0.22);
+  }
+  .section-actions .section-nv-btns {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .section-actions .section-nv-btns .btn-primary {
+    font-weight: 600;
+    padding: 9px 16px;
+    font-size: 13px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+  @media (max-width: 640px) {
+    .section-actions .section-nv-btns {
+      margin-left: 0;
+      width: 100%;
+    }
+    .section-actions .section-nv-btns .btn {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--border); }
+  table.grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.grid th, table.grid td {
+    border: 1px solid var(--border);
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.grid th { background: #f2f0eb; font-weight: 600; }
+  table.grid tr:nth-child(even) td { background: #fafaf8; }
+  .title-cell { max-width: 420px; word-break: break-word; }
+  .mono { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
+  .hint { font-size: 12px; color: var(--text-3); margin-top: 8px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; align-items: center; }
+  .nv-step-card {
+    margin: 14px 0 18px;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    border: 1px solid rgba(28, 79, 138, 0.35);
+    background: linear-gradient(180deg, #f0f6ff 0%, #fafcff 100%);
+  }
+  .nv-step-title { font-size: 14px; color: var(--accent); }
+  .nv-step-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .nv-global-toast {
+    display: none;
+    margin: 10px 0 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--green-bg);
+    border: 1px solid #b8d4c4;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--green);
+  }
+  .nv-global-toast.visible { display: block; }
+  .section-actions .nv-stage-line {
+    flex-basis: 100%;
+    width: 100%;
+    order: 10;
+  }
+  .nv-stage-inline-msg {
+    display: none;
+    margin-top: 4px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--green-bg);
+    border: 1px solid #b8d4c4;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--green);
+  }
+  .nv-stage-inline-msg.visible { display: block; }
+  .toolbar-opt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: 6px; font-size: 12px; color: var(--text-2); }
+  .toolbar-opt input { width: auto; margin: 0; }
+  .nv-after-import {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(28, 79, 138, 0.35);
+    background: linear-gradient(180deg, #e8f4ff 0%, #f5f9ff 100%);
+  }
+  .nv-after-import strong { color: var(--accent); }
+  .msg { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 10px; }
+  .msg.ok { background: var(--green-bg); border: 1px solid #b8d4c4; }
+  .msg.err { background: var(--red-bg); border: 1px solid #e8b4b4; }
+  #loginGate { text-align: center; padding: 40px 20px; }
+  .result-layout {
+    display: grid;
+    grid-template-columns: minmax(200px, 240px) 1fr;
+    gap: 20px 24px;
+    align-items: start;
+    margin-top: 14px;
+  }
+  @media (max-width: 900px) {
+    .result-layout {
+      grid-template-columns: 1fr;
+    }
+    .result-toc {
+      position: static;
+    }
+  }
+  .result-toc {
+    position: sticky;
+    top: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    background: linear-gradient(180deg, #faf9f7 0%, #f5f3ee 100%);
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .result-toc h3 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--text-3);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .result-toc ul { list-style: none; }
+  .result-toc li { margin-bottom: 2px; }
+  .result-toc a {
+    display: block;
+    padding: 7px 10px;
+    border-radius: 8px;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid transparent;
+  }
+  .result-toc a:hover {
+    background: var(--accent-light);
+    border-color: rgba(28, 79, 138, 0.15);
+  }
+  .result-toc .toc-count {
+    font-weight: 600;
+    opacity: 0.8;
+    white-space: nowrap;
+  }
+  .result-toc .toc-empty {
+    display: block;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text-3);
+    line-height: 1.35;
+  }
+  .result-toc .toc-top {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--accent);
+    text-decoration: none;
+    padding: 4px 0;
+  }
+  .result-toc .toc-top:hover { text-decoration: underline; }
+  .section {
+    scroll-margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>So sánh BibTeX với CSDL & nhập có chọn lọc</h1>
+    <div style="font-size:12px;opacity:.85;margin-top:4px">Cùng logic lọc trùng với import hàng loạt; thêm nhóm «nghi ngờ» để bạn rà soát.</div>
+  </div>
+  <nav>
+    <a href="cong-bo-khoa-hoc.html">← Quản lý công bố</a>
+    ·
+    <a href="dang-nhap.html?returnUrl=bibtex-import-review.html">Đăng nhập</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div id="loginGate" class="card" style="display:none">
+    <p>Vui lòng <a href="dang-nhap.html?returnUrl=bibtex-import-review.html">đăng nhập</a> (quyền admin công bố) để dùng trang này.</p>
+  </div>
+
+  <div id="appMain" style="display:none">
+    <div class="card">
+      <h2>1. Nguồn BibTeX</h2>
+      <label class="lbl" for="bibtexTa">Dán nội dung .bib</label>
+      <textarea id="bibtexTa" class="bib" placeholder="@article{..."></textarea>
+      <div class="bib-actions">
+        <div class="bib-actions-row">
+          <div class="field-min">
+            <label class="lbl" for="bibFile">Hoặc chọn file</label>
+            <input type="file" id="bibFile" accept=".bib,.txt,text/plain">
+          </div>
+          <div class="field-min">
+            <label class="lbl" for="importSrc">import_source</label>
+            <select id="importSrc">
+              <option value="google_scholar">Google Scholar (mặc định)</option>
+              <option value="bibtex">BibTeX — nguồn khác</option>
+            </select>
+          </div>
+        </div>
+        <div class="bib-actions-row bib-actions-submit">
+          <button type="button" class="btn btn-primary" id="btnCompare">So sánh với CSDL</button>
+        </div>
+      </div>
+      <p class="hint">Bước «So sánh» chỉ đọc CSDL, không ghi dữ liệu. Sau đó bạn chọn nhóm hoặc từng dòng để nhập.</p>
+    </div>
+
+    <div id="resultCard" class="card" style="display:none">
+      <h2 id="bib-result-top">2. Kết quả phân nhóm</h2>
+      <div class="result-layout">
+        <aside id="resultToc" class="result-toc" aria-label="Mục lục điều hướng nhóm kết quả"></aside>
+        <div class="result-main">
+          <div id="statsEl" class="stats"></div>
+          <div id="nvGlobalStageToast" class="nv-global-toast" role="status" aria-live="polite" aria-atomic="true"></div>
+          <div class="toolbar">
+            <button type="button" class="btn btn-ok" id="btnImpReady">Nhập tất cả «Sẵn sàng»</button>
+            <button type="button" class="btn btn-warn" id="btnImpReadySusp">Nhập «Sẵn sàng» + «Nghi ngờ»</button>
+            <button type="button" class="btn btn-primary" id="btnImpSelected" title="Gộp mọi dòng đã tick ở các nhóm Sẵn sàng / Nghi ngờ">Nhập các ô đã tick (mọi nhóm)</button>
+            <label class="toolbar-opt"><input type="checkbox" id="chkNvAfterImport"> Sau khi nhập thành công, <strong>tự mở</strong> trang lọc NCV (toàn bộ nhóm «Sẵn sàng»)</label>
+          </div>
+          <p class="hint">Chỉ nhóm <strong>Sẵn sàng</strong> và <strong>Nghi ngờ</strong> mới có thể đưa vào CSDL từ trang này. Trùng trong file / trùng CSDL / lỗi thiếu tiêu đề không được nhập qua nút nhóm (đúng thiết kế).</p>
+          <div class="nv-step-card" role="region" aria-label="Bước lọc định danh NCV">
+            <strong class="nv-step-title">3. Lọc định danh nghiên cứu viên (trang riêng)</strong>
+            <p class="hint" style="margin-top:6px;margin-bottom:10px">
+              <strong>Không bắt buộc nhập CSDL trước.</strong> Trong mỗi nhóm Sẵn sàng / Nghi ngờ: bấm <strong>«Chuyển sang bước Lọc định danh NCV»</strong> để lưu tạm (không nhập DB), rồi <strong>«Mở trang lọc NCV»</strong>. Hoặc <strong>«Tiếp → Lọc NCV»</strong> bên dưới để lưu và mở trang trong một bước.
+            </p>
+            <div class="nv-step-actions">
+              <button type="button" class="btn" id="btnNvOpenPageTop">Mở trang lọc NCV</button>
+              <button type="button" class="btn btn-primary" id="btnNvStagingSelectedBig">Tiếp → Lọc NCV (đã tick)</button>
+              <button type="button" class="btn btn-primary" id="btnNvStagingAllReadyBig">Tiếp → Lọc NCV (cả nhóm Sẵn sàng)</button>
+            </div>
+          </div>
+          <div id="sectionsEl"></div>
+          <div id="importMsg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var API_BASE = '/api';
+
+  function isPubAdmin() {
+    try {
+      var u = JSON.parse(localStorage.getItem('user') || '{}');
+      if (String(u.role || '').toLowerCase() === 'admin') return true;
+      return typeof isSystemSuperAdminEmail === 'function' && isSystemSuperAdminEmail(u.email);
+    } catch (_) { return false; }
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function escAttr(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;');
+  }
+
+  function getToken() {
+    return localStorage.getItem('token');
+  }
+
+  async function apiJson(path, opts) {
+    var token = getToken();
+    var headers = Object.assign({ 'Content-Type': 'application/json' }, (opts && opts.headers) || {});
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    var res = await fetch(API_BASE + path, Object.assign({ credentials: 'include', cache: 'no-store' }, opts, { headers: headers }));
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error(data.message || data.error || ('HTTP ' + res.status));
+    return data;
+  }
+
+  var state = { raw: '', entries: [], stats: null };
+
+  function categoryLabel(cat) {
+    var m = {
+      duplicate_db: 'Trùng CSDL (tiêu đề + năm)',
+      duplicate_db_no_year: 'Không có năm · trùng tiêu đề (CSDL)',
+      duplicate_file: 'Trùng trong file',
+      ready: 'Sẵn sàng nhập',
+      suspicious: 'Nghi ngờ (kiểm tra)',
+      error: 'Lỗi / thiếu dữ liệu'
+    };
+    return m[cat] || cat;
+  }
+
+  function categoryClass(cat) {
+    if (cat === 'duplicate_db' || cat === 'duplicate_db_no_year') return 'dup-db';
+    if (cat === 'duplicate_file') return 'dup-file';
+    if (cat === 'ready') return 'ready';
+    if (cat === 'suspicious') return 'susp';
+    if (cat === 'error') return 'err';
+    return '';
+  }
+
+  function renderStats() {
+    var s = state.stats;
+    if (!s) return;
+    var el = document.getElementById('statsEl');
+    var parts = [
+      ['Tổng dòng parse', s.total_raw, 'total'],
+      ['Trùng CSDL (tiêu đề+năm)', s.duplicate_db, 'dup-db'],
+      ['Không năm · trùng tiêu đề', s.duplicate_db_no_year || 0, 'dup-db'],
+      ['Trùng trong file', s.duplicate_file, 'dup-file'],
+      ['Sẵn sàng', s.ready, 'ready'],
+      ['Nghi ngờ', s.suspicious, 'susp'],
+      ['Lỗi', s.error, 'err']
+    ];
+    el.innerHTML = parts.map(function (p) {
+      return '<div class="stat ' + p[2] + '"><span>' + esc(p[0]) + '</span><strong>' + esc(String(p[1])) + '</strong></div>';
+    }).join('');
+  }
+
+  function extraCell(entry) {
+    if (entry.category === 'duplicate_db') {
+      return 'title_year · CSDL id ' + esc(String(entry.existingId != null ? entry.existingId : ''));
+    }
+    if (entry.category === 'duplicate_db_no_year') {
+      return 'So khớp theo tiêu đề đã chuẩn hóa (không có năm trong BibTeX) · CSDL id ' + esc(String(entry.existingId != null ? entry.existingId : ''));
+    }
+    if (entry.category === 'duplicate_file') {
+      return 'Trùng với dòng #' + (Number(entry.duplicateOfEntryId) + 1);
+    }
+    if (entry.category === 'error') {
+      return esc(entry.message || '');
+    }
+    if (entry.category === 'suspicious' && entry.suspicious) {
+      var t = esc(entry.suspicious.detail || '');
+      if (entry.suspicious.matches && entry.suspicious.matches.length) {
+        t += '<br><span class="mono">' + entry.suspicious.matches.map(function (m) {
+          return 'id ' + m.id + ' (năm ' + m.pub_year + ')';
+        }).join('; ') + '</span>';
+      }
+      return t;
+    }
+    return '—';
+  }
+
+  function renderResultToc() {
+    var aside = document.getElementById('resultToc');
+    if (!aside) return;
+    var order = ['duplicate_db', 'duplicate_db_no_year', 'duplicate_file', 'ready', 'suspicious', 'error'];
+    var counts = {};
+    order.forEach(function (c) {
+      counts[c] = 0;
+    });
+    state.entries.forEach(function (e) {
+      if (counts[e.category] != null) counts[e.category] += 1;
+    });
+    var html = '<h3>Mục lục nhóm</h3><ul>';
+    order.forEach(function (cat) {
+      var n = counts[cat];
+      var label = categoryLabel(cat);
+      if (n > 0) {
+        html +=
+          '<li><a href="#bib-sec-' +
+          esc(cat) +
+          '">' +
+          esc(label) +
+          ' <span class="toc-count">(' +
+          n +
+          ')</span></a></li>';
+      } else {
+        html += '<li><span class="toc-empty">' + esc(label) + ' (0)</span></li>';
+      }
+    });
+    html += '</ul><a href="#bib-result-top" class="toc-top">↑ Đầu mục kết quả</a>';
+    aside.innerHTML = html;
+  }
+
+  function renderSections() {
+    var by = { duplicate_db: [], duplicate_db_no_year: [], duplicate_file: [], ready: [], suspicious: [], error: [] };
+    state.entries.forEach(function (e) {
+      if (by[e.category]) by[e.category].push(e);
+    });
+    var order = ['duplicate_db', 'duplicate_db_no_year', 'duplicate_file', 'ready', 'suspicious', 'error'];
+    var html = '';
+    order.forEach(function (cat) {
+      var list = by[cat];
+      if (!list.length) return;
+      var showCb = cat === 'ready' || cat === 'suspicious';
+      html += '<div class="section" id="bib-sec-' + esc(cat) + '" data-cat="' + esc(cat) + '">';
+      html += '<h3>' + esc(categoryLabel(cat)) + ' <span class="badge">' + list.length + '</span></h3>';
+      if (showCb) {
+        html += '<div class="section-actions" role="toolbar" aria-label="Thao tác nhóm ' + esc(categoryLabel(cat)) + '">';
+        html +=
+          '<button type="button" class="btn sel-cat" data-cat="' +
+          esc(cat) +
+          '" style="font-size:12px;padding:6px 10px">Chọn tất cả trong nhóm</button>';
+        html +=
+          '<button type="button" class="btn unsel-cat" data-cat="' +
+          esc(cat) +
+          '" style="font-size:12px;padding:6px 10px">Bỏ chọn nhóm</button>';
+        html += '<span class="section-nv-btns">';
+        html +=
+          '<button type="button" class="btn btn-primary nv-stage-cat" data-cat="' +
+          esc(cat) +
+          '" title="Lưu các dòng đã tick vào bước Lọc NCV (không nhập CSDL)">Chuyển sang bước Lọc định danh NCV</button>';
+        html +=
+          '<button type="button" class="btn nv-open-page" title="Mở trang Lọc định danh NCV (cần đã bấm nút Chuyển sang bước trước đó)">Mở trang lọc NCV</button>';
+        html += '</span>';
+        html +=
+          '<div class="nv-stage-line"><div class="nv-stage-inline-msg" data-feed-cat="' +
+          esc(cat) +
+          '"></div></div>';
+        html += '</div>';
+      }
+      html += '<div style="overflow:auto"><table class="grid"><thead><tr>';
+      if (showCb) html += '<th style="width:36px">Chọn</th>';
+      html += '<th>#</th><th>Tiêu đề</th><th>Năm</th><th>DOI</th><th>URL (crawl)</th><th>Chi tiết</th>';
+      if (showCb) html += '<th style="min-width:100px">Một bài</th>';
+      html += '</tr></thead><tbody>';
+      list.forEach(function (entry) {
+        html += '<tr>';
+        if (showCb) {
+          html += '<td><input type="checkbox" class="pick-eid" data-eid="' + esc(String(entry.entryId)) + '"></td>';
+        }
+        html += '<td class="mono">' + (Number(entry.entryId) + 1) + '</td>';
+        html += '<td class="title-cell">' + esc((entry.item && entry.item.title) || '') + '</td>';
+        html += '<td class="mono">' + esc((entry.item && entry.item.year != null) ? String(entry.item.year) : '—') + '</td>';
+        html += '<td class="mono">' + esc((entry.item && entry.item.doi) || '—') + '</td>';
+        var srcUrl = entry.item && entry.item.url;
+        html += '<td class="mono" style="max-width:140px;word-break:break-all">';
+        if (srcUrl) {
+          html += '<a href="' + escAttr(srcUrl) + '" target="_blank" rel="noopener noreferrer">Mở</a>';
+        } else {
+          html += '—';
+        }
+        html += '</td>';
+        html += '<td style="max-width:280px">' + extraCell(entry) + '</td>';
+        if (showCb) {
+          html += '<td><button type="button" class="btn btn-primary imp-one" data-eid="' + esc(String(entry.entryId)) + '" style="font-size:11px;padding:4px 8px">Nhập</button></td>';
+        }
+        html += '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+    });
+    document.getElementById('sectionsEl').innerHTML = html;
+
+    document.querySelectorAll('.sel-cat').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var c = btn.getAttribute('data-cat');
+        document.querySelectorAll('.pick-eid').forEach(function (cb) {
+          var tr = cb.closest('tr');
+          var sec = cb.closest('.section');
+          if (sec && sec.getAttribute('data-cat') === c) cb.checked = true;
+        });
+      });
+    });
+    document.querySelectorAll('.unsel-cat').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var c = btn.getAttribute('data-cat');
+        document.querySelectorAll('.pick-eid').forEach(function (cb) {
+          var sec = cb.closest('.section');
+          if (sec && sec.getAttribute('data-cat') === c) cb.checked = false;
+        });
+      });
+    });
+    document.querySelectorAll('.imp-one').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = Number(btn.getAttribute('data-eid'));
+        if (Number.isFinite(id)) runImport({ entry_ids: [id] });
+      });
+    });
+    document.querySelectorAll('.nv-stage-cat').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var c = btn.getAttribute('data-cat');
+        var n = stageNvForSectionCategory(c);
+        if (n !== false) showNvStagedSavedMessage(c, n);
+      });
+    });
+    document.querySelectorAll('.nv-open-page').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        window.location.href = '/bibtex-nv-disambiguation.html';
+      });
+    });
+    renderResultToc();
+  }
+
+  function collectRaw() {
+    var ta = document.getElementById('bibtexTa');
+    var f = document.getElementById('bibFile');
+    if (f && f.files && f.files[0]) {
+      return new Promise(function (resolve, reject) {
+        var r = new FileReader();
+        r.onload = function () { resolve(String(r.result || '')); };
+        r.onerror = function () { reject(new Error('Đọc file lỗi')); };
+        r.readAsText(f.files[0], 'UTF-8');
+      });
+    }
+    return Promise.resolve((ta && ta.value) || '');
+  }
+
+  function getImportSource() {
+    var sel = document.getElementById('importSrc');
+    return (sel && sel.value) ? sel.value : 'google_scholar';
+  }
+
+  async function runCompare() {
+    var msg = document.getElementById('importMsg');
+    msg.innerHTML = '';
+    var toast = document.getElementById('nvGlobalStageToast');
+    if (toast) {
+      toast.innerHTML = '';
+      toast.classList.remove('visible');
+    }
+    var raw = await collectRaw();
+    if (!String(raw).trim()) {
+      alert('Dán BibTeX hoặc chọn file .bib.');
+      return;
+    }
+    state.raw = raw;
+    var token = getToken();
+    if (!token) {
+      alert('Chưa đăng nhập.');
+      return;
+    }
+    var btn = document.getElementById('btnCompare');
+    btn.disabled = true;
+    try {
+      var data = await apiJson('/publications/preview-bibtex', {
+        method: 'POST',
+        body: JSON.stringify({ bibtex: raw, import_source: getImportSource() })
+      });
+      if (!data.ok) throw new Error('Preview thất bại');
+      state.entries = data.entries || [];
+      state.stats = data.stats || null;
+      document.getElementById('resultCard').style.display = 'block';
+      clearNvStagingSession();
+      renderStats();
+      renderSections();
+    } catch (e) {
+      alert('Lỗi: ' + (e.message || String(e)));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function selectedEntryIds() {
+    var ids = [];
+    document.querySelectorAll('.pick-eid:checked').forEach(function (cb) {
+      var id = Number(cb.getAttribute('data-eid'));
+      if (Number.isFinite(id)) ids.push(id);
+    });
+    return ids;
+  }
+
+  var NV_STASH_KEY = 'bib_nv_staging_v1';
+  var NV_FLAG_KEY = 'bib_nv_staged_ok_v1';
+
+  function clearNvStagingSession() {
+    try {
+      sessionStorage.removeItem(NV_FLAG_KEY);
+      sessionStorage.removeItem(NV_STASH_KEY);
+    } catch (_) {}
+  }
+
+  function saveNvStashAndMark(payload) {
+    try {
+      sessionStorage.setItem(NV_STASH_KEY, JSON.stringify(payload));
+      sessionStorage.setItem(NV_FLAG_KEY, '1');
+      return true;
+    } catch (e) {
+      alert('Không lưu được dữ liệu tạm (sessionStorage).');
+      return false;
+    }
+  }
+
+  function showNvStagedSavedMessage(sectionCat, itemCount) {
+    var line =
+      'Đã lưu vào trang Lọc định danh NCV' +
+      (itemCount != null ? ' (<strong>' + itemCount + '</strong> bài)' : '') +
+      '. Tiếp theo: bấm <strong>«Mở trang lọc NCV»</strong> ở ngay trên hoặc trên thanh bước 3.';
+    var toast = document.getElementById('nvGlobalStageToast');
+    if (toast) {
+      toast.innerHTML = line;
+      toast.classList.add('visible');
+      toast.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    if (sectionCat) {
+      var inline = document.querySelector('.nv-stage-inline-msg[data-feed-cat="' + sectionCat + '"]');
+      if (inline) {
+        inline.innerHTML = line;
+        inline.classList.add('visible');
+        inline.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+    var msg = document.getElementById('importMsg');
+    if (msg) {
+      msg.innerHTML = '<div class="msg ok">' + line + '</div>';
+    }
+  }
+
+  /**
+   * Stage checked rows in one section (ready/suspicious) for NCV page — does not import DB.
+   */
+  /** @returns {false|number} false on failure, or number of items staged */
+  function stageNvForSectionCategory(cat) {
+    if (!String(state.raw || '').trim()) {
+      alert('Chưa có BibTeX — bấm «So sánh với CSDL» trước.');
+      return false;
+    }
+    var ids = [];
+    document.querySelectorAll('.pick-eid:checked').forEach(function (cb) {
+      var sec = cb.closest('.section');
+      if (!sec || sec.getAttribute('data-cat') !== cat) return;
+      var id = Number(cb.getAttribute('data-eid'));
+      if (Number.isFinite(id)) ids.push(id);
+    });
+    if (!ids.length) {
+      alert('Tick ít nhất một dòng trong nhóm này.');
+      return false;
+    }
+    var set = new Set(ids);
+    var pick = [];
+    state.entries.forEach(function (e) {
+      if (!set.has(e.entryId)) return;
+      if (e.category !== 'ready' && e.category !== 'suspicious') return;
+      pick.push({
+        id: e.entryId,
+        title: (e.item && e.item.title) || '',
+        year: e.item && e.item.year,
+        detail_url: (e.item && e.item.url) || '',
+        authors: (e.item && e.item.authors) || '',
+        bib_review_category: e.category,
+      });
+    });
+    if (!pick.length) {
+      alert('Không có bài nào thỏa điều kiện chuyển sang bước lọc NCV.');
+      return false;
+    }
+    if (
+      !saveNvStashAndMark({
+        bibtex: state.raw,
+        import_source: getImportSource(),
+        items: pick,
+      })
+    ) {
+      return false;
+    }
+    return pick.length;
+  }
+
+  function buildNvStagingPayload(allReadyOnly) {
+    if (!String(state.raw || '').trim()) {
+      alert('Chưa có BibTeX — bấm «So sánh với CSDL» trước.');
+      return null;
+    }
+    var pick = [];
+    if (allReadyOnly) {
+      state.entries.forEach(function (e) {
+        if (e.category !== 'ready') return;
+        pick.push({
+          id: e.entryId,
+          title: (e.item && e.item.title) || '',
+          year: e.item && e.item.year,
+          detail_url: (e.item && e.item.url) || '',
+          authors: (e.item && e.item.authors) || '',
+          bib_review_category: 'ready',
+        });
+      });
+    } else {
+      var set = new Set(selectedEntryIds());
+      if (!set.size) {
+        alert('Tick ít nhất một dòng (nhóm Sẵn sàng hoặc Nghi ngờ), hoặc dùng nút «cả nhóm Sẵn sàng».');
+        return null;
+      }
+      state.entries.forEach(function (e) {
+        if (!set.has(e.entryId)) return;
+        if (e.category !== 'ready' && e.category !== 'suspicious') return;
+        pick.push({
+          id: e.entryId,
+          title: (e.item && e.item.title) || '',
+          year: e.item && e.item.year,
+          detail_url: (e.item && e.item.url) || '',
+          authors: (e.item && e.item.authors) || '',
+          bib_review_category: e.category,
+        });
+      });
+    }
+    if (!pick.length) {
+      alert('Không có bài nào thỏa điều kiện chuyển sang bước lọc NCV.');
+      return null;
+    }
+    return {
+      bibtex: state.raw,
+      import_source: getImportSource(),
+      items: pick,
+    };
+  }
+
+  function goToNvDisambiguation(allReadyOnly) {
+    var payload = buildNvStagingPayload(allReadyOnly);
+    if (!payload) return;
+    if (!saveNvStashAndMark(payload)) return;
+    window.location.href = '/bibtex-nv-disambiguation.html';
+  }
+
+  async function runImport(body) {
+    var msg = document.getElementById('importMsg');
+    msg.innerHTML = '';
+    var toast = document.getElementById('nvGlobalStageToast');
+    if (toast) {
+      toast.innerHTML = '';
+      toast.classList.remove('visible');
+    }
+    if (!String(state.raw).trim()) {
+      alert('Chưa có BibTeX — bấm «So sánh» trước.');
+      return;
+    }
+    var token = getToken();
+    if (!token) return;
+    var payload = Object.assign({
+      bibtex: state.raw,
+      import_source: getImportSource()
+    }, body);
+    try {
+      var data = await apiJson('/publications/import-bibtex-selected', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      var line = 'Đã thử nhập <strong>' + (data.attempted || 0) + '</strong> bài → nhập OK <strong>' + (data.imported || 0) + '</strong>, bỏ qua <strong>' + (data.skipped || 0) + '</strong>';
+      if (data.errors && data.errors.length) line += ', lỗi <strong>' + data.errors.length + '</strong>';
+      msg.innerHTML = '<div class="msg ok">' + line + '</div>';
+      if (data.errors && data.errors.length) {
+        var pre = data.errors.slice(0, 15).map(function (x) {
+          return esc(x.title) + ' — ' + esc(x.reason);
+        }).join('<br>');
+        msg.innerHTML += '<div class="msg err" style="margin-top:8px;font-size:12px">' + pre + (data.errors.length > 15 ? '<br>…' : '') + '</div>';
+      }
+      var impOk = Number(data.imported || 0) > 0;
+      var noErr = !data.errors || !data.errors.length;
+      if (impOk && noErr) {
+        msg.innerHTML +=
+          '<div class="nv-after-import">' +
+          '<strong>Bước tiếp — trang lọc định danh NCV</strong><br>' +
+          '<span style="font-size:12px;color:var(--text-2)">Hệ thống không tự chuyển trang. Bấm một nút để mở <code>/bibtex-nv-disambiguation.html</code>:</span><br>' +
+          '<button type="button" class="btn btn-primary" data-nv-go="all" style="margin-top:10px">Mở trang lọc NCV — toàn bộ «Sẵn sàng nhập»</button> ' +
+          '<button type="button" class="btn" data-nv-go="selected">Mở trang lọc NCV — các dòng đang tick</button>' +
+          '</div>';
+      }
+      var autoNv = document.getElementById('chkNvAfterImport');
+      if (impOk && noErr && autoNv && autoNv.checked) {
+        goToNvDisambiguation(true);
+      }
+    } catch (e) {
+      msg.innerHTML = '<div class="msg err">' + esc(e.message || String(e)) + '</div>';
+    }
+  }
+
+  function init() {
+    var tok = getToken();
+    var admin = isPubAdmin();
+    if (!tok || !admin) {
+      document.getElementById('loginGate').style.display = 'block';
+      return;
+    }
+    document.getElementById('appMain').style.display = 'block';
+
+    document.getElementById('btnCompare').addEventListener('click', runCompare);
+
+    document.getElementById('btnImpReady').addEventListener('click', function () {
+      runImport({ scope: 'ready' });
+    });
+    document.getElementById('btnImpReadySusp').addEventListener('click', function () {
+      runImport({ scope: 'ready_and_suspicious' });
+    });
+    document.getElementById('btnImpSelected').addEventListener('click', function () {
+      var ids = selectedEntryIds();
+      if (!ids.length) {
+        alert('Tick ít nhất một dòng ở nhóm Sẵn sàng hoặc Nghi ngờ.');
+        return;
+      }
+      runImport({ entry_ids: ids });
+    });
+    var btnNv1b = document.getElementById('btnNvStagingSelectedBig');
+    if (btnNv1b) btnNv1b.addEventListener('click', function () { goToNvDisambiguation(false); });
+    var btnNv2b = document.getElementById('btnNvStagingAllReadyBig');
+    if (btnNv2b) btnNv2b.addEventListener('click', function () { goToNvDisambiguation(true); });
+    var btnNvOpenTop = document.getElementById('btnNvOpenPageTop');
+    if (btnNvOpenTop) {
+      btnNvOpenTop.addEventListener('click', function () {
+        window.location.href = '/bibtex-nv-disambiguation.html';
+      });
+    }
+
+    document.getElementById('importMsg').addEventListener('click', function (ev) {
+      var btn = ev.target.closest('[data-nv-go]');
+      if (!btn) return;
+      var mode = btn.getAttribute('data-nv-go');
+      if (mode === 'selected') goToNvDisambiguation(false);
+      else goToNvDisambiguation(true);
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

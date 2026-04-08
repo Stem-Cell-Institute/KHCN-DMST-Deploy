@@ -275,6 +275,15 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
+#### Upload file ~20MB (module Hợp tác — Thỏa thuận, tờ trình…)
+
+Ứng dụng (Multer) cho phép file tới **20MB**, nhưng **Nginx mặc định thường chỉ ~1MB** → trình duyệt báo **413 Request Entity Too Large** trước khi request tới Node.
+
+- Trong khối `server { ... }` của site (HTTPS), đảm bảo có **`client_max_body_size`** ít nhất **25m** (dư một chút cho multipart). Ví dụ đã có trong mẫu trên: `client_max_body_size 100M;` là đủ.
+- Snippet tối thiểu để copy: `deploy/nginx-upload-limit-snippet.conf`
+- Sau khi sửa: `sudo nginx -t && sudo systemctl reload nginx`
+- Nếu vẫn 413: kiểm tra có **file cấu hình site khác** đang `listen` cùng domain nhưng thiếu dòng này, hoặc lớp proxy phía trước (CDN, load balancer).
+
 ---
 
 ## 7. Quản lý Process (PM2)

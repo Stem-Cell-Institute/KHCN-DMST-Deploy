@@ -30,6 +30,8 @@
     --isi: #c00;
     --shadow: 0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
     --shadow-lg: 0 4px 24px rgba(0,0,0,.1);
+    --btn-press: 0 1px 4px rgba(0,0,0,.12);
+    --btn-lift: 0 6px 20px rgba(0,0,0,.16);
     --radius: 10px;
     --radius-sm: 6px;
     --mono: 'IBM Plex Mono', monospace;
@@ -214,13 +216,116 @@
     overflow-x: hidden;
   }
 
+  /* ── Hai khu vực: thống kê (trên) vs danh sách (dưới) ── */
+  .main-zone--dashboard {
+    padding: 16px 18px 26px;
+    margin: 0 0 4px;
+    background: linear-gradient(
+      168deg,
+      #dfe8f3 0%,
+      #e8f0f8 18%,
+      #f2f4f7 45%,
+      var(--bg) 88%
+    );
+    border: 1px solid rgba(28, 79, 138, 0.14);
+    border-radius: var(--radius);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.65) inset,
+      0 10px 32px rgba(28, 79, 138, 0.08);
+  }
+  .main-zone--listing {
+    padding: 22px 2px 10px;
+    margin-top: 8px;
+    position: relative;
+  }
+  .main-zone--listing::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(200, 73, 14, 0.35) 20%,
+      rgba(28, 79, 138, 0.2) 80%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+  .main-zone-eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    row-gap: 6px;
+    margin-bottom: 14px;
+    padding: 11px 14px;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.72) 0%, rgba(232, 240, 251, 0.55) 100%);
+    border: 1px solid rgba(28, 79, 138, 0.12);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 1px 3px rgba(28, 79, 138, 0.06);
+  }
+  .main-zone-eyebrow__dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(28, 79, 138, 0.22);
+    flex-shrink: 0;
+  }
+  .main-zone-eyebrow__title {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    color: var(--text);
+    margin-left: 2px;
+  }
+  .main-zone-eyebrow--listing {
+    color: var(--accent-2);
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.8) 0%, rgba(253, 242, 232, 0.45) 100%);
+    border-color: rgba(200, 73, 14, 0.16);
+  }
+  .main-zone-eyebrow--listing .main-zone-eyebrow__dot {
+    background: var(--accent-2);
+    box-shadow: 0 0 0 3px rgba(200, 73, 14, 0.22);
+  }
+  .main-zone-eyebrow--listing .main-zone-eyebrow__title {
+    color: var(--text);
+  }
+
   /* ── TOOLBAR ── */
   .toolbar {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     margin-bottom: 20px;
     flex-wrap: wrap;
+  }
+  .toolbar-action-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: linear-gradient(165deg, rgba(255,255,255,.98) 0%, var(--bg2) 55%, #e8e4d9 100%);
+    border: 1px solid rgba(176, 173, 163, .45);
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(26, 25, 22, .07), inset 0 1px 0 rgba(255,255,255,.8);
+  }
+  body.pub-is-admin .toolbar-action-group {
+    background: linear-gradient(165deg, #f0f6fd 0%, #e8eef8 40%, var(--bg2) 100%);
+    border-color: rgba(28, 79, 138, .22);
+    box-shadow: 0 4px 22px rgba(28, 79, 138, .1), inset 0 1px 0 rgba(255,255,255,.75);
   }
   .search-box {
     flex: 1;
@@ -229,9 +334,15 @@
     align-items: center;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 0 12px;
+    border-radius: 12px;
+    padding: 0 14px;
     gap: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.04);
+    transition: box-shadow .2s ease, border-color .2s ease;
+  }
+  .search-box:focus-within {
+    border-color: rgba(28, 79, 138, .45);
+    box-shadow: 0 0 0 3px rgba(28, 79, 138, .12), 0 4px 14px rgba(0,0,0,.06);
   }
   .search-box input {
     border: none;
@@ -246,29 +357,211 @@
   .search-box input::placeholder { color: var(--text-3); }
   .search-icon { color: var(--text-3); font-size: 16px; }
 
+  /* ── Khối danh sách: toolbar + lọc + bảng dính một mạng ── */
+  .pub-list-stack {
+    border: 1px solid rgba(28, 79, 138, 0.14);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 18px;
+    background: linear-gradient(180deg, #fffbf7 0%, #faf8f5 14%, var(--surface) 55%, #f8fafc 100%);
+    box-shadow:
+      0 4px 22px rgba(28, 79, 138, 0.07),
+      0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+  .pub-list-stack .toolbar {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 0;
+    padding: 14px 18px;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid rgba(28, 79, 138, 0.1);
+    background: linear-gradient(180deg, #f5f9ff 0%, #eef6ff 45%, #f8fafc 100%);
+  }
+  .pub-list-stack .search-box {
+    flex: 1 1 220px;
+    min-width: min(100%, 260px);
+    padding: 0 16px 0 18px;
+    background: linear-gradient(180deg, #fff 0%, #f0f6fc 100%);
+    border: 2px solid rgba(28, 79, 138, 0.32);
+    border-radius: 14px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 2px 8px rgba(28, 79, 138, 0.1),
+      0 1px 3px rgba(15, 23, 42, 0.06);
+  }
+  .pub-list-stack .search-box:focus-within {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow:
+      0 0 0 4px rgba(28, 79, 138, 0.16),
+      0 4px 18px rgba(28, 79, 138, 0.14);
+  }
+  .pub-list-stack .search-box input {
+    padding: 12px 0;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .pub-list-stack .search-icon {
+    font-size: 19px;
+    line-height: 1;
+    color: var(--accent);
+    opacity: 0.92;
+  }
+  .pub-list-stack .toolbar-action-group {
+    flex: 0 1 auto;
+    margin-left: auto;
+    justify-content: flex-end;
+  }
+  .pub-list-stack .filter-bar {
+    margin-bottom: 0;
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(28, 79, 138, 0.1);
+    background: linear-gradient(180deg, #f0fdf7 0%, #ecfdf3 22%, #f4fbf7 100%);
+    box-shadow: none;
+  }
+  .pub-list-stack .pub-table-wrapper {
+    margin-bottom: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: linear-gradient(180deg, #f7f9fc 0%, #f1f5f9 18%, var(--surface) 55%, #fafcff 100%);
+  }
+  .pub-list-stack .table-top {
+    background: linear-gradient(165deg, #eef4fb 0%, #f4f8fd 40%, var(--surface) 100%);
+    border-bottom-color: rgba(28, 79, 138, 0.11);
+  }
+  .pub-list-stack .pagination {
+    background: linear-gradient(180deg, #f1f5f9 0%, #e8eef5 35%, #f8fafc 100%);
+    border-top-color: rgba(28, 79, 138, 0.09);
+  }
+
+  a.btn {
+    text-decoration: none;
+    box-sizing: border-box;
+  }
   .btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    padding: 8px 16px;
-    border-radius: var(--radius-sm);
+    padding: 9px 18px;
+    border-radius: 10px;
     border: 1px solid var(--border);
     background: var(--surface);
     font-size: 13px;
     font-family: inherit;
     cursor: pointer;
     color: var(--text-2);
-    transition: all .15s;
+    transition: transform .18s ease, box-shadow .18s ease, background .15s ease, border-color .15s ease, filter .18s ease;
     white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
   }
-  .btn:hover { background: var(--bg2); border-color: var(--border-strong); }
+  .btn:hover {
+    background: var(--bg2);
+    border-color: var(--border-strong);
+    box-shadow: 0 3px 10px rgba(0,0,0,.09);
+    transform: translateY(-1px);
+  }
+  .btn:active {
+    transform: translateY(0);
+    box-shadow: var(--btn-press);
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
   .btn-primary {
-    background: var(--accent);
+    background: linear-gradient(180deg, #2a6bb8 0%, var(--accent) 38%, #143d6e 100%);
     color: #fff;
-    border-color: var(--accent);
-    font-weight: 500;
+    border-color: rgba(12, 45, 82, .35);
+    font-weight: 600;
+    box-shadow: 0 3px 12px rgba(28, 79, 138, .32), inset 0 1px 0 rgba(255,255,255,.2);
   }
-  .btn-primary:hover { background: #163d6e; border-color: #163d6e; }
+  .btn-primary:hover {
+    background: linear-gradient(180deg, #3578c9 0%, #205a9e 45%, #0f3258 100%);
+    border-color: rgba(12, 45, 82, .45);
+    filter: brightness(1.03);
+    box-shadow: 0 5px 18px rgba(28, 79, 138, .38), inset 0 1px 0 rgba(255,255,255,.22);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    filter: brightness(.96);
+    box-shadow: 0 2px 8px rgba(28, 79, 138, .28);
+    transform: translateY(0);
+  }
+
+  /* Nút công cụ toolbar — màu rõ ràng, tương tác */
+  .btn-tool {
+    font-weight: 600;
+    letter-spacing: .01em;
+    border: none;
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,.14);
+    text-shadow: 0 1px 0 rgba(0,0,0,.12);
+  }
+  .btn-tool:hover {
+    filter: brightness(1.06) saturate(1.05);
+    box-shadow: var(--btn-lift);
+    transform: translateY(-2px);
+  }
+  .btn-tool:active {
+    transform: translateY(0);
+    filter: brightness(.94);
+    box-shadow: 0 1px 6px rgba(0,0,0,.18);
+  }
+  .btn-tool-excel {
+    background: linear-gradient(145deg, #16a34a 0%, #15803d 45%, #14532d 100%);
+  }
+  .btn-tool-bibtex-out {
+    background: linear-gradient(145deg, #64748b 0%, #475569 50%, #334155 100%);
+  }
+  .btn-tool-import-bib {
+    background: linear-gradient(145deg, #3b82f6 0%, #2563eb 45%, #1e40af 100%);
+  }
+  .btn-tool-sjr-nav {
+    background: linear-gradient(145deg, #fb923c 0%, #ea580c 48%, #9a3412 100%);
+  }
+  .btn-tool-orcid {
+    background: linear-gradient(145deg, #a78bfa 0%, #7c3aed 40%, #4c1d95 100%);
+  }
+  /* So sánh BibTeX — cùng họ btn-tool, bắt buộc có nền (trước đây chỉ .btn-tool → chữ trắng trên nền trắng) */
+  .btn-tool-bibtex-compare {
+    background: linear-gradient(145deg, #0e7490 0%, #0f766e 42%, #115e59 100%);
+    border: 1px solid rgba(6, 78, 59, 0.35);
+  }
+  a.btn.btn-tool.btn-tool-bibtex-compare,
+  a.btn.btn-tool.btn-tool-bibtex-compare:visited {
+    color: #fff;
+  }
+  a.btn.btn-tool.btn-tool-bibtex-compare:hover {
+    background: linear-gradient(145deg, #14b8a6 0%, #0d9488 45%, #0f766e 100%);
+    color: #fff;
+    border-color: rgba(6, 78, 59, 0.45);
+    filter: brightness(1.05) saturate(1.06);
+    box-shadow: var(--btn-lift);
+    transform: translateY(-2px);
+  }
+  a.btn.btn-tool.btn-tool-bibtex-compare:active {
+    filter: brightness(.94);
+    transform: translateY(0);
+  }
+  .btn-tool-add {
+    padding: 10px 20px;
+    font-size: 13.5px;
+    background: linear-gradient(180deg, #2f74c4 0%, var(--accent) 35%, #102c52 100%);
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 4px 16px rgba(28, 79, 138, .4), inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  .btn-tool-add:hover {
+    box-shadow: 0 6px 22px rgba(28, 79, 138, .48), inset 0 1px 0 rgba(255,255,255,.25);
+    transform: translateY(-2px);
+  }
+  .btn-tool-add:active {
+    transform: translateY(0);
+  }
 
   /* ── STAT CARDS ROW ── */
   .stat-row {
@@ -278,12 +571,33 @@
     margin-bottom: 22px;
   }
   .stat-card {
-    background: var(--surface);
+    background: linear-gradient(165deg, #ffffff 0%, var(--surface) 100%);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 14px 16px;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 2px 14px rgba(28, 79, 138, 0.06);
+  }
+  .stat-row .stat-card:nth-child(1) {
+    background: linear-gradient(165deg, #fef2f2 0%, #fff5f5 28%, var(--surface) 100%);
+    border-color: rgba(185, 28, 28, 0.14);
+  }
+  .stat-row .stat-card:nth-child(2) {
+    background: linear-gradient(165deg, #fffbeb 0%, #fffbf0 30%, var(--surface) 100%);
+    border-color: rgba(180, 83, 9, 0.14);
+  }
+  .stat-row .stat-card:nth-child(3) {
+    background: linear-gradient(165deg, #ecfdf3 0%, #f0fdf6 30%, var(--surface) 100%);
+    border-color: rgba(26, 92, 58, 0.14);
+  }
+  .stat-row .stat-card:nth-child(4) {
+    background: linear-gradient(165deg, #f5f3ff 0%, #faf5ff 30%, var(--surface) 100%);
+    border-color: rgba(124, 58, 237, 0.16);
+  }
+  .stat-row .stat-card:nth-child(5) {
+    background: linear-gradient(165deg, #fff7ed 0%, #fffaf5 32%, var(--surface) 100%);
+    border-color: rgba(200, 73, 14, 0.16);
   }
   .stat-card::before {
     content: '';
@@ -359,6 +673,20 @@
     border-color: var(--accent);
     background: #fff;
   }
+  .filter-bar > .btn-filter-clear {
+    align-self: end;
+    font-weight: 600;
+    color: var(--text-2);
+    background: linear-gradient(180deg, #fff 0%, var(--bg2) 100%);
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  }
+  .filter-bar > .btn-filter-clear:hover {
+    background: #fff;
+    color: #b91c1c;
+    border-color: #fca5a5;
+    box-shadow: 0 4px 12px rgba(185, 28, 28, .12);
+  }
 
   /* ── PUBLICATION TABLE ── */
   .pub-table-wrapper {
@@ -367,26 +695,84 @@
     border-radius: var(--radius);
     overflow: hidden;
     margin-bottom: 18px;
+    box-shadow:
+      0 4px 22px rgba(28, 79, 138, 0.07),
+      0 1px 2px rgba(15, 23, 42, 0.04);
   }
   .table-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 18px;
+    padding: 14px 18px 14px 20px;
     border-bottom: 1px solid var(--border);
-    background: var(--bg);
+    background: linear-gradient(165deg, var(--surface) 0%, var(--bg) 55%, #eef3f9 100%);
+    position: relative;
+  }
+  .table-top::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--accent) 0%, #143d6e 100%);
+    border-radius: var(--radius) 0 0 0;
+    opacity: 0.95;
   }
   .table-top-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--text-2);
+    color: var(--text);
+    letter-spacing: -0.01em;
+    padding-left: 6px;
   }
-  .table-top-actions {
-    display: flex;
-    gap: 8px;
+  .table-top-title #rowCount {
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
+    min-width: 2em;
+    padding: 3px 11px;
+    margin: 0 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    background: linear-gradient(180deg, #fff 0%, var(--accent-light) 100%);
+    border: 1px solid rgba(28, 79, 138, 0.2);
+    border-radius: 999px;
+    box-shadow: 0 1px 2px rgba(28, 79, 138, 0.12);
   }
 
+  #pubTable {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  #pubTable thead th {
+    text-align: left;
+    font-size: 10.5px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-2);
+    padding: 12px 12px;
+    border-bottom: 2px solid rgba(28, 79, 138, 0.14);
+    background: linear-gradient(180deg, #f3f6fb 0%, #e6ecf4 100%);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  }
+  #pubTable thead th:hover {
+    color: var(--accent);
+    background: linear-gradient(180deg, #f7faff 0%, #e8f0fa 100%);
+  }
+  #pubTable thead th .sort-icon {
+    opacity: .45;
+    margin-left: 5px;
+    font-size: 11px;
+  }
+  #pubTable thead th.sorted .sort-icon { opacity: 1; color: var(--accent); }
   table { width: 100%; border-collapse: collapse; }
   thead th {
     text-align: left;
@@ -406,6 +792,20 @@
   thead th .sort-icon { opacity: .4; margin-left: 4px; }
   thead th.sorted .sort-icon { opacity: 1; color: var(--accent); }
 
+  #pubTable tbody tr.pub-row {
+    border-bottom: 1px solid rgba(28, 79, 138, 0.07);
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+  }
+  #pubTable tbody tr.pub-row:nth-child(even) {
+    background: rgba(28, 79, 138, 0.022);
+  }
+  #pubTable tbody tr.pub-row:hover {
+    background: linear-gradient(90deg, var(--accent-light) 0%, rgba(232, 240, 250, 0.65) 100%);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  #pubTable tbody tr.pub-row:last-child { border-bottom: none; }
+
   tbody tr {
     border-bottom: 1px solid var(--border);
     transition: background .1s;
@@ -421,8 +821,54 @@
     color: var(--text);
   }
 
+  .pub-empty-row .pub-empty-cell {
+    padding: 0;
+    border: none;
+    background: linear-gradient(180deg, #eef2f8 0%, #f6f9fc 45%, var(--surface) 100%);
+    cursor: default;
+  }
+  .pub-empty-inner {
+    text-align: center;
+    padding: 44px 20px 52px;
+    max-width: 460px;
+    margin: 0 auto;
+  }
+  .pub-empty-icon {
+    font-size: 2.75rem;
+    line-height: 1;
+    margin-bottom: 14px;
+    filter: drop-shadow(0 2px 6px rgba(28, 79, 138, 0.15));
+  }
+  .pub-empty-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 10px;
+    letter-spacing: -0.02em;
+  }
+  .pub-empty-hint {
+    font-size: 13px;
+    color: var(--text-3);
+    line-height: 1.55;
+    margin: 0;
+  }
+  #pubTable tbody tr.pub-empty-row:hover {
+    background: transparent;
+    box-shadow: none;
+  }
+
   .pub-title-cell {
     max-width: 320px;
+  }
+  .pub-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 6px 8px;
+    margin-bottom: 3px;
+  }
+  .pub-title-row .pub-title {
+    margin-bottom: 0;
   }
   .pub-title {
     font-weight: 500;
@@ -433,6 +879,34 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    flex: 1;
+    min-width: 0;
+  }
+  .pub-import-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    line-height: 1.3;
+    margin-top: 1px;
+  }
+  .pub-import-badge.scholar {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+  }
+  .pub-import-badge.bibtex {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border: 1px solid #93c5fd;
+  }
+  .pub-import-badge.manual {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
   }
   .pub-authors {
     font-size: 11.5px;
@@ -539,10 +1013,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 18px;
-    border-top: 1px solid var(--border);
+    padding: 14px 18px;
+    border-top: 1px solid rgba(28, 79, 138, 0.1);
     font-size: 12.5px;
     color: var(--text-3);
+    background: linear-gradient(180deg, var(--bg) 0%, var(--surface) 100%);
   }
   .page-btns {
     display: flex;
@@ -760,10 +1235,24 @@
     margin-bottom: 20px;
   }
   .chart-card {
-    background: var(--surface);
+    background: linear-gradient(165deg, #fafbfc 0%, var(--surface) 100%);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 16px 18px;
+    box-shadow: 0 2px 12px rgba(28, 79, 138, 0.055);
+  }
+  .stats-toolbar.chart-card {
+    background: linear-gradient(165deg, #e3f0fc 0%, #f0f7ff 32%, #fff 100%);
+    border-color: rgba(28, 79, 138, 0.18);
+    box-shadow: 0 3px 16px rgba(28, 79, 138, 0.08);
+  }
+  .charts-row > .chart-card:first-child {
+    background: linear-gradient(165deg, #fff2f2 0%, #fff8f8 28%, var(--surface) 100%);
+    border-color: rgba(185, 28, 28, 0.12);
+  }
+  .charts-row > .chart-card:last-child {
+    background: linear-gradient(165deg, #fff4e8 0%, #fffaf3 30%, var(--surface) 100%);
+    border-color: rgba(232, 119, 34, 0.14);
   }
   .chart-title {
     font-size: 12.5px;
@@ -792,9 +1281,10 @@
   .bar-track {
     flex: 1;
     height: 18px;
-    background: var(--bg2);
+    background: linear-gradient(180deg, #e8edf4 0%, #dce3ee 100%);
     border-radius: 3px;
     overflow: hidden;
+    border: 1px solid rgba(28, 79, 138, 0.06);
   }
   .bar-fill {
     height: 100%;
@@ -864,6 +1354,9 @@
     max-width: 100%;
   }
   .stats-year { min-width: 88px; }
+  .stats-scope-table-mode .stats-toolbar-year-row {
+    opacity: 0.5;
+  }
   .stats-inline {
     display: inline-flex;
     align-items: center;
@@ -950,7 +1443,18 @@
     border-radius: 4px;
     font-weight: 600;
   }
-  .btn-danger { background: #dc3545; color: #fff; border-color: #dc3545; }
+  .btn-danger {
+    background: linear-gradient(180deg, #ef4444 0%, #dc3545 50%, #b91c1c 100%);
+    color: #fff;
+    border-color: rgba(100, 15, 25, .35);
+    font-weight: 600;
+    box-shadow: 0 2px 10px rgba(220, 53, 69, .25);
+  }
+  .btn-danger:hover {
+    filter: brightness(1.06);
+    box-shadow: 0 4px 16px rgba(220, 53, 69, .35);
+    transform: translateY(-1px);
+  }
 
   /* ── Admin: quản lý danh sách công bố ── */
   .pub-admin-bar {
@@ -968,6 +1472,38 @@
   body.pub-is-admin .pub-admin-bar { display: flex; }
   .pub-admin-bar label { font-size: 11px; font-family: var(--mono); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
   .pub-admin-bar select { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; background: var(--surface); }
+  .pub-admin-bar .btn {
+    border-radius: 9px;
+    font-weight: 600;
+  }
+  .pub-admin-bar .btn:not(.btn-primary):not(.btn-danger) {
+    background: #fff;
+    border: 1px solid rgba(176, 173, 163, .65);
+    box-shadow: 0 2px 6px rgba(0,0,0,.05);
+  }
+  .pub-admin-bar .btn:not(.btn-primary):not(.btn-danger):hover {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .pub-admin-bar .btn-primary {
+    padding: 7px 16px;
+    min-width: 92px;
+  }
+  .pub-admin-bar .btn-danger {
+    border-radius: 9px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, .2);
+    border-style: solid !important;
+    border-width: 1px !important;
+  }
+  .pub-admin-bar .btn-danger:hover {
+    background: #c82333 !important;
+    color: #fff !important;
+    border-color: #bd2130 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(220, 53, 69, .35);
+  }
   .pub-admin-only { display: none !important; }
   body.pub-is-admin .pub-admin-only { display: inline-flex !important; align-items: center; gap: 4px; }
   body.pub-is-admin .pub-admin-only.pub-admin-stack { display: flex !important; flex-direction: column; align-items: stretch; }
@@ -975,6 +1511,91 @@
   #pubTable td.pub-check-col { display: none; }
   body.pub-is-admin #pubTable th.pub-check-col,
   body.pub-is-admin #pubTable td.pub-check-col { display: table-cell; }
+
+  /* Modal import BibTeX */
+  .bibtex-import-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10040;
+    background: rgba(15, 23, 42, 0.45);
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  .bibtex-import-overlay.is-open { display: flex; }
+  .bibtex-import-dialog {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    max-width: 560px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 16px 48px rgba(0,0,0,.18);
+  }
+  .bibtex-import-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  .bibtex-import-body { padding: 14px 16px; overflow: auto; flex: 1; }
+  .bibtex-import-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .bibtex-import-tabs button {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .bibtex-import-tabs button.is-active {
+    border-color: var(--accent);
+    background: var(--accent-light);
+    font-weight: 600;
+  }
+  .bibtex-import-panel { display: none; }
+  .bibtex-import-panel.is-active { display: block; }
+  .bibtex-import-panel textarea {
+    width: 100%;
+    min-height: 200px;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-sizing: border-box;
+    resize: vertical;
+  }
+  .bibtex-import-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .bibtex-import-result {
+    margin-top: 12px;
+    font-size: 13px;
+    line-height: 1.45;
+    max-height: 160px;
+    overflow: auto;
+    padding: 10px;
+    background: var(--accent-light);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: none;
+    white-space: pre-wrap;
+  }
+  .bibtex-import-result.is-visible { display: block; }
 
   /* Thanh enrich: flex (không dùng inline-flex của .pub-admin-only) */
   body.pub-is-admin .pub-enrich-statusbar.pub-admin-only {
@@ -1008,6 +1629,18 @@
     scroll-margin-top: 12px;
     border-left: 4px solid var(--accent);
   }
+  #admin-orcid-nv.nv-admin-panel {
+    background: linear-gradient(165deg, #ede9fe 0%, #f5f3ff 35%, var(--surface) 100%);
+    border-color: rgba(124, 58, 237, 0.2);
+    border-left-color: #7c3aed;
+    box-shadow: 0 2px 14px rgba(124, 58, 237, 0.07);
+  }
+  #admin-sjr-import.nv-admin-panel {
+    background: linear-gradient(165deg, #ffedd5 0%, #fff7ed 38%, var(--surface) 100%);
+    border-color: rgba(234, 88, 12, 0.2);
+    border-left-color: #ea580c;
+    box-shadow: 0 2px 14px rgba(234, 88, 12, 0.08);
+  }
   .nv-admin-panel .nv-head {
     display: flex;
     flex-wrap: wrap;
@@ -1030,6 +1663,32 @@
     margin-top: 4px;
   }
   .nv-admin-panel .nv-actions-top { display: flex; gap: 8px; flex-wrap: wrap; }
+  .nv-admin-panel .btn-primary,
+  #sjrImportForm .btn-primary {
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #2a6bb8 0%, var(--accent) 40%, #143d6e 100%);
+    border: 1px solid rgba(255,255,255,.15);
+    box-shadow: 0 3px 14px rgba(28, 79, 138, .3), inset 0 1px 0 rgba(255,255,255,.2);
+  }
+  .nv-admin-panel .btn-primary:hover,
+  #sjrImportForm .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(28, 79, 138, .38), inset 0 1px 0 rgba(255,255,255,.22);
+  }
+  #enrichRunNowBtn {
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    font-size: 11px !important;
+    padding: 8px 18px !important;
+    border-radius: 999px !important;
+    box-shadow: 0 3px 12px rgba(28, 79, 138, .35) !important;
+  }
+  #enrichRunNowBtn:hover {
+    transform: translateY(-2px) scale(1.02);
+  }
   .nv-form-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
   .nv-form-row input {
     padding: 8px 10px;
@@ -1073,6 +1732,14 @@
     .stat-row { grid-template-columns: repeat(3, 1fr); }
     .charts-row { grid-template-columns: 1fr; }
     .filter-bar { grid-template-columns: 1fr 1fr; }
+    .toolbar-action-group {
+      width: 100%;
+      justify-content: flex-start;
+    }
+    .pub-list-stack .toolbar-action-group {
+      margin-left: 0;
+      width: 100%;
+    }
   }
 </style>
 </head>
@@ -1255,6 +1922,12 @@
   <!-- ── MAIN ── -->
   <main class="main">
 
+    <div class="main-zone main-zone--dashboard" aria-label="Khu vực thống kê và biểu đồ">
+      <div class="main-zone-eyebrow">
+        <span class="main-zone-eyebrow__dot" aria-hidden="true"></span>
+        <span>Thống kê · biểu đồ</span>
+        <span class="main-zone-eyebrow__title">Tổng quan số liệu theo phạm vi năm hoặc theo bảng đang lọc</span>
+      </div>
     <!-- Stat cards (theo bộ lọc năm bên dưới) -->
     <div class="stat-row">
       <div class="stat-card" style="--card-color:#b91c1c">
@@ -1290,6 +1963,11 @@
 
     <div class="stats-toolbar chart-card" style="margin-bottom:16px;padding:12px 16px">
       <div class="stats-toolbar-row">
+        <span class="stats-toolbar-label">Phạm vi thống kê</span>
+        <label class="stats-inline"><input type="radio" name="statsScope" id="statsScopeInstitute" value="institute" checked> Toàn Viện</label>
+        <label class="stats-inline"><input type="radio" name="statsScope" id="statsScopeTable" value="table"> Theo bảng đang lọc</label>
+      </div>
+      <div class="stats-toolbar-row stats-toolbar-year-row">
         <span class="stats-toolbar-label">Khoảng thời gian</span>
         <select id="statsPreset" class="stats-select" aria-label="Chọn khoảng năm">
           <option value="all">Toàn bộ (theo năm xuất bản)</option>
@@ -1409,7 +2087,7 @@
       </div>
     </section>
 
-    <section id="admin-sjr-import" class="nv-admin-panel pub-admin-only" aria-labelledby="sjr-import-heading" style="margin-top:16px">
+    <section id="admin-sjr-import" class="nv-admin-panel pub-admin-only pub-admin-stack" aria-labelledby="sjr-import-heading" style="margin-top:16px">
       <div class="nv-head">
         <div>
           <h2 id="sjr-import-heading">Import SCImago Journal Rank (Admin)</h2>
@@ -1421,7 +2099,7 @@
           </p>
         </div>
       </div>
-      <form id="sjrImportForm" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:12px" onsubmit="submitSjrCsvImport(event)">
+      <form id="sjrImportForm" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:12px" onsubmit="submitSjrCsvImport(event)" aria-label="Import SCImago CSV">
         <label class="stats-inline"><span>Năm kỳ SJR</span>
           <select id="sjrImportYear" class="stats-select stats-year" required aria-label="Năm dữ liệu SCImago">
             <option value="2026">2026</option>
@@ -1445,18 +2123,30 @@
       </form>
       <pre id="sjrImportLog" style="margin-top:12px;padding:12px;background:var(--accent-light);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;max-height:220px;overflow:auto;white-space:pre-wrap;display:none"></pre>
     </section>
+    </div>
 
+    <div class="main-zone main-zone--listing" aria-label="Khu vực tra cứu và danh sách công bố">
+      <div class="main-zone-eyebrow main-zone-eyebrow--listing">
+        <span class="main-zone-eyebrow__dot" aria-hidden="true"></span>
+        <span>Danh sách · tra cứu</span>
+        <span class="main-zone-eyebrow__title">Tìm kiếm, lọc và thao tác trên từng công bố</span>
+      </div>
+    <div class="pub-list-stack" aria-label="Tìm kiếm, lọc và danh sách công bố">
     <!-- Toolbar -->
     <div class="toolbar">
       <div class="search-box">
         <span class="search-icon">🔍</span>
         <input type="text" id="searchInput" placeholder="Tìm trong mọi trường dữ liệu (tiêu đề, tác giả, DOI, abstract, đề tài, ORCID, ISSN, trích dẫn…)" oninput="filterTable()">
       </div>
-      <button type="button" class="btn" onclick="exportToolbarExcel()" title="Xuất các dòng đang hiển thị (sau ô tìm &amp; lọc) — file CSV, mở bằng Excel">📊 Xuất Excel</button>
-      <button type="button" class="btn" onclick="exportToolbarBibtex()" title="File .bib cho các công bố đang hiển thị">📎 BibTeX</button>
-      <button type="button" class="btn pub-admin-only" onclick="scrollToSjrImportAdmin()" title="Nạp CSV SCImago vào CSDL">📥 Import SCImago (SJR)</button>
-      <a class="btn pub-admin-only" href="orcid-harvest.html" style="text-decoration:none;display:inline-flex;align-items:center;">🛰 ORCID Auto-Harvest</a>
-      <button type="button" class="btn btn-primary pub-admin-only" onclick="openAddModal()">＋ Thêm công bố</button>
+      <div class="toolbar-action-group" aria-label="Thao tác xuất / nhập">
+        <button type="button" class="btn btn-tool btn-tool-excel" onclick="exportToolbarExcel()" title="Xuất các dòng đang hiển thị (sau ô tìm &amp; lọc) — file CSV, mở bằng Excel">📊 Xuất Excel</button>
+        <button type="button" class="btn btn-tool btn-tool-bibtex-out" onclick="exportToolbarBibtex()" title="File .bib cho các công bố đang hiển thị">📎 BibTeX</button>
+        <button type="button" class="btn btn-tool btn-tool-import-bib pub-admin-only" onclick="openBibtexImportModal()" title="Nhập nhiều công bố từ BibTeX">📥 Import BibTeX</button>
+        <a href="bibtex-import-review.html" class="btn btn-tool btn-tool-bibtex-compare pub-admin-only" title="So sánh với CSDL, xem trùng / lỗi / nghi ngờ, nhập có chọn lọc">📋 So sánh BibTeX</a>
+        <button type="button" class="btn btn-tool btn-tool-sjr-nav pub-admin-only" onclick="scrollToSjrImportAdmin()" title="Nạp CSV SCImago vào CSDL">📥 Import SCImago (SJR)</button>
+        <a class="btn btn-tool btn-tool-orcid pub-admin-only" href="orcid-harvest.html" style="text-decoration:none;">🛰 ORCID Auto-Harvest</a>
+        <button type="button" class="btn btn-primary btn-tool-add pub-admin-only" onclick="openAddModal()">＋ Thêm công bố</button>
+      </div>
     </div>
 
     <!-- Filter bar -->
@@ -1516,7 +2206,7 @@
           <option value="under-review">Đang phản biện</option>
         </select>
       </div>
-      <button class="btn" onclick="clearFilters()">✕ Xóa lọc</button>
+      <button type="button" class="btn btn-filter-clear" onclick="clearFilters()">✕ Xóa lọc</button>
     </div>
 
     <!-- Table -->
@@ -1556,9 +2246,6 @@
         <div class="table-top-title">
           Danh sách công bố — <span id="rowCount">0</span> kết quả
         </div>
-        <div class="table-top-actions">
-          <button type="button" class="btn pub-admin-only" style="font-size:12px;padding:6px 12px" onclick="pubToggleSelectAllVisible(true)">☑ Chọn tất cả</button>
-        </div>
       </div>
       <table id="pubTable">
         <thead>
@@ -1581,6 +2268,8 @@
       <div class="pagination" id="pubPaginationWrap">
         <span id="pubTableFooterLine">—</span>
       </div>
+    </div>
+    </div>
     </div>
 
   </main>
@@ -1897,6 +2586,40 @@
 </div>
 
 <!-- Notification -->
+<!-- Modal import BibTeX (admin) -->
+<div id="bibtexImportOverlay" class="bibtex-import-overlay" aria-hidden="true">
+  <div class="bibtex-import-dialog" role="dialog" aria-labelledby="bibtexImportTitle">
+    <div class="bibtex-import-head">
+      <span id="bibtexImportTitle">📥 Import BibTeX</span>
+      <button type="button" class="btn" style="padding:4px 10px;font-size:12px" onclick="closeBibtexImportModal()">Đóng</button>
+    </div>
+    <div class="bibtex-import-body">
+      <div class="bibtex-import-tabs" role="tablist">
+        <button type="button" id="bibtexTabPaste" class="is-active" onclick="setBibtexImportTab('paste')">Dán nội dung</button>
+        <button type="button" id="bibtexTabFile" onclick="setBibtexImportTab('file')">Chọn file .bib</button>
+      </div>
+      <div id="bibtexPanelPaste" class="bibtex-import-panel is-active">
+        <label for="bibtexImportTextarea" class="stats-inline" style="display:block;margin-bottom:6px;color:var(--text-3)">Nội dung .bib</label>
+        <textarea id="bibtexImportTextarea" placeholder="@article{..."></textarea>
+      </div>
+      <div id="bibtexPanelFile" class="bibtex-import-panel">
+        <label class="stats-inline" style="display:block;margin-bottom:8px;color:var(--text-3)">File BibTeX</label>
+        <input type="file" id="bibtexImportFile" accept=".bib,text/plain" style="font-size:13px">
+      </div>
+      <label class="stats-inline pub-admin-only" style="display:block;margin-top:12px;color:var(--text-3)">Gán nguồn (import_source)</label>
+      <select id="bibtexImportSourceSel" class="pub-admin-only" style="margin-top:6px;width:100%;max-width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--surface)">
+        <option value="google_scholar">Google Scholar (mặc định)</option>
+        <option value="bibtex">BibTeX — nguồn khác</option>
+      </select>
+      <div class="bibtex-import-actions">
+        <button type="button" class="btn" onclick="closeBibtexImportModal()">Hủy</button>
+        <button type="button" class="btn btn-primary" id="bibtexImportSubmitBtn" onclick="submitBibtexImport()">Nhập</button>
+      </div>
+      <div id="bibtexImportResult" class="bibtex-import-result"></div>
+    </div>
+  </div>
+</div>
+
 <div class="notif" id="notif">✅ Thao tác thành công!</div>
 
 <script src="js/system-access.js"></script>
@@ -2055,7 +2778,10 @@ function apiPublicationToPub(row) {
     grant: row.grant_no || '—',
     enrichment_status: row.enrichment_status != null ? row.enrichment_status : null,
     sjr_year_used: row.sjr_year_used != null ? row.sjr_year_used : null,
-    quartile: q || null
+    quartile: q || null,
+    import_source: row.import_source != null && String(row.import_source).trim() !== ''
+      ? String(row.import_source).trim()
+      : null
   });
 }
 
@@ -2331,6 +3057,155 @@ function toggleClusterControl() {
   wrap.style.display = mode && mode.value === 'by_cluster' ? 'inline-flex' : 'none';
 }
 
+function getPublicationStatsScope() {
+  var el = document.querySelector('input[name="statsScope"]:checked');
+  return el && el.value === 'table' ? 'table' : 'institute';
+}
+
+var __tableStatsRefreshTimer = null;
+
+function toggleStatsScopeUI() {
+  var table = getPublicationStatsScope() === 'table';
+  var tb = document.querySelector('.stats-toolbar.chart-card');
+  if (tb) tb.classList.toggle('stats-scope-table-mode', table);
+  var preset = document.getElementById('statsPreset');
+  var btn = document.getElementById('statsRefreshBtn');
+  if (preset) preset.disabled = table;
+  if (btn) btn.disabled = table;
+  if (table) {
+    var fromEl = document.getElementById('statsYearFrom');
+    var toEl = document.getElementById('statsYearTo');
+    if (fromEl) fromEl.disabled = true;
+    if (toEl) toEl.disabled = true;
+  } else {
+    toggleStatsCustomYears();
+  }
+}
+
+function indexBucketForPub(p) {
+  var db = String(p.db || '').toLowerCase();
+  if (db.indexOf('scopus') !== -1) return 'scopus';
+  if (db.indexOf('web of science') !== -1 || db.indexOf('wos') !== -1) return 'wos';
+  if (db.indexOf('pubmed') !== -1) return 'pubmed';
+  if (db.indexOf('doaj') !== -1) return 'doaj';
+  if (String(p.rowType || '') === 'conference') return 'conference';
+  return 'other';
+}
+
+function parsePubImpactFactor(p) {
+  var s = String(p.IF != null ? p.IF : '').trim();
+  if (!s || s === '—') return null;
+  var n = Number(s.replace(/,/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
+function buildDashboardDataFromVisibleIndices(indices) {
+  var totals = {
+    total: 0,
+    q1: 0,
+    q2: 0,
+    q3: 0,
+    q4: 0,
+    conferences: 0,
+    journals: 0,
+    book_chapters: 0,
+    preprints: 0,
+    patents: 0,
+    patents_pending: 0,
+    total_citations: 0,
+    avg_if_q1: null,
+    avg_if_q2: null
+  };
+  var ix = { scopus: 0, wos: 0, pubmed: 0, doaj: 0, conference: 0, other: 0 };
+  var byYearMap = {};
+  var ifAccQ1 = 0;
+  var ifAccQ2 = 0;
+  var nIfQ1 = 0;
+  var nIfQ2 = 0;
+
+  (indices || []).forEach(function (i) {
+    var raw = pubs[i];
+    if (!raw) return;
+    var p = ensurePubShape(raw);
+    totals.total++;
+    var rt = String(p.rowType || 'journal');
+    if (rt === 'journal') totals.journals++;
+    else if (rt === 'conference') totals.conferences++;
+    else if (rt === 'book') totals.book_chapters++;
+    else if (rt === 'patent') {
+      totals.patents++;
+      var st0 = String(p.status || '');
+      if (st0 === 'under_review' || st0 === 'under-review') totals.patents_pending++;
+    } else if (rt === 'preprint') totals.preprints++;
+
+    var q = String(p.q || '').trim().toUpperCase();
+    if (q === 'Q1') {
+      totals.q1++;
+      var if1 = parsePubImpactFactor(p);
+      if (if1 != null) {
+        ifAccQ1 += if1;
+        nIfQ1++;
+      }
+    } else if (q === 'Q2') {
+      totals.q2++;
+      var if2 = parsePubImpactFactor(p);
+      if (if2 != null) {
+        ifAccQ2 += if2;
+        nIfQ2++;
+      }
+    } else if (q === 'Q3') totals.q3++;
+    else if (q === 'Q4') totals.q4++;
+
+    totals.total_citations += statsNum(p.cite);
+
+    var bucket = indexBucketForPub(p);
+    if (Object.prototype.hasOwnProperty.call(ix, bucket)) ix[bucket]++;
+    else ix.other++;
+
+    var yStr = String(p.year != null ? p.year : '').trim();
+    var yNum = parseInt(yStr, 10);
+    if (!Number.isNaN(yNum)) {
+      byYearMap[yNum] = (byYearMap[yNum] || 0) + 1;
+    }
+  });
+
+  totals.avg_if_q1 = nIfQ1 ? ifAccQ1 / nIfQ1 : null;
+  totals.avg_if_q2 = nIfQ2 ? ifAccQ2 / nIfQ2 : null;
+
+  var byYear = Object.keys(byYearMap)
+    .map(Number)
+    .sort(function (a, b) { return a - b; })
+    .map(function (y) {
+      return { pub_year: y, count: byYearMap[y], citations: 0 };
+    });
+
+  var metaBase = __pubStatsMeta || { yearMin: null, yearMax: null };
+  var ys = Object.keys(byYearMap).map(Number);
+  var meta = {
+    yearMin: ys.length ? Math.min.apply(null, ys) : metaBase.yearMin,
+    yearMax: ys.length ? Math.max.apply(null, ys) : metaBase.yearMax
+  };
+
+  var n = indices ? indices.length : 0;
+  return {
+    meta: meta,
+    filter: null,
+    totals: totals,
+    byYear: byYear,
+    indexExclusive: ix,
+    _filterLabel: n ? ('Bảng đang lọc (' + n + ')') : 'Bảng đang lọc (0)'
+  };
+}
+
+function refreshDashboardIfTableScope() {
+  if (typeof PUB_INSTITUTE_OK !== 'undefined' && !PUB_INSTITUTE_OK) return;
+  if (getPublicationStatsScope() !== 'table') return;
+  clearTimeout(__tableStatsRefreshTimer);
+  __tableStatsRefreshTimer = setTimeout(function () {
+    loadPublicationStats();
+  }, 140);
+}
+
 function barRowHtml(label, count, max, className, barStyle) {
   var pct = max > 0 ? Math.max(6, Math.round((count / max) * 100)) : 0;
   var extra = barStyle ? barStyle : '';
@@ -2586,6 +3461,12 @@ function applySidebarAndHeaderStats(d) {
 }
 
 function wirePublicationStatsUI() {
+  document.querySelectorAll('input[name="statsScope"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      toggleStatsScopeUI();
+      loadPublicationStats();
+    });
+  });
   var preset = document.getElementById('statsPreset');
   if (preset) {
     preset.addEventListener('change', function () {
@@ -2609,11 +3490,22 @@ function wirePublicationStatsUI() {
   var btn = document.getElementById('statsRefreshBtn');
   if (btn) btn.addEventListener('click', function () { loadPublicationStats(); });
   toggleClusterControl();
+  toggleStatsScopeUI();
 }
 
 async function loadPublicationStats() {
   if (typeof PUB_INSTITUTE_OK !== 'undefined' && !PUB_INSTITUTE_OK) return;
   var hint = document.getElementById('statsHint');
+  if (getPublicationStatsScope() === 'table') {
+    toggleStatsScopeUI();
+    var idxs = getVisiblePubIndices();
+    var dTable = buildDashboardDataFromVisibleIndices(idxs);
+    applyPublicationDashboard(dTable);
+    if (hint) {
+      hint.textContent = 'Thẻ số và biểu đồ đang tính theo các dòng đang hiển thị (ô tìm + bộ lọc bảng). Header & sidebar vẫn là toàn bộ CSDL. Đổi sang «Toàn Viện» để lọc theo khoảng năm xuất bản trên server.';
+    }
+    return;
+  }
   try {
     var q = buildPublicationStatsQuery();
     var url = '/publications/stats' + (q.qs ? ('?' + q.qs) : '');
@@ -2623,11 +3515,12 @@ async function loadPublicationStats() {
     __pubStatsMeta = d.meta || __pubStatsMeta;
     fillStatsYearSelects(__pubStatsMeta);
     toggleStatsCustomYears();
+    toggleStatsScopeUI();
     d._filterLabel = q.label;
     applyPublicationDashboard(d);
     applySidebarAndHeaderStats(d);
     if (hint) {
-      hint.textContent = 'Header & sidebar: toàn bộ công bố trong CSDL. Thẻ số và biểu đồ: theo «Khoảng thời gian» phía trên (pub_year).';
+      hint.textContent = 'Header & sidebar: toàn bộ công bố trong CSDL. Thẻ số và biểu đồ: theo «Khoảng thời gian» phía trên (pub_year). Chọn «Theo bảng đang lọc» để đồng bộ với danh sách phía dưới.';
     }
   } catch (e) {
     if (hint) hint.textContent = 'Không tải được thống kê từ API: ' + (e.message || e) + ' (kiểm tra server và đường dẫn /api/publications).';
@@ -3025,9 +3918,36 @@ function citeCellHtmlPub(p) {
   return '<div class="cite-num">' + escHtmlPub(ifv) + '</div><div class="cite-if">' + escHtmlPub(sub) + '</div>';
 }
 
+/** Badge nguồn nhập (orcid / NULL không hiện). */
+function importSourceBadgeHtml(p) {
+  const src = p.import_source != null ? String(p.import_source).trim() : '';
+  if (src === 'google_scholar') {
+    return '<span class="pub-import-badge scholar" title="Nguồn: Google Scholar (BibTeX)">Scholar</span>';
+  }
+  if (src === 'bibtex') {
+    return '<span class="pub-import-badge bibtex" title="Nguồn: BibTeX">BibTeX</span>';
+  }
+  if (src === 'manual') {
+    return '<span class="pub-import-badge manual" title="Nguồn nhập tay">Manual</span>';
+  }
+  return '';
+}
+
 function renderPubTable() {
   const tb = document.getElementById('pubTbody');
   if (!tb) return;
+  if (!pubs.length) {
+    tb.innerHTML = ''
+      + '<tr class="pub-empty-row">'
+      + '<td colspan="9" class="pub-empty-cell">'
+      + '<div class="pub-empty-inner" role="status">'
+      + '<div class="pub-empty-icon" aria-hidden="true">📚</div>'
+      + '<p class="pub-empty-title">Chưa có công bố trong danh sách</p>'
+      + '<p class="pub-empty-hint">Đồng bộ từ máy chủ, dùng <strong>Thêm công bố</strong> hoặc <strong>Import BibTeX</strong> để bắt đầu. Dữ liệu sau khi lọc sẽ hiển thị tại đây.</p>'
+      + '</div></td></tr>';
+    updatePubTableFooterLine(0);
+    return;
+  }
   tb.innerHTML = pubs.map(function (p, i) {
     const p2 = ensurePubShape(p);
     const year = String(p2.year || '').trim();
@@ -3037,7 +3957,7 @@ function renderPubTable() {
     return ''
       + '<tr class="pub-row" data-pub-index="' + i + '" data-year="' + escHtmlPub(year) + '" data-q="' + escHtmlPub(qAttr) + '" data-type="' + escHtmlPub(p2.rowType) + '" data-status="' + escHtmlPub(p2.status) + '" onclick="openDetailModal(' + i + ')">'
       + '<td class="pub-check-col" onclick="event.stopPropagation()"><input type="checkbox" class="pub-row-check"></td>'
-      + '<td class="pub-title-cell"><div class="pub-title">' + escHtmlPub(p2.title) + '</div><div class="pub-authors">' + escHtmlPub(p2.authors) + chip + '</div></td>'
+      + '<td class="pub-title-cell"><div class="pub-title-row"><div class="pub-title">' + escHtmlPub(p2.title) + '</div>' + importSourceBadgeHtml(p2) + '</div><div class="pub-authors">' + escHtmlPub(p2.authors) + chip + '</div></td>'
       + '<td><div style="font-weight:500;font-size:12.5px">' + escHtmlPub(p2.journal) + '</div><div style="font-size:11px;color:var(--text-3);font-family:var(--mono)">ISSN: ' + escHtmlPub(p2.issn) + '</div></td>'
       + '<td>' + dbStringToIdxHtml(p2.db) + '</td>'
       + '<td>' + phanHangCellHtmlPub(p2) + '</td>'
@@ -3510,6 +4430,7 @@ function filterTable() {
   document.getElementById('rowCount').textContent = count;
   pubSyncSelectAllAfterFilter();
   updatePubTableFooterLine(count);
+  refreshDashboardIfTableScope();
 }
 
 function updatePubTableFooterLine(visibleAfterFilter) {
@@ -4063,6 +4984,145 @@ async function submitSjrCsvImport(ev) {
       btn.textContent = '📥 Import vào CSDL';
     }
   }
+}
+
+// ── Import BibTeX (POST /api/publications/import-bibtex) ──
+var __bibtexImportTab = 'paste';
+function setBibtexImportTab(which) {
+  __bibtexImportTab = which === 'file' ? 'file' : 'paste';
+  var p = document.getElementById('bibtexPanelPaste');
+  var f = document.getElementById('bibtexPanelFile');
+  var tp = document.getElementById('bibtexTabPaste');
+  var tf = document.getElementById('bibtexTabFile');
+  if (!p || !f || !tp || !tf) return;
+  if (__bibtexImportTab === 'paste') {
+    p.classList.add('is-active');
+    f.classList.remove('is-active');
+    tp.classList.add('is-active');
+    tf.classList.remove('is-active');
+  } else {
+    f.classList.add('is-active');
+    p.classList.remove('is-active');
+    tf.classList.add('is-active');
+    tp.classList.remove('is-active');
+  }
+}
+
+function openBibtexImportModal() {
+  if (!isPubAdmin()) {
+    showNotif('Chỉ Admin mới import BibTeX.');
+    return;
+  }
+  if (!localStorage.getItem('token')) {
+    showNotif('Vui lòng đăng nhập.');
+    return;
+  }
+  var ov = document.getElementById('bibtexImportOverlay');
+  var res = document.getElementById('bibtexImportResult');
+  if (res) {
+    res.textContent = '';
+    res.classList.remove('is-visible');
+  }
+  if (ov) {
+    ov.classList.add('is-open');
+    ov.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function closeBibtexImportModal() {
+  var ov = document.getElementById('bibtexImportOverlay');
+  if (ov) {
+    ov.classList.remove('is-open');
+    ov.setAttribute('aria-hidden', 'true');
+  }
+  hydratePubsFromServerAndRender().catch(function () {});
+}
+
+async function submitBibtexImport() {
+  if (!isPubAdmin()) return;
+  var token = localStorage.getItem('token');
+  if (!token) {
+    showNotif('Vui lòng đăng nhập.');
+    return;
+  }
+  var btn = document.getElementById('bibtexImportSubmitBtn');
+  var resEl = document.getElementById('bibtexImportResult');
+  if (btn) btn.disabled = true;
+  try {
+      var data;
+      if (__bibtexImportTab === 'file') {
+        var fileEl = document.getElementById('bibtexImportFile');
+        if (!fileEl || !fileEl.files || !fileEl.files[0]) {
+          showNotif('Chọn file .bib hoặc chuyển sang tab dán nội dung.');
+          return;
+        }
+        var fd = new FormData();
+        fd.append('bibfile', fileEl.files[0]);
+        var srcSel = document.getElementById('bibtexImportSourceSel');
+        if (srcSel && srcSel.value) fd.append('import_source', srcSel.value);
+        var res = await fetch(API_BASE + '/publications/import-bibtex', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token },
+          body: fd,
+          credentials: 'include'
+        });
+        data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          throw new Error(data.message || data.error || ('HTTP ' + res.status));
+        }
+      } else {
+        var ta = document.getElementById('bibtexImportTextarea');
+        var raw = (ta && ta.value) || '';
+        if (!String(raw).trim()) {
+          showNotif('Dán nội dung BibTeX vào ô.');
+          return;
+        }
+        var srcSel2 = document.getElementById('bibtexImportSourceSel');
+        var payload = { bibtex: raw };
+        if (srcSel2 && srcSel2.value) payload.import_source = srcSel2.value;
+        data = await apiFetch('/publications/import-bibtex', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+      }
+      var imp = Number(data.imported) || 0;
+      var sk = Number(data.skipped) || 0;
+      var errCount = (data.errors && data.errors.length) ? data.errors.length : 0;
+      var msg = '✅ Đã nhập ' + imp + ' bài.';
+      if (sk > 0) msg += ' ↩ Bỏ qua ' + sk + ' bài trùng.';
+      if (errCount > 0) msg += ' ⚠️ ' + errCount + ' bài lỗi.';
+      showNotif(msg);
+      if (resEl) {
+        var lines = [msg];
+        if (data.skippedList && data.skippedList.length) {
+          lines.push('');
+          lines.push('— Bỏ qua:');
+          for (var i = 0; i < data.skippedList.length; i++) {
+            var s = data.skippedList[i];
+            lines.push('• ' + (s.title || '') + ' — ' + (s.reason || ''));
+          }
+        }
+        if (data.errors && data.errors.length) {
+          lines.push('');
+          lines.push('— Lỗi:');
+          var maxErr = 20;
+          for (var j = 0; j < data.errors.length && j < maxErr; j++) {
+            var er = data.errors[j];
+            lines.push('• ' + (er.title || '') + ' — ' + (er.reason || ''));
+          }
+          if (data.errors.length > maxErr) {
+            lines.push('... và ' + (data.errors.length - maxErr) + ' lỗi khác');
+          }
+        }
+        resEl.textContent = lines.join('\n');
+        resEl.classList.add('is-visible');
+      }
+      await hydratePubsFromServerAndRender();
+    } catch (e) {
+      showNotif('❌ ' + (e.message || String(e)));
+    } finally {
+      if (btn) btn.disabled = false;
+    }
 }
 
 function renderOrcidResearchers() {

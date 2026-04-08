@@ -103,6 +103,33 @@ textarea{resize:vertical;min-height:70px}
 .actions-col{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}
 .dash-two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
 @media (max-width:900px){.dash-two-col{grid-template-columns:1fr}}
+#panel-thoa-thuan .tt-term-mode-section{margin-bottom:12px}
+#panel-thoa-thuan .tt-term-mode-section-label{display:block;font-size:11px;font-weight:700;color:var(--ink-soft);margin-bottom:8px;text-transform:none;letter-spacing:0}
+#panel-thoa-thuan .tt-term-mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:900px){#panel-thoa-thuan .tt-term-mode-switch{grid-template-columns:1fr}}
+#panel-thoa-thuan .tt-term-mode-btn{
+  display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:6px;
+  padding:12px 14px;border:2px solid var(--border-field);border-radius:10px;background:#fff;cursor:pointer;
+  font-family:inherit;font-size:13px;color:var(--ink);line-height:1.4;width:100%;
+  transition:border-color .2s ease,box-shadow .2s ease,background .2s ease;
+}
+#panel-thoa-thuan .tt-term-mode-btn:hover{border-color:#2dd4bf;background:#f0fdfa}
+#panel-thoa-thuan .tt-term-mode-btn:focus{outline:none;border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.22)}
+#panel-thoa-thuan .tt-term-mode-btn--active{
+  border-color:#0d9488;background:linear-gradient(180deg,#ecfdf5 0%,#f0fdfa 100%);
+  box-shadow:0 3px 12px rgba(13,148,136,.1);
+}
+#panel-thoa-thuan .tt-term-mode-title{font-weight:800;color:#0f766e;font-size:14px}
+#panel-thoa-thuan .tt-term-mode-desc{font-size:12px;color:var(--ink-soft);font-weight:500}
+#panel-thoa-thuan .tt-term-panel.hidden{display:none!important}
+#panel-thoa-thuan .tt-open-term-hint{
+  margin:0;padding:12px 14px;border-radius:10px;background:#f0fdfa;border:1px solid #99f6e4;
+  font-size:13px;color:var(--ink-soft);line-height:1.45;
+}
+#panel-thoa-thuan .tt-expiry-preview{
+  margin:0 0 12px;padding:12px 14px;border-radius:10px;background:#f8fafc;border:1px solid var(--border-subtle);
+  font-size:14px;color:var(--ink-soft);line-height:1.45;
+}
 </style>
 </head>
 <body>
@@ -357,9 +384,35 @@ textarea{resize:vertical;min-height:70px}
       </div>
       <div class="form-row cols-3">
         <div class="form-group"><label>Quốc gia</label><input id="tt-quoc-gia" placeholder="VD: Nhật Bản"></div>
-        <div class="form-group"><label>Hết hạn</label><input id="tt-het-han" type="date"></div>
-        <div class="form-group"><label>Trạng thái</label>
-          <select id="tt-trang-thai"><option value="hieu_luc">Hiệu lực</option><option value="sap_het_han">Sắp hết hạn</option><option value="het_han">Hết hạn</option></select></div>
+        <div class="form-group"><label>Ngày ký *</label><input id="tt-ngay-ky" type="date"></div>
+      </div>
+      <div class="form-group tt-term-mode-section">
+        <span class="tt-term-mode-section-label">Kiểu thời hạn hiệu lực *</span>
+        <div class="tt-term-mode-switch" role="radiogroup" aria-label="Kiểu thời hạn hiệu lực">
+          <button type="button" class="tt-term-mode-btn tt-term-mode-btn--active" id="tt-mode-btn-fixed" role="radio" aria-checked="true" onclick="setAdminThoaThuanTermMode(false)">
+            <span class="tt-term-mode-title">Có thời hạn cố định (theo năm)</span>
+            <span class="tt-term-mode-desc">Nhập số năm kể từ ngày ký; hệ thống tự tính ngày hết hiệu lực.</span>
+          </button>
+          <button type="button" class="tt-term-mode-btn" id="tt-mode-btn-open" role="radio" aria-checked="false" onclick="setAdminThoaThuanTermMode(true)">
+            <span class="tt-term-mode-title">Không có thời hạn cố định</span>
+            <span class="tt-term-mode-desc">Tự động gia hạn; kết thúc khi có văn bản chấm dứt (ghi nhận trong chi tiết thỏa thuận).</span>
+          </button>
+        </div>
+        <input type="checkbox" id="tt-no-fixed-term" hidden aria-hidden="true" tabindex="-1">
+      </div>
+      <div id="tt-panel-term-fixed" class="tt-term-panel">
+        <div class="form-row cols-3">
+          <div class="form-group"><label><span id="tt-thoi-han-label">Thời hạn hiệu lực (năm) *</span></label><input id="tt-thoi-han-nam" type="number" min="1" max="99" step="1" placeholder="VD: 5"></div>
+        </div>
+        <p id="tt-het-han-preview" class="tt-expiry-preview">—</p>
+      </div>
+      <div id="tt-panel-term-open" class="tt-term-panel tt-term-panel--open hidden">
+        <p class="tt-open-term-hint">Thỏa thuận không có ngày hết hiệu lực cố định. Ghi nhận kết thúc trong module Hợp tác QT (chi tiết thỏa thuận) khi có văn bản chấm dứt.</p>
+      </div>
+      <div class="form-group" style="margin-bottom:12px"><label>Ghi chú (P. KHCN)</label><textarea id="tt-staff-notes" rows="2" placeholder="Ví dụ: Tự động gia hạn hàng năm nếu không có văn bản khác" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px"></textarea></div>
+      <div class="form-row cols-3">
+        <div class="form-group"><label>Trạng thái (khi thêm: hệ thống tự tính theo ngày hết hiệu lực)</label>
+          <select id="tt-trang-thai" disabled><option value="hieu_luc">Hiệu lực</option><option value="sap_het_han">Sắp hết hạn</option><option value="het_han">Hết hạn</option></select></div>
       </div>
       <button class="btn btn-primary" onclick="addThoaThuan()">➕ Thêm thỏa thuận</button>
     </div>
@@ -433,6 +486,20 @@ textarea{resize:vertical;min-height:70px}
     </div>
     <div class="modal-body" id="edit-modal-body"></div>
     <div class="modal-footer" id="edit-modal-footer"></div>
+  </div>
+</div>
+
+<!-- MODAL SỬA THỎA THUẬN -->
+<div class="modal-overlay hidden" id="thoa-thuan-edit-modal" onclick="if(event.target===this)closeThoaThuanAdminModal()">
+  <div class="modal" style="max-width:640px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="thoa-thuan-edit-title">Sửa thỏa thuận</h3>
+      <button type="button" class="modal-close" onclick="closeThoaThuanAdminModal()">✕</button>
+    </div>
+    <div class="modal-body" id="thoa-thuan-edit-body"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline btn-sm" onclick="closeThoaThuanAdminModal()">Đóng</button>
+    </div>
   </div>
 </div>
 
@@ -556,6 +623,58 @@ function fmtDate(s){if(!s)return'—';var d=String(s).slice(0,10).split('-');ret
 function esc(s){return(s||'—').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escapeJsSq(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' ');}
 function v(id){var el=document.getElementById(id);return el?(el.value||'').trim():'';}
+function setv(id,val){var el=document.getElementById(id);if(el)el.value=val!=null?val:'';}
+
+function computeThoaThuanExpiryISO(){
+  var nk=v('tt-ngay-ky');
+  var thn=parseInt(String(v('tt-thoi-han-nam')||'').trim(),10);
+  if(!nk||!Number.isFinite(thn)||thn<1||thn>99)return'';
+  var p=nk.split('-');
+  if(p.length!==3)return'';
+  var y=parseInt(p[0],10),mo=parseInt(p[1],10),d=parseInt(p[2],10);
+  var dt=new Date(y,mo-1,d);
+  if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d)return'';
+  dt.setFullYear(dt.getFullYear()+thn);
+  var mm=String(dt.getMonth()+1).padStart(2,'0');
+  var dd=String(dt.getDate()).padStart(2,'0');
+  return dt.getFullYear()+'-'+mm+'-'+dd;
+}
+function setAdminThoaThuanTermMode(noFixed){
+  var cb=document.getElementById('tt-no-fixed-term');
+  if(cb) cb.checked=!!noFixed;
+  syncAdminThoaThuanTermPanels();
+}
+function syncAdminThoaThuanTermPanels(){
+  var cb=document.getElementById('tt-no-fixed-term');
+  var on=cb&&cb.checked;
+  var pFix=document.getElementById('tt-panel-term-fixed');
+  var pOpen=document.getElementById('tt-panel-term-open');
+  if(pFix) pFix.classList.toggle('hidden',!!on);
+  if(pOpen) pOpen.classList.toggle('hidden',!on);
+  var bFix=document.getElementById('tt-mode-btn-fixed');
+  var bOpen=document.getElementById('tt-mode-btn-open');
+  if(bFix){ bFix.classList.toggle('tt-term-mode-btn--active',!on); bFix.setAttribute('aria-checked',on?'false':'true'); }
+  if(bOpen){ bOpen.classList.toggle('tt-term-mode-btn--active',!!on); bOpen.setAttribute('aria-checked',on?'true':'false'); }
+  var thn=document.getElementById('tt-thoi-han-nam');
+  var lbl=document.getElementById('tt-thoi-han-label');
+  if(thn){ thn.disabled=!!on; if(on) thn.value=''; }
+  if(lbl) lbl.textContent=on?'Thời hạn hiệu lực (năm) — không áp dụng':'Thời hạn hiệu lực (năm) *';
+  refreshThoaThuanExpiryPreview();
+}
+function refreshThoaThuanExpiryPreview(){
+  var el=document.getElementById('tt-het-han-preview');
+  var noFixed=document.getElementById('tt-no-fixed-term')&&document.getElementById('tt-no-fixed-term').checked;
+  if(noFixed){
+    if(el)el.textContent='Không có ngày hết hiệu lực cố định — ghi nhận kết thúc trong module Hợp tác QT (chi tiết thỏa thuận) khi có văn bản chấm dứt.';
+    return;
+  }
+  var iso=computeThoaThuanExpiryISO();
+  if(el){
+    el.textContent=iso
+      ?('Hết hiệu lực (tự tính): '+fmtDate(iso)+' — cùng ngày/tháng sau '+String(v('tt-thoi-han-nam')).trim()+' năm kể từ ngày ký')
+      :'Nhập ngày ký và số năm để xem ngày hết hiệu lực.';
+  }
+}
 function showMsg(id,txt,isErr){var el=document.getElementById(id);if(!el)return;el.textContent=txt;el.className='alert '+(isErr?'error':'success');}
 function toast(msg,type){
   var c=document.getElementById('toast-c');
@@ -1086,20 +1205,57 @@ async function loadThoaThuan(){
   if(!list.length){document.getElementById('tt-table').innerHTML='<div class="empty-state"><span class="icon">📑</span>Chưa có thỏa thuận nào</div>';return;}
   document.getElementById('tt-table').innerHTML='<table><thead><tr><th>Tên</th><th>Đối tác</th><th>Loại</th><th>Quốc gia</th><th>Hết hạn</th><th>Trạng thái</th><th></th></tr></thead><tbody>'
     +list.map(function(t){
+      var hh=(t.no_fixed_term&&!t.het_han&&!t.terminated_at)?'<span style="color:#0f766e;font-size:12px">Không cố định</span>':fmtDate(t.het_han);
       return '<tr><td><b>'+esc(t.ten)+'</b></td><td>'+esc(t.doi_tac)+'</td>'
         +'<td><span class="badge badge-blue">'+t.loai+'</span></td>'
         +'<td>'+esc(t.quoc_gia||'—')+'</td>'
-        +'<td style="font-size:12px">'+fmtDate(t.het_han)+'</td>'
+        +'<td style="font-size:12px">'+hh+'</td>'
         +'<td><span class="badge '+(ttClass[t.trang_thai]||'badge-gray')+'">'+(ttLabel[t.trang_thai]||t.trang_thai)+'</span></td>'
-        +'<td><button class="btn btn-red btn-sm" onclick="deleteTT('+t.id+',\''+esc(t.ten)+'\')">🗑️</button></td></tr>';
+        +'<td><button type="button" class="btn btn-outline btn-sm" onclick="openAdminThoaThuanEdit('+t.id+')">✏️ Sửa</button> '
+        +'<button class="btn btn-red btn-sm" onclick="deleteTT('+t.id+',\''+esc(t.ten)+'\')">🗑️</button></td></tr>';
     }).join('')+'</tbody></table>';
 }
 
 async function addThoaThuan(){
   var ten=v('tt-ten'),doiTac=v('tt-doi-tac'),loai=v('tt-loai');
   if(!ten||!doiTac||!loai){showMsg('tt-msg','Thiếu thông tin bắt buộc.',true);document.getElementById('tt-msg').className='alert error';return;}
-  var r=await apiPost('/api/cooperation/thoa-thuan',{ten,doi_tac:doiTac,loai,quoc_gia:v('tt-quoc-gia'),het_han:v('tt-het-han'),trang_thai:v('tt-trang-thai')});
-  if(r&&r.ok){toast('Đã thêm thỏa thuận!','success');loadThoaThuan();}
+  if(!v('tt-ngay-ky')){
+    showMsg('tt-msg','Vui lòng nhập Ngày ký.',true);
+    document.getElementById('tt-msg').className='alert error';
+    return;
+  }
+  var noFixed=document.getElementById('tt-no-fixed-term')&&document.getElementById('tt-no-fixed-term').checked;
+  var payload={ten:ten,doi_tac:doiTac,loai:loai,quoc_gia:v('tt-quoc-gia'),ngay_ky:v('tt-ngay-ky'),no_fixed_term:noFixed?1:0,staff_notes:v('tt-staff-notes')||''};
+  if(!noFixed){
+    if(String(v('tt-thoi-han-nam')||'').trim()===''){
+      showMsg('tt-msg','Vui lòng nhập Thời hạn hiệu lực (năm) hoặc chọn Không có thời hạn cố định.',true);
+      document.getElementById('tt-msg').className='alert error';
+      return;
+    }
+    var years=parseInt(String(v('tt-thoi-han-nam')).trim(),10);
+    if(!Number.isFinite(years)||years<1||years>99){
+      showMsg('tt-msg','Thời hạn hiệu lực phải là số nguyên từ 1 đến 99 (năm).',true);
+      document.getElementById('tt-msg').className='alert error';
+      return;
+    }
+    if(!computeThoaThuanExpiryISO()){
+      showMsg('tt-msg','Ngày ký không hợp lệ.',true);
+      document.getElementById('tt-msg').className='alert error';
+      return;
+    }
+    payload.thoi_han_nam=years;
+  }
+  var r=await apiPost('/api/cooperation/thoa-thuan',payload);
+  if(r&&r.ok){
+    toast('Đã thêm thỏa thuận!','success');
+    loadThoaThuan();
+    setv('tt-ngay-ky','');
+    setv('tt-thoi-han-nam','');
+    setv('tt-staff-notes','');
+    var nfc=document.getElementById('tt-no-fixed-term');
+    if(nfc){ nfc.checked=false; syncAdminThoaThuanTermPanels(); }
+    else refreshThoaThuanExpiryPreview();
+  }
   else{showMsg('tt-msg',(r&&r.data&&r.data.message)||'Lỗi.','error');document.getElementById('tt-msg').className='alert error';}
 }
 
@@ -1108,6 +1264,129 @@ async function deleteTT(id,ten){
   var r=await apiDel('/api/admin/cooperation/thoa-thuan/'+id);
   if(r&&r.ok){toast('Đã xóa','success');loadThoaThuan();}
   else toast('Lỗi xóa','error');
+}
+
+var TT_SCAN_EDIT_MAX = 20 * 1024 * 1024;
+
+function ttInputEsc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+function toggleAdminThoaThuanEditNoFixed(){
+  var cb=document.getElementById('tt-edit-no-fixed');
+  var inp=document.getElementById('tt-edit-het-han');
+  var lbl=document.getElementById('tt-edit-het-han-label');
+  if(!cb||!inp)return;
+  if(cb.checked){inp.disabled=true;if(lbl)lbl.textContent='Ngày hết hiệu lực — không áp dụng';}
+  else{inp.disabled=false;if(lbl)lbl.textContent='Ngày hết hiệu lực (YYYY-MM-DD) *';}
+}
+
+function buildAdminThoaThuanEditFormHtml(it){
+  var terminated=!!(it.terminated_at&&String(it.terminated_at).trim());
+  window._thoaThuanEditTerminated=terminated;
+  var noFixed=!!(it.no_fixed_term===1||it.no_fixed_term==='1');
+  var hh=String(it.het_han||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(hh))hh='';
+  var loai=String(it.loai||'MOU');
+  var ltd=String(it.loai_doi_tac||'').trim();
+  var tr=String(it.trang_thai||'hieu_luc');
+  var loaiOpts=['MOU','MOA','HD_KHCN','LOI'].map(function(o){
+    return '<option value="'+o+'"'+(o===loai?' selected':'')+'>'+o+'</option>';
+  }).join('');
+  var ltdOpts=[['','—'],['quoc_te','Quốc tế'],['trong_nuoc','Trong nước'],['doanh_nghiep','Doanh nghiệp'],['dia_phuong','Địa phương']].map(function(p){
+    return '<option value="'+p[0]+'"'+(ltd===p[0]?' selected':'')+'>'+p[1]+'</option>';
+  }).join('');
+  var trOpts=[['hieu_luc','Hiệu lực'],['sap_het_han','Sắp hết hạn'],['het_han','Hết hạn']].map(function(p){
+    return '<option value="'+p[0]+'"'+(tr===p[0]?' selected':'')+'>'+p[1]+'</option>';
+  }).join('');
+  var termBlock='';
+  if(!terminated){
+    termBlock='<label class="tt-check-label" style="display:flex;align-items:flex-start;gap:8px;grid-column:1/-1;margin-top:4px;cursor:pointer;font-weight:600;color:#0f766e"><input type="checkbox" id="tt-edit-no-fixed"'+(noFixed?' checked':'')+' onchange="toggleAdminThoaThuanEditNoFixed()"> Không có thời hạn cố định</label>'
+      +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" id="tt-edit-het-han-label">Ngày hết hiệu lực (YYYY-MM-DD) *</label>'
+      +'<input type="date" id="tt-edit-het-han" value="'+ttInputEsc(hh)+'" style="width:100%;max-width:220px;padding:8px 10px;border:2px solid var(--border);border-radius:8px"'+(noFixed?' disabled':'')+'></div>';
+  }else{
+    termBlock='<p style="grid-column:1/-1;font-size:12px;color:var(--ink-muted);margin:0">Đã ghi nhận kết thúc — không đổi loại thời hạn hoặc ngày hết hạn tại đây.</p>';
+  }
+  return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Tên *</label><input id="tt-edit-ten" type="text" value="'+ttInputEsc(it.ten)+'" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px"></div>'
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Đối tác *</label><input id="tt-edit-doi-tac" type="text" value="'+ttInputEsc(it.doi_tac)+'" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px"></div>'
+    +'<div><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Loại *</label><select id="tt-edit-loai" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px">'+loaiOpts+'</select></div>'
+    +'<div><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Quốc gia</label><input id="tt-edit-quoc-gia" type="text" value="'+ttInputEsc(it.quoc_gia)+'" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px"></div>'
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Loại đối tác</label><select id="tt-edit-loai-doi-tac" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px">'+ltdOpts+'</select></div>'
+    +termBlock
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Trạng thái</label><select id="tt-edit-trang-thai" style="width:100%;max-width:280px;padding:8px 10px;border:2px solid var(--border);border-radius:8px">'+trOpts+'</select></div>'
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Ghi chú (P. KHCN)</label><textarea id="tt-edit-staff-notes" rows="2" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;resize:vertical">'+ttInputEsc(it.staff_notes)+'</textarea></div>'
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Thay bản scan (tuỳ chọn)</label><input type="file" id="tt-edit-scan-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"></div>'
+    +'</div>'
+    +'<div style="margin-top:14px"><button type="button" class="btn btn-primary btn-sm" id="tt-btn-edit-save" onclick="submitAdminThoaThuanEditSave()">Lưu thay đổi</button></div>';
+}
+
+function closeThoaThuanAdminModal(){
+  document.getElementById('thoa-thuan-edit-modal').classList.add('hidden');
+}
+
+async function openAdminThoaThuanEdit(id){
+  document.getElementById('thoa-thuan-edit-modal').classList.remove('hidden');
+  document.getElementById('thoa-thuan-edit-body').innerHTML='<div class="loading"><div class="spin"></div>Đang tải...</div>';
+  var tok=getToken();
+  try{
+    var r=await fetch(API+'/api/cooperation/thoa-thuan/'+id,{headers:tok?{Authorization:'Bearer '+tok}:{}});
+    var data=await r.json().catch(function(){return{};});
+    if(!r.ok||!data.item){
+      document.getElementById('thoa-thuan-edit-body').innerHTML='<div class="empty-state">Không tải được chi tiết.</div>';
+      return;
+    }
+    window._adminThoaThuanEditId=id;
+    document.getElementById('thoa-thuan-edit-title').textContent='Sửa thỏa thuận — '+(data.item.ten||('#'+id));
+    document.getElementById('thoa-thuan-edit-body').innerHTML=buildAdminThoaThuanEditFormHtml(data.item);
+  }catch(e){
+    document.getElementById('thoa-thuan-edit-body').innerHTML='<div class="empty-state">Lỗi mạng.</div>';
+  }
+}
+
+async function submitAdminThoaThuanEditSave(){
+  var id=window._adminThoaThuanEditId;
+  if(!id)return;
+  var ten=v('tt-edit-ten'),doiTac=v('tt-edit-doi-tac'),loai=v('tt-edit-loai');
+  if(!ten||!doiTac||!loai){toast('Nhập đủ tên, đối tác và loại.','error');return;}
+  var body={ten:ten,doi_tac:doiTac,loai:loai,quoc_gia:v('tt-edit-quoc-gia')||null,staff_notes:v('tt-edit-staff-notes')||null,trang_thai:v('tt-edit-trang-thai')||undefined};
+  var ltdEl=document.getElementById('tt-edit-loai-doi-tac');
+  if(ltdEl)body.loai_doi_tac=(ltdEl.value||'').trim()||null;
+  var terminated=window._thoaThuanEditTerminated;
+  if(!terminated){
+    var nf=document.getElementById('tt-edit-no-fixed')&&document.getElementById('tt-edit-no-fixed').checked;
+    body.no_fixed_term=nf?1:0;
+    if(!nf){
+      var hh=v('tt-edit-het-han');
+      if(!hh||!/^\d{4}-\d{2}-\d{2}$/.test(hh)){toast('Nhập ngày hết hiệu lực hoặc chọn không thời hạn cố định.','error');return;}
+      body.het_han=hh;
+    }
+  }
+  var btn=document.getElementById('tt-btn-edit-save');
+  var prev=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='Đang lưu...';}
+  var tok=getToken();
+  try{
+    var res=await apiPut('/api/admin/cooperation/thoa-thuan/'+id,body);
+    if(!res||!res.ok){toast((res&&res.data&&res.data.message)||'Không lưu được.','error');return;}
+    var f=document.getElementById('tt-edit-scan-file');
+    if(f&&f.files&&f.files[0]){
+      if(f.files[0].size>TT_SCAN_EDIT_MAX){toast('File scan quá 20MB.','error');return;}
+      var fd=new FormData();
+      fd.append('scan_file',f.files[0]);
+      var fr=await fetch(API+'/api/cooperation/thoa-thuan/'+id+'/agreement-scan',{method:'POST',headers:{Authorization:'Bearer '+tok},body:fd});
+      var jd={};
+      try{jd=await fr.json();}catch(e){}
+      if(!fr.ok){toast(jd.message||'Lỗi upload scan.','error');return;}
+    }
+    toast('Đã cập nhật thỏa thuận.','success');
+    closeThoaThuanAdminModal();
+    loadThoaThuan();
+  }catch(e){
+    toast('Lỗi kết nối.','error');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=prev||'Lưu thay đổi';}
+  }
 }
 
 // ============================================================
@@ -1205,6 +1484,18 @@ async function loadLichSu(){
 // ============================================================
 // START
 // ============================================================
+(function(){
+  function bindThoaThuanExpiryFields(){
+    var nk=document.getElementById('tt-ngay-ky');
+    var thn=document.getElementById('tt-thoi-han-nam');
+    if(nk) nk.addEventListener('change', refreshThoaThuanExpiryPreview);
+    if(thn){ thn.addEventListener('input', refreshThoaThuanExpiryPreview); thn.addEventListener('change', refreshThoaThuanExpiryPreview); }
+    syncAdminThoaThuanTermPanels();
+    refreshThoaThuanExpiryPreview();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bindThoaThuanExpiryFields);
+  else bindThoaThuanExpiryFields();
+})();
 init();
 </script>
 </body>

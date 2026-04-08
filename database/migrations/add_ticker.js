@@ -48,6 +48,24 @@ function runTickerMigration(db) {
   } catch (_) {
     db.exec('ALTER TABLE ticker_settings ADD COLUMN content_font_size INTEGER NOT NULL DEFAULT 13');
   }
+  try {
+    db.prepare('SELECT visible_logged_in FROM ticker_settings WHERE id = 1').get();
+  } catch (_) {
+    db.exec(`
+      ALTER TABLE ticker_settings ADD COLUMN visible_logged_in INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE ticker_settings ADD COLUMN visible_guest INTEGER NOT NULL DEFAULT 0;
+    `);
+    db.prepare(
+      'UPDATE ticker_settings SET visible_logged_in = is_visible, visible_guest = 0 WHERE id = 1'
+    ).run();
+  }
+  try {
+    db.prepare('SELECT content_text_color FROM ticker_settings WHERE id = 1').get();
+  } catch (_) {
+    db.exec(
+      "ALTER TABLE ticker_settings ADD COLUMN content_text_color TEXT NOT NULL DEFAULT '#1e293b'"
+    );
+  }
 }
 
 module.exports = runTickerMigration;

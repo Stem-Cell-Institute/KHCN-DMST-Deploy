@@ -30,6 +30,53 @@ function throwIfAborted(signal) {
   }
 }
 
+/** Normalize full_name for harvest filter matching (exact match after NFC + trim). */
+function normHarvestResearcherName(s) {
+  return String(s || '')
+    .normalize('NFC')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function normalizeOrcidForFilter(raw) {
+  const s = String(raw || '').trim();
+  const m = s.match(/(\d{4}-\d{4}-\d{4}-\d{3}[\dX])/i);
+  return (m ? m[1] : s).toUpperCase();
+}
+
+/**
+ * Keep researchers that match ANY of the provided researcherIds, orcidIds, or fullNames (OR).
+ * If no filter arrays are set, returns the input list unchanged.
+ */
+function applyHarvestResearcherFilters(researchers, { researcherIds, orcidIds, fullNames } = {}) {
+  const idSet =
+    researcherIds?.length > 0
+      ? new Set(
+          researcherIds
+            .map((n) => Number(n))
+            .filter((n) => Number.isInteger(n) && n > 0)
+        )
+      : null;
+  const orcSet =
+    orcidIds?.length > 0 ? new Set(orcidIds.map((o) => normalizeOrcidForFilter(o))) : null;
+  const nameSet =
+    fullNames?.length > 0 ? new Set(fullNames.map((n) => normHarvestResearcherName(n))) : null;
+
+  if (!idSet && !orcSet && !nameSet) return researchers;
+
+  return researchers.filter((r) => {
+    const byId = idSet ? idSet.has(Number(r.id)) : false;
+    const byOrc = orcSet ? orcSet.has(normalizeOrcidForFilter(r.orcid_id)) : false;
+    const byName = nameSet ? nameSet.has(normHarvestResearcherName(r.full_name)) : false;
+    const checks = [];
+    if (idSet) checks.push(byId);
+    if (orcSet) checks.push(byOrc);
+    if (nameSet) checks.push(byName);
+    return checks.some(Boolean);
+  });
+}
+
 /** Nhóm công bố mới theo enrichmentGroup (SSE / POST harvest). */
 export function groupNewWorksForResponse(items) {
   const newWorksGrouped = {
@@ -276,29 +323,59 @@ function printSkippedRecordsTable(researcherName, skipped_records) {
 
 // ── Entry point: chạy 1 phiên harvest đầy đủ ─────────────────────────────────
 // `signal`: AbortSignal — khi client đóng SSE, server dừng giữa các NCV / giữa các DOI
-export async function runHarvestSession({ onProgress, signal } = {}) {
+// Optional: researcherIds, orcidIds, fullNames — chỉ quét NCV khớp một trong các điều kiện (OR).
+export async function runHarvestSession({
+  onProgress,
+  signal,
+  researcherIds,
+  orcidIds,
+  fullNames,
+} = {}) {
   const sessionId = randomUUID();
   const db = await getDB();
 
+  const filterRequested =
+    (Array.isArray(researcherIds) && researcherIds.length > 0) ||
+    (Array.isArray(orcidIds) && orcidIds.length > 0) ||
+    (Array.isArray(fullNames) && fullNames.length > 0);
+
   // Lấy danh sách NCV đang active
-  const researchers = await queryAll(db,
+  const allActive = await queryAll(db,
     `SELECT * FROM researcher_orcids WHERE is_active = 1 ORDER BY full_name`
   );
 
+  const researchers = applyHarvestResearcherFilters(allActive, {
+    researcherIds,
+    orcidIds,
+    fullNames,
+  });
+
   if (!researchers.length) {
+    const message = !allActive.length
+      ? 'Không có NCV nào đang active'
+      : filterRequested
+        ? 'Không có NCV nào khớp bộ lọc (kiểm tra full_name/ORCID/id trong bảng researcher_orcids).'
+        : 'Không có NCV nào đang active';
+    if (!allActive.length) {
+      console.log('[ORCID] Không có NCV nào đang bật quét (is_active=1).');
+    } else if (filterRequested) {
+      const hint = allActive.map((r) => `${r.full_name} (id=${r.id})`).join('; ');
+      console.log(`[ORCID] NCV đang active: ${hint}`);
+    }
+
     const emptyG = groupNewWorksForResponse([]);
     onProgress?.({
       type: 'session_complete',
       sessionId,
       totalNew: 0,
       researchersChecked: 0,
-      message: 'Không có NCV nào đang active',
+      message,
       newWorksGrouped: emptyG.newWorksGrouped,
       stats: emptyG.stats,
     });
     return {
       sessionId,
-      message: 'Không có NCV nào đang active',
+      message,
       results: [],
       aborted: false,
       totalNew: 0,
@@ -311,10 +388,18 @@ export async function runHarvestSession({ onProgress, signal } = {}) {
   const sessionNewItems = [];
   let totalNew = 0;
 
+  console.log(
+    `\n[ORCID] ══ Bắt đầu phiên harvest (${sessionId}) — ${researchers.length} NCV — mỗi NCV: gọi API ORCID → so khớp CSDL/hàng chờ ══\n`
+  );
+
   try {
     for (let i = 0; i < researchers.length; i++) {
       throwIfAborted(signal);
       const researcher = researchers[i];
+
+      console.log(
+        `[ORCID] [${i + 1}/${researchers.length}] ${researcher.full_name} (${researcher.orcid_id}) — đang gọi ORCID Public API…`
+      );
 
       onProgress?.({
         type:       'researcher_start',
@@ -365,6 +450,10 @@ export async function runHarvestSession({ onProgress, signal } = {}) {
       newWorksGrouped: sg.newWorksGrouped,
       stats: sg.stats,
     });
+
+    console.log(
+      `[ORCID] ══ Kết thúc phiên ${sessionId}: ${researchers.length} NCV, ${totalNew} bài mới vào hàng chờ (còn lại là trùng → bỏ qua, không gọi enrich DOI) ═=\n`
+    );
 
     return {
       sessionId,
@@ -422,6 +511,10 @@ async function harvestOneResearcher(db, researcher, sessionId, onProgress, signa
     worksFound = works.length;
 
     const withDoi = works.filter(w => w.doi).length;
+    console.log(
+      `[ORCID] [${researcher.full_name}] Đã nhận ${worksFound} work từ ORCID (có DOI: ${withDoi}) — so khớp với publications + hàng chờ pending…`
+    );
+
     onProgress?.({
       type: 'log',
       level: 'info',
@@ -735,7 +828,7 @@ export async function approveQueueItem(queueId, adminId, overrides = {}) {
       is_open_access, oa_type,
       citation_count, citation_updated_at,
       project_code, funder, grant_no,
-      status, source, orcid_put_code, url,
+      status, source, import_source, orcid_put_code, url,
       created_by, created_at, updated_at
     ) VALUES (
       ?, ?, ?, ?, ?, ?, ?, ?,
@@ -745,7 +838,7 @@ export async function approveQueueItem(queueId, adminId, overrides = {}) {
       ?, ?,
       ?, ?,
       ?, ?, ?,
-      'published', ?, ?, ?,
+      'published', ?, ?, ?, ?,
       ?, datetime('now'), datetime('now')
     )`,
     [
@@ -760,6 +853,7 @@ export async function approveQueueItem(queueId, adminId, overrides = {}) {
       merged.citation_count, new Date().toISOString(),
       merged.project_code, merged.funder, merged.grant_no,
       merged.source || 'orcid_harvest',
+      'orcid',
       merged.orcid_put_code, merged.url,
       adminId,
     ]

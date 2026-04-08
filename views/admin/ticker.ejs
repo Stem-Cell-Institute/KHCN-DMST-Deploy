@@ -188,10 +188,23 @@
         <input type="range" id="setting-font-size" min="11" max="20" step="1" value="<%= Number(settings.content_font_size != null ? settings.content_font_size : 13) %>">
         <div id="setting-font-size-label" style="margin-top:6px;font-size:13px;color:#64748b;"></div>
       </div>
-      <div class="settings-row switch-row">
-        <input type="checkbox" id="setting-visible" <%= Number(settings.is_visible) === 1 ? 'checked' : '' %>>
-        <label for="setting-visible" style="margin:0;">Hiển thị ticker với người dùng</label>
+      <% var _txc = settings.content_text_color && /^#[0-9a-fA-F]{6}$/.test(String(settings.content_text_color).trim()) ? String(settings.content_text_color).trim() : '#1e293b'; %>
+      <div class="settings-row">
+        <label for="setting-content-color">Màu chữ nội dung thông báo</label>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <input type="color" id="setting-content-color" value="<%= _txc %>" title="Màu chữ phần nội dung chạy" style="width:52px;height:36px;padding:2px;border:1px solid #cbd5e1;border-radius:8px;cursor:pointer;">
+          <span style="font-size:13px;color:#64748b;max-width:420px;line-height:1.45;">Áp dụng cho phần text thông báo (và liên kết nếu bật). Nhãn loại (Công bố, Tin tức…) vẫn dùng màu từng loại.</span>
+        </div>
       </div>
+      <div class="settings-row switch-row">
+        <input type="checkbox" id="setting-visible-logged" <%= Number(settings.visible_logged_in != null ? settings.visible_logged_in : settings.is_visible) === 1 ? 'checked' : '' %>>
+        <label for="setting-visible-logged" style="margin:0;">Hiển thị ticker cho người đã đăng nhập</label>
+      </div>
+      <div class="settings-row switch-row">
+        <input type="checkbox" id="setting-visible-guest" <%= Number(settings.visible_guest) === 1 ? 'checked' : '' %>>
+        <label for="setting-visible-guest" style="margin:0;">Hiển thị ticker cho khách (chưa đăng nhập)</label>
+      </div>
+      <p style="font-size:13px;color:#64748b;margin:-8px 0 12px 28px;line-height:1.45;">Có thể bật một hoặc cả hai. Khi cả hai tắt, thanh ticker không hiện trên trang người dùng.</p>
       <div class="settings-row switch-row">
         <input type="checkbox" id="setting-links" <%= Number(settings.links_enabled) === 1 ? 'checked' : '' %>>
         <label for="setting-links" style="margin:0;">Cho phép click liên kết</label>
@@ -238,10 +251,13 @@
     window.__TICKER_ADMIN__ = { apiBase: '' };
     window.__TICKER_PAGE_SETTINGS__ = <%- JSON.stringify({
       is_visible: Number(settings.is_visible),
+      visible_logged_in: Number(settings.visible_logged_in != null ? settings.visible_logged_in : settings.is_visible),
+      visible_guest: Number(settings.visible_guest != null ? settings.visible_guest : 0),
       speed: Number(settings.speed),
       links_enabled: Number(settings.links_enabled),
       hover_pause: Number(settings.hover_pause),
-      content_font_size: Number(settings.content_font_size != null ? settings.content_font_size : 13)
+      content_font_size: Number(settings.content_font_size != null ? settings.content_font_size : 13),
+      content_text_color: _txc
     }) %>;
   </script>
   <script src="/public/js/ticker.js"></script>

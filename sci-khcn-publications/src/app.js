@@ -21,6 +21,8 @@ import { orcidRouter } from './routes/orcid.js';
 import { doiRouter } from './routes/doi.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { initDB } from './db/index.js';
+import { publicationsAuthMiddleware } from './middleware/publicationsAuthMiddleware.js';
+import { listResearchers } from './lib/trustScoring.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -31,7 +33,7 @@ app.use(cors({
   origin: process.env.FRONTEND_ORIGIN || 'http://localhost:3000',
   credentials: true,
 }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '12mb' }));
 
 // Rate limiting — bảo vệ các endpoint gọi API bên ngoài
 const apiLimiter = rateLimit({
@@ -42,6 +44,14 @@ const apiLimiter = rateLimit({
   message: { error: 'Quá nhiều yêu cầu, vui lòng thử lại sau.' },
 });
 app.use('/api/', apiLimiter);
+
+app.get('/api/researchers/list-for-disambiguation', publicationsAuthMiddleware, (req, res) => {
+  try {
+    res.json({ success: true, researchers: listResearchers() });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message || String(e) });
+  }
+});
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/publications', publicationsRouter);   // CRUD công bố

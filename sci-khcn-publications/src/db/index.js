@@ -118,6 +118,7 @@ function ensureSQLiteCompatibility(db) {
     ['file_url', 'TEXT'],
     ['url', 'TEXT'],
     ['source', "TEXT DEFAULT 'manual'"],
+    ['import_source', 'TEXT'],
     ['orcid_put_code', 'TEXT'],
     ['created_by', 'INTEGER'],
     ['updated_at', "TEXT DEFAULT (datetime('now'))"],
@@ -223,6 +224,7 @@ CREATE TABLE IF NOT EXISTS publications (
 
   -- ── Nguồn gốc dữ liệu ──────────────────────────────────────
   source          TEXT DEFAULT 'manual',-- manual | orcid_harvest | doi_fetch | import_bulk
+  import_source   TEXT,                 -- orcid | google_scholar | bibtex | manual | NULL (legacy)
   orcid_put_code  TEXT,                 -- put-code trong ORCID record (để dedup)
 
   -- ── Audit ──────────────────────────────────────────────────

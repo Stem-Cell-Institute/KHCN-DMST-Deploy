@@ -8,15 +8,50 @@
  * POST   /api/publications             — Tạo mới (thủ công)
  * PUT    /api/publications/:id         — Cập nhật
  * DELETE /api/publications/:id         — Xóa
- * POST   /api/publications/bulk-import — Import từ file BibTeX / CSV / Excel (TODO)
+ * POST   /api/publications/import-bibtex — Import file .bib hoặc chuỗi BibTeX (multipart / JSON)
+ * POST   /api/publications/preview-bibtex — So sánh BibTeX với CSDL (phân nhóm, không insert)
+ * POST   /api/publications/import-bibtex-selected — Nhập có chọn entry_ids hoặc scope ready / ready_and_suspicious
+ * POST   /api/publications/disambiguate-nv-researcher — Trust_Score (config NCV) + crawl URL (cheerio)
  *
  * SSE (đăng ký trên app chính): mountEnrichmentStatsSse → GET /api/enrich/stream
  */
 
 import { Router } from 'express';
+import multer from 'multer';
 import { getDB } from '../db/index.js';
+import {
+  checkDuplicatePublication,
+  insertPublication,
+  normalizeTitle,
+} from '../lib/publicationUtils.js';
+import { parseBibTeX, pubTypeLabelToSlug } from '../lib/bibTexParser.js';
+import { disambiguateItems } from '../lib/authorDisambiguation.js';
+import { resolveResearcherKey } from '../lib/trustScoring.js';
+import { publicationsAuthMiddleware } from '../middleware/publicationsAuthMiddleware.js';
 
 export const publicationsRouter = Router();
+
+/** Multer bộ nhớ tạm — chỉ dùng cho import BibTeX (tối đa 2MB). */
+const bibtexUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 },
+});
+
+/** Chỉ chạy multer khi client gửi multipart/form-data. */
+function importBibtexMultipartMaybe(req, res, next) {
+  const ct = (req.headers['content-type'] || '').toLowerCase();
+  if (ct.includes('multipart/form-data')) {
+    return bibtexUpload.single('bibfile')(req, res, next);
+  }
+  next();
+}
+
+/** import_source cho BibTeX: mặc định google_scholar; cho phép bibtex nếu client gửi rõ. */
+function resolveBibtexImportSource(body) {
+  const s = body?.import_source != null ? String(body.import_source).trim() : '';
+  if (s === 'bibtex' || s === 'google_scholar') return s;
+  return 'google_scholar';
+}
 
 /**
  * GET /api/enrich/stream — Server-Sent Events, push getEnrichmentStats() mỗi 4s.
@@ -339,6 +374,271 @@ publicationsRouter.get('/stats', async (req, res, next) => {
   }
 });
 
+// ── POST /api/publications/import-bibtex ──────────────────────────────────────
+// multipart: field bibfile | JSON: { "bibtex": "..." } — cần đăng nhập JWT.
+publicationsRouter.post(
+  '/import-bibtex',
+  publicationsAuthMiddleware,
+  importBibtexMultipartMaybe,
+  async (req, res, next) => {
+    try {
+      let raw = '';
+      if (req.file && req.file.buffer) {
+        raw = req.file.buffer.toString('utf8');
+      } else if (req.body && typeof req.body.bibtex === 'string') {
+        raw = req.body.bibtex;
+      }
+      if (!String(raw).trim()) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Thiếu nội dung BibTeX (gửi file field bibfile hoặc JSON bibtex).',
+        });
+      }
+
+      let items = [];
+      try {
+        items = parseBibTeX(raw);
+      } catch (e) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Không parse được BibTeX: ' + (e.message || String(e)),
+        });
+      }
+
+      const seenInFile = new Set();
+      const dedupedItems = [];
+      for (const item of items) {
+        if (!item.title) {
+          dedupedItems.push(item);
+          continue;
+        }
+        const key = normalizeTitle(item.title) + '||' + (item.year ?? '');
+        if (!seenInFile.has(key)) {
+          seenInFile.add(key);
+          dedupedItems.push(item);
+        }
+      }
+
+      const db = await getDB();
+      const uid = req.user?.id != null ? Number(req.user.id) : 1;
+      const bibImportSource = resolveBibtexImportSource(req.body);
+      let imported = 0;
+      const skippedList = [];
+      const errorList = [];
+
+      for (const item of dedupedItems) {
+        const r = await tryInsertParsedBibItem(db, item, uid, bibImportSource);
+        if (r.outcome === 'imported') imported += 1;
+        else if (r.outcome === 'skipped') {
+          skippedList.push({ title: r.titleLine, reason: r.reason });
+        } else {
+          errorList.push({ title: r.titleLine, reason: r.reason });
+        }
+      }
+
+      res.json({
+        ok: true,
+        imported,
+        skipped: skippedList.length,
+        skippedList,
+        errors: errorList.length ? errorList : undefined,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── POST /api/publications/preview-bibtex ─────────────────────────────────────
+// So sánh BibTeX với CSDL (không insert). Trả về phân nhóm: trùng file, trùng DB, sẵn sàng, nghi ngờ, lỗi.
+publicationsRouter.post(
+  '/preview-bibtex',
+  publicationsAuthMiddleware,
+  importBibtexMultipartMaybe,
+  async (req, res, next) => {
+    try {
+      let raw = '';
+      if (req.file && req.file.buffer) {
+        raw = req.file.buffer.toString('utf8');
+      } else if (req.body && typeof req.body.bibtex === 'string') {
+        raw = req.body.bibtex;
+      }
+      if (!String(raw).trim()) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Thiếu nội dung BibTeX (field bibfile hoặc JSON bibtex).',
+        });
+      }
+
+      const db = await getDB();
+      let result;
+      try {
+        result = await analyzeBibtexAgainstDb(db, raw);
+      } catch (e) {
+        if (e && e.code === 'BIB_PARSE') {
+          return res.status(400).json({
+            ok: false,
+            message: 'Không parse được BibTeX: ' + (e.message || String(e)),
+          });
+        }
+        throw e;
+      }
+
+      res.json({
+        ok: true,
+        stats: result.stats,
+        entries: result.entries,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── POST /api/publications/import-bibtex-selected ─────────────────────────────
+// Nhập có chọn lọc: entry_ids (từ preview) hoặc scope ready | ready_and_suspicious.
+publicationsRouter.post(
+  '/import-bibtex-selected',
+  publicationsAuthMiddleware,
+  importBibtexMultipartMaybe,
+  async (req, res, next) => {
+    try {
+      let raw = '';
+      if (req.file && req.file.buffer) {
+        raw = req.file.buffer.toString('utf8');
+      } else if (req.body && typeof req.body.bibtex === 'string') {
+        raw = req.body.bibtex;
+      }
+      if (!String(raw).trim()) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Thiếu nội dung BibTeX.',
+        });
+      }
+
+      let items = [];
+      try {
+        items = parseBibTeX(raw);
+      } catch (e) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Không parse được BibTeX: ' + (e.message || String(e)),
+        });
+      }
+
+      const db = await getDB();
+      const uid = req.user?.id != null ? Number(req.user.id) : 1;
+      const bibImportSource = resolveBibtexImportSource(req.body);
+
+      const analysis = await analyzeBibtexAgainstDb(db, raw);
+      const { entries } = analysis;
+
+      const bodyEntryIds = req.body.entry_ids ?? req.body.entryIds;
+      const entryIds = Array.isArray(bodyEntryIds)
+        ? bodyEntryIds.map((n) => Number(n)).filter((n) => Number.isFinite(n))
+        : [];
+
+      const scopeRaw = String(req.body.scope || '').toLowerCase().replace(/-/g, '_');
+      const scope =
+        scopeRaw === 'ready_and_suspicious' || scopeRaw === 'all_importable'
+          ? 'ready_and_suspicious'
+          : 'ready';
+
+      const importable = new Set(['ready', 'suspicious']);
+      const pickItems = [];
+
+      if (entryIds.length > 0) {
+        const byId = new Map(entries.map((e) => [e.entryId, e]));
+        const seenRaw = new Set();
+        for (const id of entryIds) {
+          const e = byId.get(id);
+          if (!e) continue;
+          if (!importable.has(e.category)) continue;
+          if (seenRaw.has(e.rawIndex)) continue;
+          seenRaw.add(e.rawIndex);
+          pickItems.push(items[e.rawIndex]);
+        }
+      } else {
+        for (const e of entries) {
+          if (e.category === 'ready') {
+            pickItems.push(items[e.rawIndex]);
+            continue;
+          }
+          if (scope === 'ready_and_suspicious' && e.category === 'suspicious') {
+            pickItems.push(items[e.rawIndex]);
+          }
+        }
+      }
+
+      let imported = 0;
+      const skippedList = [];
+      const errorList = [];
+
+      for (const item of pickItems) {
+        const r = await tryInsertParsedBibItem(db, item, uid, bibImportSource);
+        if (r.outcome === 'imported') imported += 1;
+        else if (r.outcome === 'skipped') {
+          skippedList.push({ title: r.titleLine, reason: r.reason });
+        } else {
+          errorList.push({ title: r.titleLine, reason: r.reason });
+        }
+      }
+
+      res.json({
+        ok: true,
+        imported,
+        skipped: skippedList.length,
+        skippedList,
+        errors: errorList.length ? errorList : undefined,
+        attempted: pickItems.length,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── POST /api/publications/disambiguate-nv-researcher ─────────────────────────
+// Lọc định danh NCV: keyword + năm + crawl detail_url (BeautifulSoup/cheerio trên server).
+publicationsRouter.post(
+  '/disambiguate-nv-researcher',
+  publicationsAuthMiddleware,
+  async (req, res, next) => {
+    try {
+      const items = Array.isArray(req.body.items) ? req.body.items : [];
+      if (!items.length) {
+        return res.status(400).json({ ok: false, message: 'Thiếu mảng items.' });
+      }
+      if (items.length > 200) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Tối đa 200 bài mỗi lần.',
+        });
+      }
+      const rawResearcher =
+        req.body.researcherKey != null && String(req.body.researcherKey).trim() !== ''
+          ? String(req.body.researcherKey).trim()
+          : req.query.researcherKey != null && String(req.query.researcherKey).trim() !== ''
+            ? String(req.query.researcherKey).trim()
+            : '';
+      const researcherKey = resolveResearcherKey(rawResearcher);
+      const results = await disambiguateItems(items, {
+        timeoutMs: 15000,
+        crawlDelayMs: 450,
+        researcherKey,
+      });
+      res.json({
+        ok: true,
+        results,
+        researcher_query: rawResearcher || null,
+        researcher_resolved_key: researcherKey,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // ── GET /api/publications/:id ─────────────────────────────────────────────────
 publicationsRouter.get('/:id', async (req, res, next) => {
   try {
@@ -363,60 +663,30 @@ publicationsRouter.post('/', async (req, res, next) => {
       return res.status(400).json({ ok: false, error: 'Cần có trường title' });
     }
 
-    // Check DOI trùng
-    if (data.doi) {
-      const [existing] = await queryAll(db,
-        `SELECT id FROM publications WHERE doi = ?`, [data.doi]
-      );
-      if (existing) {
-        return res.status(409).json({
-          ok: false,
-          error: `DOI này đã tồn tại trong hệ thống (id: ${existing.id})`,
-          existing_id: existing.id,
-        });
+    const dup = await checkDuplicatePublication(db, {
+      doi: data.doi,
+      title: data.title,
+      year: data.pub_year,
+    });
+    if (dup.isDuplicate) {
+      let errMsg;
+      if (dup.reason === 'doi') {
+        errMsg = `DOI này đã tồn tại trong hệ thống (id: ${dup.existingId})`;
+      } else if (dup.reason === 'title_no_year') {
+        errMsg = `Trùng tiêu đề với CSDL (id: ${dup.existingId}) — không có năm hợp lệ để so khớp theo cặp tiêu đề+năm.`;
+      } else {
+        errMsg = `Trùng tiêu đề và năm xuất bản (id: ${dup.existingId})`;
       }
+      return res.status(409).json({
+        ok: false,
+        error: errMsg,
+        existing_id: dup.existingId,
+        reason: dup.reason,
+      });
     }
 
-    const result = await queryRun(db, `
-      INSERT INTO publications (
-        doi, pmid, scopus_eid, wos_id, patent_no,
-        title, title_vi, abstract, keywords, language,
-        authors, authors_json, corresponding, sci_authors,
-        pub_type, journal_name, issn, isbn, volume, pages,
-        pub_year, pub_date, publisher, conference_name, conference_location,
-        index_db, quartile, impact_factor, cite_score, sjr,
-        is_open_access, oa_type, citation_count,
-        project_code, funder, grant_no,
-        status, submitted_at, accepted_at,
-        file_url, url, source,
-        created_by, created_at, updated_at
-      ) VALUES (
-        ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,
-        ?,?,?,?,?,?, ?,?,?,?,?,
-        ?,?,?,?,?, ?,?,?,
-        ?,?,?, ?,?,?,
-        ?,?, ?,?,datetime('now'),datetime('now')
-      )`,
-      [
-        data.doi,           data.pmid,          data.scopus_eid,
-        data.wos_id,        data.patent_no,
-        data.title,         data.title_vi,       data.abstract,
-        data.keywords,      data.language,
-        data.authors,       data.authors_json,   data.corresponding,
-        data.sci_authors,
-        data.pub_type,      data.journal_name,   data.issn,
-        data.isbn,          data.volume,         data.pages,
-        data.pub_year,      data.pub_date,       data.publisher,
-        data.conference_name, data.conference_location,
-        data.index_db,      data.quartile,       data.impact_factor,
-        data.cite_score,    data.sjr,
-        data.is_open_access, data.oa_type,       data.citation_count,
-        data.project_code,  data.funder,         data.grant_no,
-        data.status,        data.submitted_at,   data.accepted_at,
-        data.file_url,      data.url,            data.source || 'manual',
-        req.user?.id || 1,
-      ]
-    );
+    const uid = req.user?.id != null ? Number(req.user.id) : 1;
+    const result = await insertPublication(db, data, uid, 'manual');
 
     res.status(201).json({ ok: true, id: result.lastInsertRowid || result });
   } catch (err) { next(err); }
@@ -525,4 +795,233 @@ async function queryAll(db, sql, params = []) {
 async function queryRun(db, sql, params = []) {
   if (db.__isSQLite) return db.prepare(sql).run(...params);
   return db(sql, params);
+}
+
+function bibParsedItemToBodyLike(item) {
+  const volStr =
+    item.volume && item.number
+      ? `${item.volume}(${item.number})`
+      : item.volume || item.number || null;
+  const authorsStr =
+    item.authors != null && String(item.authors).trim() !== ''
+      ? String(item.authors).trim()
+      : '(Author not listed in BibTeX)';
+  return {
+    title: item.title,
+    authors: authorsStr,
+    pub_year: item.year,
+    journal_name: item.journal,
+    volume: volStr,
+    pages: item.pages,
+    doi: item.doi,
+    abstract: item.abstract,
+    url: item.url,
+    keywords: item.keywords,
+    pub_type: pubTypeLabelToSlug(item.pub_type),
+    source: 'bibtex_import',
+  };
+}
+
+/**
+ * Insert one parsed BibTeX row using the same rules as bulk import-bibtex.
+ * @returns {{ outcome: 'imported'|'skipped'|'error', titleLine: string, reason?: string }}
+ */
+async function tryInsertParsedBibItem(db, item, uid, bibImportSource) {
+  const titleOne = item.title ? String(item.title).trim() : '';
+  if (!titleOne) {
+    return { outcome: 'error', titleLine: '(Không có tiêu đề)', reason: 'Thiếu tiêu đề' };
+  }
+
+  const dup = await checkDuplicatePublication(db, {
+    doi: item.doi,
+    title: item.title,
+    year: item.year,
+  });
+  if (dup.isDuplicate) {
+    let reason = 'Trùng tiêu đề và năm';
+    if (dup.reason === 'doi') reason = 'Trùng DOI';
+    else if (dup.reason === 'title_no_year') {
+      reason = 'Không có năm · trùng tiêu đề (CSDL)';
+    }
+    return {
+      outcome: 'skipped',
+      titleLine: titleOne,
+      reason,
+    };
+  }
+
+  try {
+    const data = sanitizePublicationInput(bibParsedItemToBodyLike(item));
+    await insertPublication(db, data, uid, bibImportSource);
+    return { outcome: 'imported', titleLine: titleOne };
+  } catch (err) {
+    const msg = err && err.message ? String(err.message) : String(err);
+    const isUniqueViolation =
+      msg.includes('UNIQUE constraint failed') ||
+      msg.includes('SQLITE_CONSTRAINT_UNIQUE') ||
+      /unique constraint/i.test(msg) ||
+      msg.includes('duplicate key') ||
+      err.code === '23505';
+
+    if (isUniqueViolation) {
+      return {
+        outcome: 'skipped',
+        titleLine: titleOne,
+        reason: 'Trùng (phát hiện qua DB constraint)',
+      };
+    }
+    return { outcome: 'error', titleLine: titleOne, reason: msg };
+  }
+}
+
+async function buildDbTitleNormIndex(db) {
+  const rows = await queryAll(db, `SELECT id, title, pub_year FROM publications`);
+  const byNorm = new Map();
+  for (const row of rows) {
+    const n = normalizeTitle(row.title);
+    if (!n) continue;
+    if (!byNorm.has(n)) byNorm.set(n, []);
+    byNorm.get(n).push({ id: row.id, year: row.pub_year });
+  }
+  return byNorm;
+}
+
+/**
+ * Classify every parsed BibTeX row (full file order, including duplicates inside file).
+ */
+async function analyzeBibtexAgainstDb(db, rawText) {
+  let items;
+  try {
+    items = parseBibTeX(rawText);
+  } catch (e) {
+    const er = new Error(e.message || String(e));
+    er.code = 'BIB_PARSE';
+    throw er;
+  }
+
+  const byNorm = await buildDbTitleNormIndex(db);
+  const entries = [];
+  const stats = {
+    total_raw: 0,
+    duplicate_file: 0,
+    duplicate_db: 0,
+    duplicate_db_no_year: 0,
+    ready: 0,
+    suspicious: 0,
+    error: 0,
+  };
+
+  const firstKeyToEntryId = new Map();
+
+  for (let rawIndex = 0; rawIndex < items.length; rawIndex++) {
+    const item = items[rawIndex];
+    stats.total_raw += 1;
+    const entryId = entries.length;
+
+    const snapshot = {
+      title: item.title,
+      year: item.year,
+      doi: item.doi,
+      authors: item.authors || null,
+      journal: item.journal || null,
+      pub_type_label: item.pub_type || null,
+      url: item.url || null,
+    };
+
+    if (!item.title || !String(item.title).trim()) {
+      entries.push({
+        entryId,
+        rawIndex,
+        category: 'error',
+        message: 'Thiếu tiêu đề',
+        item: snapshot,
+      });
+      stats.error += 1;
+      continue;
+    }
+
+    const key = normalizeTitle(item.title) + '||' + (item.year ?? '');
+    if (firstKeyToEntryId.has(key)) {
+      entries.push({
+        entryId,
+        rawIndex,
+        category: 'duplicate_file',
+        duplicateOfEntryId: firstKeyToEntryId.get(key),
+        item: snapshot,
+      });
+      stats.duplicate_file += 1;
+      continue;
+    }
+    firstKeyToEntryId.set(key, entryId);
+
+    const dup = await checkDuplicatePublication(db, {
+      doi: item.doi,
+      title: item.title,
+      year: item.year,
+    });
+    if (dup.isDuplicate) {
+      const noYearDup = dup.reason === 'title_no_year';
+      entries.push({
+        entryId,
+        rawIndex,
+        category: noYearDup ? 'duplicate_db_no_year' : 'duplicate_db',
+        duplicateReason: dup.reason,
+        existingId: dup.existingId,
+        item: snapshot,
+      });
+      if (noYearDup) stats.duplicate_db_no_year += 1;
+      else stats.duplicate_db += 1;
+      continue;
+    }
+
+    const tNorm = normalizeTitle(item.title);
+    const yNum =
+      item.year != null && item.year !== '' ? Number(item.year) : null;
+
+    let suspicious = null;
+    if (yNum == null || Number.isNaN(yNum)) {
+      suspicious = {
+        kind: 'missing_year',
+        detail:
+          'Không có năm trong BibTeX — hệ thống không thể khớp trùng theo tiêu đề+năm; nên kiểm tra trước khi nhập.',
+      };
+    } else {
+      const matches = byNorm.get(tNorm) || [];
+      const otherYears = matches.filter(
+        (m) => m.year != null && Number(m.year) !== yNum
+      );
+      if (otherYears.length) {
+        suspicious = {
+          kind: 'title_other_year',
+          detail:
+            'Cùng tiêu đề (đã chuẩn hóa) đã có trong CSDL nhưng khác năm xuất bản.',
+          matches: otherYears.slice(0, 8).map((m) => ({
+            id: m.id,
+            pub_year: m.year,
+          })),
+        };
+      }
+    }
+
+    if (suspicious) {
+      entries.push({
+        entryId,
+        rawIndex,
+        category: 'suspicious',
+        suspicious,
+        item: snapshot,
+      });
+      stats.suspicious += 1;
+    } else {
+      entries.push({
+        entryId,
+        rawIndex,
+        category: 'ready',
+        item: snapshot,
+      });
+      stats.ready += 1;
+    }
+  }
+
+  return { entries, stats };
 }

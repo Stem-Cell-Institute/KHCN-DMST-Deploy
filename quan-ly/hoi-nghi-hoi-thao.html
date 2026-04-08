@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý đăng ký HN/HT</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0f172a;--muted:#64748b;--border:#cbd5e1;--accent:#2563eb;--card:#fff;--bg:#e8eef5}
+body{margin:0;font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--ink)}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;justify-content:space-between;align-items:center}
+.topbar a{color:var(--muted);text-decoration:none;font-size:13px}
+main{max-width:1100px;margin:0 auto;padding:24px}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.tabs button{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer;font:inherit}
+.tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end}
+.filters input,.filters select{padding:8px;border:1px solid var(--border);border-radius:6px;font:inherit}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:13px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
+th{background:#e8ecf4;font-size:11px;text-transform:uppercase}
+.badge{font-size:11px;padding:3px 8px;border-radius:16px;font-weight:600}
+.b-amber{background:#fffbeb;color:#b45309}.b-blue{background:#e8f0fe;color:#1d4ed8}
+.b-green{background:#ecfdf5;color:#065f46}.b-red{background:#fef2f2;color:#b91c1c}.b-gray{background:#f1f5f9;color:#64748b}
+tr{cursor:pointer}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer}
+</style>
+<script src="../js/system-access.js"></script>
+</head>
+<body>
+<div class="topbar">
+  <a href="../module-hoatac-quocte.html">← Hợp tác trong và ngoài nước</a>
+  <span style="font-weight:700;font-size:14px">Quản lý — Đăng ký HN/HT</span>
+</div>
+<main>
+  <h1 style="font-size:22px;margin-top:0">Đăng ký tham dự Hội nghị/Hội thảo</h1>
+  <div class="tabs">
+    <button type="button" class="on" data-tab="all">Tất cả</button>
+    <button type="button" data-tab="pend">Chờ duyệt</button>
+    <button type="button" data-tab="done">Đã duyệt</button>
+  </div>
+  <div class="filters">
+    <div><label style="font-size:11px;color:var(--muted)">Trạng thái</label><br><select id="f_st"><option value="">—</option>
+      <option value="submitted">Chờ Phòng</option><option value="khcn_approved">Chờ Viện trưởng</option>
+      <option value="director_approved">Đã duyệt</option><option value="completed">Hoàn tất</option>
+    </select></div>
+    <div><label style="font-size:11px;color:var(--muted)">Đơn vị</label><br><input id="f_unit" placeholder="Lọc"></div>
+    <div><label style="font-size:11px;color:var(--muted)">Từ ngày</label><br><input id="f_d1" type="date"></div>
+    <div><label style="font-size:11px;color:var(--muted)">Đến ngày</label><br><input id="f_d2" type="date"></div>
+    <div><label style="font-size:11px;color:var(--muted)">Tìm</label><br><input id="f_q" placeholder="Tên HN, mã"></div>
+    <button type="button" class="btn-sm" id="btn_go" style="background:var(--accent);color:#fff;border-color:var(--accent)">Lọc</button>
+  </div>
+  <div id="wrap">Đang tải...</div>
+</main>
+<script>
+(function(){
+  var API = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000'))
+    ? 'http://localhost:3000' : (window.location.origin || '');
+  function tok(){ return localStorage.getItem('token'); }
+  function h(){ return { 'Authorization': 'Bearer ' + tok() }; }
+  var tab = 'all';
+
+  async function init(){
+    if (!tok()) { location.href = '/dang-nhap.html'; return; }
+    var me = await fetch(API + '/api/me', { headers: h() }).then(function(r){ return r.json(); });
+    var role = (me.role||'').toLowerCase();
+    if (role !== 'admin' && role !== 'phong_khcn') {
+      document.getElementById('wrap').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+      return;
+    }
+    load();
+  }
+
+  function badge(st){
+    var m = { draft:['Nháp','b-gray'], submitted:['Chờ Phòng','b-amber'], khcn_reviewing:['Phòng xem xét','b-amber'],
+      khcn_approved:['Chờ VT','b-blue'], director_reviewing:['VT xem xét','b-blue'], director_approved:['Đã duyệt','b-green'],
+      director_rejected:['VT từ chối','b-red'], khcn_rejected:['Phòng từ chối','b-red'], completed:['Hoàn tất','b-green'] };
+    var x = m[st] || [st, 'b-gray'];
+    return '<span class="badge '+x[1]+'">'+x[0]+'</span>';
+  }
+
+  async function load(){
+    var q = [];
+    var st = document.getElementById('f_st').value;
+    if (st) q.push('status='+encodeURIComponent(st));
+    if (document.getElementById('f_unit').value) q.push('unit='+encodeURIComponent(document.getElementById('f_unit').value));
+    if (document.getElementById('f_d1').value) q.push('from_date='+encodeURIComponent(document.getElementById('f_d1').value));
+    if (document.getElementById('f_d2').value) q.push('to_date='+encodeURIComponent(document.getElementById('f_d2').value));
+    if (document.getElementById('f_q').value) q.push('search='+encodeURIComponent(document.getElementById('f_q').value));
+    var r = await fetch(API + '/api/conference-registrations?' + q.join('&'), { headers: h() });
+    if (r.status === 403) { document.getElementById('wrap').innerHTML = '<p>Không có quyền.</p>'; return; }
+    var j = await r.json();
+    var list = j.list || [];
+    if (tab === 'pend') {
+      list = list.filter(function(x){ return ['submitted','khcn_reviewing','khcn_approved','director_reviewing'].indexOf(x.status) >= 0; });
+    } else if (tab === 'done') {
+      list = list.filter(function(x){ return ['director_approved','completed'].indexOf(x.status) >= 0; });
+    }
+    var el = document.getElementById('wrap');
+    if (!list.length) { el.innerHTML = '<p>Không có bản ghi.</p>'; return; }
+    el.innerHTML = '<table><thead><tr><th>Mã</th><th>Người nộp</th><th>Hội nghị</th><th>Thời gian</th><th>Kinh phí đề nghị</th><th>TT</th><th></th></tr></thead><tbody>' +
+      list.map(function(row){
+        var amt = row.funding_requested_vnd != null ? Number(row.funding_requested_vnd).toLocaleString('vi-VN') : '0';
+        var d = (row.conf_start_date||'').slice(0,10) + ' — ' + (row.conf_end_date||'').slice(0,10);
+        return '<tr data-id="'+row.id+'"><td><code>'+esc(row.submission_code)+'</code></td><td>'+esc(row.submitter_name||'')+'</td><td>'+esc(row.conf_name)+'</td><td>'+d+'</td><td>'+amt+'</td><td>'+badge(row.status)+'</td><td><button type="button" class="btn-sm go">Xem</button></td></tr>';
+      }).join('') + '</tbody></table>';
+    el.querySelectorAll('tr[data-id]').forEach(function(tr){
+      tr.onclick = function(e){
+        if (e.target.closest('button')) {
+          location.href = '/hop-tac/hoi-nghi-hoi-thao/chi-tiet?id=' + tr.getAttribute('data-id');
+        }
+      };
+      tr.querySelector('.go').onclick = function(ev){
+        ev.stopPropagation();
+        location.href = '/hop-tac/hoi-nghi-hoi-thao/chi-tiet?id=' + tr.getAttribute('data-id');
+      };
+    });
+  }
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+  document.querySelectorAll('.tabs button').forEach(function(b){
+    b.onclick = function(){
+      document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      tab = b.getAttribute('data-tab');
+      load();
+    };
+  });
+  document.getElementById('btn_go').onclick = load;
+  init();
+})();
+</script>
+</body>
+</html>

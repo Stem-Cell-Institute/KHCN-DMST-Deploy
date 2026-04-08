@@ -103,9 +103,24 @@ module.exports = function createTickerRouter(deps) {
   function loadSettings() {
     return db
       .prepare(
-        'SELECT id, is_visible, speed, links_enabled, hover_pause, content_font_size, updated_at FROM ticker_settings WHERE id = 1'
+        `SELECT id, is_visible, visible_logged_in, visible_guest, speed, links_enabled, hover_pause, content_font_size, content_text_color, updated_at
+         FROM ticker_settings WHERE id = 1`
       )
       .get();
+  }
+
+  function contentTextColor(row) {
+    const c = String(row.content_text_color || '').trim();
+    return HEX6.test(c) ? c : '#1e293b';
+  }
+
+  function visibilityPayload(row) {
+    const vl = Number(row.visible_logged_in);
+    const vg = Number(row.visible_guest);
+    const visibleLoggedIn = vl === 1 ? 1 : 0;
+    const visibleGuest = vg === 1 ? 1 : 0;
+    const isVisible = visibleLoggedIn || visibleGuest ? 1 : 0;
+    return { visible_logged_in: visibleLoggedIn, visible_guest: visibleGuest, is_visible: isVisible };
   }
 
   function loadCategoriesAll() {
@@ -135,8 +150,11 @@ module.exports = function createTickerRouter(deps) {
       if (!settingsRow) {
         return res.status(500).json({ success: false, message: 'Thiếu cấu hình ticker' });
       }
+      const vis = visibilityPayload(settingsRow);
       const settings = {
-        is_visible: Number(settingsRow.is_visible),
+        is_visible: vis.is_visible,
+        visible_logged_in: vis.visible_logged_in,
+        visible_guest: vis.visible_guest,
         speed: Number(settingsRow.speed),
         links_enabled: Number(settingsRow.links_enabled),
         hover_pause: Number(settingsRow.hover_pause),
@@ -144,6 +162,7 @@ module.exports = function createTickerRouter(deps) {
           FONT_MAX,
           Math.max(FONT_MIN, Number(settingsRow.content_font_size) || 13)
         ),
+        content_text_color: contentTextColor(settingsRow),
       };
       const rows = db
         .prepare(
@@ -180,15 +199,19 @@ module.exports = function createTickerRouter(deps) {
     try {
       const row = loadSettings();
       if (!row) return res.status(500).json({ success: false, message: 'Thiếu cấu hình' });
+      const vis = visibilityPayload(row);
       return res.json({
         success: true,
         data: {
           id: row.id,
-          is_visible: Number(row.is_visible),
+          is_visible: vis.is_visible,
+          visible_logged_in: vis.visible_logged_in,
+          visible_guest: vis.visible_guest,
           speed: Number(row.speed),
           links_enabled: Number(row.links_enabled),
           hover_pause: Number(row.hover_pause),
           content_font_size: Math.min(FONT_MAX, Math.max(FONT_MIN, Number(row.content_font_size) || 13)),
+          content_text_color: contentTextColor(row),
           updated_at: row.updated_at,
         },
       });
@@ -205,9 +228,34 @@ module.exports = function createTickerRouter(deps) {
       const updates = [];
       const params = [];
 
-      if (b.is_visible !== undefined) {
+      let syncVis = false;
+      if (b.visible_logged_in !== undefined) {
+        updates.push('visible_logged_in = ?');
+        params.push(b.visible_logged_in ? 1 : 0);
+        syncVis = true;
+      }
+      if (b.visible_guest !== undefined) {
+        updates.push('visible_guest = ?');
+        params.push(b.visible_guest ? 1 : 0);
+        syncVis = true;
+      }
+      if (b.is_visible !== undefined && !syncVis) {
+        const iv = b.is_visible ? 1 : 0;
+        updates.push('is_visible = ?', 'visible_logged_in = ?', 'visible_guest = ?');
+        params.push(iv, iv, 0);
+      } else if (syncVis) {
+        const rowCur = db
+          .prepare(
+            'SELECT visible_logged_in, visible_guest FROM ticker_settings WHERE id = 1'
+          )
+          .get();
+        let vl = rowCur ? Number(rowCur.visible_logged_in) : 0;
+        let vg = rowCur ? Number(rowCur.visible_guest) : 0;
+        if (b.visible_logged_in !== undefined) vl = b.visible_logged_in ? 1 : 0;
+        if (b.visible_guest !== undefined) vg = b.visible_guest ? 1 : 0;
+        const nextIv = vl || vg ? 1 : 0;
         updates.push('is_visible = ?');
-        params.push(b.is_visible ? 1 : 0);
+        params.push(nextIv);
       }
       if (b.speed !== undefined) {
         const s = parseInt(b.speed, 10);
@@ -239,6 +287,12 @@ module.exports = function createTickerRouter(deps) {
         updates.push('content_font_size = ?');
         params.push(fz);
       }
+      if (b.content_text_color !== undefined) {
+        const col = validateColor(b.content_text_color, 'Màu chữ thông báo');
+        if (!col.ok) return res.status(400).json({ success: false, message: col.message });
+        updates.push('content_text_color = ?');
+        params.push(col.value);
+      }
       if (!updates.length) {
         return res.status(400).json({ success: false, message: 'Không có trường hợp lệ để cập nhật' });
       }
@@ -246,15 +300,19 @@ module.exports = function createTickerRouter(deps) {
       const sql = `UPDATE ticker_settings SET ${updates.join(', ')} WHERE id = 1`;
       db.prepare(sql).run(...params);
       const row = loadSettings();
+      const vis = visibilityPayload(row);
       return res.json({
         success: true,
         data: {
           id: row.id,
-          is_visible: Number(row.is_visible),
+          is_visible: vis.is_visible,
+          visible_logged_in: vis.visible_logged_in,
+          visible_guest: vis.visible_guest,
           speed: Number(row.speed),
           links_enabled: Number(row.links_enabled),
           hover_pause: Number(row.hover_pause),
           content_font_size: Math.min(FONT_MAX, Math.max(FONT_MIN, Number(row.content_font_size) || 13)),
+          content_text_color: contentTextColor(row),
           updated_at: row.updated_at,
         },
       });

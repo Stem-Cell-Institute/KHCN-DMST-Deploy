@@ -1,0 +1,146 @@
+{
+  "institute": {
+    "affiliation_positive": [
+      "stem cell institute",
+      "university of science",
+      "university of sciences",
+      "vnu-hcm",
+      "vnuhcm",
+      "vnu hcm",
+      "laboratory of stem cell research and application",
+      "laboratory of stem cell research",
+      "hcmus",
+      "đhkhtn",
+      "đại học khoa học tự nhiên",
+      "trường đại học khoa học tự nhiên",
+      "lab nghiên cứu và ứng dụng tế bào gốc",
+      "cancer research laboratory"
+    ],
+    "affiliation_negative": [
+      "vietnam academy of science and technology",
+      "vast",
+      "hanoi university",
+      "đại học hà nội",
+      "thai nguyen university",
+      "hue university",
+      "đại học huế",
+      "đà nẵng",
+      "can tho university",
+      "đại học cần thơ"
+    ],
+    "base_keywords_strong": [
+      "stem cell",
+      "mesenchymal",
+      "exosome",
+      "regenerative",
+      "cancer stem cell",
+      "ipsc",
+      "organoid",
+      "3d culture",
+      "spheroid",
+      "extracellular vesicle",
+      "tế bào gốc"
+    ],
+    "base_keywords_medium": [
+      "apoptosis",
+      "proliferation",
+      "differentiation",
+      "biochip",
+      "microfluidic",
+      "nanoparticle",
+      "curcumin",
+      "extract",
+      "cytokine",
+      "biomarker",
+      "tumor",
+      "cancer",
+      "angiogenesis"
+    ],
+    "known_coauthors": [
+      "phan kim ngoc",
+      "truong dinh kiet",
+      "le van dong",
+      "vu bich ngoc",
+      "phuc van pham",
+      "sinh nguyen",
+      "sinh truong nguyen",
+      "ngoc kim phan",
+      "nguyen thi thu huong"
+    ],
+    "known_journals_issn": [
+      "1422-0067",
+      "2073-4409",
+      "1664-3224",
+      "2045-2322",
+      "1932-6203",
+      "1859-1868"
+    ],
+    "crawl_delay_ms": 450,
+    "crawl_timeout_ms": 15000
+  },
+  "researchers": {
+    "pham_van_phuc": {
+      "display_name": "Phạm Văn Phúc",
+      "name_variants": [
+        "Pham Van Phuc",
+        "V.P. Pham",
+        "Phuc Van Pham",
+        "Van Phuc Pham",
+        "Pham, Van Phuc",
+        "V. P. Pham"
+      ],
+      "keywords_strong_add": [
+        "prp",
+        "platelet-rich plasma",
+        "platelet rich plasma"
+      ],
+      "keywords_medium_add": [
+        "wound healing",
+        "adipose",
+        "hepatocellular",
+        "xenotransplant",
+        "vitrification",
+        "ovarian",
+        "reprogramming",
+        "endothelial progenitor",
+        "endothelial",
+        "fibroblast",
+        "murine",
+        "cytotoxic",
+        "transplantation",
+        "ischemia",
+        "acridone",
+        "alkaloid",
+        "cord blood",
+        "umbilical",
+        "dermal",
+        "ultraviolet"
+      ],
+      "frequent_coauthors": [
+        "le thi bich",
+        "nguyen thi thu huong"
+      ],
+      "frequent_journals_issn": []
+    },
+    "nguyen_thi_thu_huong": {
+      "display_name": "Nguyễn Thị Thu Hương",
+      "name_variants": [
+        "Nguyen Thi Thu Huong",
+        "T.T.H. Nguyen",
+        "Thu Huong Nguyen"
+      ],
+      "keywords_strong_add": [
+        "biochip",
+        "lab-on-chip",
+        "microdevice"
+      ],
+      "keywords_medium_add": [
+        "pdms",
+        "photolithography",
+        "droplet"
+      ],
+      "frequent_coauthors": [],
+      "frequent_journals_issn": []
+    }
+  }
+}

@@ -10,6 +10,14 @@
  * - Cloudflare: Sử dụng @libsql/client qua ./lib/db-bridge.js
  */
 try { require('dotenv').config({ path: '.env' }); } catch (_) {}
+/**
+ * Civil time for Vietnam (ICT, UTC+7, no DST). Matches how Google services show "local time" for VN.
+ * Set TZ in .env to override. Does not replace OS NTP — sync the host clock if drift is large.
+ */
+if (!process.env.TZ) {
+  process.env.TZ = 'Asia/Ho_Chi_Minh';
+}
+
 const path = require('path');
 const { startWorker } = require(path.join(__dirname, 'services', 'enrichmentWorker.js'));
 const fs = require('fs');
@@ -46,6 +54,63 @@ app.set('view engine', 'ejs');
 // Route kiểm tra sớm nhất (trước middleware)
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, message: 'Backend đang chạy' });
+});
+
+/** Compare OS clock to Google edge HTTP Date (UTC reference). Does not change system time. */
+function logServerTimeDriftVsGoogle() {
+  const c = new AbortController();
+  const t = setTimeout(() => c.abort(), 6000);
+  fetch('https://www.google.com', { method: 'HEAD', signal: c.signal })
+    .then((r) => {
+      clearTimeout(t);
+      const dh = r.headers.get('date');
+      if (!dh) return;
+      const skewSec = Math.round((new Date(dh).getTime() - Date.now()) / 1000);
+      if (Math.abs(skewSec) > 120) {
+        console.warn(
+          `[clock] OS clock differs from Google HTTP Date by ~${skewSec}s. Sync system time (Windows: Settings → Time & language) or NTP. Application TZ=${process.env.TZ}`
+        );
+      }
+    })
+    .catch(() => {
+      clearTimeout(t);
+    });
+}
+
+// Public: server wall clock vs Google HTTP Date (for diagnostics; ICT via TZ)
+app.get('/api/server-time', async (req, res) => {
+  const tz = process.env.TZ || 'Asia/Ho_Chi_Minh';
+  const payload = {
+    timezone: tz,
+    serverUtcIso: new Date().toISOString(),
+    vietnamWallClock: new Date().toLocaleString('vi-VN', {
+      timeZone: tz,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }),
+  };
+  try {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 6000);
+    const r = await fetch('https://www.google.com', { method: 'HEAD', signal: c.signal });
+    clearTimeout(t);
+    const dh = r.headers.get('date');
+    if (dh) {
+      const g = new Date(dh);
+      payload.googleHttpDateHeader = dh;
+      payload.googleUtcIso = g.toISOString();
+      payload.skewSecondsVsGoogle = Math.round((g.getTime() - Date.now()) / 1000);
+    }
+  } catch (e) {
+    payload.googleReferenceError = String(e.message || 'unavailable');
+  }
+  res.set('Cache-Control', 'no-store');
+  res.json(payload);
 });
 
 // Favicon: trả 204 để tránh 404 trong Console khi trình duyệt tự gọi /favicon.ico
@@ -836,6 +901,27 @@ try {
 } catch (e) {
   console.error('[Ticker migration]', e.message || e);
 }
+try {
+  require('./database/migrations/add_conference_registrations')(db);
+} catch (e) {
+  console.error('[Conference registrations migration]', e.message || e);
+}
+try {
+  require('./database/migrations/add_homepage_sidebar_rss')(db);
+} catch (e) {
+  console.error('[Homepage sidebar RSS migration]', e.message || e);
+}
+try {
+  require('./database/migrations/add_homepage_sidebar_rss_html_scrape')(db);
+  require('./database/migrations/add_homepage_news_strip_display')(db);
+} catch (e) {
+  console.error('[Homepage sidebar RSS HTML scrape migration]', e.message || e);
+}
+try {
+  require('./database/migrations/add_cooperation_thoa_thuan_open_term')(db);
+} catch (e) {
+  console.error('[Cooperation thoa thuan open-term migration]', e.message || e);
+}
 
 (function backfillCapVienHistory() {
   const allSubs = db.prepare('SELECT id, status, createdAt, submittedById, reviewedAt, reviewedById, reviewNote, assignedAt, assignedById, assignedReviewerIds FROM cap_vien_submissions').all();
@@ -1225,6 +1311,11 @@ db.exec(`
 db.exec(`CREATE TABLE IF NOT EXISTS personnel (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT DEFAULT (datetime('now')))`);
 db.exec(`CREATE TABLE IF NOT EXISTS ip_assets (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT DEFAULT (datetime('now')))`);
 db.exec(`CREATE TABLE IF NOT EXISTS publications (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT DEFAULT (datetime('now')))`);
+try {
+  db.prepare('ALTER TABLE publications ADD COLUMN import_source TEXT DEFAULT NULL').run();
+} catch (e) {
+  /* cột đã tồn tại */
+}
 db.exec(`CREATE TABLE IF NOT EXISTS cooperation (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT DEFAULT (datetime('now')))`);
 db.exec(`
   CREATE TABLE IF NOT EXISTS cooperation_notification_recipients (
@@ -1836,6 +1927,22 @@ const uploadHtqtThoaThuanScan = multer({
   fileFilter: function (_req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.(pdf|doc|docx|jpg|jpeg|png)$/i.test(n)) return cb(new Error('Scan chỉ nhận PDF, DOC, DOCX, JPG, PNG'));
+    cb(null, true);
+  },
+});
+const uploadHtqtThoaThuanTermination = multer({
+  storage: multer.diskStorage({
+    destination: function (_req, _file, cb) { cb(null, htqtThoaThuanDir); },
+    filename: function (_req, file, cb) {
+      const ext = path.extname(file.originalname || '') || '.pdf';
+      const safe = path.basename(file.originalname || 'termination', ext).replace(/[^\w\-]+/g, '_').slice(0, 80);
+      cb(null, 'thoa_thuan_termination_' + Date.now() + '_' + safe + ext.toLowerCase());
+    },
+  }),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: function (_req, file, cb) {
+    const n = (file.originalname || '').toLowerCase();
+    if (!/\.(pdf|doc|docx|jpg|jpeg|png)$/i.test(n)) return cb(new Error('Termination file: PDF, DOC, DOCX, JPG, PNG only'));
     cb(null, true);
   },
 });
@@ -2986,7 +3093,8 @@ function sendRoleAssignmentEmail(toEmail, fullname, role, tempPassword) {
 
 // Middleware (static đặt sau API để /api/* luôn do API xử lý)
 app.use(cors({ origin: '*' })); // Cho phép mọi origin (kể cả file:// khi mở từ ổ đĩa)
-app.use(express.json());
+// BibTeX lớn (JSON hoặc preview) cần > giới hạn mặc định ~100kb
+app.use(express.json({ limit: '12mb' }));
 
 function getCookieFromReq(req, name) {
   const raw = req.headers.cookie || '';
@@ -3200,6 +3308,9 @@ app.use(
     clearAuthCookie,
   })
 );
+
+const registerHomepageSidebarRss = require('./routes/homepageSidebarRss');
+registerHomepageSidebarRss(app, { db, authMiddleware, adminOnly });
 
 // --- API ---
 
@@ -8305,12 +8416,55 @@ app.get('/api/cooperation/de-xuat-cua-toi', authMiddleware, (req, res) => {
         });
       }
     } catch (ey) {}
+    try {
+      const uidRow = db.prepare('SELECT id FROM users WHERE lower(trim(email)) = ?').get(email);
+      if (uidRow && uidRow.id != null) {
+        const hn = db
+          .prepare(
+            `SELECT id, submission_code, conf_name, status, created_at FROM conference_registrations
+             WHERE submitted_by_user_id = ? AND status != 'cancelled' ORDER BY created_at DESC`
+          )
+          .all(uidRow.id);
+        const HN_ST = {
+          draft: 'Nháp',
+          submitted: 'Chờ Phòng KHCN',
+          khcn_reviewing: 'Phòng đang xem xét',
+          khcn_approved: 'Chờ Viện trưởng',
+          director_reviewing: 'Viện trưởng đang xem xét',
+          director_approved: 'Đã phê duyệt',
+          director_rejected: 'Viện trưởng từ chối',
+          khcn_rejected: 'Phòng KHCN từ chối',
+          completed: 'Đã nộp minh chứng',
+        };
+        for (const r of hn || []) {
+          list.push({
+            source: 'hnht',
+            loai: 'hnht',
+            id: r.id,
+            ma_de_xuat: r.submission_code || '',
+            title: 'HN/HT — ' + (r.conf_name || '—'),
+            ngay_gui: (r.created_at || '').slice(0, 10),
+            status: r.status || 'draft',
+            status_label: HN_ST[r.status] || r.status,
+            step: 1,
+            yeu_cau_bo_sung: null,
+            han_phan_hoi: null,
+            nguoi_xu_ly: 'Phòng KHCN&QHĐN',
+          });
+        }
+      }
+    } catch (eh) {}
   } catch (e) {
     console.error('[API] de-xuat-cua-toi error:', e.message);
   }
   list.sort((a, b) => (b.ngay_gui || '').localeCompare(a.ngay_gui || ''));
   const choDuyet = list.filter(function(x) {
     var s = (x.status || '').toLowerCase();
+    if (x.loai === 'hnht') {
+      return (
+        ['submitted', 'khcn_reviewing', 'khcn_approved', 'director_reviewing', 'khcn_rejected', 'director_rejected'].indexOf(s) >= 0
+      );
+    }
     return ['dang_tham_dinh', 'cho_ky_duyet', 'cho_tham_dinh', 'cho_phong_duyet', 'cho_vt_duyet', 'cho_vt_phe_duyet', 'yeu_cau_bo_sung', 'cho_phan_loai'].indexOf(s) >= 0;
   }).length;
   return res.json({ list, cho_duyet: choDuyet });
@@ -8728,6 +8882,13 @@ app.get('/api/cooperation/doi-tac', (req, res) => {
   }
 });
 
+/** Form field / JSON: treat common truthy strings as true (multipart sends strings). */
+function thoaThuanParseOpenEndedFlag(v) {
+  if (v === true || v === 1) return true;
+  const s = String(v ?? '').trim().toLowerCase();
+  return s === '1' || s === 'true' || s === 'on' || s === 'yes';
+}
+
 function thoaThuanAutoStatusByExpiry(hetHanText) {
   const s = String(hetHanText || '').trim();
   if (!s) return 'hieu_luc';
@@ -8743,11 +8904,32 @@ function thoaThuanAutoStatusByExpiry(hetHanText) {
   return 'hieu_luc';
 }
 
+/** Expiry = signing date + N calendar years (same month/day; JS normalizes leap years). Returns YYYY-MM-DD or null. */
+function thoaThuanHetHanFromSigningYears(ngayKyText, yearsNum) {
+  const s = String(ngayKyText || '').trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return null;
+  const y = parseInt(m[1], 10);
+  const mo = parseInt(m[2], 10);
+  const d = parseInt(m[3], 10);
+  const years = parseInt(String(yearsNum).trim(), 10);
+  if (!Number.isFinite(years) || years < 1 || years > 99) return null;
+  const dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+  dt.setFullYear(dt.getFullYear() + years);
+  const yy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
 // Danh sách Thỏa thuận (MOU, MOA, HĐ KH&CN, LOI)
 app.get('/api/cooperation/thoa-thuan', (req, res) => {
   try {
     const rows = db.prepare(
-      'SELECT id, ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac, scan_file_path, scan_file_name, scan_uploaded_at, created_at FROM cooperation_thoa_thuan ORDER BY trang_thai ASC, het_han ASC, id DESC'
+      `SELECT id, ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac, scan_file_path, scan_file_name, scan_uploaded_at, created_at,
+              no_fixed_term, staff_notes, terminated_at, termination_scan_path, termination_scan_name, termination_uploaded_at
+       FROM cooperation_thoa_thuan ORDER BY trang_thai ASC, het_han ASC, id DESC`
     ).all();
     return res.json({ list: rows || [] });
   } catch (e) {
@@ -8759,7 +8941,11 @@ app.get('/api/cooperation/thoa-thuan/:id', authMiddleware, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id) return res.status(400).json({ message: 'ID không hợp lệ.' });
   try {
-    const row = db.prepare('SELECT id, ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac, scan_file_path, scan_file_name, scan_uploaded_at, created_at, updated_at FROM cooperation_thoa_thuan WHERE id = ?').get(id);
+    const row = db.prepare(
+      `SELECT id, ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac, scan_file_path, scan_file_name, scan_uploaded_at, created_at, updated_at,
+              no_fixed_term, staff_notes, terminated_at, termination_scan_path, termination_scan_name, termination_uploaded_at
+       FROM cooperation_thoa_thuan WHERE id = ?`
+    ).get(id);
     if (!row) return res.status(404).json({ message: 'Không tìm thấy thỏa thuận.' });
     return res.json({ ok: true, item: row });
   } catch (e) {
@@ -8779,58 +8965,215 @@ app.delete('/api/admin/cooperation/thoa-thuan/:id', authMiddleware, adminOnly, (
   } catch(e) { return res.status(500).json({ message: 'Lỗi: ' + e.message }); }
 });
 
-// Admin: sửa thỏa thuận
-app.put('/api/admin/cooperation/thoa-thuan/:id', authMiddleware, adminOnly, (req, res) => {
+// P.KHCN / Admin: sửa thỏa thuận (staff notes, open-ended flag, core fields)
+app.put('/api/admin/cooperation/thoa-thuan/:id', authMiddleware, coopPhongOrAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);
   const body = req.body || {};
   let prev;
   try {
-    prev = db.prepare('SELECT het_han FROM cooperation_thoa_thuan WHERE id=?').get(id);
+    prev = db.prepare('SELECT * FROM cooperation_thoa_thuan WHERE id=?').get(id);
   } catch (e) {}
   if (!prev) return res.status(404).json({ message: 'Không tìm thấy.' });
-  const allowed = ['ten','doi_tac','loai','het_han','trang_thai','quoc_gia','loai_doi_tac'];
-  const sets = [], vals = [];
-  for (const k of allowed) { if (body[k] !== undefined) { sets.push(`${k}=?`); vals.push(body[k]); } }
-  if (body.het_han !== undefined) {
-    const newH = (body.het_han || '').trim() || null;
-    const oldH = (prev.het_han || '').trim() || null;
-    if (String(newH || '') !== String(oldH || '')) {
-      sets.push('trang_thai=?'); vals.push(thoaThuanAutoStatusByExpiry(newH));
+  const sets = [];
+  const vals = [];
+  const allowed = ['ten', 'doi_tac', 'loai', 'trang_thai', 'quoc_gia', 'loai_doi_tac', 'staff_notes'];
+  for (const k of allowed) {
+    if (body[k] !== undefined) {
+      sets.push(`${k}=?`);
+      vals.push(body[k]);
+    }
+  }
+  if (body.no_fixed_term !== undefined) {
+    const wantOpen = thoaThuanParseOpenEndedFlag(body.no_fixed_term);
+    if (wantOpen) {
+      if (String(prev.terminated_at || '').trim()) {
+        return res.status(400).json({ message: 'Đã ghi nhận kết thúc; không thể chuyển lại sang không thời hạn cố định qua form này.' });
+      }
+      sets.push('no_fixed_term=1');
+      sets.push('het_han=NULL');
+      sets.push('trang_thai=?');
+      vals.push('hieu_luc');
       sets.push('expiry_alert_sent_at=NULL');
       sets.push('post_expiry_alert_count=0');
       sets.push('last_post_expiry_alert_at=NULL');
+    } else {
+      sets.push('no_fixed_term=0');
+      const newH = body.het_han !== undefined ? String(body.het_han || '').trim() : String(prev.het_han || '').trim();
+      if (!newH) {
+        return res.status(400).json({ message: 'Thời hạn cố định cần có ngày hết hiệu lực (het_han, YYYY-MM-DD).' });
+      }
+      sets.push('het_han=?');
+      vals.push(newH);
+      const oldH = String(prev.het_han || '').trim();
+      if (newH !== oldH) {
+        sets.push('trang_thai=?');
+        vals.push(thoaThuanAutoStatusByExpiry(newH));
+        sets.push('expiry_alert_sent_at=NULL');
+        sets.push('post_expiry_alert_count=0');
+        sets.push('last_post_expiry_alert_at=NULL');
+      }
+    }
+  } else if (body.het_han !== undefined) {
+    const newH = String(body.het_han || '').trim() || null;
+    const oldH = String(prev.het_han || '').trim() || '';
+    const newS = newH || '';
+    if (newS !== oldH) {
+      sets.push('het_han=?');
+      vals.push(newH);
+      sets.push('trang_thai=?');
+      vals.push(thoaThuanAutoStatusByExpiry(newH));
+      sets.push('expiry_alert_sent_at=NULL');
+      sets.push('post_expiry_alert_count=0');
+      sets.push('last_post_expiry_alert_at=NULL');
+      if (newH) sets.push('no_fixed_term=0');
     }
   }
   if (!sets.length) return res.status(400).json({ message: 'Không có gì cập nhật.' });
-  sets.push("updated_at=datetime('now','localtime')"); vals.push(id);
+  sets.push("updated_at=datetime('now','localtime')");
+  vals.push(id);
   try {
-    db.prepare(`UPDATE cooperation_thoa_thuan SET ${sets.join(',')} WHERE id=?`).run(...vals);
+    db.prepare(`UPDATE cooperation_thoa_thuan SET ${sets.join(', ')} WHERE id=?`).run(...vals);
     return res.json({ ok: true, message: 'Đã cập nhật.' });
-  } catch(e) { return res.status(500).json({ message: 'Lỗi: ' + e.message }); }
+  } catch (e) {
+    return res.status(500).json({ message: 'Lỗi: ' + e.message });
+  }
 });
 
 // P.KHCN/Admin: thêm thỏa thuận + upload scan
 app.post('/api/cooperation/thoa-thuan', authMiddleware, coopPhongOrAdmin, (req, res) => {
   uploadHtqtThoaThuanScan.single('scan_file')(req, res, (err) => {
     if (err) return res.status(400).json({ message: err.message || 'Upload file thất bại' });
-    const { ten, doi_tac, loai, het_han, quoc_gia, loai_doi_tac } = req.body || {};
+    const { ten, doi_tac, loai, het_han, ngay_ky, thoi_han_nam, quoc_gia, loai_doi_tac, staff_notes } = req.body || {};
     const tenTrim = (ten || '').trim();
     const doiTacTrim = (doi_tac || '').trim();
     const loaiTrim = (loai || '').trim();
     if (!tenTrim || !doiTacTrim || !loaiTrim) {
       return res.status(400).json({ message: 'Thiếu Tên thỏa thuận, Đối tác hoặc Loại' });
     }
-    const hetHanVal = (het_han || '').trim() || null;
-    const trangThai = thoaThuanAutoStatusByExpiry(hetHanVal);
+    const noFixedTerm = thoaThuanParseOpenEndedFlag(req.body && req.body.no_fixed_term);
+    const staffNotesVal = String(staff_notes || '').trim() || null;
+    const nk = String(ngay_ky || '').trim();
+    const thnRaw = String(thoi_han_nam != null ? thoi_han_nam : '').trim();
+    const thn = parseInt(thnRaw, 10);
+    let hetHanVal = null;
+    let noFixedTermInt = 0;
+    if (noFixedTerm) {
+      if (!nk) {
+        return res.status(400).json({ message: 'Vui lòng nhập Ngày ký (thời hạn không cố định vẫn cần ngày ký để hồ sơ).' });
+      }
+      hetHanVal = null;
+      noFixedTermInt = 1;
+    } else {
+      if (nk && thnRaw !== '' && Number.isFinite(thn)) {
+        const computed = thoaThuanHetHanFromSigningYears(nk, thn);
+        if (!computed) {
+          return res.status(400).json({ message: 'Ngày ký hoặc thời hạn hiệu lực (năm) không hợp lệ.' });
+        }
+        hetHanVal = computed;
+      } else {
+        hetHanVal = (het_han || '').trim() || null;
+      }
+      if (!hetHanVal) {
+        return res.status(400).json({ message: 'Vui lòng nhập Ngày ký và Thời hạn hiệu lực (năm), hoặc chọn Không có thời hạn cố định.' });
+      }
+    }
+    const trangThai = noFixedTerm ? 'hieu_luc' : thoaThuanAutoStatusByExpiry(hetHanVal);
     const quocGiaVal = (quoc_gia || '').trim() || null;
     const loaiValDt = ['quoc_te', 'trong_nuoc', 'doanh_nghiep', 'dia_phuong'].includes((loai_doi_tac || '').trim()) ? loai_doi_tac.trim() : null;
     const scanPath = req.file ? path.join('uploads', 'htqt-thoa-thuan', req.file.filename).replace(/\\/g, '/') : null;
     const scanName = req.file ? (req.file.originalname || req.file.filename) : null;
     try {
-      db.prepare('INSERT INTO cooperation_thoa_thuan (ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac, scan_file_path, scan_file_name, scan_uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        .run(tenTrim, doiTacTrim, loaiTrim, hetHanVal, trangThai, quocGiaVal, loaiValDt, scanPath, scanName, scanPath ? new Date().toISOString() : null);
-      const row = db.prepare('SELECT id, ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac, scan_file_path, scan_file_name, scan_uploaded_at, created_at FROM cooperation_thoa_thuan WHERE id = last_insert_rowid()').get();
+      db.prepare(
+        `INSERT INTO cooperation_thoa_thuan (ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac, scan_file_path, scan_file_name, scan_uploaded_at, no_fixed_term, staff_notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        tenTrim, doiTacTrim, loaiTrim, hetHanVal, trangThai, quocGiaVal, loaiValDt, scanPath, scanName,
+        scanPath ? new Date().toISOString() : null, noFixedTermInt, staffNotesVal
+      );
+      const row = db.prepare(
+        `SELECT id, ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac, scan_file_path, scan_file_name, scan_uploaded_at, created_at,
+                no_fixed_term, staff_notes, terminated_at, termination_scan_path, termination_scan_name, termination_uploaded_at
+         FROM cooperation_thoa_thuan WHERE id = last_insert_rowid()`
+      ).get();
       return res.status(201).json({ message: 'Đã thêm thỏa thuận.', item: row });
+    } catch (e) {
+      return res.status(500).json({ message: 'Lỗi: ' + (e.message || '') });
+    }
+  });
+});
+
+// P.KHCN / Admin: record agreement termination date + optional termination document
+app.post('/api/cooperation/thoa-thuan/:id/terminate', authMiddleware, coopPhongOrAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ message: 'ID không hợp lệ.' });
+  uploadHtqtThoaThuanTermination.single('termination_file')(req, res, (err) => {
+    if (err) return res.status(400).json({ message: err.message || 'Upload termination file failed' });
+    const termRaw = String((req.body && req.body.terminated_at) || '').trim();
+    if (!/^(\d{4})-(\d{2})-(\d{2})$/.test(termRaw)) {
+      return res.status(400).json({ message: 'Vui lòng nhập ngày kết thúc (YYYY-MM-DD).' });
+    }
+    let prev;
+    try {
+      prev = db.prepare(
+        'SELECT id, termination_scan_path, termination_scan_name, termination_uploaded_at FROM cooperation_thoa_thuan WHERE id = ?'
+      ).get(id);
+    } catch (e) {
+      return res.status(500).json({ message: 'Lỗi: ' + (e.message || '') });
+    }
+    if (!prev) return res.status(404).json({ message: 'Không tìm thấy thỏa thuận.' });
+    const termPath = req.file ? path.join('uploads', 'htqt-thoa-thuan', req.file.filename).replace(/\\/g, '/') : null;
+    const termName = req.file ? (req.file.originalname || req.file.filename) : null;
+    const termUploaded = req.file ? new Date().toISOString() : null;
+    const finalPath = termPath || prev.termination_scan_path || null;
+    const finalName = termName || prev.termination_scan_name || null;
+    const finalUploaded = termUploaded || (finalPath && prev.termination_uploaded_at) || (finalPath ? new Date().toISOString() : null);
+    try {
+      db.prepare(
+        `UPDATE cooperation_thoa_thuan SET
+          terminated_at = ?, het_han = ?, trang_thai = 'het_han',
+          termination_scan_path = ?, termination_scan_name = ?, termination_uploaded_at = ?,
+          expiry_alert_sent_at = NULL, post_expiry_alert_count = 0, last_post_expiry_alert_at = NULL,
+          updated_at = datetime('now','localtime')
+         WHERE id = ?`
+      ).run(termRaw, termRaw, finalPath, finalName, finalUploaded, id);
+      const row = db.prepare(
+        `SELECT id, ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac, scan_file_path, scan_file_name, scan_uploaded_at, created_at, updated_at,
+                no_fixed_term, staff_notes, terminated_at, termination_scan_path, termination_scan_name, termination_uploaded_at
+         FROM cooperation_thoa_thuan WHERE id = ?`
+      ).get(id);
+      return res.json({ ok: true, message: 'Đã ghi nhận kết thúc thỏa thuận.', item: row });
+    } catch (e) {
+      return res.status(500).json({ message: 'Lỗi: ' + (e.message || '') });
+    }
+  });
+});
+
+// P.KHCN / Admin: replace main agreement scan (PDF/DOCX/image)
+app.post('/api/cooperation/thoa-thuan/:id/agreement-scan', authMiddleware, coopPhongOrAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ message: 'ID không hợp lệ.' });
+  let exists;
+  try {
+    exists = db.prepare('SELECT id FROM cooperation_thoa_thuan WHERE id = ?').get(id);
+  } catch (e) {
+    return res.status(500).json({ message: 'Lỗi: ' + (e.message || '') });
+  }
+  if (!exists) return res.status(404).json({ message: 'Không tìm thấy thỏa thuận.' });
+  uploadHtqtThoaThuanScan.single('scan_file')(req, res, (err) => {
+    if (err) return res.status(400).json({ message: err.message || 'Upload failed' });
+    if (!req.file) return res.status(400).json({ message: 'Chọn file bản scan.' });
+    const scanPath = path.join('uploads', 'htqt-thoa-thuan', req.file.filename).replace(/\\/g, '/');
+    const scanName = req.file.originalname || req.file.filename;
+    try {
+      db.prepare(
+        `UPDATE cooperation_thoa_thuan SET scan_file_path = ?, scan_file_name = ?, scan_uploaded_at = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+      ).run(scanPath, scanName, new Date().toISOString(), id);
+      const row = db.prepare(
+        `SELECT id, ten, doi_tac, loai, het_han, trang_thai, quoc_gia, loai_doi_tac, scan_file_path, scan_file_name, scan_uploaded_at, created_at, updated_at,
+                no_fixed_term, staff_notes, terminated_at, termination_scan_path, termination_scan_name, termination_uploaded_at
+         FROM cooperation_thoa_thuan WHERE id = ?`
+      ).get(id);
+      return res.json({ ok: true, message: 'Đã cập nhật bản scan.', item: row });
     } catch (e) {
       return res.status(500).json({ message: 'Lỗi: ' + (e.message || '') });
     }
@@ -10342,6 +10685,26 @@ function coopBuildEmail(title, intro, rows, footer, link) {
   </div>`;
 }
 
+try {
+  const createConferenceRegistrationRouter = require('./routes/conferenceRegistration');
+  const confUploadDir = path.join(__dirname, 'uploads', 'conference');
+  fs.mkdirSync(confUploadDir, { recursive: true });
+  app.use(
+    '/api/conference-registrations',
+    authMiddleware,
+    createConferenceRegistrationRouter({
+      db,
+      coopSendMail,
+      coopBuildEmail,
+      baseUrl: process.env.BASE_URL || 'http://localhost:' + PORT,
+      coopIsVienTruong,
+    })
+  );
+  console.log('[HNHT] Đã mount /api/conference-registrations');
+} catch (e) {
+  console.warn('[HNHT] Không mount conference-registrations:', e.message);
+}
+
 function coopFmtDate(s) {
   if (!s) return '—';
   const d = String(s).slice(0,10).split('-');
@@ -11205,7 +11568,7 @@ app.get('/api/cooperation/sidebar-badges', authMiddleware, (req, res) => {
       try { return (db.prepare(sql).get(...params) || {}).c || 0; } catch (e) { return 0; }
     };
 
-    const de_xuat_cua_toi = email
+    let de_xuat_cua_toi = email
       ? [
           safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_ra WHERE lower(trim(submitted_by_email))=?", email),
           safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_vao WHERE lower(trim(submitted_by_email))=?", email),
@@ -11213,6 +11576,15 @@ app.get('/api/cooperation/sidebar-badges', authMiddleware, (req, res) => {
           safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat WHERE lower(trim(submitted_by_email))=?", email),
         ].reduce((a, b) => a + b, 0)
       : 0;
+    try {
+      const uid = db.prepare('SELECT id FROM users WHERE lower(trim(email)) = ?').get(email);
+      if (uid && uid.id != null) {
+        de_xuat_cua_toi += safeCount(
+          "SELECT COUNT(*) AS c FROM conference_registrations WHERE submitted_by_user_id = ? AND status != 'cancelled'",
+          uid.id
+        );
+      }
+    } catch (_) {}
 
     let cho_phong = 0;
     let cho_vt = 0;
@@ -11222,17 +11594,38 @@ app.get('/api/cooperation/sidebar-badges', authMiddleware, (req, res) => {
         safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_ra WHERE status IN ('cho_phong_duyet')")
         + safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_vao WHERE status IN ('cho_phong_duyet','cho_tham_dinh')")
         + safeCount("SELECT COUNT(*) AS c FROM cooperation_mou_de_xuat WHERE status IN ('cho_phong_duyet','dang_tham_dinh')")
-        + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat WHERE status IN ('cho_phong_duyet','cho_phan_loai','dang_tham_dinh')");
+        + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat WHERE status IN ('cho_phong_duyet','cho_phan_loai','dang_tham_dinh')")
+        + safeCount("SELECT COUNT(*) AS c FROM conference_registrations WHERE status IN ('submitted','khcn_reviewing')");
       cho_vt =
         safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_ra WHERE status='cho_vt_duyet'")
         + safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_vao WHERE status='cho_vt_duyet'")
         + safeCount("SELECT COUNT(*) AS c FROM cooperation_mou_de_xuat WHERE status='cho_vt_duyet'")
-        + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat WHERE status IN ('cho_vt_duyet','cho_vt_phe_duyet')");
+        + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat WHERE status IN ('cho_vt_duyet','cho_vt_phe_duyet')")
+        + safeCount("SELECT COUNT(*) AS c FROM conference_registrations WHERE status IN ('khcn_approved','director_reviewing')");
       tat_ca_tong =
         safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_ra")
         + safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_vao")
         + safeCount("SELECT COUNT(*) AS c FROM cooperation_mou_de_xuat")
-        + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat");
+        + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat")
+        + safeCount("SELECT COUNT(*) AS c FROM conference_registrations WHERE status != 'cancelled'");
+    }
+
+    let hnht_cho_phong = 0;
+    let hnht_sap_dien_ra = 0;
+    let hnht_minh_chung_qua_han = 0;
+    if (role === 'admin' || role === 'phong_khcn') {
+      hnht_cho_phong = safeCount(
+        "SELECT COUNT(*) AS c FROM conference_registrations WHERE status IN ('submitted','khcn_reviewing')"
+      );
+      hnht_sap_dien_ra = safeCount(
+        `SELECT COUNT(*) AS c FROM conference_registrations WHERE status = 'director_approved'
+         AND julianday(conf_start_date) >= julianday('now')
+         AND julianday(conf_start_date) <= julianday('now','+30 days')`
+      );
+      hnht_minh_chung_qua_han = safeCount(
+        `SELECT COUNT(*) AS c FROM conference_registrations WHERE status = 'director_approved'
+         AND julianday('now') - julianday(conf_end_date) > 15`
+      );
     }
 
     return res.json({
@@ -11241,9 +11634,21 @@ app.get('/api/cooperation/sidebar-badges', authMiddleware, (req, res) => {
       cho_vt_duyet: cho_vt,
       tat_ca_tong,
       su_kien_sap_dien_ra: safeCount("SELECT COUNT(*) AS c FROM cooperation_su_kien WHERE status='sap_dien_ra'"),
+      hnht_cho_phong,
+      hnht_sap_dien_ra,
+      hnht_minh_chung_qua_han,
     });
   } catch (e) {
-    return res.json({ de_xuat_cua_toi: 0, cho_phong_duyet: 0, cho_vt_duyet: 0, tat_ca_tong: 0, su_kien_sap_dien_ra: 0 });
+    return res.json({
+      de_xuat_cua_toi: 0,
+      cho_phong_duyet: 0,
+      cho_vt_duyet: 0,
+      tat_ca_tong: 0,
+      su_kien_sap_dien_ra: 0,
+      hnht_cho_phong: 0,
+      hnht_sap_dien_ra: 0,
+      hnht_minh_chung_qua_han: 0,
+    });
   }
 });
 
@@ -11263,26 +11668,43 @@ app.get('/api/cooperation/dashboard-stats', authMiddleware, coopDashboardViewer,
       safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_ra WHERE status IN ('cho_phong_duyet')")
       + safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_vao WHERE status IN ('cho_phong_duyet','cho_tham_dinh')")
       + safeCount("SELECT COUNT(*) AS c FROM cooperation_mou_de_xuat WHERE status IN ('cho_phong_duyet','dang_tham_dinh')")
-      + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat WHERE status IN ('cho_phong_duyet','cho_phan_loai','dang_tham_dinh')");
+      + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat WHERE status IN ('cho_phong_duyet','cho_phan_loai','dang_tham_dinh')")
+      + safeCount("SELECT COUNT(*) AS c FROM conference_registrations WHERE status IN ('submitted','khcn_reviewing')");
 
     const cho_vt =
       safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_ra WHERE status='cho_vt_duyet'")
       + safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_vao WHERE status='cho_vt_duyet'")
       + safeCount("SELECT COUNT(*) AS c FROM cooperation_mou_de_xuat WHERE status='cho_vt_duyet'")
-      + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat WHERE status IN ('cho_vt_duyet','cho_vt_phe_duyet')");
+      + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat WHERE status IN ('cho_vt_duyet','cho_vt_phe_duyet')")
+      + safeCount("SELECT COUNT(*) AS c FROM conference_registrations WHERE status IN ('khcn_approved','director_reviewing')");
 
     const tat_ca_tong =
       safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_ra")
       + safeCount("SELECT COUNT(*) AS c FROM cooperation_doan_vao")
       + safeCount("SELECT COUNT(*) AS c FROM cooperation_mou_de_xuat")
-      + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat");
+      + safeCount("SELECT COUNT(*) AS c FROM htqt_de_xuat")
+      + safeCount("SELECT COUNT(*) AS c FROM conference_registrations WHERE status != 'cancelled'");
 
     const by_loai = {
       doan_ra: safeCount('SELECT COUNT(*) AS c FROM cooperation_doan_ra'),
       doan_vao: safeCount('SELECT COUNT(*) AS c FROM cooperation_doan_vao'),
       mou: safeCount('SELECT COUNT(*) AS c FROM cooperation_mou_de_xuat'),
       ytnn: safeCount('SELECT COUNT(*) AS c FROM htqt_de_xuat'),
+      hnht: safeCount("SELECT COUNT(*) AS c FROM conference_registrations WHERE status != 'cancelled'"),
     };
+
+    const hnht_cho_phong = safeCount(
+      "SELECT COUNT(*) AS c FROM conference_registrations WHERE status IN ('submitted','khcn_reviewing')"
+    );
+    const hnht_sap_dien_ra = safeCount(
+      `SELECT COUNT(*) AS c FROM conference_registrations WHERE status = 'director_approved'
+       AND julianday(conf_start_date) >= julianday('now')
+       AND julianday(conf_start_date) <= julianday('now', '+30 days')`
+    );
+    const hnht_minh_chung_qua_han = safeCount(
+      `SELECT COUNT(*) AS c FROM conference_registrations WHERE status = 'director_approved'
+       AND julianday('now') - julianday(conf_end_date) > 15`
+    );
     const by_status = coopDashMergeStatusBuckets(null);
     const series_12m = coopDashSeries12m(null);
 
@@ -11295,6 +11717,9 @@ app.get('/api/cooperation/dashboard-stats', authMiddleware, coopDashboardViewer,
       by_loai,
       by_status,
       series_12m,
+      hnht_cho_phong,
+      hnht_sap_dien_ra,
+      hnht_minh_chung_qua_han,
       generated_at: new Date().toISOString(),
       is_phong_khcn: role === 'admin' || role === 'phong_khcn',
       is_vien_truong: role === 'admin' || coopIsVienTruong(email),
@@ -11304,6 +11729,14 @@ app.get('/api/cooperation/dashboard-stats', authMiddleware, coopDashboardViewer,
     return res.status(500).json({ message: 'Không tải được Dashboard.' });
   }
 });
+
+// HTQT dashboard (EJS) — /ytnn/dashboard, /ytnn/api/dashboard/*
+try {
+  const createYtnnRouter = require('./routes/ytnn');
+  app.use('/ytnn', authMiddleware, createYtnnRouter({ db, coopDashboardViewer }));
+} catch (e) {
+  console.warn('[ytnn] Không mount router /ytnn:', e.message);
+}
 
 // ============================================================
 // ROUTE MỚI — CHỜ PHÒNG KHCN XỬ LÝ
@@ -11337,6 +11770,30 @@ app.get('/api/cooperation/cho-phong-xu-ly', authMiddleware, coopPhongOrAdmin, (r
         });
       } catch(e) {}
     }
+    try {
+      const hnRows = db
+        .prepare(
+          `SELECT r.*, u.fullname AS uname, u.email AS uemail FROM conference_registrations r
+           JOIN users u ON u.id = r.submitted_by_user_id
+           WHERE r.status IN ('submitted','khcn_reviewing') ORDER BY r.created_at ASC`
+        )
+        .all();
+      for (const r of hnRows || []) {
+        list.push({
+          loai: 'hnht',
+          id: r.id,
+          ma_de_xuat: r.submission_code || '',
+          title: 'Đăng ký HN/HT — ' + (r.conf_name || '—'),
+          status: r.status,
+          status_label:
+            r.status === 'khcn_reviewing' ? 'Phòng đang xem xét' : 'Chờ Phòng KHCN',
+          submitted_by_name: r.uname || r.uemail || '—',
+          submitted_by_email: r.uemail,
+          created_at: (r.created_at || '').slice(0, 10),
+          note_phong: r.khcn_comment || null,
+        });
+      }
+    } catch (eh) {}
     list.sort((a,b) => (a.created_at||'').localeCompare(b.created_at||''));
     return res.json({ list, tong: list.length });
   } catch(e) { return res.json({ list:[], tong:0 }); }
@@ -11371,6 +11828,29 @@ app.get('/api/cooperation/cho-vt-duyet', authMiddleware, coopVTOrAdmin, (req, re
           }));
       } catch(e) {}
     }
+    try {
+      const hnRows = db
+        .prepare(
+          `SELECT r.*, u.fullname AS uname, u.email AS uemail FROM conference_registrations r
+           JOIN users u ON u.id = r.submitted_by_user_id
+           WHERE r.status IN ('khcn_approved','director_reviewing') ORDER BY r.created_at ASC`
+        )
+        .all();
+      for (const r of hnRows || []) {
+        list.push({
+          loai: 'hnht',
+          id: r.id,
+          ma_de_xuat: r.submission_code || '',
+          title: 'Đăng ký HN/HT — ' + (r.conf_name || '—'),
+          status: r.status,
+          status_label: r.status === 'director_reviewing' ? 'Viện trưởng đang xem xét' : 'Chờ Viện trưởng',
+          submitted_by_name: r.uname || r.uemail || '—',
+          submitted_by_email: r.uemail,
+          created_at: (r.created_at || '').slice(0, 10),
+          note_phong: r.khcn_comment || null,
+        });
+      }
+    } catch (eh) {}
     list.sort((a,b) => (a.created_at||'').localeCompare(b.created_at||''));
     return res.json({ list, tong: list.length });
   } catch(e) { return res.json({ list:[], tong:0 }); }
@@ -11404,6 +11884,31 @@ app.get('/api/cooperation/tat-ca-de-xuat', authMiddleware, (req, res) => {
         created_at: (r.created_at||'').slice(0,10),
       }));
     } catch(e) {}
+  }
+  if (!loai || loai === 'hnht') {
+    try {
+      let sql = `SELECT r.*, u.fullname AS submitted_by_name, u.email AS submitted_by_email
+        FROM conference_registrations r JOIN users u ON u.id = r.submitted_by_user_id WHERE r.status != 'cancelled'`;
+      const params = [];
+      if (status) {
+        sql += ' AND r.status = ?';
+        params.push(status);
+      }
+      sql += ' ORDER BY r.created_at DESC';
+      db.prepare(sql).all(...params).forEach((r) =>
+        list.push({
+          loai: 'hnht',
+          id: r.id,
+          ma_de_xuat: r.submission_code || '',
+          title: 'Đăng ký HN/HT — ' + (r.conf_name || '—'),
+          status: r.status,
+          status_label: r.status,
+          submitted_by_name: r.submitted_by_name || r.submitted_by_email || '—',
+          submitted_by_email: r.submitted_by_email,
+          created_at: (r.created_at || '').slice(0, 10),
+        })
+      );
+    } catch (eh) {}
   }
   list.sort((a,b) => (b.created_at||'').localeCompare(a.created_at||''));
   const page = parseInt(req.query.page)||1;
@@ -13028,6 +13533,37 @@ function isPublicHtmlPath(reqPath) {
   const base = path.basename(p);
   return PUBLIC_HTML_AUTH.has(base);
 }
+
+/** Đường dẫn không đuôi .html — Đăng ký HN/HT */
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  const p = (req.path || '').replace(/\\/g, '/');
+  const hnhtMap = {
+    '/hop-tac/hoi-nghi-hoi-thao/dang-ky': 'hop-tac/hoi-nghi-hoi-thao/dang-ky.html',
+    '/hop-tac/hoi-nghi-hoi-thao/cua-toi': 'hop-tac/hoi-nghi-hoi-thao/cua-toi.html',
+    '/hop-tac/hoi-nghi-hoi-thao/chi-tiet': 'hop-tac/hoi-nghi-hoi-thao/chi-tiet.html',
+    '/quan-ly/hoi-nghi-hoi-thao': 'quan-ly/hoi-nghi-hoi-thao.html',
+  };
+  const rel = hnhtMap[p];
+  if (!rel) return next();
+  const token = getTokenFromReq(req);
+  if (!token) {
+    return res.redirect(302, '/dang-nhap.html?returnUrl=' + encodeURIComponent(p));
+  }
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (userIdIsBanned(payload.id)) {
+      clearAuthCookie(res);
+      return res.redirect(302, '/dang-nhap.html?banned=1');
+    }
+  } catch (e) {
+    return res.redirect(302, '/dang-nhap.html?returnUrl=' + encodeURIComponent(p));
+  }
+  const abs = path.join(__dirname, rel);
+  if (!fs.existsSync(abs)) return next();
+  return res.sendFile(abs);
+});
+
 app.use((req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   const reqPath = req.path || '';
@@ -13160,6 +13696,52 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 setInterval(sendCoopStaleStepReminders, ONE_DAY_MS);
 setTimeout(sendCoopStaleStepReminders, 60 * 60 * 1000);
 
+/** Nhắc nộp minh chứng HN/HT: sau conf_end_date + 15 ngày, gửi một lần (evidence_reminder_sent_at). Chạy khi giờ máy chủ = 8. */
+let _hnhtReminderDayKey = null;
+function sendConferenceEvidenceReminders() {
+  if (!transporter) return;
+  try {
+    const { createConferenceEmailService } = require('./services/conferenceEmailService');
+    const emails = createConferenceEmailService({
+      db,
+      sendMail: coopSendMail,
+      buildEmail: coopBuildEmail,
+      baseUrl: process.env.BASE_URL || 'http://localhost:' + PORT,
+    });
+    const rows = db
+      .prepare(
+        `SELECT * FROM conference_registrations WHERE status = 'director_approved'
+         AND julianday('now') - julianday(conf_end_date) >= 15
+         AND (evidence_reminder_sent_at IS NULL OR evidence_reminder_sent_at = '')`
+      )
+      .all();
+    for (const r of rows || []) {
+      const submitter = db.prepare('SELECT id, email, fullname FROM users WHERE id = ?').get(r.submitted_by_user_id);
+      if (!submitter) continue;
+      emails
+        .sendEvidenceReminder(r, submitter)
+        .then(() => {
+          try {
+            db.prepare('UPDATE conference_registrations SET evidence_reminder_sent_at = datetime(\'now\') WHERE id = ?').run(r.id);
+          } catch (e2) {
+            console.error('[HNHT reminder] Lỗi cập nhật:', e2.message);
+          }
+        })
+        .catch((err) => console.error('[HNHT reminder] Gửi lỗi:', err.message));
+    }
+  } catch (e) {
+    console.warn('[HNHT reminder]', e.message);
+  }
+}
+setInterval(() => {
+  const d = new Date();
+  if (d.getHours() !== 8) return;
+  const key = d.toISOString().slice(0, 10);
+  if (_hnhtReminderDayKey === key) return;
+  _hnhtReminderDayKey = key;
+  sendConferenceEvidenceReminders();
+}, 60 * 1000);
+
 function coopRunThoaThuanExpiryAlertsWrapped() {
   coopRunThoaThuanExpiryAlerts()
     .then((r) => {
@@ -13173,11 +13755,13 @@ setTimeout(coopRunThoaThuanExpiryAlertsWrapped, 2 * 60 * 1000);
 async function mountSciKhcnPublicationsRouters() {
   const moduleBase = path.join(__dirname, 'sci-khcn-publications', 'src');
   const toUrl = (p) => pathToFileURL(p).href;
-  const [pubMod, orcidMod, doiMod, dbMod] = await Promise.all([
+  const [pubMod, orcidMod, doiMod, dbMod, authPubMod, trustMod] = await Promise.all([
     import(toUrl(path.join(moduleBase, 'routes', 'publications.js'))),
     import(toUrl(path.join(moduleBase, 'routes', 'orcid.js'))),
     import(toUrl(path.join(moduleBase, 'routes', 'doi.js'))),
     import(toUrl(path.join(moduleBase, 'db', 'index.js'))),
+    import(toUrl(path.join(moduleBase, 'middleware', 'publicationsAuthMiddleware.js'))),
+    import(toUrl(path.join(moduleBase, 'lib', 'trustScoring.js'))),
   ]);
 
   if (dbMod && typeof dbMod.initDB === 'function') {
@@ -13341,6 +13925,14 @@ async function mountSciKhcnPublicationsRouters() {
   });
 
   // Phải khai báo trước app.use('/api/publications', router) để không bị coi là :id
+  app.get('/api/researchers/list-for-disambiguation', authPubMod.publicationsAuthMiddleware, (req, res) => {
+    try {
+      res.json({ success: true, researchers: trustMod.listResearchers() });
+    } catch (e) {
+      res.status(500).json({ success: false, message: e.message || String(e) });
+    }
+  });
+
   app.delete('/api/publications/admin/clear-all', authMiddleware, adminOnly, (req, res) => {
     try {
       const rPub = db.prepare('DELETE FROM publications').run();
@@ -13372,7 +13964,18 @@ async function mountSciKhcnPublicationsRouters() {
   app.post('/api/orcid/harvest', authMiddleware, adminOnly, async (req, res, next) => {
     try {
       const { runHarvestSession } = await import(orcidServiceUrl);
-      const result = await runHarvestSession();
+      const body = req.body && typeof req.body === 'object' ? req.body : {};
+      const opts = {};
+      if (Array.isArray(body.researcherIds) && body.researcherIds.length) {
+        opts.researcherIds = body.researcherIds;
+      }
+      if (Array.isArray(body.orcidIds) && body.orcidIds.length) {
+        opts.orcidIds = body.orcidIds.map((s) => String(s).trim()).filter(Boolean);
+      }
+      if (Array.isArray(body.fullNames) && body.fullNames.length) {
+        opts.fullNames = body.fullNames.map((s) => String(s).trim()).filter(Boolean);
+      }
+      const result = await runHarvestSession(opts);
       return res.json({ ok: true, success: true, data: result?.data || {}, ...result });
     } catch (e) {
       return next(e);
@@ -13413,6 +14016,8 @@ async function mountSciKhcnPublicationsRouters() {
   app.listen(PORT, () => {
     console.log('SCI-ACE server chạy tại http://localhost:' + PORT);
     console.log('Kiểm tra kết nối: http://localhost:' + PORT + '/api/health');
+    console.log(`[clock] TZ=${process.env.TZ} (Vietnam civil time / ICT; override with TZ in .env)`);
+    logServerTimeDriftVsGoogle();
     if (transporter) console.log('SMTP đã cấu hình — email thông báo sẽ gửi khi có sự kiện (nộp hồ sơ, yêu cầu bổ sung, kết quả họp...)');
     else console.log('Chưa cấu hình SMTP — kiểm tra file .env (SMTP_HOST, SMTP_USER, SMTP_PASS). Email thông báo sẽ không gửi.');
     console.log('Email nhắc nhở duyệt đề xuất: mỗi 3 ngày (phong cách hành chính nhà nước)');

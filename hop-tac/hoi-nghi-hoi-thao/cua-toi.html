@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đăng ký HN/HT của tôi</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0f172a;--muted:#64748b;--border:#cbd5e1;--accent:#2563eb;--card:#fff;--bg:#e8eef5}
+body{margin:0;font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--ink)}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;justify-content:space-between}
+.topbar a{color:var(--muted);text-decoration:none;font-size:13px}
+main{max-width:1000px;margin:0 auto;padding:24px}
+h1{font-size:22px}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;border:1px solid var(--border);font-size:13px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
+th{background:#e8ecf4;font-size:11px;text-transform:uppercase}
+.badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
+.b-gray{background:#f1f5f9;color:#64748b}.b-blue{background:#e8f0fe;color:#1d4ed8}
+.b-green{background:#ecfdf5;color:#065f46}.b-red{background:#fef2f2;color:#b91c1c}.b-amber{background:#fffbeb;color:#b45309}
+.btn{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:12px;margin-right:4px}
+.btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}
+.loading{padding:40px;text-align:center;color:var(--muted)}
+</style>
+<script src="../../js/system-access.js"></script>
+</head>
+<body>
+<div class="topbar">
+  <a href="../../module-hoatac-quocte.html">← Hợp tác</a>
+  <a href="dang-ky.html">+ Đăng ký mới</a>
+</div>
+<main>
+  <h1>Đăng ký Hội nghị/Hội thảo của tôi</h1>
+  <div id="wrap" class="loading">Đang tải...</div>
+</main>
+<script>
+(function(){
+  var API = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000'))
+    ? 'http://localhost:3000' : (window.location.origin || '');
+  function tok(){ return localStorage.getItem('token'); }
+  function h(){ return { 'Authorization': 'Bearer ' + tok() }; }
+  var ST = {
+    draft:['Nháp','b-gray'], submitted:['Chờ Phòng KHCN','b-amber'], khcn_reviewing:['Phòng xem xét','b-amber'],
+    khcn_approved:['Chờ Viện trưởng','b-blue'], director_reviewing:['VT xem xét','b-blue'],
+    director_approved:['Đã phê duyệt','b-green'], director_rejected:['VT từ chối','b-red'],
+    khcn_rejected:['Phòng từ chối','b-red'], completed:['Hoàn tất','b-green'], cancelled:['Đã hủy','b-gray']
+  };
+  async function go(){
+    if (!tok()) { location.href = '/dang-nhap.html'; return; }
+    var r = await fetch(API + '/api/conference-registrations', { headers: h() });
+    if (r.status === 401) { location.href = '/dang-nhap.html'; return; }
+    var j = await r.json();
+    var list = j.list || [];
+    var el = document.getElementById('wrap');
+    if (!list.length) { el.className = ''; el.innerHTML = '<p>Chưa có đăng ký nào. <a href="dang-ky.html">Tạo mới</a></p>'; return; }
+    el.className = '';
+    el.innerHTML = '<table><thead><tr><th>Mã</th><th>Hội nghị</th><th>Thời gian</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody>' +
+      list.map(function(row){
+        var st = ST[row.status] || [row.status, 'b-gray'];
+        var d = (row.conf_start_date||'').slice(0,10) + ' — ' + (row.conf_end_date||'').slice(0,10);
+        var id = row.id;
+        var code = row.submission_code || '';
+        var canWord = row.status === 'director_approved' || row.status === 'completed';
+        var canEvid = row.status === 'director_approved';
+        var canEdit = row.status === 'draft';
+        var canCancel = row.status === 'draft' || row.status === 'submitted';
+        var btns = '<a class="btn" href="chi-tiet.html?id='+id+'">Chi tiết</a>';
+        if (canEdit) btns += '<a class="btn" href="dang-ky.html?id='+id+'">Sửa</a>';
+        if (canWord) btns += '<a class="btn btn-p" href="'+API+'/api/conference-registrations/'+id+'/export-word" target="_blank">Word</a>';
+        if (canEvid) btns += '<a class="btn" href="chi-tiet.html?id='+id+'#evidence">Minh chứng</a>';
+        if (canCancel) btns += '<button type="button" class="btn" data-del="'+id+'">Hủy</button>';
+        return '<tr><td><code>'+code+'</code></td><td>'+esc(row.conf_name||'')+'</td><td>'+d+'</td><td><span class="badge '+st[1]+'">'+st[0]+'</span></td><td>'+btns+'</td></tr>';
+      }).join('') + '</tbody></table>';
+    el.querySelectorAll('[data-del]').forEach(function(b){
+      b.onclick = async function(){
+        if (!confirm('Hủy đăng ký này?')) return;
+        var id = b.getAttribute('data-del');
+        var x = await fetch(API + '/api/conference-registrations/' + id, { method: 'DELETE', headers: h() });
+        if (x.ok) go(); else alert('Không hủy được');
+      };
+    });
+  }
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  go();
+})();
+</script>
+</body>
+</html>

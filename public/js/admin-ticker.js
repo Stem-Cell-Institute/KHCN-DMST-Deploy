@@ -67,7 +67,9 @@
         window.SciTicker.setupHoverPause(track, inner, settings);
         if (prev) prev.style.display = '';
         if (banner) {
-          banner.style.display = Number(settings.is_visible) === 1 ? 'none' : 'block';
+          var anyVis =
+            Number(settings.visible_logged_in) === 1 || Number(settings.visible_guest) === 1;
+          banner.style.display = anyVis ? 'none' : 'block';
         }
       })
       .catch(function () {});
@@ -263,12 +265,13 @@
     if (modal) modal.classList.remove('is-open');
   }
 
-  /** Nút nhanh cạnh Preview: đồng bộ với checkbox Cài đặt « Hiển thị ticker với người dùng » */
+  /** Nút nhanh cạnh Preview: ẩn/hiện ticker trên trang người dùng (mặc định hiện lại chỉ cho người đăng nhập) */
   function updateGlobalTickerButton() {
     var btn = $('btn-ticker-toggle-global');
-    var vis = $('setting-visible');
+    var vl = $('setting-visible-logged');
+    var vg = $('setting-visible-guest');
     if (!btn) return;
-    var shown = vis ? vis.checked : true;
+    var shown = (vl && vl.checked) || (vg && vg.checked);
     if (shown) {
       btn.textContent = 'Ẩn toàn bộ thanh Ticker';
       btn.className = 'btn-ticker-global btn-ticker-global--hide';
@@ -286,7 +289,8 @@
     var speedLabel = $('setting-speed-label');
     var fontRange = $('setting-font-size');
     var fontLabel = $('setting-font-size-label');
-    var vis = $('setting-visible');
+    var visLogged = $('setting-visible-logged');
+    var visGuest = $('setting-visible-guest');
     var links = $('setting-links');
     var hover = $('setting-hover');
     if (range && speedLabel) {
@@ -327,6 +331,12 @@
       });
       syncFontLabel();
     }
+    var colorContent = $('setting-content-color');
+    if (colorContent) {
+      colorContent.addEventListener('change', function () {
+        putSettings({ content_text_color: colorContent.value });
+      });
+    }
     function putSettings(body) {
       fetch(apiBase() + '/api/ticker/settings', {
         method: 'PUT',
@@ -342,6 +352,12 @@
             if (d.is_visible !== undefined && d.is_visible !== null) {
               window.__TICKER_PAGE_SETTINGS__.is_visible = d.is_visible;
             }
+            if (d.visible_logged_in !== undefined && d.visible_logged_in !== null) {
+              window.__TICKER_PAGE_SETTINGS__.visible_logged_in = d.visible_logged_in;
+            }
+            if (d.visible_guest !== undefined && d.visible_guest !== null) {
+              window.__TICKER_PAGE_SETTINGS__.visible_guest = d.visible_guest;
+            }
             if (d.speed !== undefined && d.speed !== null) {
               window.__TICKER_PAGE_SETTINGS__.speed = d.speed;
             }
@@ -354,16 +370,22 @@
             if (d.content_font_size !== undefined && d.content_font_size !== null) {
               window.__TICKER_PAGE_SETTINGS__.content_font_size = d.content_font_size;
             }
+            if (d.content_text_color !== undefined && d.content_text_color !== null) {
+              window.__TICKER_PAGE_SETTINGS__.content_text_color = d.content_text_color;
+            }
           }
           window.reloadTickerPreview();
           updateGlobalTickerButton();
         });
     }
-    if (vis) {
-      vis.addEventListener('change', function () {
-        putSettings({ is_visible: vis.checked ? 1 : 0 });
+    function putVisibilityFromUI() {
+      putSettings({
+        visible_logged_in: visLogged && visLogged.checked ? 1 : 0,
+        visible_guest: visGuest && visGuest.checked ? 1 : 0,
       });
     }
+    if (visLogged) visLogged.addEventListener('change', putVisibilityFromUI);
+    if (visGuest) visGuest.addEventListener('change', putVisibilityFromUI);
     if (links) {
       links.addEventListener('change', function () {
         putSettings({ links_enabled: links.checked ? 1 : 0 });
@@ -380,11 +402,13 @@
     var s = window.__TICKER_PAGE_SETTINGS__;
     if (!s) return;
     var range = $('setting-speed');
-    var vis = $('setting-visible');
+    var visLogged = $('setting-visible-logged');
+    var visGuest = $('setting-visible-guest');
     var links = $('setting-links');
     var hover = $('setting-hover');
     if (range) range.value = String(s.speed || 30);
-    if (vis) vis.checked = Number(s.is_visible) === 1;
+    if (visLogged) visLogged.checked = Number(s.visible_logged_in) === 1;
+    if (visGuest) visGuest.checked = Number(s.visible_guest) === 1;
     if (links) links.checked = Number(s.links_enabled) === 1;
     if (hover) hover.checked = Number(s.hover_pause) === 1;
     var speedLabel = $('setting-speed-label');
@@ -401,6 +425,11 @@
     if (fontLabel && fontRange) {
       var fv = parseInt(fontRange.value, 10);
       fontLabel.textContent = fv + ' px — chữ nội dung và nhãn loại (tỷ lệ nhãn ~78%)';
+    }
+    var colorContent = $('setting-content-color');
+    if (colorContent && s.content_text_color) {
+      var hx = String(s.content_text_color).trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(hx)) colorContent.value = hx;
     }
   }
 
@@ -573,13 +602,16 @@
 
     $('btn-ticker-toggle-global') &&
       $('btn-ticker-toggle-global').addEventListener('click', function () {
-        var vis = $('setting-visible');
-        var currentlyShown = vis && vis.checked;
-        var nextVisible = currentlyShown ? 0 : 1;
+        var vl = $('setting-visible-logged');
+        var vg = $('setting-visible-guest');
+        var anyShown = (vl && vl.checked) || (vg && vg.checked);
+        var body = anyShown
+          ? { visible_logged_in: 0, visible_guest: 0 }
+          : { visible_logged_in: 1, visible_guest: 0 };
         fetch(apiBase() + '/api/ticker/settings', {
           method: 'PUT',
           headers: authHeaders(),
-          body: JSON.stringify({ is_visible: nextVisible }),
+          body: JSON.stringify(body),
         })
           .then(function (r) {
             return r.json();
@@ -589,9 +621,12 @@
               alert((j && j.message) || 'Không cập nhật được cài đặt');
               return;
             }
-            if (vis && j.data) vis.checked = Number(j.data.is_visible) === 1;
+            if (vl && j.data) vl.checked = Number(j.data.visible_logged_in) === 1;
+            if (vg && j.data) vg.checked = Number(j.data.visible_guest) === 1;
             if (j.data && window.__TICKER_PAGE_SETTINGS__) {
               window.__TICKER_PAGE_SETTINGS__.is_visible = j.data.is_visible;
+              window.__TICKER_PAGE_SETTINGS__.visible_logged_in = j.data.visible_logged_in;
+              window.__TICKER_PAGE_SETTINGS__.visible_guest = j.data.visible_guest;
               if (j.data.content_font_size != null) {
                 window.__TICKER_PAGE_SETTINGS__.content_font_size = j.data.content_font_size;
               }

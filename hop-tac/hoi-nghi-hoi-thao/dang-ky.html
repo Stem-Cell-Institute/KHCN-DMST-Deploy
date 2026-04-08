@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đăng ký tham dự HN/HT — Viện Tế bào gốc</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0c1222;
+  --ink-soft:#334155;
+  --muted:#64748b;
+  --navy:#0f2847;
+  --blue:#2563eb;
+  --blue-light:#dbeafe;
+  --cyan:#0891b2;
+  --cyan-soft:#ecfeff;
+  --green:#059669;
+  --green-soft:#d1fae5;
+  --amber:#d97706;
+  --amber-soft:#fffbeb;
+  --coral:#ea580c;
+  --coral-soft:#ffedd5;
+  --purple:#7c3aed;
+  --purple-soft:#ede9fe;
+  --card:#ffffff;
+  --border:#e2e8f0;
+  --shadow:0 4px 6px -1px rgba(15,23,42,.07),0 12px 24px -4px rgba(15,40,71,.12);
+  --shadow-lg:0 20px 40px -12px rgba(15,40,71,.18);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Be Vietnam Pro',system-ui,sans-serif;
+  color:var(--ink);
+  min-height:100vh;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(37,99,235,.14), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(5,150,105,.12), transparent 50%),
+    radial-gradient(700px 400px at 50% 100%, rgba(234,88,12,.08), transparent 45%),
+    linear-gradient(165deg, #f0f7ff 0%, #f8fafc 35%, #eef8f4 100%);
+}
+.topbar{
+  background:linear-gradient(105deg,var(--navy) 0%,#1e3a5f 45%,#1d4ed8 100%);
+  padding:14px 28px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  position:sticky;
+  top:0;
+  z-index:50;
+  box-shadow:0 4px 20px rgba(15,40,71,.25);
+}
+.topbar a{
+  color:rgba(255,255,255,.88);
+  text-decoration:none;
+  font-size:13px;
+  font-weight:600;
+  padding:8px 14px;
+  border-radius:999px;
+  transition:background .2s,color .2s;
+}
+.topbar a:hover{background:rgba(255,255,255,.12);color:#fff}
+.topbar a:last-child{background:rgba(5,150,105,.35);border:1px solid rgba(255,255,255,.25)}
+.topbar a:last-child:hover{background:rgba(5,150,105,.55)}
+main{max-width:920px;margin:0 auto;padding:28px 20px 48px}
+.page-hero{
+  margin-bottom:28px;
+  padding:20px 22px;
+  background:linear-gradient(135deg,rgba(255,255,255,.92) 0%,rgba(219,234,254,.65) 100%);
+  border-radius:16px;
+  border:1px solid rgba(37,99,235,.15);
+  box-shadow:var(--shadow);
+}
+.badge-flow{
+  display:inline-block;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--coral);
+  background:var(--coral-soft);
+  padding:5px 12px;
+  border-radius:999px;
+  margin-bottom:10px;
+}
+h1{
+  font-size:clamp(1.35rem,2.5vw,1.75rem);
+  font-weight:800;
+  margin:0 0 8px;
+  line-height:1.25;
+  background:linear-gradient(120deg,var(--navy),var(--blue));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.sub{color:var(--ink-soft);font-size:14px;line-height:1.55;margin:0;max-width:52ch}
+.section{
+  background:var(--card);
+  border-radius:16px;
+  padding:0;
+  margin-bottom:20px;
+  box-shadow:var(--shadow);
+  border:1px solid rgba(226,232,240,.9);
+  overflow:hidden;
+}
+.section-head{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:16px 20px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(248,250,252,.9) 0%,#fff 100%);
+}
+.section-num{
+  flex-shrink:0;
+  width:36px;height:36px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:15px;
+  color:#fff;
+  border-radius:12px;
+  box-shadow:0 4px 12px rgba(37,99,235,.35);
+}
+.section.accent-1 .section-num{background:linear-gradient(135deg,var(--blue),#4f46e5)}
+.section.accent-2 .section-num{background:linear-gradient(135deg,var(--cyan),var(--blue))}
+.section.accent-3 .section-num{background:linear-gradient(135deg,var(--purple),var(--blue))}
+.section.accent-4 .section-num{background:linear-gradient(135deg,var(--green),#0d9488)}
+.section.accent-5 .section-num{background:linear-gradient(135deg,var(--amber),var(--coral))}
+.section h2{
+  font-size:16px;
+  font-weight:700;
+  margin:0;
+  color:var(--navy);
+}
+.section-body{padding:20px 22px 22px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid .full{grid-column:1/-1}
+.field label,.section-body>label:first-child{
+  display:block;
+  font-size:12px;
+  font-weight:700;
+  margin-bottom:6px;
+  color:var(--ink-soft);
+  letter-spacing:.02em;
+}
+input:not([type=radio]):not([type=checkbox]):not([type=file]),select,textarea{
+  width:100%;
+  padding:11px 14px;
+  border:2px solid var(--border);
+  border-radius:10px;
+  font:inherit;
+  font-size:14px;
+  background:#fafbfc;
+  transition:border-color .2s,box-shadow .2s,background .2s;
+}
+input:not([type=radio]):not([type=checkbox]):not([type=file]):hover,select:hover,textarea:hover{border-color:#cbd5e1;background:#fff}
+input:not([type=radio]):not([type=checkbox]):not([type=file]):focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:var(--blue);
+  background:#fff;
+  box-shadow:0 0 0 4px rgba(37,99,235,.15);
+}
+input[readonly]{background:linear-gradient(180deg,#f1f5f9,#e2e8f0)!important;color:var(--ink-soft);cursor:default}
+input[type=file]{padding:10px;border:2px dashed #cbd5e1;border-radius:10px;background:var(--cyan-soft);cursor:pointer}
+input[type=file]:hover{border-color:var(--cyan);background:#cffafe}
+textarea{min-height:88px;resize:vertical;line-height:1.5}
+.pill-group{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.pill{
+  position:relative;
+  cursor:pointer;
+  margin:0;
+  font-weight:600;
+  font-size:13px;
+  color:var(--ink-soft);
+}
+.pill input{
+  position:absolute;
+  opacity:0;
+  width:0;height:0;
+}
+.pill span{
+  display:inline-block;
+  padding:10px 16px;
+  border-radius:999px;
+  border:2px solid var(--border);
+  background:#f8fafc;
+  transition:all .2s;
+}
+.pill input:focus-visible + span{outline:2px solid var(--blue);outline-offset:2px}
+.pill input:checked + span{
+  border-color:var(--blue);
+  background:linear-gradient(180deg,var(--blue-light),#eff6ff);
+  color:#1e40af;
+  box-shadow:0 2px 8px rgba(37,99,235,.2);
+}
+.pill:hover span{border-color:#94a3b8;background:#fff}
+.toggle-paper{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 16px;
+  border-radius:12px;
+  background:var(--purple-soft);
+  border:1px solid #ddd6fe;
+  margin-bottom:16px;
+  cursor:pointer;
+  font-weight:600;
+  color:#5b21b6;
+}
+.toggle-paper input{width:20px;height:20px;accent-color:var(--purple);cursor:pointer}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.actions{
+  display:flex;
+  gap:14px;
+  margin-top:8px;
+  flex-wrap:wrap;
+  padding:22px 24px;
+  background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(219,234,254,.4));
+  border-radius:16px;
+  border:1px solid rgba(37,99,235,.12);
+  box-shadow:var(--shadow);
+}
+.btn{
+  padding:12px 24px;
+  border-radius:999px;
+  font-weight:700;
+  font-size:14px;
+  border:none;
+  cursor:pointer;
+  font:inherit;
+  transition:transform .15s,box-shadow .2s;
+}
+.btn:active{transform:scale(.98)}
+.btn-primary{
+  background:linear-gradient(135deg,var(--green),#047857);
+  color:#fff;
+  box-shadow:0 6px 20px rgba(5,150,105,.4);
+}
+.btn-primary:hover{box-shadow:0 8px 28px rgba(5,150,105,.5)}
+.btn-outline{
+  background:#fff;
+  border:2px solid var(--border);
+  color:var(--navy);
+  box-shadow:0 2px 8px rgba(15,23,42,.06);
+}
+.btn-outline:hover{border-color:var(--blue);color:var(--blue)}
+.alert{padding:14px 16px;border-radius:12px;margin-bottom:16px;font-size:14px;font-weight:500;border:1px solid transparent}
+.alert-err{background:#fef2f2;color:#991b1b;border-color:#fecaca}
+.alert-ok{background:var(--green-soft);color:#065f46;border-color:#a7f3d0}
+table.fund{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+table.fund th{
+  background:linear-gradient(180deg,#1e40af,#2563eb);
+  color:#fff;
+  font-weight:700;
+  text-transform:uppercase;
+  font-size:10px;
+  letter-spacing:.06em;
+  padding:10px 8px;
+  text-align:left;
+}
+table.fund td{border-top:1px solid var(--border);padding:8px;background:#fff}
+table.fund tr:nth-child(even) td{background:#f8fafc}
+table.fund select,table.fund input[type=number],table.fund input:not([type]){padding:8px 10px!important;border-radius:8px!important;font-size:13px!important}
+table.fund button.rm,table.fund .btn-sm{
+  padding:6px 12px!important;font-size:12px!important;border-radius:8px!important;
+  background:#fff!important;border:2px solid #fecdd3!important;color:#be123c!important;font-weight:600!important;
+}
+table.fund button.rm:hover{background:#fff1f2!important;border-color:#fb7185!important}
+.hidden{display:none!important}
+.req::after{content:' *';color:#e11d48;font-weight:800}
+#btn_add_fund{border-radius:999px!important;border:2px dashed var(--blue)!important;color:var(--blue)!important;background:var(--blue-light)!important}
+#fund_total{color:var(--green);font-size:1.1em}
+@media (max-width:640px){
+  .grid{grid-template-columns:1fr}
+  .topbar{flex-direction:column;gap:10px;align-items:stretch;text-align:center}
+}
+</style>
+<script src="../../js/system-access.js"></script>
+</head>
+<body>
+<div class="topbar">
+  <a href="../../module-hoatac-quocte.html">← Hợp tác trong và ngoài nước</a>
+  <a href="cua-toi.html">Đăng ký của tôi</a>
+</div>
+<main>
+  <div class="page-hero">
+    <span class="badge-flow">Quy trình: Bạn gửi → Phòng KHCN → Viện trưởng</span>
+    <h1>Đăng ký tham dự Hội nghị/Hội thảo</h1>
+    <p class="sub">Lưu nháp không bắt buộc đủ trường; nộp đăng ký sẽ kiểm tra đầy đủ trước khi gửi Phòng KHCN.</p>
+  </div>
+  <div id="msg"></div>
+
+  <div class="section accent-1">
+    <div class="section-head"><span class="section-num">1</span><h2>Thông tin người đăng ký</h2></div>
+    <div class="section-body">
+    <div class="grid">
+      <div class="field"><label>Họ tên</label><input id="f_fullname" readonly></div>
+      <div class="field"><label>Email</label><input id="f_email" readonly></div>
+      <div class="field full"><label class="req">Đơn vị / Phòng ban</label><input id="f_unit" placeholder="Nhập đơn vị công tác"></div>
+      <div class="field"><label>Nhóm nghiên cứu</label><input id="f_rg" placeholder="Nếu có"></div>
+      <div class="field"><label class="req">Chức danh / Học vị</label><input id="f_job" placeholder="VD: TS., PGS.TS"></div>
+    </div>
+    </div>
+  </div>
+
+  <div class="section accent-2">
+    <div class="section-head"><span class="section-num">2</span><h2>Thông tin Hội nghị/Hội thảo</h2></div>
+    <div class="section-body">
+    <div class="grid">
+      <div class="field full"><label class="req">Tên hội nghị/hội thảo</label><input id="f_cname" placeholder="Tên đầy đủ sự kiện"></div>
+      <div class="field full"><label class="req">Loại</label>
+        <div class="pill-group" role="radiogroup">
+          <label class="pill"><input type="radio" name="ctype" value="Trong nước" checked><span>Trong nước</span></label>
+          <label class="pill"><input type="radio" name="ctype" value="Quốc tế"><span>Quốc tế</span></label>
+        </div>
+      </div>
+      <div class="field full"><label class="req">Đơn vị tổ chức</label><input id="f_corg" placeholder="Ban tổ chức / hội đồng khoa học"></div>
+      <div class="field"><label class="req">Từ ngày</label><input id="f_d1" type="date"></div>
+      <div class="field"><label class="req">Đến ngày</label><input id="f_d2" type="date"></div>
+      <div class="field full"><label class="req">Địa điểm tổ chức</label><input id="f_loc" placeholder="Thành phố, địa điểm"></div>
+      <div class="field full hidden" id="wrap_country"><label class="req">Quốc gia</label><input id="f_country"></div>
+      <div class="field full"><label>Website hội nghị</label><input id="f_web" type="url" placeholder="https://"></div>
+      <div class="field full"><label class="req">Trạng thái thư mời</label>
+        <div class="pill-group">
+          <label class="pill"><input type="radio" name="inv" value="Đã có thư mời"><span>Đã có thư mời</span></label>
+          <label class="pill"><input type="radio" name="inv" value="Chưa có thư mời" checked><span>Chưa có thư mời</span></label>
+          <label class="pill"><input type="radio" name="inv" value="Đang mở nộp bài"><span>Đang mở nộp bài</span></label>
+        </div>
+      </div>
+      <div class="field full hidden" id="wrap_invf"><label>Upload thư mời (PDF/DOC/DOCX, tối đa 20MB)</label><input id="f_inv" type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></div>
+    </div>
+    </div>
+  </div>
+
+  <div class="section accent-3">
+    <div class="section-head"><span class="section-num">3</span><h2>Bài báo / báo cáo</h2></div>
+    <div class="section-body">
+    <label class="toggle-paper"><input type="checkbox" id="f_has_paper"><span>Có gửi bài tham dự (báo cáo / poster)</span></label>
+    <div id="paper_block" class="hidden">
+      <div class="grid">
+        <div class="field full"><label class="req">Tiêu đề</label><input id="f_ptitle"></div>
+        <div class="field full"><label class="req">Tác giả (ngăn cách bằng ;)</label><input id="f_pauth"></div>
+        <div class="field full"><label class="req">Hình thức</label>
+          <select id="f_ptype"><option value="">— Chọn —</option><option>Báo cáo toàn văn</option><option>Báo cáo tóm tắt</option><option>Poster</option></select>
+        </div>
+        <div class="field full"><label>Tóm tắt nội dung</label><textarea id="f_pabs"></textarea></div>
+        <div class="field full"><label>File bài báo/tóm tắt (PDF/DOC/DOCX, tối đa 20MB)</label><input id="f_pfile" type="file" accept=".pdf,.doc,.docx"></div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <div class="section accent-4">
+    <div class="section-head"><span class="section-num">4</span><h2>Mục đích tham dự</h2></div>
+    <div class="section-body">
+    <label class="req">Mục đích và kỳ vọng</label>
+    <textarea id="f_purpose" placeholder="Nêu rõ mục đích tham dự, kết quả mong đợi..."></textarea>
+    </div>
+  </div>
+
+  <div class="section accent-5">
+    <div class="section-head"><span class="section-num">5</span><h2>Kinh phí</h2></div>
+    <div class="section-body">
+    <label class="req" style="margin-bottom:8px;display:block">Phương án kinh phí</label>
+    <div class="pill-group" style="margin-bottom:16px">
+      <label class="pill"><input type="radio" name="fund" value="Tự túc hoàn toàn" checked><span>Tự túc hoàn toàn</span></label>
+      <label class="pill"><input type="radio" name="fund" value="Đề nghị Viện hỗ trợ một phần"><span>Hỗ trợ một phần</span></label>
+      <label class="pill"><input type="radio" name="fund" value="Đề nghị Viện hỗ trợ toàn bộ"><span>Hỗ trợ toàn bộ</span></label>
+    </div>
+    <div id="fund_block" class="hidden">
+      <table class="fund"><thead><tr><th>STT</th><th>Khoản mục</th><th>Số tiền (VNĐ)</th><th>Ghi chú</th><th></th></tr></thead><tbody id="fund_body"></tbody></table>
+      <button type="button" class="btn btn-outline" style="margin-top:12px" id="btn_add_fund">+ Thêm dòng</button>
+      <p style="margin-top:14px;font-weight:700;font-size:15px;color:var(--navy)">Tổng đề nghị: <span id="fund_total">0</span> VNĐ</p>
+    </div>
+    <label style="margin-top:16px;display:block">Ghi chú kinh phí</label><textarea id="f_fnote" placeholder="Thông tin bổ sung về dự trù..."></textarea>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button type="button" class="btn btn-outline" id="btn_draft">Lưu nháp</button>
+    <button type="button" class="btn btn-primary" id="btn_submit">Nộp đăng ký</button>
+  </div>
+</main>
+<script>
+(function(){
+  var API = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000'))
+    ? 'http://localhost:3000' : (window.location.origin || '');
+  function getToken(){ return localStorage.getItem('token'); }
+  function authHeaders(isMultipart){
+    var h = {};
+    if (!isMultipart) h['Content-Type'] = 'application/json';
+    var t = getToken();
+    if (t) h['Authorization'] = 'Bearer '+t;
+    return h;
+  }
+  function authBearerOnly(){
+    var h = {};
+    var t = getToken();
+    if (t) h['Authorization'] = 'Bearer '+t;
+    return h;
+  }
+  var draftId = null;
+  var params = new URLSearchParams(location.search);
+  var qid = params.get('id');
+  if (qid) draftId = parseInt(qid,10);
+
+  function showMsg(text, ok){
+    var el = document.getElementById('msg');
+    el.className = 'alert ' + (ok ? 'alert-ok' : 'alert-err');
+    el.textContent = text;
+    el.style.display = text ? 'block' : 'none';
+  }
+
+  function invState(){
+    var v = document.querySelector('input[name=inv]:checked');
+    return v ? v.value : '';
+  }
+  function syncInv(){
+    var on = invState() === 'Đã có thư mời';
+    document.getElementById('wrap_invf').classList.toggle('hidden', !on);
+  }
+  document.querySelectorAll('input[name=inv]').forEach(function(r){ r.addEventListener('change', syncInv); });
+
+  function ctype(){
+    var v = document.querySelector('input[name=ctype]:checked');
+    return v ? v.value : 'Trong nước';
+  }
+  document.querySelectorAll('input[name=ctype]').forEach(function(r){
+    r.addEventListener('change', function(){
+      document.getElementById('wrap_country').classList.toggle('hidden', ctype() !== 'Quốc tế');
+    });
+  });
+
+  document.getElementById('f_has_paper').addEventListener('change', function(){
+    document.getElementById('paper_block').classList.toggle('hidden', !this.checked);
+  });
+
+  function fundType(){
+    var v = document.querySelector('input[name=fund]:checked');
+    return v ? v.value : 'Tự túc hoàn toàn';
+  }
+  document.querySelectorAll('input[name=fund]').forEach(function(r){
+    r.addEventListener('change', function(){
+      var self = fundType() === 'Tự túc hoàn toàn';
+      document.getElementById('fund_block').classList.toggle('hidden', self);
+      if (!self && !document.getElementById('fund_body').querySelector('tr')) addFundRow();
+    });
+  });
+
+  var fundPresets = ['Phí đăng ký','Vé máy bay','Lưu trú','Ăn uống','Đi lại nội địa','Khác'];
+  function addFundRow(){
+    var tr = document.createElement('tr');
+    var i = document.querySelectorAll('#fund_body tr').length + 1;
+    tr.innerHTML = '<td>'+i+'</td><td><select class="fi-item">'+
+      fundPresets.map(function(p){ return '<option>'+p+'</option>'; }).join('') +
+      '</select></td><td><input type="number" class="fi-amt" min="0" step="1000"></td><td><input class="fi-note"></td><td><button type="button" class="btn btn-outline btn-sm rm">Xóa</button></td>';
+    tr.querySelector('.rm').onclick = function(){ tr.remove(); recalcFund(); };
+    tr.querySelector('.fi-amt').addEventListener('input', recalcFund);
+    document.getElementById('fund_body').appendChild(tr);
+  }
+  document.getElementById('btn_add_fund').onclick = addFundRow;
+  function recalcFund(){
+    var sum = 0;
+    document.querySelectorAll('.fi-amt').forEach(function(inp){
+      var n = parseInt(inp.value,10);
+      if (n > 0) sum += n;
+    });
+    document.getElementById('fund_total').textContent = sum.toLocaleString('vi-VN');
+    return sum;
+  }
+  function collectFundingItems(){
+    var rows = document.querySelectorAll('#fund_body tr');
+    var arr = [];
+    rows.forEach(function(tr){
+      var item = tr.querySelector('.fi-item').value;
+      var amount = parseInt(tr.querySelector('.fi-amt').value,10) || 0;
+      var note = tr.querySelector('.fi-note').value.trim();
+      if (item && amount > 0) arr.push({ item: item, amount: amount, note: note });
+    });
+    return arr;
+  }
+
+  function buildFormData(){
+    var fd = new FormData();
+    fd.append('unit', document.getElementById('f_unit').value.trim());
+    fd.append('research_group', document.getElementById('f_rg').value.trim());
+    fd.append('job_title', document.getElementById('f_job').value.trim());
+    fd.append('conf_name', document.getElementById('f_cname').value.trim());
+    fd.append('conf_type', ctype());
+    fd.append('conf_organizer', document.getElementById('f_corg').value.trim());
+    fd.append('conf_start_date', document.getElementById('f_d1').value);
+    fd.append('conf_end_date', document.getElementById('f_d2').value);
+    fd.append('conf_location', document.getElementById('f_loc').value.trim());
+    fd.append('conf_country', document.getElementById('f_country').value.trim());
+    fd.append('conf_website', document.getElementById('f_web').value.trim());
+    fd.append('invitation_status', invState());
+    fd.append('has_paper', document.getElementById('f_has_paper').checked ? '1' : '0');
+    if (document.getElementById('f_has_paper').checked) {
+      fd.append('paper_title', document.getElementById('f_ptitle').value.trim());
+      fd.append('paper_authors', document.getElementById('f_pauth').value.trim());
+      fd.append('paper_type', document.getElementById('f_ptype').value);
+      fd.append('paper_abstract', document.getElementById('f_pabs').value.trim());
+    }
+    fd.append('purpose', document.getElementById('f_purpose').value.trim());
+    fd.append('funding_type', fundType());
+    var items = collectFundingItems();
+    var total = recalcFund();
+    fd.append('funding_items', JSON.stringify(items));
+    fd.append('funding_requested_vnd', String(total));
+    fd.append('funding_note', document.getElementById('f_fnote').value.trim());
+    var invf = document.getElementById('f_inv').files[0];
+    if (invf) fd.append('invitation_file', invf);
+    var pf = document.getElementById('f_pfile').files[0];
+    if (pf && document.getElementById('f_has_paper').checked) fd.append('paper_file', pf);
+    return fd;
+  }
+
+  async function loadMe(){
+    var t = getToken();
+    if (!t) { location.href = '/dang-nhap.html'; return; }
+    var r = await fetch(API + '/api/me', { headers: authHeaders(false) });
+    if (r.status === 401) { location.href = '/dang-nhap.html'; return; }
+    var me = await r.json();
+    if (typeof hasInstituteModuleAccess === 'function' && !hasInstituteModuleAccess(me.email)) {
+      showMsg('Tài khoản không có quyền truy cập module Viện.', false); return;
+    }
+    document.getElementById('f_fullname').value = me.fullname || '';
+    document.getElementById('f_email').value = me.email || '';
+  }
+
+  async function loadDraft(){
+    if (!draftId) return;
+    var r = await fetch(API + '/api/conference-registrations/' + draftId, { headers: authHeaders(false) });
+    if (!r.ok) return;
+    var j = await r.json();
+    var d = j.data;
+    if (!d) return;
+    document.getElementById('f_unit').value = d.unit || '';
+    document.getElementById('f_rg').value = d.research_group || '';
+    document.getElementById('f_job').value = d.job_title || '';
+    document.getElementById('f_cname').value = d.conf_name || '';
+    document.querySelectorAll('input[name=ctype]').forEach(function(x){ x.checked = (x.value === d.conf_type); });
+    document.getElementById('f_corg').value = d.conf_organizer || '';
+    document.getElementById('f_d1').value = (d.conf_start_date || '').slice(0,10);
+    document.getElementById('f_d2').value = (d.conf_end_date || '').slice(0,10);
+    document.getElementById('f_loc').value = d.conf_location || '';
+    document.getElementById('f_country').value = d.conf_country || '';
+    document.getElementById('f_web').value = d.conf_website || '';
+    document.querySelectorAll('input[name=inv]').forEach(function(x){ x.checked = (x.value === d.invitation_status); });
+    syncInv();
+    document.getElementById('f_has_paper').checked = !!Number(d.has_paper);
+    document.getElementById('paper_block').classList.toggle('hidden', !Number(d.has_paper));
+    document.getElementById('f_ptitle').value = d.paper_title || '';
+    document.getElementById('f_pauth').value = d.paper_authors || '';
+    document.getElementById('f_ptype').value = d.paper_type || '';
+    document.getElementById('f_pabs').value = d.paper_abstract || '';
+    document.getElementById('f_purpose').value = d.purpose || '';
+    document.querySelectorAll('input[name=fund]').forEach(function(x){ x.checked = (x.value === d.funding_type); });
+    document.getElementById('fund_block').classList.toggle('hidden', fundType() === 'Tự túc hoàn toàn');
+    document.getElementById('f_fnote').value = d.funding_note || '';
+    document.getElementById('wrap_country').classList.toggle('hidden', ctype() !== 'Quốc tế');
+    try {
+      var fi = JSON.parse(d.funding_items || '[]');
+      document.getElementById('fund_body').innerHTML = '';
+      if (fi.length) fi.forEach(function(row){
+        addFundRow();
+        var tr = document.querySelector('#fund_body tr:last-child');
+        tr.querySelector('.fi-item').value = row.item || 'Khác';
+        tr.querySelector('.fi-amt').value = row.amount || '';
+        tr.querySelector('.fi-note').value = row.note || '';
+      });
+      recalcFund();
+    } catch(e){}
+  }
+
+  document.getElementById('btn_draft').onclick = async function(){
+    showMsg('', true);
+    var fd = buildFormData();
+    var url = API + (draftId ? '/api/conference-registrations/' + draftId : '/api/conference-registrations');
+    var opt = { method: draftId ? 'PATCH' : 'POST', headers: authHeaders(true), body: fd };
+    var r = await fetch(url, opt);
+    var j = await r.json().catch(function(){ return {}; });
+    if (!r.ok) { showMsg(j.message || 'Lỗi lưu', false); return; }
+    draftId = j.id;
+    history.replaceState(null, '', '?id=' + draftId);
+    showMsg('Đã lưu nháp.', true);
+  };
+
+  document.getElementById('btn_submit').onclick = async function(){
+    showMsg('Đang kiểm tra...', true);
+    if (!document.getElementById('f_unit').value.trim()) { showMsg('Nhập đơn vị.', false); return; }
+    if (!document.getElementById('f_job').value.trim()) { showMsg('Nhập chức danh/học vị.', false); return; }
+    if (!document.getElementById('f_cname').value.trim()) { showMsg('Nhập tên hội nghị.', false); return; }
+    var d1 = document.getElementById('f_d1').value;
+    var d2 = document.getElementById('f_d2').value;
+    if (!d1 || !d2) { showMsg('Chọn đủ khoảng thời gian.', false); return; }
+    if (d1 > d2) { showMsg('Ngày kết thúc phải sau ngày bắt đầu.', false); return; }
+    if (ctype() === 'Quốc tế' && !document.getElementById('f_country').value.trim()) { showMsg('Nhập quốc gia.', false); return; }
+    if (invState() === 'Đã có thư mời') {
+      var hasInv = document.getElementById('f_inv').files.length > 0;
+      if (!hasInv && draftId) {
+        var chk = await fetch(API + '/api/conference-registrations/' + draftId, { headers: authHeaders(false) });
+        var cj = await chk.json();
+        if (!cj.data || !cj.data.invitation_file_path) { showMsg('Cần tải lên thư mời.', false); return; }
+      } else if (!hasInv && !draftId) { showMsg('Cần tải lên thư mời.', false); return; }
+    }
+    if (document.getElementById('f_has_paper').checked) {
+      if (!document.getElementById('f_ptitle').value.trim() || !document.getElementById('f_pauth').value.trim() || !document.getElementById('f_ptype').value) {
+        showMsg('Điền đủ thông tin bài báo.', false); return;
+      }
+      var hasPf = document.getElementById('f_pfile').files.length > 0;
+      if (!hasPf && draftId) {
+        var chk2 = await fetch(API + '/api/conference-registrations/' + draftId, { headers: authHeaders(false) });
+        var cj2 = await chk2.json();
+        if (!cj2.data || !cj2.data.paper_file_path) { showMsg('Cần tải file bài báo/tóm tắt.', false); return; }
+      } else if (!hasPf && !draftId) { showMsg('Cần tải file bài báo/tóm tắt.', false); return; }
+    }
+    if (!document.getElementById('f_purpose').value.trim()) { showMsg('Nhập mục đích tham dự.', false); return; }
+    if (fundType() !== 'Tự túc hoàn toàn') {
+      var items = collectFundingItems();
+      if (!items.length) { showMsg('Thêm ít nhất một khoản dự trù.', false); return; }
+      if (recalcFund() <= 0) { showMsg('Tổng đề nghị hỗ trợ phải > 0.', false); return; }
+    }
+    var summ = 'Đơn vị: ' + document.getElementById('f_unit').value + '\nHội nghị: ' + document.getElementById('f_cname').value + '\nThời gian: ' + d1 + ' — ' + d2;
+    if (!confirm('Xác nhận nộp đăng ký?\n\n' + summ)) return;
+
+    var fd = buildFormData();
+    if (!draftId) {
+      var cr = await fetch(API + '/api/conference-registrations', { method: 'POST', headers: authHeaders(true), body: fd });
+      var jr = await cr.json().catch(function(){ return {}; });
+      if (!cr.ok) { showMsg(jr.message || 'Lỗi tạo đơn', false); return; }
+      draftId = jr.id;
+    } else {
+      var pr = await fetch(API + '/api/conference-registrations/' + draftId, { method: 'PATCH', headers: authHeaders(true), body: fd });
+      var jp = await pr.json().catch(function(){ return {}; });
+      if (!pr.ok) { showMsg(jp.message || 'Lỗi cập nhật', false); return; }
+    }
+    var sr = await fetch(API + '/api/conference-registrations/' + draftId + '/submit', { method: 'POST', headers: authBearerOnly() });
+    var sj = await sr.json().catch(function(){ return {}; });
+    if (!sr.ok) { showMsg(sj.message || 'Lỗi nộp', false); return; }
+    showMsg('Đã nộp đăng ký thành công.', true);
+    setTimeout(function(){ location.href = 'cua-toi.html'; }, 800);
+  };
+
+  loadMe().then(function(){ return loadDraft(); });
+  syncInv();
+})();
+</script>
+</body>
+</html>

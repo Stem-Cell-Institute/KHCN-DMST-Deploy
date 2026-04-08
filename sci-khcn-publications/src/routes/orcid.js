@@ -7,7 +7,7 @@
  * DELETE /api/orcid/researchers/:id   — Xóa NCV
  *
  * GET  /api/orcid/harvest/stream      — Bắt đầu harvest, trả về SSE (real-time progress)
- * POST /api/orcid/harvest             — Đăng ký trên server.js (JWT + adminOnly), chạy runHarvestSession đồng bộ
+ * POST /api/orcid/harvest             — Trên server.js (JWT + adminOnly). Body tuỳ chọn: { fullNames[], researcherIds[], orcidIds[] } để chỉ quét một số NCV
  * GET  /api/orcid/queue               — Lấy danh sách công bố chờ duyệt
  * POST /api/orcid/queue/:id/approve   — Duyệt (import vào publications)
  * POST /api/orcid/queue/:id/reject    — Từ chối

@@ -134,6 +134,7 @@
                         <a href="#section-categories">Hạng mục đề tài cấp Viện</a>
                         <a href="#section-missions">Nhiệm vụ KHCN</a>
                         <a href="#section-homepage">Cấu hình trang chủ &amp; hệ thống</a>
+                        <a href="#section-sidebar-rss">Tin RSS cột phải (Trang chủ)</a>
                         <a href="#section-notify-recipients">Email thông báo</a>
                         <a href="#section-audit">Nhật ký hệ thống</a>
                     </nav>
@@ -469,6 +470,94 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <div class="card" id="section-sidebar-rss">
+                <h3>📰 Tin RSS cột phải (Trang chủ)</h3>
+                <p class="note">Gộp tin từ nhiều nguồn. <strong>RSS:</strong> URL trang hoặc feed (<code>…/feed/</code>) — hệ thống ưu tiên XML RSS/Atom. <strong>HTML:</strong> URL trang tin, kèm CSS selector (Cheerio) để chọn từng ô tin, tiêu đề và (tuỳ chọn) link, ngày — dùng khi site không có feed. Mỗi tin hiển thị nhãn nguồn. <strong>Cài đặt thanh TIN TỨC</strong> (chạy ngang) tương tự Ticker thông báo: tốc độ, cỡ chữ, màu chữ, hiển thị theo đối tượng, link, dừng khi hover.</p>
+                <div id="sidebar-rss-msg" class="msg" style="display:none;"></div>
+                <div class="add-role-form" style="margin-bottom:1rem;padding:1rem;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+                    <h4 style="margin:0 0 0.75rem;font-size:1rem;color:#334155;">Cài đặt thanh TIN TỨC (trang chủ)</h4>
+                    <p style="margin:0 0 0.75rem;font-size:0.88rem;color:#64748b;line-height:1.45;">
+                        Áp dụng cho <strong>dải tin chạy ngang</strong> (nhãn xanh &quot;TIN TỨC&quot;) giữa THÔNG BÁO và hàng thống kê — <em>không</em> phải cột RSS dọc hay ticker THÔNG BÁO.
+                    </p>
+                    <div class="form-row" style="align-items:flex-end;flex-wrap:wrap;margin-bottom:0.75rem;">
+                        <div class="form-group" style="min-width:160px;">
+                            <label for="sidebar-rss-scroll-sec">Một vòng cuộn (giây, 0–300; 0 = chạy nhanh nhất)</label>
+                            <input type="number" id="sidebar-rss-scroll-sec" min="0" max="300" step="1" value="50" style="width:100%;padding:0.5rem;border:2px solid #dee2e6;border-radius:8px;">
+                        </div>
+                        <div class="form-group" style="min-width:200px;flex:1;">
+                            <label for="sidebar-rss-font-size">Cỡ chữ nội dung (px, 10–28)</label>
+                            <input type="number" id="sidebar-rss-font-size" min="10" max="28" step="1" value="13" style="width:100%;padding:0.5rem;border:2px solid #dee2e6;border-radius:8px;">
+                        </div>
+                        <div class="form-group" style="min-width:140px;">
+                            <label for="sidebar-rss-text-color">Màu chữ nội dung (#RRGGBB)</label>
+                            <input type="text" id="sidebar-rss-text-color" maxlength="7" placeholder="#1e293b" style="width:100%;padding:0.5rem;border:2px solid #dee2e6;border-radius:8px;">
+                        </div>
+                    </div>
+                    <div class="form-row" style="flex-wrap:wrap;gap:1rem;margin-bottom:0.75rem;align-items:center;">
+                        <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.95rem;">
+                            <input type="checkbox" id="sidebar-rss-vis-login" checked> Hiển thị cho người đã đăng nhập
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.95rem;">
+                            <input type="checkbox" id="sidebar-rss-vis-guest" checked> Hiển thị cho khách (chưa đăng nhập)
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.95rem;">
+                            <input type="checkbox" id="sidebar-rss-links" checked> Cho phép click liên kết tin
+                        </label>
+                        <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.95rem;">
+                            <input type="checkbox" id="sidebar-rss-hover" checked> Dừng khi hover (trang chủ)
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <button type="button" class="btn-submit-role" id="btn-save-sidebar-rss-strip">Lưu cài đặt thanh TIN TỨC</button>
+                    </div>
+                </div>
+                <div class="add-role-form" style="margin-bottom:1rem;">
+                    <div class="form-row" style="align-items:flex-end;flex-wrap:wrap;">
+                        <div class="form-group" style="min-width:140px;">
+                            <label for="sidebar-rss-source-type">Kiểu nguồn</label>
+                            <select id="sidebar-rss-source-type" style="width:100%;padding:0.5rem;border:2px solid #dee2e6;border-radius:8px;">
+                                <option value="rss">RSS / Atom (mặc định)</option>
+                                <option value="html">HTML + CSS selector</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex:1;min-width:200px;">
+                            <label for="sidebar-rss-label">Tên hiển thị nguồn</label>
+                            <input type="text" id="sidebar-rss-label" placeholder="VD: NAFOSTED" maxlength="120" style="width:100%;padding:0.5rem;border:2px solid #dee2e6;border-radius:8px;">
+                        </div>
+                        <div class="form-group" style="flex:2;min-width:260px;">
+                            <label for="sidebar-rss-url">URL trang hoặc RSS</label>
+                            <input type="url" id="sidebar-rss-url" placeholder="https://…" style="width:100%;padding:0.5rem;border:2px solid #dee2e6;border-radius:8px;">
+                        </div>
+                        <div class="form-group form-group-btn">
+                            <button type="button" class="btn-submit-role" id="btn-add-sidebar-rss-source">Thêm nguồn</button>
+                        </div>
+                    </div>
+                    <div id="sidebar-rss-scrape-fields" style="display:none;margin-top:0.75rem;padding:0.75rem 0 0;border-top:1px dashed #dee2e6;">
+                        <p class="note" style="margin-top:0;font-size:0.88rem;">Selector áp dụng trong phạm vi mỗi ô tin (Cheerio). Ví dụ: item <code>article.post</code>, tiêu đề <code>h2 a</code>. Để lấy link từ chính thẻ tiêu đề là <code>&lt;a&gt;</code>, có thể để trống “Link”. Ngày: <code>time</code> (ưu tiên thuộc tính <code>datetime</code>).</p>
+                        <div class="form-row" style="flex-wrap:wrap;">
+                            <div class="form-group" style="flex:1;min-width:200px;">
+                                <label for="sidebar-rss-sel-item">CSS — ô tin (bắt buộc)</label>
+                                <input type="text" id="sidebar-rss-sel-item" placeholder="VD: article, .news-item, li.item" maxlength="400" style="width:100%;padding:0.5rem;border:2px solid #dee2e6;border-radius:8px;">
+                            </div>
+                            <div class="form-group" style="flex:1;min-width:200px;">
+                                <label for="sidebar-rss-sel-title">CSS — tiêu đề trong ô (bắt buộc)</label>
+                                <input type="text" id="sidebar-rss-sel-title" placeholder="VD: h2 a, h3, a" maxlength="400" style="width:100%;padding:0.5rem;border:2px solid #dee2e6;border-radius:8px;">
+                            </div>
+                        </div>
+                        <div class="form-row" style="flex-wrap:wrap;">
+                            <div class="form-group" style="flex:1;min-width:200px;">
+                                <label for="sidebar-rss-sel-link">CSS — link (tuỳ chọn)</label>
+                                <input type="text" id="sidebar-rss-sel-link" placeholder="Để trống nếu tiêu đề đã là thẻ a" maxlength="400" style="width:100%;padding:0.5rem;border:2px solid #dee2e6;border-radius:8px;">
+                            </div>
+                            <div class="form-group" style="flex:1;min-width:200px;">
+                                <label for="sidebar-rss-sel-date">CSS — ngày (tuỳ chọn)</label>
+                                <input type="text" id="sidebar-rss-sel-date" placeholder="VD: time, .date, .post-meta" maxlength="400" style="width:100%;padding:0.5rem;border:2px solid #dee2e6;border-radius:8px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="sidebar-rss-sources-wrap"><div class="empty-state">Đang tải…</div></div>
             </div>
             <div class="card">
                 <h3>☑️ Ô đánh dấu (Nộp đề tài cấp Viện)</h3>
@@ -1035,6 +1124,7 @@
             loadRecipients();
             loadHomepageModules();
             loadStandardLabel();
+            loadSidebarRssAdmin();
             loadSubmissionOptions();
             var btnSaveStd = document.getElementById('btn-save-standard-label');
             var btnClearStd = document.getElementById('btn-clear-standard-label');
@@ -1055,6 +1145,237 @@
                     if (res.ok) { showStandardLabelMsg(data.message || 'Đã xóa dòng tiêu chuẩn.', false); var inp = document.getElementById('standard-label-input'); if (inp) inp.value = ''; } else showStandardLabelMsg(data.message || 'Xóa thất bại.', true);
                 } catch (err) { showStandardLabelMsg('Lỗi kết nối.', true); }
             });
+            var btnSaveStrip = document.getElementById('btn-save-sidebar-rss-strip');
+            if (btnSaveStrip) btnSaveStrip.addEventListener('click', saveSidebarRssStrip);
+            var btnAddSrc = document.getElementById('btn-add-sidebar-rss-source');
+            if (btnAddSrc) btnAddSrc.addEventListener('click', addSidebarRssSource);
+            var typeSel = document.getElementById('sidebar-rss-source-type');
+            if (typeSel) typeSel.addEventListener('change', toggleSidebarRssScrapeFields);
+            toggleSidebarRssScrapeFields();
+        }
+
+        function toggleSidebarRssScrapeFields() {
+            var typeEl = document.getElementById('sidebar-rss-source-type');
+            var box = document.getElementById('sidebar-rss-scrape-fields');
+            if (!box) return;
+            var isHtml = typeEl && String(typeEl.value || 'rss') === 'html';
+            box.style.display = isHtml ? 'block' : 'none';
+        }
+
+        function showSidebarRssMsg(text, isErr) {
+            var el = document.getElementById('sidebar-rss-msg');
+            if (!el) return;
+            el.style.display = 'block';
+            el.textContent = text;
+            el.className = 'msg ' + (isErr ? 'error' : 'success');
+        }
+
+        function escHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        async function loadSidebarRssAdmin() {
+            var wrap = document.getElementById('sidebar-rss-sources-wrap');
+            var secInp = document.getElementById('sidebar-rss-scroll-sec');
+            if (!wrap || !isAdmin || !token) return;
+            try {
+                var res = await fetch(apiBase + '/api/admin/homepage-sidebar-rss/sources', {
+                    headers: { Authorization: 'Bearer ' + token },
+                });
+                var data = await res.json().catch(function () {
+                    return {};
+                });
+                if (!res.ok) {
+                    wrap.innerHTML = '<div class="empty-state">' + escHtml(data.message || 'Không tải được.') + '</div>';
+                    return;
+                }
+                if (secInp && data.scrollDurationSec != null) secInp.value = String(data.scrollDurationSec);
+                var fzInp = document.getElementById('sidebar-rss-font-size');
+                var colInp = document.getElementById('sidebar-rss-text-color');
+                var vL = document.getElementById('sidebar-rss-vis-login');
+                var vG = document.getElementById('sidebar-rss-vis-guest');
+                var lnk = document.getElementById('sidebar-rss-links');
+                var hov = document.getElementById('sidebar-rss-hover');
+                if (fzInp && data.contentFontSize != null) fzInp.value = String(data.contentFontSize);
+                if (colInp && data.contentTextColor) colInp.value = String(data.contentTextColor);
+                if (vL) vL.checked = data.visibleLoggedIn !== 0;
+                if (vG) vG.checked = data.visibleGuest !== 0;
+                if (lnk) lnk.checked = data.linksEnabled !== 0;
+                if (hov) hov.checked = data.hoverPause !== 0;
+                var rows = data.sources || [];
+                if (rows.length === 0) {
+                    wrap.innerHTML = '<div class="empty-state">Chưa có nguồn nào.</div>';
+                    return;
+                }
+                wrap.innerHTML =
+                    '<table><thead><tr><th>Loại</th><th>Nhãn</th><th>URL / cấu hình</th><th></th></tr></thead><tbody>' +
+                    rows
+                        .map(function (r) {
+                            var kind = String(r.source_type || 'rss').toLowerCase() === 'html' ? 'HTML' : 'RSS';
+                            var extra = '';
+                            if (kind === 'HTML') {
+                                extra =
+                                    '<div style="font-size:0.8rem;color:#64748b;margin-top:4px;">item: <code>' +
+                                    escHtml((r.scrape_item_selector || '').slice(0, 80)) +
+                                    '</code> · title: <code>' +
+                                    escHtml((r.scrape_title_selector || '').slice(0, 80)) +
+                                    '</code></div>';
+                            }
+                            return (
+                                '<tr><td>' +
+                                escHtml(kind) +
+                                '</td><td>' +
+                                escHtml(r.label) +
+                                '</td><td style="word-break:break-all;font-size:0.88rem;">' +
+                                escHtml(r.feed_url) +
+                                extra +
+                                '</td><td><button type="button" class="btn-sm btn-delete btn-del-sidebar-rss" data-id="' +
+                                escHtml(String(r.id)) +
+                                '">Xóa</button></td></tr>'
+                            );
+                        })
+                        .join('') +
+                    '</tbody></table>';
+                wrap.querySelectorAll('.btn-del-sidebar-rss').forEach(function (btn) {
+                    btn.addEventListener('click', async function () {
+                        var id = this.getAttribute('data-id');
+                        if (!id || !confirm('Xóa nguồn RSS này?')) return;
+                        try {
+                            var r2 = await fetch(
+                                apiBase + '/api/admin/homepage-sidebar-rss/sources/' + encodeURIComponent(id),
+                                { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } }
+                            );
+                            var d2 = await r2.json().catch(function () {
+                                return {};
+                            });
+                            if (r2.ok) {
+                                showSidebarRssMsg('Đã xóa nguồn.', false);
+                                loadSidebarRssAdmin();
+                            } else showSidebarRssMsg(d2.message || 'Lỗi xóa.', true);
+                        } catch (e) {
+                            showSidebarRssMsg('Lỗi kết nối.', true);
+                        }
+                    });
+                });
+            } catch (e) {
+                wrap.innerHTML = '<div class="empty-state">Lỗi tải danh sách.</div>';
+            }
+        }
+
+        async function saveSidebarRssStrip() {
+            var secInp = document.getElementById('sidebar-rss-scroll-sec');
+            var fzInp = document.getElementById('sidebar-rss-font-size');
+            var colInp = document.getElementById('sidebar-rss-text-color');
+            var vL = document.getElementById('sidebar-rss-vis-login');
+            var vG = document.getElementById('sidebar-rss-vis-guest');
+            var lnk = document.getElementById('sidebar-rss-links');
+            var hov = document.getElementById('sidebar-rss-hover');
+            if (!secInp || !token) return;
+            var n = parseInt(secInp.value, 10);
+            if (isNaN(n)) n = 50;
+            n = Math.min(300, Math.max(0, n));
+            var fz = parseInt((fzInp && fzInp.value) || '13', 10);
+            if (isNaN(fz)) fz = 13;
+            fz = Math.min(28, Math.max(10, fz));
+            var color = (colInp && colInp.value && colInp.value.trim()) || '#1e293b';
+            var body = {
+                scroll_duration_sec: n,
+                content_font_size: fz,
+                content_text_color: color,
+                visible_logged_in: vL && vL.checked ? 1 : 0,
+                visible_guest: vG && vG.checked ? 1 : 0,
+                links_enabled: lnk && lnk.checked ? 1 : 0,
+                hover_pause: hov && hov.checked ? 1 : 0,
+            };
+            try {
+                var res = await fetch(apiBase + '/api/admin/homepage-sidebar-rss/settings', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer ' + token,
+                    },
+                    body: JSON.stringify(body),
+                });
+                var data = await res.json().catch(function () {
+                    return {};
+                });
+                if (res.ok) {
+                    showSidebarRssMsg(
+                        'Đã lưu cài đặt thanh TIN TỨC (tốc độ ' +
+                            (data.scrollDurationSec != null ? data.scrollDurationSec : n) +
+                            ' giây/vòng).',
+                        false
+                    );
+                    loadSidebarRssAdmin();
+                } else showSidebarRssMsg(data.message || 'Lưu thất bại.', true);
+            } catch (e) {
+                showSidebarRssMsg('Lỗi kết nối.', true);
+            }
+        }
+
+        async function addSidebarRssSource() {
+            var labelInp = document.getElementById('sidebar-rss-label');
+            var urlInp = document.getElementById('sidebar-rss-url');
+            var typeEl = document.getElementById('sidebar-rss-source-type');
+            if (!labelInp || !urlInp || !token) return;
+            var label = (labelInp.value || '').trim();
+            var feed_url = (urlInp.value || '').trim();
+            if (!label) {
+                showSidebarRssMsg('Nhập tên hiển thị nguồn.', true);
+                return;
+            }
+            if (!feed_url) {
+                showSidebarRssMsg('Nhập URL.', true);
+                return;
+            }
+            var payload = { label: label, feed_url: feed_url };
+            if (typeEl && String(typeEl.value || 'rss') === 'html') {
+                payload.source_type = 'html';
+                payload.scrape_item_selector = (document.getElementById('sidebar-rss-sel-item') || {}).value || '';
+                payload.scrape_title_selector = (document.getElementById('sidebar-rss-sel-title') || {}).value || '';
+                var sl = ((document.getElementById('sidebar-rss-sel-link') || {}).value || '').trim();
+                var sd = ((document.getElementById('sidebar-rss-sel-date') || {}).value || '').trim();
+                if (sl) payload.scrape_link_selector = sl;
+                if (sd) payload.scrape_date_selector = sd;
+                if (!(payload.scrape_item_selector || '').trim() || !(payload.scrape_title_selector || '').trim()) {
+                    showSidebarRssMsg('Chế độ HTML: nhập selector ô tin và tiêu đề.', true);
+                    return;
+                }
+            }
+            try {
+                var res = await fetch(apiBase + '/api/admin/homepage-sidebar-rss/sources', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer ' + token,
+                    },
+                    body: JSON.stringify(payload),
+                });
+                var data = await res.json().catch(function () {
+                    return {};
+                });
+                if (res.ok) {
+                    showSidebarRssMsg('Đã thêm nguồn.', false);
+                    urlInp.value = '';
+                    labelInp.value = '';
+                    var si = document.getElementById('sidebar-rss-sel-item');
+                    var st = document.getElementById('sidebar-rss-sel-title');
+                    var slk = document.getElementById('sidebar-rss-sel-link');
+                    var sdt = document.getElementById('sidebar-rss-sel-date');
+                    if (si) si.value = '';
+                    if (st) st.value = '';
+                    if (slk) slk.value = '';
+                    if (sdt) sdt.value = '';
+                    if (typeEl) typeEl.value = 'rss';
+                    toggleSidebarRssScrapeFields();
+                    loadSidebarRssAdmin();
+                } else showSidebarRssMsg(data.message || 'Thêm thất bại.', true);
+            } catch (e) {
+                showSidebarRssMsg('Lỗi kết nối.', true);
+            }
         }
 
         async function loadSubmissionOptions() {
