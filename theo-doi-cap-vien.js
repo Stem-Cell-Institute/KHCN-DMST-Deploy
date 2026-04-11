@@ -8,7 +8,9 @@
     var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
 
     if (token && user.email) {
-        userEmail.textContent = user.email;
+        userEmail.textContent = typeof getLoginGreetingDisplay === 'function'
+            ? getLoginGreetingDisplay(user)
+            : user.email;
         userBar.style.display = 'flex';
     } else {
         listEl.innerHTML = '<div class="empty-state">Vui lòng <a href="dang-nhap.html">đăng nhập</a> để xem hồ sơ của bạn.</div>';
@@ -44,12 +46,12 @@
                     var id = s.id || s._id;
                     var title = s.title || 'Không tên';
                     var date = s.createdAt || '';
-                    var deleteBtn = isAdmin ? '<button type="button" class="btn-delete" data-id="' + id + '" data-title="' + escapeHtml(title) + '">Xóa</button>' : '';
+                    var deleteBtn = isAdmin ? '<button type="button" class="btn-action btn-delete" data-id="' + id + '" data-title="' + escapeHtml(title) + '">Xóa</button>' : '';
                     return '<div class="submission-item">' +
                         '<div><h4>' + escapeHtml(title) + '</h4><p class="meta">Ngày nộp: ' + escapeHtml(date) + '</p></div>' +
                         '<div class="item-actions">' +
-                        '<a href="theo-doi-de-tai-cap-vien-chi-tiet.html?id=' + id + '" class="btn-track">Tiến trình</a>' +
-                        '<button type="button" class="btn-download" data-id="' + id + '">Tải về</button>' +
+                        '<a href="theo-doi-de-tai-cap-vien-chi-tiet.html?id=' + id + '" class="btn-action btn-track">Tiến trình</a>' +
+                        '<button type="button" class="btn-action btn-download" data-id="' + id + '">Tải về</button>' +
                         deleteBtn +
                         '</div></div>';
                 }).join('');

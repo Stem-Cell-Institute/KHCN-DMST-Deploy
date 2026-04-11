@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản trị — Tài liệu &amp; hồ sơ STIMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/dms-records.css">
+</head>
+<body class="dms-page dms-admin-page">
+  <a href="#dms-admin-content" class="dms-skip-link">Bỏ qua đến nội dung chính</a>
+  <header class="dms-topbar" role="banner">
+    <div class="dms-topbar-brand">
+      <p class="dms-kicker">STIMS — VIỆN TẾ BÀO GỐC</p>
+      <h1>Công cụ quản trị module</h1>
+      <p class="dms-subtitle">Danh mục, loại văn bản, thẻ nhãn và phân quyền truy cập module Tài liệu &amp; hồ sơ.</p>
+    </div>
+    <div class="dms-top-actions">
+      <a href="tai-lieu-hanh-chinh.html" class="dms-btn dms-btn-ghost" style="text-decoration:none">← Quản lý tài liệu</a>
+      <a href="index.html" class="dms-btn dms-btn-ghost" style="text-decoration:none">Trang chủ</a>
+      <div class="dms-auth-slot" id="auth-status"></div>
+    </div>
+  </header>
+
+  <main class="dms-admin-main" id="dms-admin-content">
+    <p class="dms-admin-lead">Tab <strong>Phân quyền module</strong> (chỉ <strong>Master Admin</strong>, email <code>ADMIN_EMAIL</code>): mở truy cập từng người hoặc <strong>toàn viện</strong>, sau đó gán vai trò Quản lý / Tải lên / Chỉ xem <em>trên đúng danh sách đó</em>.</p>
+
+    <div class="dms-adm-tabs">
+      <button type="button" class="adm-tab-btn on" id="tab-btn-cats" data-go="cats">Danh mục</button>
+      <button type="button" class="adm-tab-btn" id="tab-btn-types" data-go="types">Loại tài liệu</button>
+      <button type="button" class="adm-tab-btn" id="tab-btn-tags" data-go="tags">Thẻ nhãn</button>
+      <button type="button" class="adm-tab-btn" id="tab-btn-roles" data-go="roles">Phân quyền module</button>
+    </div>
+
+    <div class="adm-tab" data-tab="cats" style="display:block">
+      <h2 class="dms-adm-section-title">Danh mục cây</h2>
+      <form class="inline" id="form-new-cat">
+        <label>Tên mới<input type="text" id="new-cat-name" required placeholder="Tên danh mục"></label>
+        <label>Danh mục cấp trên
+          <select id="new-cat-parent"></select>
+        </label>
+        <button type="submit" class="adm-btn adm-btn--primary">Thêm</button>
+      </form>
+      <div class="dms-adm-table-scroll">
+        <table><thead><tr><th>ID</th><th title="Mã danh mục cấp trên trong cây phân loại; «—» = danh mục gốc (không trực thuộc nhóm nào)">Danh mục cấp trên (ID)</th><th>Tên</th><th>Trạng thái</th><th></th></tr></thead><tbody id="tbl-categories"></tbody></table>
+      </div>
+      <p class="note">Không xóa được nếu còn danh mục con hoặc tài liệu đang gắn.</p>
+    </div>
+
+    <div class="adm-tab" data-tab="types">
+      <h2 class="dms-adm-section-title">Loại tài liệu</h2>
+      <form class="inline" id="form-new-type">
+        <label>Tên<input type="text" id="new-type-name" required></label>
+        <label>Mã (tùy chọn)<input type="text" id="new-type-code" placeholder="vd: quyet_dinh"></label>
+        <button type="submit" class="adm-btn adm-btn--primary">Thêm</button>
+      </form>
+      <div class="dms-adm-table-scroll">
+        <table><thead><tr><th>ID</th><th>Tên</th><th>Mã</th><th>Hiện</th><th></th></tr></thead><tbody id="tbl-types"></tbody></table>
+      </div>
+    </div>
+
+    <div class="adm-tab" data-tab="tags">
+      <h2 class="dms-adm-section-title">Thẻ nhãn</h2>
+      <form class="inline" id="form-new-tag">
+        <label>Tên<input type="text" id="new-tag-name" required></label>
+        <label>Màu<input type="text" id="new-tag-color" value="#4f46e5" placeholder="#hex"></label>
+        <button type="submit" class="adm-btn adm-btn--primary">Thêm</button>
+      </form>
+      <div class="dms-adm-table-scroll">
+        <table><thead><tr><th>ID</th><th>Tên</th><th>Màu</th><th></th></tr></thead><tbody id="tbl-tags"></tbody></table>
+      </div>
+    </div>
+
+    <div class="adm-tab" data-tab="roles">
+      <h2 class="dms-adm-section-title">Phân quyền module</h2>
+      <p class="note"><strong>Chỉ Master Admin.</strong> Bước 1: thêm tài khoản vào danh sách được mở truy cập (hoặc «Thêm toàn viện») — <strong>mặc định vai trò module là chỉ xem (viewer)</strong>. Bước 2: nâng quyền lên Quản lý / Tải lên nếu cần.</p>
+
+      <h3 class="dms-adm-subhead">1. Danh sách được mở truy cập module</h3>
+      <p class="note">Người chưa có trong bảng dưới sẽ không vào được nội dung quản lý giấy tờ (kể cả khi biết đường link), trừ Admin hệ thống.</p>
+      <form id="form-add-access" class="inline dms-adm-form-stack">
+        <label>Thêm từng người — gõ email hoặc họ tên
+          <input type="search" id="access-user-search" autocomplete="off" placeholder="Tìm trong hệ thống…">
+        </label>
+        <input type="hidden" id="access-user-id" value="">
+        <div id="access-user-suggest"></div>
+        <div class="dms-adm-actions-row">
+          <button type="submit" class="adm-btn adm-btn--primary">Thêm vào danh sách</button>
+          <button type="button" class="adm-btn adm-btn--teal" id="btn-access-all-institute">Thêm toàn viện</button>
+        </div>
+      </form>
+      <div class="dms-adm-table-scroll">
+        <table><thead><tr><th>Họ tên</th><th>Email</th><th>Vai trò module</th><th>Mở lúc</th><th></th></tr></thead><tbody id="tbl-module-access"></tbody></table>
+      </div>
+
+      <h3 class="dms-adm-subhead">2. Gán vai trò (trên danh sách trên)</h3>
+      <p class="note"><strong>Quản lý (manager):</strong> chỉnh danh mục/loại/thẻ, sửa/xóa/di chuyển mọi tài liệu.<br>
+        <strong>Tải lên (uploader):</strong> thêm và sửa tài liệu của mình; chỉ xóa được bản dự thảo của mình.<br>
+        <strong>Chỉ xem (viewer):</strong> xem và tải file, xuất Excel / ZIP.</p>
+      <form id="form-assign-role" class="inline dms-adm-form-stack">
+        <label>Gõ email hoặc họ tên (chỉ gợi ý người đã có trong danh sách mở truy cập)
+          <input type="search" id="role-user-search" autocomplete="off" placeholder="Tìm trong hệ thống…">
+        </label>
+        <input type="hidden" id="role-user-id" value="">
+        <div id="role-user-suggest"></div>
+        <label>Vai trò
+          <select id="role-pick">
+            <option value="manager">Quản lý module</option>
+            <option value="uploader">Người tải lên</option>
+            <option value="viewer">Chỉ xem &amp; theo dõi</option>
+          </select>
+        </label>
+        <button type="submit" class="adm-btn adm-btn--primary" style="align-self:flex-start">Lưu phân quyền</button>
+      </form>
+      <h3 class="dms-adm-subhead">Đang được cấp quyền</h3>
+      <div class="dms-adm-table-scroll">
+        <table><thead><tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Cấp lúc</th><th></th></tr></thead><tbody id="tbl-mod-users"></tbody></table>
+      </div>
+    </div>
+  </main>
+  <script src="js/auth-status.js"></script>
+  <script src="js/dms-admin-page.js"></script>
+</body>
+</html>

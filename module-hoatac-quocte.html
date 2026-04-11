@@ -113,6 +113,7 @@ body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--in
 .nav-badge.blue{background:#3b82f6}
 .nav-badge.green{background:#22c55e}
 .nav-badge.pulse{animation:badgePulse 1.7s ease-in-out infinite;box-shadow:0 0 0 0 rgba(59,130,246,.45)}
+.nav-badge.nav-badge--zero{background:#94a3b8;color:#fff}
 @keyframes badgePulse{
   0%{transform:scale(1);box-shadow:0 0 0 0 rgba(59,130,246,.45)}
   70%{transform:scale(1.06);box-shadow:0 0 0 8px rgba(59,130,246,0)}
@@ -766,29 +767,29 @@ textarea{resize:vertical;min-height:80px}
 <div class="layout">
 <nav class="sidebar">
   <div class="nav-label">Của tôi</div>
-  <div class="nav-item active" onclick="gotoPanel(this,'de-xuat-cua-toi')">Đề xuất đã gửi<span class="nav-badge blue hidden" id="bdg-cua-toi">0</span></div>
+  <div class="nav-item active" onclick="gotoPanel(this,'de-xuat-cua-toi')">Đề xuất đã gửi<span class="nav-badge blue nav-badge--zero" id="bdg-cua-toi">0</span></div>
 
   <div class="nav-divider"></div>
   <div class="nav-label">Gửi đề xuất mới</div>
-  <div class="nav-item" onclick="gotoPanel(this,'gui-doan-ra')">Đăng ký Đoàn ra</div>
-  <div class="nav-item" onclick="gotoPanel(this,'gui-doan-vao')">Đăng ký Đoàn vào</div>
-  <div class="nav-item" onclick="gotoPanel(this,'gui-mou')">Đề xuất Thỏa thuận</div>
-  <a class="nav-item" href="/hop-tac/hoi-nghi-hoi-thao/dang-ky" style="text-decoration:none;color:inherit">Đăng ký tham dự Hội nghị/Hội thảo</a>
-  <div class="nav-item" onclick="gotoPanel(this,'gui-ytnn')">Đề tài YTNN</div>
+  <div class="nav-item" onclick="gotoPanel(this,'gui-doan-ra')">Đăng ký Đoàn ra<span class="nav-badge blue nav-badge--zero" id="bdg-gui-doan-ra">0</span></div>
+  <div class="nav-item" onclick="gotoPanel(this,'gui-doan-vao')">Đăng ký Đoàn vào<span class="nav-badge blue nav-badge--zero" id="bdg-gui-doan-vao">0</span></div>
+  <div class="nav-item" onclick="gotoPanel(this,'gui-mou')">Đề xuất Thỏa thuận<span class="nav-badge blue nav-badge--zero" id="bdg-gui-mou">0</span></div>
+  <a class="nav-item" href="/hop-tac/hoi-nghi-hoi-thao/dang-ky" style="text-decoration:none;color:inherit">Đăng ký tham dự Hội nghị/Hội thảo<span class="nav-badge blue nav-badge--zero" id="bdg-hnht">0</span></a>
+  <div class="nav-item" onclick="gotoPanel(this,'gui-ytnn')">Đề tài YTNN<span class="nav-badge blue nav-badge--zero" id="bdg-gui-ytnn">0</span></div>
 
   <div class="nav-divider mgr-block hidden"></div>
   <div class="nav-label nav-label-mixed-case mgr-block hidden">Viện trưởng phê duyệt đề xuất</div>
   <p class="nav-note-mgr mgr-block hidden">Ghi chú: Ban lãnh đạo phê duyệt đề xuất.</p>
-  <div class="nav-item mgr hidden" onclick="gotoPanel(this,'cho-phong-xu-ly')">Chờ Phòng thẩm định<span class="nav-badge amber hidden" id="bdg-phong">0</span></div>
-  <div class="nav-item vt-only hidden" onclick="gotoPanel(this,'cho-vt-duyet')">Chờ Viện trưởng duyệt<span class="nav-badge red hidden" id="bdg-vt">0</span></div>
-  <div class="nav-item mgr hidden" onclick="gotoPanel(this,'tat-ca')">Tất cả đề xuất<span class="nav-badge green hidden" id="bdg-tat-ca">0</span></div>
+  <div class="nav-item mgr hidden" onclick="gotoPanel(this,'cho-phong-xu-ly')">Chờ Phòng thẩm định<span class="nav-badge amber nav-badge--zero" id="bdg-phong">0</span></div>
+  <div class="nav-item vt-only hidden" onclick="gotoPanel(this,'cho-vt-duyet')">Chờ Viện trưởng duyệt<span class="nav-badge red nav-badge--zero" id="bdg-vt">0</span></div>
+  <div class="nav-item mgr hidden" onclick="gotoPanel(this,'tat-ca')">Tất cả đề xuất<span class="nav-badge green nav-badge--zero" id="bdg-tat-ca">0</span></div>
 
   <div class="nav-divider khcn-only hidden"></div>
   <div class="nav-label nav-label-mixed-case khcn-only hidden">Quản lý sự kiện và MOU</div>
   <p class="nav-note-khcn khcn-only hidden">Khu vực dành cho P. KHCN&amp;QHĐN</p>
-  <div class="nav-item nav-item-rich khcn-only hidden" onclick="gotoPanel(this,'su-kien')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gotoPanel(this,'su-kien');}">Sự kiện<span class="nav-badge blue hidden" id="bdg-sk">0</span></div>
-  <div class="nav-item nav-item-rich khcn-only hidden" onclick="gotoPanel(this,'doi-tac')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gotoPanel(this,'doi-tac');}">Đối tác</div>
-  <div class="nav-item nav-item-rich khcn-only hidden" onclick="gotoPanel(this,'thoa-thuan')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gotoPanel(this,'thoa-thuan');}">Thỏa thuận</div>
+  <div class="nav-item nav-item-rich khcn-only hidden" onclick="gotoPanel(this,'su-kien')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gotoPanel(this,'su-kien');}">Sự kiện<span class="nav-badge blue nav-badge--zero" id="bdg-sk">0</span></div>
+  <div class="nav-item nav-item-rich khcn-only hidden" onclick="gotoPanel(this,'doi-tac')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gotoPanel(this,'doi-tac');}">Đối tác<span class="nav-badge blue nav-badge--zero" id="bdg-doi-tac">0</span></div>
+  <div class="nav-item nav-item-rich khcn-only hidden" onclick="gotoPanel(this,'thoa-thuan')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gotoPanel(this,'thoa-thuan');}">Thỏa thuận<span class="nav-badge blue nav-badge--zero" id="bdg-thoa-thuan">0</span></div>
 </nav>
 
 <main class="main">
@@ -1338,11 +1339,18 @@ function showRoleBanner(role) {
 async function loadSidebarBadges() {
   var d = await apiGet('/api/cooperation/sidebar-badges');
   if (!d) return;
+  setBadge('bdg-cua-toi', d.de_xuat_cua_toi);
+  setBadge('bdg-gui-doan-ra', d.my_doan_ra, { pulse: false });
+  setBadge('bdg-gui-doan-vao', d.my_doan_vao, { pulse: false });
+  setBadge('bdg-gui-mou', d.my_mou, { pulse: false });
+  setBadge('bdg-hnht', d.my_hnht, { pulse: false });
+  setBadge('bdg-gui-ytnn', d.my_ytnn, { pulse: false });
   setBadge('bdg-phong', d.cho_phong_duyet);
   setBadge('bdg-vt', d.cho_vt_duyet);
-  setBadge('bdg-sk', d.su_kien_sap_dien_ra);
-  setBadge('bdg-cua-toi', d.de_xuat_cua_toi);
-  setBadge('bdg-tat-ca', d.tat_ca_tong != null ? d.tat_ca_tong : 0);
+  setBadge('bdg-tat-ca', d.tat_ca_tong != null ? d.tat_ca_tong : 0, { pulse: false });
+  setBadge('bdg-sk', d.su_kien_sap_dien_ra, { pulse: false });
+  setBadge('bdg-doi-tac', d.doi_tac_tong != null ? d.doi_tac_tong : 0, { pulse: false });
+  setBadge('bdg-thoa-thuan', d.thoa_thuan_tong != null ? d.thoa_thuan_tong : 0, { pulse: false });
 }
 
 function dashFmtMonth(ym) {
@@ -1457,17 +1465,21 @@ async function loadDashboardPage() {
     + '</div>'
     + '</div>';
 }
-function setBadge(id, n) {
+function setBadge(id, n, opts) {
+  opts = opts || {};
   var el = document.getElementById(id);
   if (!el) return;
-  el.textContent = n;
-  if (n > 0) {
-    el.classList.remove('hidden');
-    el.classList.add('pulse');
-  } else {
-    el.classList.add('hidden');
-    el.classList.remove('pulse');
-  }
+  var num = Number(n);
+  if (!Number.isFinite(num) || num < 0) num = 0;
+  num = Math.floor(num);
+  el.textContent = String(num);
+  el.classList.remove('hidden');
+  el.classList.toggle('nav-badge--zero', num === 0);
+  var tone = el.classList.contains('red') ? 'red' : el.classList.contains('amber') ? 'amber' : el.classList.contains('green') ? 'green' : 'blue';
+  el.classList.remove('red', 'amber', 'blue', 'green');
+  el.classList.add(tone);
+  if (num > 0 && opts.pulse !== false) el.classList.add('pulse');
+  else el.classList.remove('pulse');
 }
 
 // ============================================================
@@ -2979,9 +2991,9 @@ async function loadEventList(){
   el.innerHTML='<div class="loading"><div class="spin"></div>Đang tải...</div>';
   var q=[]; if(v('ev-filter-loai')) q.push('loai='+encodeURIComponent(v('ev-filter-loai'))); if(v('ev-filter-status')) q.push('trang_thai='+encodeURIComponent(v('ev-filter-status'))); if(v('ev-filter-nam')) q.push('nam='+encodeURIComponent(v('ev-filter-nam')));
   var d=await apiGet('/api/events'+(q.length?('?'+q.join('&')):'')); var list=(d&&d.list)||[];
-  if(!list.length){ el.innerHTML='<div class="empty-state">Chưa có sự kiện nào</div>'; setBadge('bdg-sk',0); return; }
+  if(!list.length){ el.innerHTML='<div class="empty-state">Chưa có sự kiện nào</div>'; loadSidebarBadges(); return; }
   el.innerHTML='<table><thead><tr><th>Số VB</th><th>Tên sự kiện</th><th>Loại</th><th>Ngày tổ chức</th><th>Trạng thái</th><th>Hành động</th></tr></thead><tbody>'+list.map(function(ev){ return '<tr><td>'+esc(ev.so_van_ban||'')+'</td><td><b>'+esc(ev.tieu_de||'')+'</b></td><td>'+esc(ev.loai||'')+'</td><td>'+fmtDate(ev.ngay_bat_dau)+(ev.ngay_ket_thuc?' - '+fmtDate(ev.ngay_ket_thuc):'')+'</td><td><span class="badge '+(EVENT_BADGES[ev.trang_thai]||'badge-gray')+'">'+(EVENT_STATUS_LABELS[ev.trang_thai]||ev.trang_thai||'')+'</span></td><td><button class="btn btn-outline btn-sm" onclick="openEventDetail('+ev.id+')">Mở</button>'+(IS_ADMIN?' <button class="btn btn-red btn-sm" onclick="deleteEvent('+ev.id+')">Xóa</button>':'')+'</td></tr>'; }).join('')+'</tbody></table>';
-  setBadge('bdg-sk',list.length);
+  loadSidebarBadges();
 }
 
 // ============================================================
@@ -3011,12 +3023,33 @@ async function loadThoaThuan() {
   var ttl={hieu_luc:'badge-green',sap_het_han:'badge-amber',het_han:'badge-red',dang_tham_dinh:'badge-blue'};
   var ttlb={hieu_luc:'Hiệu lực',sap_het_han:'Sắp hết hạn',het_han:'Hết hạn',dang_tham_dinh:'Đang thẩm định'};
   if (IS_MANAGER||IS_ADMIN) document.querySelectorAll('.mgr').forEach(function(el){el.classList.remove('hidden');});
-  el.innerHTML='<div class="card"><table><thead><tr><th>Tên</th><th>Đối tác</th><th>Loại</th><th>Quốc gia</th><th>Hết hạn</th><th>Trạng thái</th></tr></thead><tbody>'
+  var actionTh = (IS_MANAGER || IS_ADMIN) ? '<th>Thao tác</th>' : '';
+  el.innerHTML='<div class="card"><table><thead><tr><th>Tên</th><th>Đối tác</th><th>Loại</th><th>Quốc gia</th><th>Hết hạn</th><th>Trạng thái</th>'+actionTh+'</tr></thead><tbody>'
     +(list.length?list.map(function(t){
       var hh=(t.no_fixed_term&&!t.het_han&&!t.terminated_at)?'<span style="color:#0f766e;font-size:12px">Không cố định</span>':fmtDate(t.het_han);
-      return '<tr onclick="openThoaThuanDetail('+t.id+')" style="cursor:pointer"><td><b>'+esc(t.ten)+'</b>'+(t.scan_file_path?'<div style="font-size:11px;color:#0f766e">📎 Có bản scan</div>':'')+'</td><td>'+esc(t.doi_tac)+'</td><td><span class="badge badge-blue">'+t.loai+'</span></td><td>'+esc(t.quoc_gia||'—')+'</td><td style="font-size:12px">'+hh+'</td><td><span class="badge '+(ttl[t.trang_thai]||'badge-gray')+'">'+(ttlb[t.trang_thai]||t.trang_thai)+'</span></td></tr>';
-    }).join(''):'<tr><td colspan="6"><div class="empty-state">Chưa có thỏa thuận nào</div></td></tr>')
+      var actionTd = (IS_MANAGER || IS_ADMIN)
+        ? '<td><button type="button" class="btn btn-red btn-sm" onclick="event.stopPropagation();deleteThoaThuan('+t.id+')">Xóa</button></td>'
+        : '';
+      return '<tr onclick="openThoaThuanDetail('+t.id+')" style="cursor:pointer"><td><b>'+esc(t.ten)+'</b>'+(t.scan_file_path?'<div style="font-size:11px;color:#0f766e">📎 Có bản scan</div>':'')+'</td><td>'+esc(t.doi_tac)+'</td><td><span class="badge badge-blue">'+t.loai+'</span></td><td>'+esc(t.quoc_gia||'—')+'</td><td style="font-size:12px">'+hh+'</td><td><span class="badge '+(ttl[t.trang_thai]||'badge-gray')+'">'+(ttlb[t.trang_thai]||t.trang_thai)+'</span></td>'+actionTd+'</tr>';
+    }).join(''):'<tr><td colspan="'+((IS_MANAGER||IS_ADMIN)?'7':'6')+'"><div class="empty-state">Chưa có thỏa thuận nào</div></td></tr>')
     +'</tbody></table></div>';
+}
+
+async function deleteThoaThuan(id) {
+  if (!(IS_MANAGER || IS_ADMIN)) {
+    toast('Bạn không có quyền xóa thỏa thuận.', 'error');
+    return;
+  }
+  if (!id) return;
+  if (!confirm('Xóa thỏa thuận này? Hành động không thể hoàn tác.')) return;
+  var r = await apiDel('/api/admin/cooperation/thoa-thuan/' + id);
+  if (r && r.ok) {
+    toast((r.data && r.data.message) || 'Đã xóa thỏa thuận.', 'success');
+    if (window._thoaThuanDetailId === id) closeModal();
+    loadThoaThuan();
+    return;
+  }
+  toast((r && r.data && r.data.message) || 'Xóa thất bại.', 'error');
 }
 
 /** YYYY-MM-DD expiry from signing date + whole years (aligned with server). */
@@ -3407,7 +3440,11 @@ async function openThoaThuanDetail(id){
     + '<div class="dk">Bản scan</div><div class="dv">' + (it.scan_file_path ? '<a class="tt-scan-link" target="_blank" href="' + esc(it.scan_file_path) + '">📎 ' + esc(it.scan_file_name || 'Mở file scan') + '</a>' : 'Chưa có') + '</div>'
     + termExtra
     + '</div>' + editForm + mgrForm;
-  document.getElementById('modal-footer').innerHTML = '<button class="btn btn-outline btn-sm" onclick="closeModal()">Đóng</button>';
+  var footerHtml = '<button class="btn btn-outline btn-sm" onclick="closeModal()">Đóng</button>';
+  if (IS_MANAGER || IS_ADMIN) {
+    footerHtml = '<button class="btn btn-red btn-sm" onclick="deleteThoaThuan(' + it.id + ')">Xóa thỏa thuận</button> ' + footerHtml;
+  }
+  document.getElementById('modal-footer').innerHTML = footerHtml;
   document.getElementById('modal').classList.remove('hidden');
   if ((IS_MANAGER || IS_ADMIN) && document.getElementById('tt-edit-no-fixed') && document.getElementById('tt-edit-no-fixed').checked) {
     toggleThoaThuanEditNoFixed();

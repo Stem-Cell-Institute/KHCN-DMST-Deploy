@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý tài liệu &amp; hồ sơ — STIMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/dms-records.css">
+</head>
+<body class="dms-page">
+  <a href="#dms-main" class="dms-skip-link">Bỏ qua đến nội dung chính</a>
+  <header class="dms-topbar" role="banner">
+    <div class="dms-topbar-brand">
+      <p class="dms-kicker">STIMS — VIỆN TẾ BÀO GỐC</p>
+      <h1>Quản lý tài liệu &amp; hồ sơ</h1>
+      <p class="dms-subtitle">Giấy tờ hành chính, văn bản nội bộ, hợp đồng và hồ sơ KHCN</p>
+    </div>
+    <div class="dms-top-actions">
+      <a href="index.html" class="dms-btn dms-btn-ghost" style="text-decoration:none">← Trang chủ</a>
+      <a href="quan-tri-tai-lieu-hc.html" id="dms-admin-link" class="dms-btn dms-btn-ghost" style="text-decoration:none;display:none">Công cụ quản trị</a>
+      <button type="button" class="dms-btn dms-btn-primary" id="dms-btn-export">Xuất Excel</button>
+      <a href="dms-them-tai-lieu.html" class="dms-btn dms-btn-primary" id="dms-btn-add" style="display:none;text-decoration:none">Thêm tài liệu</a>
+      <div class="dms-auth-slot" id="auth-status"></div>
+    </div>
+  </header>
+
+  <div id="dms-app-root">
+    <div class="dms-layout">
+      <aside class="dms-sidebar" aria-label="Bộ lọc và danh mục">
+        <div class="dms-sidebar-inner">
+          <h3 class="dms-section-title"><span class="dms-section-dot" aria-hidden="true"></span>Danh mục</h3>
+          <nav id="dms-cat-nav" class="dms-nav-stack" aria-label="Danh mục tài liệu"></nav>
+          <h3 class="dms-section-title"><span class="dms-section-dot dms-section-dot--amber" aria-hidden="true"></span>Lọc nhanh</h3>
+          <nav id="dms-quick-nav" class="dms-nav-stack" aria-label="Lọc theo trạng thái"></nav>
+          <h3 class="dms-section-title"><span class="dms-section-dot dms-section-dot--teal" aria-hidden="true"></span>Thẻ nhãn</h3>
+          <div id="dms-tags-nav" class="dms-tag-cloud" role="group" aria-label="Lọc theo thẻ"></div>
+        </div>
+      </aside>
+      <main class="dms-main" id="dms-main">
+        <section class="dms-toolbar-panel" aria-label="Tìm kiếm và lọc">
+        <div class="dms-search-hero" id="dms-search-hero" role="search">
+          <label class="dms-search-label" for="dms-search">Tìm kiếm tài liệu</label>
+          <div class="dms-search-row">
+            <div class="dms-search-field">
+              <input type="search" id="dms-search" placeholder="Nhập tên, số hiệu, đơn vị ban hành…" autocomplete="off" enterkeyhint="search" inputmode="search">
+            </div>
+            <button type="button" class="dms-search-clear" id="dms-search-clear" hidden aria-label="Xóa từ khóa">×</button>
+            <button type="button" class="dms-search-submit" id="dms-search-submit">Tìm</button>
+          </div>
+          <p class="dms-search-hint">Gõ và chờ gợi ý hoặc bấm <strong>Tìm</strong> / phím <kbd>Enter</kbd> — tìm trong tiêu đề, số văn bản, ghi chú, đơn vị, link.</p>
+        </div>
+        <div class="dms-toolbar-filters">
+          <span class="dms-filters-kicker" id="dms-filters-kicker">Bộ lọc nhanh</span>
+          <div class="dms-toolbar dms-toolbar--filters">
+            <select class="dms-select" id="filter-doc-type" aria-describedby="dms-filters-kicker"></select>
+            <select class="dms-select" id="filter-status" aria-describedby="dms-filters-kicker">
+              <option value="all">Trạng thái: Tất cả</option>
+              <option value="active">Có hiệu lực</option>
+              <option value="draft">Dự thảo</option>
+              <option value="expired">Hết hạn</option>
+              <option value="revoked">Thu hồi</option>
+            </select>
+            <select class="dms-select" id="filter-year" aria-describedby="dms-filters-kicker"></select>
+            <select class="dms-select" id="filter-sort" aria-describedby="dms-filters-kicker">
+              <option value="uploaded_at">Sắp xếp: Ngày tải lên</option>
+              <option value="issue_date">Ngày ban hành</option>
+              <option value="valid_until">Hiệu lực đến</option>
+              <option value="title">Tên A–Z</option>
+            </select>
+            <select class="dms-select dms-select--dup" id="filter-dup" title="Lọc trùng theo Số QĐ + ngày ban hành" aria-describedby="dms-filters-kicker">
+              <option value="">Trùng lặp: Tất cả</option>
+              <option value="1">Chỉ bản ghi trùng khóa</option>
+            </select>
+          </div>
+        </div>
+        <p id="dms-dup-hint" style="margin:10px 0 0;font-size:0.8125rem;color:var(--dms-muted,#5c6b84);"></p>
+        </section>
+
+        <section class="dms-cards" aria-label="Thống kê nhanh">
+          <article class="dms-card dms-card--stat dms-card--indigo">
+            <div class="dms-card-stat-inner">
+              <span class="dms-card-icon" aria-hidden="true">📄</span>
+              <div class="dms-card-stat-text">
+                <div class="val tabular-nums" id="dms-stat-total">—</div>
+                <div class="lbl">Tổng tài liệu</div>
+              </div>
+            </div>
+          </article>
+          <article class="dms-card dms-card--stat dms-card--green">
+            <div class="dms-card-stat-inner">
+              <span class="dms-card-icon" aria-hidden="true">✓</span>
+              <div class="dms-card-stat-text">
+                <div class="val tabular-nums" id="dms-stat-active">—</div>
+                <div class="lbl">Có hiệu lực</div>
+              </div>
+            </div>
+          </article>
+          <article class="dms-card dms-card--stat dms-card--amber">
+            <div class="dms-card-stat-inner">
+              <span class="dms-card-icon" aria-hidden="true">⏱</span>
+              <div class="dms-card-stat-text">
+                <div class="val tabular-nums" id="dms-stat-soon">—</div>
+                <div class="lbl">Sắp hết hạn (30 ngày)</div>
+              </div>
+            </div>
+          </article>
+          <article class="dms-card dms-card--stat dms-card--rose">
+            <div class="dms-card-stat-inner">
+              <span class="dms-card-icon" aria-hidden="true">!</span>
+              <div class="dms-card-stat-text">
+                <div class="val tabular-nums" id="dms-stat-exp">—</div>
+                <div class="lbl">Hết hạn / thu hồi</div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <div class="dms-table-wrap">
+          <div class="dms-bulk-bar" id="dms-bulk-bar">
+            <strong id="dms-bulk-count">0 mục đã chọn</strong>
+            <button type="button" class="dms-btn dms-btn-sm dms-btn-bulk-primary" id="dms-bulk-dl">Tải về (ZIP)</button>
+            <button type="button" class="dms-btn dms-btn-sm dms-btn-bulk-secondary" id="dms-bulk-mv">Di chuyển</button>
+            <button type="button" class="dms-btn dms-btn-sm dms-btn-bulk-danger" id="dms-bulk-del">Xoá</button>
+            <button type="button" class="dms-btn dms-btn-sm dms-btn-bulk-muted" id="dms-bulk-clear">Bỏ chọn</button>
+          </div>
+          <div class="dms-table-head">
+            <span class="dms-list-summary" id="dms-list-summary">Tất cả tài liệu</span>
+          </div>
+          <div class="dms-table-scroll">
+          <table class="dms-table">
+            <thead>
+              <tr>
+                <th class="dms-th-check" scope="col" style="width:40px">
+                  <input type="checkbox" id="dms-select-all" class="dms-select-all" title="Chọn / bỏ chọn tất cả bản ghi trên trang này" aria-label="Chọn tất cả trên trang hiện tại">
+                </th>
+                <th>Tên tài liệu</th>
+                <th>Loại</th>
+                <th>Số hiệu</th>
+                <th>Ngày ban hành</th>
+                <th>Hiệu lực đến</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="dms-tbody"></tbody>
+          </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/auth-status.js"></script>
+  <script src="js/dms-records-app.js"></script>
+</body>
+</html>

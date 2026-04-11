@@ -181,14 +181,41 @@ body {
 /* ── Timeline ───────────────────────────────── */
 /* padding-bottom: chỗ cho tooltip phía dưới hàng cuối (ô lịch dùng ::after bên dưới thanh) */
 .tl-wrap  { overflow-x:auto; padding-bottom:72px; }
-.calendar-layout { display:flex; gap:18px; align-items:flex-start; }
-.calendar-layout .tl-wrap { flex:1 1 auto; min-width:0; }
+/* Cùng chiều cao với lưới lịch — cột hoạt động không kéo dài quá hàng cuối calendar */
+.cal-toolbar-row { display:flex; align-items:flex-start; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+.cal-toolbar-left { display:flex; align-items:center; gap:12px; flex-wrap:wrap; flex-shrink:0; }
+.cal-toolbar-actions { flex-shrink:0; display:flex; align-items:center; gap:8px; }
+.crd-lab-announce-strip {
+  flex: 1 1 220px;
+  min-width: 180px;
+  max-width: 100%;
+  border: 1px solid rgba(102,126,234,0.28);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8f9ff 0%, var(--white) 100%);
+  padding: 8px 10px;
+  max-height: 88px;
+  overflow-y: auto;
+  font-size: 11.5px;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+.crd-lab-announce-strip .crd-la-item { margin-top: 8px; padding-left: 2px; }
+.crd-lab-announce-strip .crd-la-item:first-child { margin-top: 0; }
+.crd-lab-announce-strip .crd-la-title { font-weight: 800; color: #4338ca; font-size: 12px; }
+.calendar-layout { display:flex; gap:18px; align-items:stretch; }
+.calendar-layout .tl-wrap { flex:1 1 auto; min-width:0; align-self:stretch; }
 .bk-activity-wrap {
   flex: 0 0 330px;
   width: 330px;
+  min-height: 0;
   padding: 10px 0 0 10px;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  box-sizing: border-box;
 }
 .bk-activity-hdr {
+  flex-shrink: 0;
   font-size:12px;
   font-weight:900;
   color:var(--muted);
@@ -196,13 +223,54 @@ body {
   text-transform:uppercase;
   letter-spacing:.04em;
 }
+.bk-activity-admin-cap {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -6px 0 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(118,75,162,0.1), rgba(102,126,234,0.07));
+  border: 1px solid rgba(102,126,234,0.28);
+  font-size: 11px;
+  font-weight: 800;
+  color: #5b4a7a;
+}
+.bk-activity-admin-cap.is-visible {
+  display: flex;
+}
+.bk-activity-admin-cap-label { letter-spacing: 0.02em; }
+.bk-activity-max-input {
+  width: 56px;
+  padding: 5px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: var(--white);
+  color: var(--text);
+}
+.bk-activity-max-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
 .bk-activity-feed {
-  min-height: 520px;
+  flex: 1 1 auto;
+  min-height: 0;
   display:flex;
   flex-direction:column;
   gap:10px;
   overflow-y:auto;
-  max-height: 520px; /* Khi nhiều hơn thì dồn lên (scroll) */
+  overflow-x:hidden;
+  max-height: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  background: var(--surface);
+  padding: 8px;
+  box-sizing: border-box;
 }
 .bk-activity-item {
   background:var(--white);
@@ -212,7 +280,24 @@ body {
   box-shadow:0 12px 30px rgba(102,126,234,.10);
   animation:bkPopIn .28s ease both;
 }
-/* Không auto-exit: pop-up giữ lại sau khi hiện */
+.bk-activity-item--snapshot {
+  border-style:dashed;
+  border-color:rgba(102,126,234,.38);
+  background:linear-gradient(180deg,#fafbff 0%,var(--white) 100%);
+  box-shadow:0 8px 20px rgba(102,126,234,.08);
+}
+.bk-activity-date-sep {
+  flex-shrink:0;
+  text-align:center;
+  font-size:10px;
+  font-weight:800;
+  color:var(--muted);
+  letter-spacing:.05em;
+  padding:8px 4px 4px;
+  border-top:1px dashed var(--border);
+  margin-top:2px;
+}
+/* Không auto-exit; số thẻ .bk-activity-item tối đa do admin chỉnh (localStorage) hoặc mặc định */
 .bk-activity-top { display:flex; align-items:center; gap:8px; }
 .bk-act-dot { width:10px; height:10px; border-radius:50%; background:var(--primary); flex-shrink:0; }
 .bk-activity-action { font-size:12.5px; font-weight:900; color:var(--text); }
@@ -289,6 +374,10 @@ body {
   pointer-events:none; z-index:0; }
 .tl-row-even { background:#fff; }
 .tl-row-odd  { background:var(--surface); }
+.tl-drag-handle--admin { cursor: grab; user-select: none; -webkit-user-select: none; }
+.tl-drag-handle--admin:active { cursor: grabbing; }
+.tl-table tbody tr.tl-tr--dragging { opacity: 0.55; }
+.tl-table tbody tr.tl-tr--drop-target .tl-label { box-shadow: inset 0 0 0 2px var(--primary); }
 
 /* ── Data table ─────────────────────────────── */
 .data-table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -396,8 +485,9 @@ body {
   .modal-box  { max-width:100% !important; }
   .search-input { width:100%; }
   .calendar-layout { flex-direction:column; gap:14px; }
-  .bk-activity-wrap { width:100%; flex:0 0 auto; padding: 0; }
-  .bk-activity-feed { min-height: 220px; }
+  .bk-activity-wrap { width:100%; flex:0 0 auto; padding: 0; align-self: auto; }
+  /* Mobile: giới hạn cao để không chiếm quá nửa màn */
+  .bk-activity-feed { flex: 0 1 auto; max-height: min(420px, 55vh); min-height: 180px; }
 }
 </style>
 </head>
@@ -450,15 +540,20 @@ body {
 
     <!-- Lịch trực quan -->
     <div class="tab-pane active" id="tab-calendar">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-        <h2 style="font-size:17px;font-weight:700;color:var(--text);">Lịch sử dụng thiết bị</h2>
-        <div class="date-nav">
-          <button onclick="changeDate(-1)">‹</button>
-          <input type="date" id="date-picker" title="Chọn ngày" onchange="renderTimeline()">
-          <button onclick="changeDate(1)">›</button>
+      <div class="cal-toolbar-row">
+        <div class="cal-toolbar-left">
+          <h2 style="font-size:17px;font-weight:700;color:var(--text);margin:0;">Lịch sử dụng thiết bị</h2>
+          <div class="date-nav">
+            <button onclick="changeDate(-1)">‹</button>
+            <input type="date" id="date-picker" title="Chọn ngày" onchange="renderTimeline()">
+            <button onclick="changeDate(1)">›</button>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="setToday()">Hôm nay</button>
         </div>
-        <button class="btn btn-outline btn-sm" onclick="setToday()">Hôm nay</button>
-        <button class="btn btn-primary btn-sm" id="new-bk-btn" onclick="openBookingModal(null,9)">+ Đặt lịch mới</button>
+        <div class="crd-lab-announce-strip" id="crd-lab-announce-strip" aria-label="Thông báo Lab Booking"></div>
+        <div class="cal-toolbar-actions">
+          <button class="btn btn-primary btn-sm" id="new-bk-btn" onclick="openBookingModal(null,9)">+ Đặt lịch mới</button>
+        </div>
       </div>
       <div class="legend-wrap" id="machine-legend"></div>
       <div class="calendar-layout">
@@ -467,6 +562,11 @@ body {
         </div>
         <div class="bk-activity-wrap" id="bk-activity-wrap" aria-live="polite">
           <div class="bk-activity-hdr">🧾 Hoạt động đặt lịch</div>
+          <div class="bk-activity-admin-cap" id="bk-activity-admin-cap" hidden>
+            <span class="bk-activity-admin-cap-label">Số pop-up tối đa</span>
+            <input type="number" class="bk-activity-max-input" id="bk-activity-max-input" min="1" max="50" step="1" title="Giới hạn 1–50 (lưu trên trình duyệt)">
+            <button type="button" class="btn btn-outline btn-sm" id="bk-activity-max-apply" style="padding:4px 10px;font-size:11px;">Áp dụng</button>
+          </div>
           <div class="bk-activity-feed" id="bk-activity-feed"></div>
         </div>
       </div>
@@ -728,6 +828,51 @@ body {
             <button class="btn btn-primary btn-sm" id="chat-send-btn" onclick="sendChat()">Gửi</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL — THÔNG BÁO LAB (admin CRUD)
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-lab-announce" style="display:none;" onclick="if(event.target===this)closeModal('modal-lab-announce')">
+  <div class="modal-box" style="max-width:640px;">
+    <div class="modal-header">
+      <div>
+        <h3>Thông báo Lab Booking</h3>
+        <p style="font-size:12px;color:var(--muted);margin:0;">Tin tức, nội quy, hướng dẫn — hiển thị cạnh lịch cho mọi người.</p>
+      </div>
+      <button type="button" class="modal-close" onclick="closeModal('modal-lab-announce')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="la-admin-list" style="max-height:240px;overflow-y:auto;margin-bottom:14px;border:1px solid var(--border);border-radius:10px;padding:4px 8px;background:var(--surface);"></div>
+      <div id="la-admin-form-hint" style="font-size:12px;font-weight:800;margin-bottom:8px;color:var(--text);">Thêm mới hoặc sửa mục đã chọn</div>
+      <input type="hidden" id="la-edit-id" value="">
+      <div class="field">
+        <label>Tiêu đề <span style="color:var(--muted);font-weight:600;">(tuỳ chọn)</span></label>
+        <input type="text" id="la-title" class="search-input" style="width:100%;box-sizing:border-box;" placeholder="VD: Nội quy đặt lịch phòng Lab" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Nội dung</label>
+        <textarea id="la-body" rows="5" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;font-size:13px;line-height:1.45;" placeholder="Nội dung chi tiết, có thể xuống dòng…"></textarea>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Thứ tự hiển thị</label>
+          <input type="number" id="la-sort" class="search-input" style="width:100%;" value="0" title="Số nhỏ hơn đứng trước">
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-top:6px;">
+            <input type="checkbox" id="la-active" checked> Đang hiển thị
+          </label>
+        </div>
+      </div>
+      <div id="la-err" style="color:#c62828;font-size:12px;margin-bottom:8px;"></div>
+      <div class="modal-footer" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn btn-ghost" onclick="resetLabAnnounceForm()">Xoá form</button>
+        <button type="button" class="btn btn-primary" onclick="submitLabAnnounceForm()">💾 Lưu</button>
       </div>
     </div>
   </div>
@@ -1027,11 +1172,22 @@ function normalizeCrdMachine(m) {
   if (o.availTo == null && o.avail_to != null) o.availTo = o.avail_to;
   if (o.maxHours == null && o.max_hours != null) o.maxHours = o.max_hours;
   if ((o.desc == null || o.desc === '') && o.description != null) o.desc = o.description;
+  if (o.sort_order == null && o.sortOrder != null) o.sort_order = o.sortOrder;
   return o;
 }
 
 function mergeMachinesFromApi(list) {
   return (list || []).map(normalizeCrdMachine);
+}
+
+/** Thứ tự hiển thị (khớp ORDER BY sort_order trên máy chủ) */
+function sortedMachines() {
+  return [...DB.machines].sort((a, b) => {
+    const sa = Number(a.sort_order ?? a.sortOrder ?? 0);
+    const sb = Number(b.sort_order ?? b.sortOrder ?? 0);
+    if (sa !== sb) return sa - sb;
+    return String(a.name || '').localeCompare(String(b.name || ''), 'vi');
+  });
 }
 
 /** Khung giờ thiết bị: ô cột h mở khi h >= af && h < at (at = mốc đóng, exclusive) */
@@ -1055,7 +1211,7 @@ function halfFreeTL(m, date, h, half, bookings){
 }
 const uid     = () => Math.random().toString(36).slice(2,10);
 const today   = () => new Date().toISOString().split('T')[0];
-const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const escHtml = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 /* ── API helpers ──────────────────────────────────────────── */
 const API = (() => {
@@ -1107,6 +1263,7 @@ const API = (() => {
     deleteBooking:  id => apiFetch(`/api/crd/bookings/${id}`,  { method:'DELETE' }),
     createMachine:  m  => apiFetch('/api/crd/admin/machines', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(m) }),
     updateMachine:  (id, m) => apiFetch(`/api/crd/admin/machines/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(m) }),
+    reorderMachines: orderedIds => apiFetch('/api/crd/admin/machines/reorder', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ orderedIds }) }),
     deleteMachine:  id => apiFetch(`/api/crd/admin/machines/${id}`, { method:'DELETE' }),
     createPerson:   p  => apiFetch('/api/crd/admin/persons', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(p) }),
     updatePerson:   (id, p) => apiFetch(`/api/crd/admin/persons/${encodeURIComponent(id)}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(p) }),
@@ -1127,6 +1284,10 @@ const API = (() => {
     getAllSysUsers: () => apiFetch('/api/crd/admin/users'),
     disableSysUser: id => apiFetch(`/api/crd/admin/users/${id}/disable`, { method:'PUT' }),
     resetPassword:  (id, password) => apiFetch(`/api/crd/admin/users/${id}/reset-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password }) }),
+    listLabAnnouncements: () => apiFetch('/api/crd/admin/lab-announcements'),
+    createLabAnnouncement: b => apiFetch('/api/crd/admin/lab-announcements', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b) }),
+    updateLabAnnouncement: (id, b) => apiFetch(`/api/crd/admin/lab-announcements/${encodeURIComponent(id)}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b) }),
+    deleteLabAnnouncement: id => apiFetch(`/api/crd/admin/lab-announcements/${encodeURIComponent(id)}`, { method:'DELETE' }),
   };
 })();
 
@@ -1185,7 +1346,9 @@ function resolveCurrentUser() {
 }
 
 /* ── DB state (sẽ được load từ API) ──────────────────────── */
-const DB = { machines: [], users: [], bookings: [], chats: [], crdRoles: [] };
+const DB = { machines: [], users: [], bookings: [], chats: [], crdRoles: [], labAnnouncements: [] };
+/** Danh sách đầy đủ khi mở modal quản trị thông báo */
+let labAnnounceAdminCache = [];
 
 function ensureCrdRolesFallback() {
   if (DB.crdRoles && DB.crdRoles.length) return;
@@ -1370,6 +1533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     DB.bookings = data.bookings || [];
     DB.chats    = data.chats    || [];
     DB.crdRoles = data.crdRoles || [];
+    DB.labAnnouncements = data.labAnnouncements || [];
     appRole     = data.appRole  || currentUser.role;
     if (data.broadcastLastRead != null) broadcastLastRead = Number(data.broadcastLastRead) || 0;
     if (data.broadcastChannelId) crdBroadcastId = data.broadcastChannelId;
@@ -1433,6 +1597,7 @@ function initApp() {
 
   renderAll();
   initBkTooltipPortal();
+  initTimelineRowDnD();
   initBkActivityFeed();
 
   /* Sub-tabs người dùng (admin) */
@@ -1440,6 +1605,8 @@ function initApp() {
     document.getElementById('u-sub-tabs').style.display = 'flex';
     loadSysUsers();
   }
+
+  bkActivityInitAdminToolbar(isAdmin);
 }
 
 /* ── Tab switch ──────────────────────────────────────────── */
@@ -1449,8 +1616,11 @@ function switchTab(id, btn) {
   if (btn) btn.classList.add('active');
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
+  if (id === 'calendar') {
+    requestAnimationFrame(() => { bkActivitySeedTodayIfEmpty(); });
+  }
   if (id === 'analytics' && window.EquipmentAnalytics && typeof DB !== 'undefined' && DB.machines) {
-    window.EquipmentAnalytics.setMachineOptions(DB.machines);
+    window.EquipmentAnalytics.setMachineOptions(sortedMachines());
     window.EquipmentAnalytics.init();
   }
 }
@@ -1539,6 +1709,85 @@ function initBkTooltipPortal() {
   if (tlWrap) tlWrap.addEventListener('scroll', hideOnMove, { passive: true });
 }
 
+let tlDnDInitialized = false;
+let tlDragMachineId = null;
+let tlDropHighlightTr = null;
+
+function clearTlDropHighlight() {
+  if (tlDropHighlightTr) {
+    tlDropHighlightTr.classList.remove('tl-tr--drop-target');
+    tlDropHighlightTr = null;
+  }
+}
+
+/** Admin: kéo cột 「Thiết bị」 để đổi sort_order; lịch giữ nguyên theo machineId */
+function initTimelineRowDnD() {
+  if (tlDnDInitialized) return;
+  tlDnDInitialized = true;
+  const table = document.getElementById('tl-table');
+  if (!table) return;
+
+  table.addEventListener('dragstart', (e) => {
+    if (appRole !== 'admin') return;
+    const td = e.target.closest('td.tl-drag-handle--admin');
+    if (!td) return;
+    const tr = td.closest('tr');
+    if (!tr) return;
+    const mid = tr.getAttribute('data-machine-id');
+    if (!mid) return;
+    tlDragMachineId = mid;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', mid);
+    tr.classList.add('tl-tr--dragging');
+  });
+
+  table.addEventListener('dragend', () => {
+    table.querySelectorAll('tr.tl-tr--dragging').forEach((tr) => tr.classList.remove('tl-tr--dragging'));
+    clearTlDropHighlight();
+    tlDragMachineId = null;
+  });
+
+  table.addEventListener('dragover', (e) => {
+    if (appRole !== 'admin' || !tlDragMachineId) return;
+    const tr = e.target.closest('tbody tr[data-machine-id]');
+    if (!tr) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (tr !== tlDropHighlightTr) {
+      clearTlDropHighlight();
+      tr.classList.add('tl-tr--drop-target');
+      tlDropHighlightTr = tr;
+    }
+  });
+
+  table.addEventListener('drop', (e) => {
+    if (appRole !== 'admin' || !tlDragMachineId) return;
+    const tr = e.target.closest('tbody tr[data-machine-id]');
+    if (!tr) return;
+    e.preventDefault();
+    const targetId = tr.getAttribute('data-machine-id');
+    clearTlDropHighlight();
+    if (!targetId || targetId === tlDragMachineId) return;
+    const fromId = tlDragMachineId;
+    const ids = sortedMachines().map((m) => m.id);
+    const i = ids.indexOf(fromId);
+    const j = ids.indexOf(targetId);
+    if (i < 0 || j < 0) return;
+    ids.splice(i, 1);
+    ids.splice(j, 0, fromId);
+    API.reorderMachines(ids)
+      .then((res) => {
+        if (res.machines) DB.machines = mergeMachinesFromApi(res.machines);
+        renderTimeline();
+        renderMachinesGrid();
+        if (window.EquipmentAnalytics && DB.machines) {
+          window.EquipmentAnalytics.setMachineOptions(sortedMachines());
+        }
+      })
+      .catch((err) => alert(err.message || 'Không lưu được thứ tự thiết bị'));
+  });
+}
+
 /* ── Render all ──────────────────────────────────────────── */
 function renderAll() {
   ensureCrdRolesFallback();
@@ -1550,6 +1799,161 @@ function renderAll() {
   renderUsersGrid();
   renderChatSidebar();
   updateUnreadBadge();
+  renderLabAnnounceStrip();
+}
+
+function renderLabAnnounceStrip() {
+  const el = document.getElementById('crd-lab-announce-strip');
+  if (!el) return;
+  const list = DB.labAnnouncements || [];
+  const isAdm = appRole === 'admin';
+  let html = '';
+  if (!list.length) {
+    html =
+      '<div style="color:var(--muted);font-weight:600;font-size:11px;line-height:1.45;">📌 <span style="font-style:italic;">Chưa có thông báo hoặc nội quy.</span></div>';
+  } else {
+    html = list
+      .map(a => {
+        const t = (a.title || '').trim();
+        const b = (a.body || '').trim();
+        const headRaw = t || b.slice(0, 100) + (b.length > 100 ? '…' : '');
+        const sub =
+          t && b
+            ? escHtml(b.slice(0, 160)) + (b.length > 160 ? '…' : '')
+            : !t && b
+              ? ''
+              : '';
+        return `<div class="crd-la-item"><div class="crd-la-title">${escHtml(headRaw)}</div>${
+          sub ? `<div style="color:var(--muted);font-size:11px;margin-top:3px;white-space:pre-wrap;">${sub}</div>` : ''
+        }</div>`;
+      })
+      .join('');
+  }
+  if (isAdm) {
+    html += `<div style="margin-top:8px;padding-top:6px;border-top:1px dashed rgba(102,126,234,0.35);">
+      <button type="button" class="btn btn-outline btn-sm" style="padding:3px 10px;font-size:11px;font-weight:700;" onclick="openLabAnnounceAdminModal()">⚙ Quản lý thông báo</button>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+function openLabAnnounceAdminModal() {
+  if (appRole !== 'admin') return;
+  const err = document.getElementById('la-err');
+  if (err) err.textContent = '';
+  API.listLabAnnouncements()
+    .then(res => {
+      labAnnounceAdminCache = res.announcements || [];
+      renderLabAnnounceAdminList();
+      resetLabAnnounceForm();
+      showModal('modal-lab-announce');
+    })
+    .catch(e => alert(e.message || String(e)));
+}
+
+function renderLabAnnounceAdminList() {
+  const host = document.getElementById('la-admin-list');
+  if (!host) return;
+  if (!labAnnounceAdminCache.length) {
+    host.innerHTML =
+      '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px;">Chưa có mục — điền form bên dưới và bấm Lưu.</div>';
+    return;
+  }
+  host.innerHTML = labAnnounceAdminCache
+    .map(a => {
+      const st = a.isActive
+        ? '<span style="color:#2e7d32;font-weight:800;">Đang hiện</span>'
+        : '<span style="color:#999;font-weight:700;">Ẩn</span>';
+      const idJs = JSON.stringify(a.id);
+      return `<div style="border-bottom:1px solid var(--border);padding:8px 6px;display:flex;gap:10px;align-items:flex-start;justify-content:space-between;">
+      <div style="min-width:0;flex:1;">
+        <div style="font-weight:800;font-size:12.5px;color:var(--text);">${escHtml((a.title || '').trim() || '(Không tiêu đề)')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;white-space:pre-wrap;max-height:4.5em;overflow:hidden;">${escHtml(a.body || '')}</div>
+        <div style="font-size:10px;margin-top:5px;color:var(--muted);">${st} · thứ tự ${Number(a.sortOrder) || 0}</div>
+      </div>
+      <div style="flex-shrink:0;display:flex;flex-direction:column;gap:6px;">
+        <button type="button" class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:11px;" onclick="labAnnounceStartEdit(${idJs})">Sửa</button>
+        <button type="button" class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;color:#c62828;" onclick="labAnnounceDelete(${idJs})">Xóa</button>
+      </div>
+    </div>`;
+    })
+    .join('');
+}
+
+function labAnnounceStartEdit(id) {
+  const a = labAnnounceAdminCache.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('la-edit-id').value = id;
+  document.getElementById('la-title').value = a.title || '';
+  document.getElementById('la-body').value = a.body || '';
+  document.getElementById('la-sort').value = String(a.sortOrder != null ? a.sortOrder : 0);
+  document.getElementById('la-active').checked = !!a.isActive;
+  document.getElementById('la-admin-form-hint').textContent = 'Đang sửa — bấm Lưu để cập nhật';
+  document.getElementById('la-err').textContent = '';
+}
+
+function resetLabAnnounceForm() {
+  document.getElementById('la-edit-id').value = '';
+  document.getElementById('la-title').value = '';
+  document.getElementById('la-body').value = '';
+  document.getElementById('la-sort').value = '0';
+  document.getElementById('la-active').checked = true;
+  const h = document.getElementById('la-admin-form-hint');
+  if (h) h.textContent = 'Thêm mới hoặc sửa mục đã chọn';
+  const err = document.getElementById('la-err');
+  if (err) err.textContent = '';
+}
+
+function submitLabAnnounceForm() {
+  if (appRole !== 'admin') return;
+  const id = document.getElementById('la-edit-id').value.trim();
+  const title = document.getElementById('la-title').value.trim();
+  const body = document.getElementById('la-body').value;
+  const sortOrder = parseInt(document.getElementById('la-sort').value, 10);
+  const isActive = document.getElementById('la-active').checked;
+  const err = document.getElementById('la-err');
+  err.textContent = '';
+  if (!title && !body.trim()) {
+    err.textContent = 'Vui lòng nhập tiêu đề hoặc nội dung.';
+    return;
+  }
+  const payload = {
+    title,
+    body,
+    sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
+    isActive
+  };
+  const req = id ? API.updateLabAnnouncement(id, payload) : API.createLabAnnouncement(payload);
+  req
+    .then(res => {
+      if (res.labAnnouncements) DB.labAnnouncements = res.labAnnouncements;
+      renderLabAnnounceStrip();
+      return API.listLabAnnouncements();
+    })
+    .then(res => {
+      labAnnounceAdminCache = res.announcements || [];
+      renderLabAnnounceAdminList();
+      resetLabAnnounceForm();
+    })
+    .catch(e => {
+      err.textContent = e.message || String(e);
+    });
+}
+
+function labAnnounceDelete(id) {
+  if (appRole !== 'admin') return;
+  if (!confirm('Xóa thông báo này vĩnh viễn?')) return;
+  API.deleteLabAnnouncement(id)
+    .then(res => {
+      if (res.labAnnouncements) DB.labAnnouncements = res.labAnnouncements;
+      renderLabAnnounceStrip();
+      return API.listLabAnnouncements();
+    })
+    .then(res => {
+      labAnnounceAdminCache = res.announcements || [];
+      renderLabAnnounceAdminList();
+    })
+    .catch(e => alert(e.message || String(e)));
 }
 
 /* ════════════════════════════════════════════
@@ -1563,6 +1967,108 @@ let bkActivityPollRunning = false;
 const bkActivityRecent = new Map(); // key = `${action}|${bookingId}` -> ts
 const BK_ACTIVITY_POLL_MS = 4000;
 const BK_ACTIVITY_DEDUP_MS = 9000;
+const BK_ACTIVITY_LS_MAX = 'crdBkActivityMaxItems';
+const BK_ACTIVITY_MAX_DEFAULT = 9;
+const BK_ACTIVITY_MAX_MIN = 1;
+const BK_ACTIVITY_MAX_HARD = 50;
+
+function bkActivityGetMaxItems() {
+  try {
+    const raw = localStorage.getItem(BK_ACTIVITY_LS_MAX);
+    if (raw == null || raw === '') return BK_ACTIVITY_MAX_DEFAULT;
+    const n = parseInt(raw, 10);
+    if (!Number.isFinite(n)) return BK_ACTIVITY_MAX_DEFAULT;
+    return Math.min(BK_ACTIVITY_MAX_HARD, Math.max(BK_ACTIVITY_MAX_MIN, n));
+  } catch (e) {
+    return BK_ACTIVITY_MAX_DEFAULT;
+  }
+}
+
+/** Trả về giá trị đã kẹp; đồng bộ ô nhập admin (nếu có). */
+function bkActivitySetMaxItems(raw) {
+  const n = parseInt(raw, 10);
+  const v = !Number.isFinite(n)
+    ? BK_ACTIVITY_MAX_DEFAULT
+    : Math.min(BK_ACTIVITY_MAX_HARD, Math.max(BK_ACTIVITY_MAX_MIN, n));
+  try {
+    localStorage.setItem(BK_ACTIVITY_LS_MAX, String(v));
+  } catch (e) { /* ignore */ }
+  const inp = document.getElementById('bk-activity-max-input');
+  if (inp) inp.value = String(v);
+  return v;
+}
+
+function bkActivityApplyMaxAndTrim() {
+  const inp = document.getElementById('bk-activity-max-input');
+  const feed = document.getElementById('bk-activity-feed');
+  if (inp) bkActivitySetMaxItems(inp.value);
+  if (feed) bkActivityTrimOldest(feed);
+  if (feed) feed.scrollTop = feed.scrollHeight;
+}
+
+/** Chỉ admin: hiện ô chỉnh số pop-up tối đa (lưu localStorage). */
+function bkActivityInitAdminToolbar(isAdmin) {
+  const cap = document.getElementById('bk-activity-admin-cap');
+  const inp = document.getElementById('bk-activity-max-input');
+  const btn = document.getElementById('bk-activity-max-apply');
+  if (!cap || !inp) return;
+  if (!isAdmin) {
+    cap.classList.remove('is-visible');
+    cap.setAttribute('hidden', '');
+    return;
+  }
+  cap.removeAttribute('hidden');
+  cap.classList.add('is-visible');
+  inp.value = String(bkActivityGetMaxItems());
+  inp.min = String(BK_ACTIVITY_MAX_MIN);
+  inp.max = String(BK_ACTIVITY_MAX_HARD);
+  const onApply = () => {
+    bkActivityApplyMaxAndTrim();
+  };
+  if (btn) {
+    btn.onclick = onApply;
+  }
+  inp.onchange = onApply;
+  inp.onkeydown = (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      onApply();
+    }
+  };
+}
+
+/** Giữ tối đa N thẻ pop-up (N do admin / mặc định); thẻ mới chèn cuối → xoá thẻ cũ nhất. */
+function bkActivityTrimOldest(feed) {
+  if (!feed) return;
+  const max = bkActivityGetMaxItems();
+  while (true) {
+    const cards = feed.querySelectorAll('.bk-activity-item');
+    if (cards.length <= max) break;
+    cards[0].remove();
+  }
+}
+
+function bkActivityAppendDateMarker(dateStr) {
+  const feed = document.getElementById('bk-activity-feed');
+  if (!feed) return;
+  const el = document.createElement('div');
+  el.className = 'bk-activity-date-sep';
+  el.setAttribute('role', 'separator');
+  const d = String(dateStr || '').trim();
+  try {
+    const parts = d.split('-');
+    if (parts.length === 3) {
+      el.textContent = '— ' + parts[2] + '/' + parts[1] + '/' + parts[0] + ' —';
+    } else {
+      el.textContent = d ? ('— ' + d + ' —') : '—';
+    }
+  } catch (e) {
+    el.textContent = d ? ('— ' + d + ' —') : '—';
+  }
+  feed.appendChild(el);
+  bkActivityTrimOldest(feed);
+  feed.scrollTop = feed.scrollHeight;
+}
 
 function bkActivityKey(action, bookingId) {
   return `${action}|${bookingId}`;
@@ -1619,6 +2125,51 @@ function bkActivitySyncLastSnapFromDB() {
   bkActivityCurrentDate = currentDate;
 }
 
+function bkActivityPushSnapshotCard(booking) {
+  const feed = document.getElementById('bk-activity-feed');
+  if (!feed || !booking || !booking.id) return;
+
+  const m = DB.machines.find(x => x.id === booking.machineId);
+  const u = DB.users.find(x => x.id === booking.userId);
+  const uname = (u && u.name) ? u.name : '—';
+  const dotColor = m?.color || '#667eea';
+  const t1 = fmtT(booking.startH);
+  const t2 = fmtT(booking.endH);
+  const rg = (booking.researchGroup || '').trim();
+  const rgTxt = rg ? `Nhóm: ${rg}` : '';
+  const p = (booking.purpose || '').trim();
+  const pTxt = p ? (p.length > 30 ? (p.slice(0, 30) + '…') : p) : '';
+
+  const el = document.createElement('div');
+  el.className = 'bk-activity-item bk-activity-item--snapshot';
+  el.setAttribute('data-bk-id', String(booking.id));
+  el.innerHTML = `
+    <div class="bk-activity-top">
+      <span class="bk-act-dot" style="background:${escHtml(dotColor)};"></span>
+      <span class="bk-activity-action">📋 Trên lịch</span>
+      <span class="bk-activity-when">${escHtml(t1)}–${escHtml(t2)}</span>
+    </div>
+    <div class="bk-activity-detail">
+      <strong>${escHtml(m?.name || 'Thiết bị')}</strong> · ${escHtml(t1)}–${escHtml(t2)}
+      <br>👤 ${escHtml(uname)}${rgTxt ? ` · ${escHtml(rgTxt)}` : ''}${pTxt ? ` · ${escHtml(pTxt)}` : ''}
+    </div>
+  `;
+  feed.appendChild(el);
+  bkActivityTrimOldest(feed);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+/** Khi cột trống: đổ nhanh các lịch đang có trong ngày (trông bận rộn ngay từ đầu). */
+function bkActivitySeedTodayIfEmpty() {
+  const feed = document.getElementById('bk-activity-feed');
+  if (!feed || feed.children.length > 0) return;
+  const list = DB.bookings.filter(b => b && b.date === currentDate)
+    .slice()
+    .sort((a, b) => (a.startH || 0) - (b.startH || 0));
+  const cap = 12;
+  list.slice(0, cap).forEach(bk => bkActivityPushSnapshotCard(bk));
+}
+
 function bkActivityPushItem(action, booking, oldBooking) {
   if (!bkActivityIsCalendarActive()) return;
   const feed = document.getElementById('bk-activity-feed');
@@ -1626,6 +2177,10 @@ function bkActivityPushItem(action, booking, oldBooking) {
   if (bkActivityShouldSkip(action, booking.id)) return;
 
   bkActivityMarkSeen(action, booking.id);
+
+  Array.from(feed.querySelectorAll('.bk-activity-item--snapshot[data-bk-id]')).forEach(node => {
+    if (node.getAttribute('data-bk-id') === String(booking.id)) node.remove();
+  });
 
   const m = DB.machines.find(x => x.id === booking.machineId);
   const u = DB.users.find(x => x.id === booking.userId);
@@ -1661,9 +2216,9 @@ function bkActivityPushItem(action, booking, oldBooking) {
     </div>
   `;
 
-  // Xếp kề nhau: mục sau nằm dưới mục trước.
-  // Khi quá chiều cao: feed tự scroll lên để “dồn lên”.
+  // Xếp kề nhau: mục sau nằm dưới mục trước. Quá giới hạn → xoá mục đầu (đùn ra).
   feed.appendChild(el);
+  bkActivityTrimOldest(feed);
   feed.scrollTop = feed.scrollHeight;
 }
 
@@ -1772,14 +2327,19 @@ function renderTimeline() {
   hideBkTooltipPortal();
   currentDate = document.getElementById('date-picker').value;
   if (bkActivityCurrentDate !== currentDate) {
+    const prevCal = bkActivityCurrentDate;
     bkActivityCurrentDate = currentDate;
-    if (bkActivityInitialized) bkActivityClearFeed();
     bkActivityLastSnap = bkActivityMakeSnap(DB.bookings, currentDate);
+    if (bkActivityInitialized && prevCal != null && String(prevCal) !== String(currentDate)) {
+      bkActivityAppendDateMarker(currentDate);
+    }
   }
   /* Cột 6→23 (đủ cho availTo tới 24); mỗi thiết bị tô ngoài giờ theo af/at riêng */
   const hours   = HOURS.slice(6, 24);
+  const isAdm   = appRole === 'admin';
+  const machineRows = sortedMachines();
 
-  document.getElementById('machine-legend').innerHTML = DB.machines.map(m => `
+  document.getElementById('machine-legend').innerHTML = machineRows.map(m => `
     <div class="legend-chip" style="background:${m.color}12;border:1px solid ${m.color}44;color:${m.color};">
       <span style="width:8px;height:8px;border-radius:50%;background:${m.color};display:inline-block;"></span>
       ${escHtml(m.name)}
@@ -1789,7 +2349,7 @@ function renderTimeline() {
   hours.forEach(() => { html += '<col class="tl-col-hour" />'; });
   html += '</colgroup>';
   html += '<thead><tr>';
-  html += `<th class="tl-label tl-th-corner" style="background:var(--surface);position:sticky;left:0;z-index:3;font-size:12px;color:#3d4456;font-weight:700;text-align:left;">Thiết bị</th>`;
+  html += `<th class="tl-label tl-th-corner" style="background:var(--surface);position:sticky;left:0;z-index:3;font-size:12px;color:#3d4456;font-weight:700;text-align:left;" title="${isAdm ? 'Cột trái: quản trị có thể kéo thả để đổi thứ tự hàng' : ''}">Thiết bị</th>`;
   hours.forEach(h => { html += `<th class="tl-hr-head">${fmt(h)}</th>`; });
   html += '</tr></thead><tbody>';
 
@@ -1798,14 +2358,15 @@ function renderTimeline() {
   const hEnd = h0 + hours.length;
   const trackW = hours.length * cellW;
 
-  DB.machines.forEach((m, mi) => {
+  machineRows.forEach((m, mi) => {
     const rowBg  = mi % 2 === 0 ? '#fff' : 'var(--surface)';
     const rowBks = DB.bookings.filter(b => b.machineId === m.id && b.date === currentDate)
       .sort((a,b)=>a.startH-b.startH);
     const { af, at } = machineAvailBounds(m);
+    const dragAttr = isAdm ? ' draggable="true" title="Kéo để đổi thứ tự hàng (quản trị)"' : '';
 
-    html += `<tr style="background:${rowBg};">`;
-    html += `<td class="tl-label" style="background:${rowBg};">
+    html += `<tr data-machine-id="${escHtml(m.id)}" style="background:${rowBg};">`;
+    html += `<td class="tl-label${isAdm ? ' tl-drag-handle--admin' : ''}" style="background:${rowBg};"${dragAttr}>
       <div style="display:flex;align-items:center;gap:9px;">
         <span style="width:10px;height:10px;border-radius:50%;background:${m.color};flex-shrink:0;display:inline-block;"></span>
         <div>
@@ -1867,6 +2428,7 @@ function renderTimeline() {
 
   html += '</tbody>';
   document.getElementById('tl-table').innerHTML = html;
+  bkActivitySeedTodayIfEmpty();
 }
 
 function changeDate(d) {
@@ -1897,7 +2459,8 @@ function halfHourSelectOpts(from, to, isEnd) {
 }
 
 function openBookingModal(machineId, startH) {
-  pendingMachineId = machineId || DB.machines[0].id;
+  const firstOrd = sortedMachines()[0];
+  pendingMachineId = machineId || (firstOrd && firstOrd.id);
   const m = DB.machines.find(x => x.id === pendingMachineId);
   const { af, at } = machineAvailBounds(m);
 
@@ -2248,7 +2811,7 @@ function deleteBooking(id) {
 ════════════════════════════════════════════ */
 function renderMachinesGrid() {
   document.getElementById('m-count').textContent = `${DB.machines.length} thiết bị`;
-  document.getElementById('m-grid').innerHTML = DB.machines.map(m => {
+  document.getElementById('m-grid').innerHTML = sortedMachines().map(m => {
     const { af, at } = machineAvailBounds(m);
     return `
     <div class="card" style="padding:20px;border-top:4px solid ${m.color};">
@@ -2995,6 +3558,7 @@ document.addEventListener('keydown', e => {
     closeModal('modal-booking');
     closeModal('modal-machine');
     closeModal('modal-person');
+    closeModal('modal-lab-announce');
   }
 });
 </script>

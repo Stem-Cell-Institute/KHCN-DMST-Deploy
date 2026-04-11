@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thêm / Import tài liệu — STIMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/dms-records.css">
+</head>
+<body class="dms-page">
+  <a href="#dms-add-main" class="dms-skip-link">Bỏ qua đến biểu mẫu</a>
+  <header class="dms-topbar" role="banner">
+    <div class="dms-topbar-brand">
+      <p class="dms-kicker">STIMS — VIỆN TẾ BÀO GỐC</p>
+      <h1 id="page-title">Thêm tài liệu</h1>
+      <p class="dms-subtitle">Nhập tay từng hồ sơ hoặc import hàng loạt từ Excel mẫu Quyết định (cột Số QĐ + Ngày ban hành để chống trùng).</p>
+    </div>
+    <div class="dms-top-actions">
+      <a href="tai-lieu-hanh-chinh.html" class="dms-btn dms-btn-ghost" style="text-decoration:none">← Quản lý tài liệu</a>
+      <a href="index.html" class="dms-btn dms-btn-ghost" style="text-decoration:none">Trang chủ</a>
+      <div class="dms-auth-slot" id="auth-status"></div>
+    </div>
+  </header>
+
+  <div class="dms-add-wrap" id="dms-add-main">
+    <div class="dms-add-tabs">
+      <button type="button" class="dms-add-tab dms-add-tab--on" id="tab-manual" data-add-tab-btn="manual">Một tài liệu</button>
+      <button type="button" class="dms-add-tab" id="tab-import" data-add-tab-btn="import">Import Excel (mẫu Quyết định)</button>
+    </div>
+
+    <div class="dms-add-panel" data-add-tab="manual">
+      <h2>Thông tin tài liệu</h2>
+      <form id="form-manual" class="dms-add-grid">
+        <div class="dms-add-field" style="grid-column:1/-1">
+          <label>Tiêu đề / Trích yếu *</label>
+          <input type="text" id="f-title" required placeholder="VD: Quy định chế độ làm việc…">
+        </div>
+        <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
+          <div class="dms-add-field">
+            <label>Số quyết định / Số hiệu</label>
+            <input type="text" id="f-ref" placeholder="VD: 01, 66/QĐ-SCI…">
+          </div>
+          <div class="dms-add-field">
+            <label>Đơn vị ban hành</label>
+            <input type="text" id="f-dv" placeholder="VD: CBT, KHTH…">
+          </div>
+        </div>
+        <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
+          <div class="dms-add-field">
+            <label>Danh mục</label>
+            <select id="f-cat"></select>
+          </div>
+          <div class="dms-add-field">
+            <label>Loại tài liệu</label>
+            <select id="f-type"></select>
+          </div>
+        </div>
+        <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
+          <div class="dms-add-field">
+            <label>Trạng thái</label>
+            <select id="f-status">
+              <option value="active">Có hiệu lực</option>
+              <option value="draft">Dự thảo</option>
+              <option value="expired">Hết hạn</option>
+              <option value="revoked">Thu hồi / Gộp thay thế</option>
+            </select>
+          </div>
+          <div class="dms-add-field">
+            <label>Link bản scan (PDF)</label>
+            <input type="text" id="f-scan" placeholder="VD: 01-QĐ.pdf hoặc URL">
+          </div>
+          <div class="dms-add-field">
+            <label>Link file Word</label>
+            <input type="text" id="f-word" placeholder="Đường dẫn hoặc URL tới .doc/.docx">
+          </div>
+        </div>
+        <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
+          <div class="dms-add-field">
+            <label>Ngày ban hành</label>
+            <input type="date" id="f-issue">
+          </div>
+          <div class="dms-add-field">
+            <label>Ngày / Hiệu lực đến</label>
+            <input type="date" id="f-valid">
+          </div>
+        </div>
+        <div class="dms-add-field" style="grid-column:1/-1">
+          <label>Ghi chú</label>
+          <textarea id="f-notes" rows="2" placeholder="Ghi chú nội bộ…"></textarea>
+        </div>
+        <div class="dms-add-field" style="grid-column:1/-1">
+          <label>File đính kèm (PDF, Word…)</label>
+          <input type="file" id="f-file">
+          <p class="dms-add-note" id="f-file-help">Có thể bỏ qua nếu chỉ lưu metadata + link scan (hệ thống vẫn lưu được).</p>
+        </div>
+        <div class="dms-add-field" style="grid-column:1/-1">
+          <label>Thẻ nhãn</label>
+          <div id="f-tags"></div>
+        </div>
+        <div class="dms-add-actions" style="grid-column:1/-1">
+          <button type="submit" class="dms-btn dms-btn-modal-primary">Lưu</button>
+          <a href="tai-lieu-hanh-chinh.html" class="dms-btn dms-btn-modal-secondary" style="text-decoration:none;display:inline-flex;align-items:center">Huỷ</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="dms-add-panel" data-add-tab="import" style="display:none">
+      <h2>Import từ Excel</h2>
+      <div class="dms-import-columns">
+        <strong>Dòng tiêu đề cần có (tên gần đúng là được):</strong>
+        cột số (<code>Số</code>, <code>Số QĐ</code>, <code>Số CV</code>…) và cột ngày (<code>Ngày ban hành</code> / <code>Ngày tháng</code>) — bắt buộc;
+        thêm tùy chọn: <code>Nội dung trích yếu</code>, <code>Ngày hiệu lực</code>,
+        <code>Đơn vị ban hành</code>, <code>Đơn vị nhận</code> / <code>Nơi nhận</code>, <code>Soạn thảo</code>,
+        <code>Ngày gửi</code>, <code>Người tiếp nhận công văn</code>, <code>Ghi chú</code>, <code>Link bản scan</code>, <code>Link file word</code> (ô <code>N/A</code> được bỏ qua).
+        Có thể có vài dòng tiêu đề phía trên; hệ thống tự tìm hàng header. Hyperlink có thể nằm ở cột link hoặc trên ô số tham chiếu.
+        Trùng <strong>cùng số tham chiếu + cùng ngày</strong> trong CSDL sẽ bỏ qua và báo trong báo cáo.
+      </div>
+      <div class="dms-add-grid">
+        <div class="dms-add-grid dms-add-grid--2">
+          <div class="dms-add-field">
+            <label>Gán danh mục (tùy chọn)</label>
+            <select id="imp-cat"></select>
+          </div>
+          <div class="dms-add-field">
+            <label>Loại tài liệu (khuyến nghị: Quyết định)</label>
+            <select id="imp-type"></select>
+          </div>
+        </div>
+        <div class="dms-add-field">
+          <label>Trạng thái mặc định cho dòng nhập mới</label>
+          <select id="imp-status">
+            <option value="active">Có hiệu lực</option>
+            <option value="draft">Dự thảo</option>
+            <option value="revoked">Thu hồi / Không còn dùng</option>
+          </select>
+        </div>
+        <div class="dms-add-field">
+          <label>File Excel (.xlsx / .xls)</label>
+          <input type="file" id="imp-file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+        </div>
+        <div class="dms-add-actions">
+          <button type="button" class="dms-btn dms-btn-modal-secondary" id="imp-preview">Xem trước &amp; kiểm tra trùng</button>
+          <button type="button" class="dms-btn dms-btn-modal-primary" id="imp-btn-run" disabled>Thực hiện nhập</button>
+        </div>
+        <div id="imp-report" class="dms-add-note" style="margin-top:16px"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/auth-status.js"></script>
+  <script src="js/dms-add-page.js"></script>
+</body>
+</html>

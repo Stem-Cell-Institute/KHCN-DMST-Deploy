@@ -319,6 +319,7 @@
         </div>
     </div>
 
+    <script src="js/page-greeting.js"></script>
     <script>
     (function() {
         var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
@@ -330,9 +331,13 @@
         var isLoggedIn = !!(user.email || user.fullname);
         if (greetingEl) {
             if (isLoggedIn) {
-                var name = (user.fullname || '').trim() || (user.email || '').split('@')[0];
-                var label = ((user.role || '').toLowerCase() === 'admin') ? 'Xin chào Admin' : ('Chào ' + (name || 'bạn'));
-                greetingEl.textContent = label;
+                if (typeof getLoginGreetingDisplay === 'function') {
+                    greetingEl.textContent = getLoginGreetingDisplay(user);
+                } else {
+                    var name = (user.fullname || '').trim() || (user.email || '').split('@')[0];
+                    var label = ((user.role || '').toLowerCase() === 'admin') ? 'Xin chào Admin' : ('Chào ' + (name || 'bạn'));
+                    greetingEl.textContent = label;
+                }
             } else {
                 greetingEl.innerHTML = '<a href="dang-nhap.html">Đăng nhập</a>';
             }

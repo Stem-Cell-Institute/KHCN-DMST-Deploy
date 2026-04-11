@@ -45,8 +45,8 @@
         .page-title { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 1rem; }
         .user-bar { background: rgba(21, 101, 192, 0.08); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; }
         .card { background: var(--white); padding: 2rem; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); margin-bottom: 1.5rem; }
-        .card h3 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 1rem; font-size: 1.2rem; }
-        .note { font-size: 0.9rem; color: var(--gray); margin-bottom: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 8px; }
+        .card h3 { font-family: 'Libre Baskerville', serif; color: #0d47a1; margin-bottom: 1rem; font-size: 1.2rem; }
+        .note { font-size: 0.92rem; color: #1e293b; margin-bottom: 1rem; padding: 0.8rem 0.9rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e8ecf1; line-height: 1.55; }
         .method-card { background: linear-gradient(135deg, rgba(21, 101, 192, 0.06) 0%, rgba(25, 118, 210, 0.06) 100%); padding: 1.25rem 1.5rem; border-radius: 12px; border-left: 4px solid var(--primary); margin-bottom: 1.5rem; }
         .method-card h3 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.75rem; font-size: 1.1rem; }
         .method-steps { margin: 0; padding-left: 1.25rem; color: var(--gray); font-size: 0.95rem; line-height: 1.7; }
@@ -86,6 +86,89 @@
         .btn-row .btn-sm { flex-shrink: 0; }
         .btn-delete { background: #dc3545 !important; color: #fff !important; }
         .btn-delete:hover { background: #c82333 !important; }
+
+        /* —— Quản lý tài khoản: bố cục & phân cấp thị giác —— */
+        .accounts-section { scroll-margin-top: 1rem; }
+        .accounts-hero {
+            display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem;
+            margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid #e2e8f0;
+        }
+        .accounts-hero__title { margin: 0; font-family: 'Libre Baskerville', serif; color: #0d47a1; font-size: 1.55rem; line-height: 1.25; }
+        .accounts-hero__lead { margin: 0.35rem 0 0; font-size: 0.95rem; color: #1e293b; max-width: 42rem; line-height: 1.55; }
+        .accounts-hero__actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+        .accounts-hero__actions a {
+            display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; border-radius: 10px;
+            font-size: 0.88rem; font-weight: 600; text-decoration: none; border: 2px solid rgba(21, 101, 192, 0.25);
+            color: var(--primary); background: rgba(21, 101, 192, 0.06); transition: background 0.15s, border-color 0.15s, transform 0.12s;
+        }
+        .accounts-hero__actions a:hover { background: rgba(21, 101, 192, 0.12); border-color: var(--primary); transform: translateY(-1px); }
+
+        .accounts-help-details {
+            margin-bottom: 1.25rem; border-radius: 14px; border: 1px solid #e2e8f0; background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+            box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04); overflow: hidden;
+        }
+        .accounts-help-details > summary {
+            list-style: none; cursor: pointer; padding: 0.85rem 1.1rem; font-weight: 600; font-size: 0.95rem; color: #334155;
+            display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; user-select: none;
+        }
+        .accounts-help-details > summary::-webkit-details-marker { display: none; }
+        .accounts-help-details > summary::after { content: '▾'; font-size: 0.75rem; color: #64748b; transition: transform 0.2s; }
+        .accounts-help-details[open] > summary::after { transform: rotate(-180deg); }
+        .accounts-help-details > summary:hover { background: rgba(21, 101, 192, 0.04); }
+        .accounts-guide-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;
+            padding: 0 1rem 1rem;
+        }
+        .accounts-guide-card {
+            border-radius: 12px; padding: 0.85rem 1rem; background: var(--white); border: 1px solid #e8eef4;
+            transition: box-shadow 0.18s, border-color 0.18s, transform 0.15s;
+        }
+        .accounts-guide-card:hover { box-shadow: 0 6px 20px rgba(21, 101, 192, 0.1); border-color: rgba(21, 101, 192, 0.35); transform: translateY(-2px); }
+        .accounts-guide-card__icon { font-size: 1.35rem; line-height: 1; margin-bottom: 0.35rem; }
+        .accounts-guide-card__label { font-weight: 700; font-size: 0.88rem; color: #0f172a; margin: 0 0 0.35rem; }
+        .accounts-guide-card__text { margin: 0; font-size: 0.85rem; color: #334155; line-height: 1.5; }
+
+        .accounts-layout { display: grid; grid-template-columns: 1fr; gap: 1.25rem; align-items: start; margin-bottom: 1.25rem; }
+        @media (min-width: 1024px) {
+            .accounts-layout { grid-template-columns: 1fr minmax(260px, 320px); }
+        }
+        .accounts-aside {
+            position: sticky; top: 0.75rem; border-radius: 14px; padding: 1rem 1.1rem; background: linear-gradient(145deg, #fff7d6 0%, #fffbeb 100%);
+            border: 1px solid #e5a00d; font-size: 0.9rem; line-height: 1.6; color: #451a03;
+        }
+        .accounts-aside h4 { margin: 0 0 0.5rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: #713f12; }
+        .accounts-aside ul { margin: 0; padding-left: 1.1rem; }
+        .accounts-aside li { margin-bottom: 0.35rem; }
+
+        .accounts-form-card.add-role-card { margin-bottom: 0; }
+        .accounts-form-note {
+            font-size: 0.9rem; color: #0f172a; margin: 0 0 1rem; line-height: 1.6; padding: 0.85rem 1.05rem; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; border-left: 4px solid #64748b;
+        }
+
+        .accounts-table-card .card__toolbar {
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem;
+        }
+        .accounts-table-card .card__toolbar h3 { margin: 0; font-size: 1.1rem; }
+        .accounts-filter-wrap { flex: 1; min-width: 200px; max-width: 360px; }
+        .accounts-filter-input {
+            width: 100%; padding: 0.55rem 0.85rem 0.55rem 2.35rem; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 0.92rem;
+            background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E") no-repeat 0.75rem center;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .accounts-filter-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.12); }
+        .accounts-table-wrap.accounts-table-scroll { max-height: min(68vh, 560px); overflow: auto; border-radius: 12px; border: 1px solid #e8eef4; }
+        .accounts-table-wrap.accounts-table-scroll table { margin: 0; }
+        .accounts-table-wrap.accounts-table-scroll thead th {
+            position: sticky; top: 0; z-index: 1; background: #f1f5f9; box-shadow: 0 1px 0 #e2e8f0; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; color: #475569;
+        }
+        .accounts-table-wrap.accounts-table-scroll tbody tr:hover { background: rgba(21, 101, 192, 0.04); }
+        .visually-hidden {
+            position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+        }
+        .admin-tier-badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 8px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em; }
+        .admin-tier-badge--master { background: linear-gradient(135deg, #1e3a5f, #1565c0); color: #fff; }
+        .admin-tier-badge--deputy { background: #e8eaf0; color: #37474f; border: 1px solid #cfd4dc; }
+        .admin-team-non-master-note { display: none; margin-bottom: 1rem; padding: 0.9rem 1rem; border-radius: 12px; background: #f1f5f9; border: 1px solid #e2e8f0; font-size: 0.9rem; color: #475569; line-height: 1.5; }
     </style>
 </head>
 <body class="theme-cap-vien" data-activity-module="quan_tri_cap_vien">
@@ -109,7 +192,8 @@
                 <div class="nav-dropdown-menu">
                     <a href="de-tai-cap-vien.html">📋 Trang giới thiệu &amp; quy trình</a>
                     <a href="nop-de-tai-cap-vien.html">📝 Nộp đề tài cấp Viện</a>
-                    <a href="theo-doi-de-tai-cap-vien.html">📁 Theo dõi hồ sơ của tôi</a>
+                    <a href="theo-doi-de-tai-cap-vien.html">📁 Hồ sơ chi tiết</a>
+                    <a href="theo-doi-tien-trinh-de-tai-cap-vien.html">Trang theo dõi tiến trình hồ sơ đề tài cấp Viện</a>
                     <a href="hoi-dong-de-tai-cap-vien.html">👥 Khu vực Hội đồng</a>
                 </div>
             </div>
@@ -119,7 +203,7 @@
     <main class="content-page">
         <div id="admin-content">
             <div id="user-bar" class="user-bar" style="display: none;">
-                <strong>Đăng nhập:</strong> <span id="user-email"></span> (Admin)
+                <span id="user-email"></span> <span style="opacity:0.85;font-size:0.9em;">(Quản trị)</span>
             </div>
 
             <div class="admin-layout">
@@ -256,15 +340,21 @@
             <section id="section-admin-team" class="section-block section-admin">
             <h2 class="page-title">⚙️ Phần 3: Tổ Admin quản trị hệ thống</h2>
             <div class="method-card">
-                <h3>Phương thức thêm Admin</h3>
+                <h3>Phân cấp &amp; phương thức thêm Admin</h3>
                 <ol class="method-steps">
-                    <li>Chỉ Admin hiện tại mới thêm được Admin mới.</li>
-                    <li>Nhập Email, Họ tên; mật khẩu ≥6 ký tự để kích hoạt ngay, hoặc để trống để tài khoản tự kích hoạt qua trang Đăng ký.</li>
+                    <li><strong>Master Admin</strong> (tài khoản nhà phát triển): toàn quyền quản trị; <strong>chỉ Master</strong> mới thêm tài khoản Admin mới hoặc <strong>gỡ quyền Admin</strong> (chuyển về Nghiên cứu viên — vẫn giữ tài khoản).</li>
+                    <li><strong>Admin phụ</strong>: dùng được các chức năng quản trị thông thường, nhưng không cấp / không gỡ vai trò Admin.</li>
+                    <li>Thêm Admin: Email, Họ tên; mật khẩu ≥6 ký tự để kích hoạt ngay, hoặc để trống để user tự kích hoạt qua trang Đăng ký.</li>
                 </ol>
             </div>
             <div id="msg-admin" class="msg"></div>
+            <p id="admin-team-non-master-note" class="admin-team-non-master-note" role="status">
+                Bạn đang đăng nhập với quyền <strong>Admin phụ</strong>. Chỉ <strong>Master Admin</strong> mới thêm hoặc gỡ quyền Admin. Các mục quản trị khác vẫn dùng bình thường.
+            </p>
+            <div id="admin-team-master-only">
             <div class="card add-role-card">
                 <h3>Thêm Admin mới</h3>
+                <p class="note" style="margin-top:0;">Chỉ Master Admin thấy và dùng form này.</p>
                 <form id="form-add-admin" class="add-role-form">
                     <div class="form-row">
                         <div class="form-group">
@@ -285,8 +375,10 @@
                     </div>
                 </form>
             </div>
+            </div>
             <div class="card">
                 <h3>Danh sách Admin</h3>
+                <p class="note" style="margin-top:0;">Master Admin có thể <strong>Gỡ quyền Admin</strong> đối với Admin phụ (tài khoản chuyển thành Nghiên cứu viên).</p>
                 <div id="admin-table-wrap">
                     <div class="empty-state">Đang tải...</div>
                 </div>
@@ -294,22 +386,55 @@
             </section>
 
             <!-- PHẦN 4: QUẢN LÝ TÀI KHOẢN (toàn hệ thống) -->
-            <section id="section-accounts" class="section-block section-members">
-            <h2 class="page-title">👤 Quản lý tài khoản</h2>
-            <div class="method-card">
-                <h3>Thao tác trên tài khoản người dùng</h3>
-                <ol class="method-steps">
-                    <li><strong>Thêm tài khoản:</strong> Dùng form <strong>Thêm tài khoản</strong> bên dưới (mọi vai trò). Email đã có thì hệ thống chỉ cập nhật họ tên và vai trò — không đổi mật khẩu từ đây.</li>
-                    <li><strong>Trạng thái kích hoạt:</strong> Cột <strong>Mật khẩu / kích hoạt</strong> hiển thị <strong>Chưa kích hoạt</strong> (user chưa đặt mật khẩu qua trang Đăng ký) hoặc <strong>Đã kích hoạt</strong>. Khi admin nhập mật khẩu lúc tạo tài khoản, có thể kèm ghi chú mật khẩu hỗ trợ.</li>
-                    <li><strong>Reset kích hoạt:</strong> Nút <strong>Cấp lại MK</strong> đưa tài khoản về <strong>chưa kích hoạt</strong> (xóa mật khẩu); user phải vào trang <strong>Đăng ký</strong> với cùng email @sci.edu.vn để đặt mật khẩu. Không áp dụng tài khoản Admin.</li>
-                    <li><strong>Khóa / mở khóa:</strong> Tài khoản bị khóa không đăng nhập được (ban nick).</li>
-                    <li><strong>Xóa tài khoản:</strong> Chỉ khi user chưa có hồ sơ nộp. Không thể xóa hoặc khóa chính mình.</li>
-                </ol>
-            </div>
+            <section id="section-accounts" class="section-block section-members accounts-section">
+            <header class="accounts-hero">
+                <div>
+                    <h2 class="accounts-hero__title">Quản lý tài khoản</h2>
+                    <p class="accounts-hero__lead">Tạo và cập nhật người dùng toàn hệ thống, theo dõi kích hoạt, khóa tài khoản hoặc xóa khi chưa có hồ sơ nộp.</p>
+                </div>
+                <div class="accounts-hero__actions">
+                    <a href="dang-ky.html">Đăng ký (user)</a>
+                </div>
+            </header>
+
+            <details class="accounts-help-details">
+                <summary>Hướng dẫn nhanh — thao tác trên tài khoản</summary>
+                <div class="accounts-guide-grid" role="list">
+                    <article class="accounts-guide-card" role="listitem">
+                        <div class="accounts-guide-card__icon" aria-hidden="true">➕</div>
+                        <p class="accounts-guide-card__label">Thêm / cập nhật</p>
+                        <p class="accounts-guide-card__text">Dùng form bên dưới. Email đã tồn tại → chỉ cập nhật họ tên và vai trò; không đổi mật khẩu từ đây.</p>
+                    </article>
+                    <article class="accounts-guide-card" role="listitem">
+                        <div class="accounts-guide-card__icon" aria-hidden="true">🔐</div>
+                        <p class="accounts-guide-card__label">Kích hoạt</p>
+                        <p class="accounts-guide-card__text">Cột kích hoạt: <strong>Chưa kích hoạt</strong> hoặc <strong>Đã kích hoạt</strong>. Admin có thể đặt mật khẩu lúc tạo (≥6 ký tự) hoặc để user tự đặt qua Đăng ký.</p>
+                    </article>
+                    <article class="accounts-guide-card" role="listitem">
+                        <div class="accounts-guide-card__icon" aria-hidden="true">🔄</div>
+                        <p class="accounts-guide-card__label">Cấp lại MK</p>
+                        <p class="accounts-guide-card__text">Đưa về chưa kích hoạt (xóa mật khẩu). User vào <strong>Đăng ký</strong> với cùng email @sci.edu.vn. Không áp dụng Admin.</p>
+                    </article>
+                    <article class="accounts-guide-card" role="listitem">
+                        <div class="accounts-guide-card__icon" aria-hidden="true">🔒</div>
+                        <p class="accounts-guide-card__label">Khóa / mở khóa</p>
+                        <p class="accounts-guide-card__text">Tài khoản bị khóa không đăng nhập được. Không khóa chính mình.</p>
+                    </article>
+                    <article class="accounts-guide-card" role="listitem">
+                        <div class="accounts-guide-card__icon" aria-hidden="true">🗑️</div>
+                        <p class="accounts-guide-card__label">Xóa tài khoản</p>
+                        <p class="accounts-guide-card__text">Chỉ khi user <strong>chưa có hồ sơ nộp</strong>. Không xóa chính mình.</p>
+                    </article>
+                </div>
+            </details>
+
             <div id="msg-members" class="msg"></div>
-            <div class="card add-role-card">
+
+            <div class="accounts-layout">
+                <div class="accounts-layout__form">
+                    <div class="card add-role-card accounts-form-card">
                 <h3>Thêm tài khoản</h3>
-                <p style="font-size:0.9rem;color:#555;margin:0 0 1rem;line-height:1.45;">Tạo user mới hoặc (nếu email đã tồn tại) cập nhật họ tên và vai trò. Để trống mật khẩu → tài khoản <strong>chưa kích hoạt</strong> — người dùng đặt mật khẩu tại trang <strong>Đăng ký</strong> (@sci.edu.vn). <strong>Lưu ý:</strong> nếu trình duyệt tự điền chuỗi vào ô mật khẩu, hãy xóa sạch trước khi nhấn Thêm — nếu không hệ thống sẽ coi là mật khẩu thật (≥6 ký tự) và báo <em>Đã kích hoạt</em>.</p>
+                <p class="accounts-form-note">Tạo user mới hoặc (email đã có) cập nhật họ tên và vai trò. Để trống mật khẩu → <strong>chưa kích hoạt</strong>; user đặt mật khẩu tại <strong>Đăng ký</strong> (@sci.edu.vn). <strong>Lưu ý:</strong> nếu trình duyệt tự điền ô mật khẩu, hãy xóa sạch trước khi gửi — chuỗi ≥6 ký tự sẽ được coi là mật khẩu thật.</p>
                 <form id="form-add-account" class="add-role-form">
                     <div class="form-row">
                         <div class="form-group">
@@ -348,10 +473,27 @@
                         </div>
                     </div>
                 </form>
+                    </div>
+                </div>
+                <aside class="accounts-aside" aria-label="Mẹo nhanh">
+                    <h4>Mẹo</h4>
+                    <ul>
+                        <li>Ưu tiên để trống mật khẩu và gửi user qua trang Đăng ký để tự đặt — an toàn hơn.</li>
+                        <li>Dùng ô <strong>Lọc danh sách</strong> để tìm nhanh theo email, tên hoặc vai trò.</li>
+                        <li>Cần chỉnh HĐ / Tổ TC riêng? Cuộn tới các mục tương ứng trong danh mục bên trái.</li>
+                    </ul>
+                </aside>
             </div>
-            <div class="card">
-                <h3>Danh sách tất cả tài khoản</h3>
-                <div id="members-table-wrap" class="accounts-table-wrap">
+
+            <div class="card accounts-table-card">
+                <div class="card__toolbar">
+                    <h3>Danh sách tất cả tài khoản</h3>
+                    <div class="accounts-filter-wrap">
+                        <label for="accounts-member-filter" class="visually-hidden">Lọc danh sách tài khoản</label>
+                        <input type="search" id="accounts-member-filter" class="accounts-filter-input" placeholder="Lọc theo email, tên, vai trò…" autocomplete="off">
+                    </div>
+                </div>
+                <div id="members-table-wrap" class="accounts-table-wrap accounts-table-scroll">
                     <div class="empty-state">Đang tải...</div>
                 </div>
             </div>
@@ -433,12 +575,12 @@
             <div id="missions-msg" class="msg" style="display:none;"></div>
             <div class="card">
                 <h3>Đồng bộ nhiệm vụ KHCN</h3>
-                <p class="note">Nhấn nút bên dưới để đồng bộ dữ liệu đề tài cấp Viện vào bảng Nhiệm vụ KHCN (hiển thị trên trang quan-ly-de-tai-co-so.html).</p>
+                <p class="note">Nhấn nút bên dưới để đồng bộ dữ liệu đề tài cấp Viện vào bảng Nhiệm vụ KHCN (hiển thị trên trang quan-ly-de-tai-co-so.html). Nếu trước đó Admin đã <strong>Xóa</strong> đề tài đồng bộ khỏi bảng quản lý, lần đồng bộ này cũng <strong>khôi phục</strong> các hồ sơ cấp Viện còn trong hệ thống.</p>
                 <button type="button" class="btn-submit-role" id="btn-sync-missions">🔄 Đồng bộ từ đề tài cấp Viện</button>
             </div>
             <div class="card">
                 <h3>Danh sách đề tài cấp Viện (Admin)</h3>
-                <p class="note">Toàn bộ hồ sơ đã nộp. Bấm "Chi tiết" để xem và sửa mã đề tài.</p>
+                <p class="note">Toàn bộ hồ sơ đã nộp. Bấm <strong>Chi tiết</strong> để xem và sửa mã đề tài. <strong>Xóa</strong> sẽ gỡ vĩnh viễn hồ sơ và file đính kèm (chỉ Admin).</p>
                 <div id="admin-submissions-table-wrap"><div class="empty-state">Đang tải...</div></div>
             </div>
             </section>
@@ -611,6 +753,20 @@
                     <div class="empty-state">Đang tải...</div>
                 </div>
             </div>
+            <div class="card" style="margin-top:1.25rem;">
+                <h3>✉️ Email khi hoàn thành Bước 7 (Ký hợp đồng KHCN)</h3>
+                <p class="note">Khi P. KHCN nhấn <strong>Hoàn thành</strong> ở Bước 7, hệ thống có thể gửi thông báo hành chính tới <strong>Chủ nhiệm</strong> (cc danh sách nhận thông báo phía trên), cùng phong cách như email Bước 6. Tắt tùy chọn nếu chỉ cần cập nhật trạng thái trên hệ thống, không gửi mail.</p>
+                <div class="form-row" style="align-items:center;margin-top:0.75rem;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+                        <input type="checkbox" id="cap-vien-step7-email-enabled">
+                        Gửi email tự động khi hoàn thành Bước 7
+                    </label>
+                </div>
+                <div style="margin-top:12px;">
+                    <button type="button" class="btn-submit-role" id="btn-save-step7-email-setting">Lưu cài đặt</button>
+                </div>
+                <div id="step7-email-setting-msg" class="msg" style="display:none;"></div>
+            </div>
             </section>
 
             <section id="section-audit" class="section-block section-audit">
@@ -679,19 +835,23 @@
             <div class="footer-bottom"><p>&copy; 2026 Viện Tế bào gốc — Quản trị Đề tài cấp Viện</p></div>
         </div>
     </footer>
+    <script src="js/page-greeting.js"></script>
     <script src="js/auth-status.js"></script>
     <script src="js/activity-tracker.js"></script>
     <script>
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const isAdmin = (user.role || '').toLowerCase() === 'admin';
+        let isMasterAdmin = !!user.isMasterAdmin;
         const apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
 
         if (!token || !isAdmin) {
             document.getElementById('admin-content').style.display = 'none';
             document.getElementById('access-denied').style.display = 'block';
         } else {
-            document.getElementById('user-email').textContent = user.email || '';
+            document.getElementById('user-email').textContent = typeof getLoginGreetingDisplay === 'function'
+                ? getLoginGreetingDisplay(user)
+                : (user.email || '');
             document.getElementById('user-bar').style.display = 'block';
             var navTicker = document.getElementById('nav-ticker-admin');
             if (navTicker) navTicker.style.display = '';
@@ -699,6 +859,18 @@
 
         const roleLabels = { chu_tich: 'Chủ tịch HĐKHCN', thu_ky: 'Thư ký HĐKHCN', thanh_vien: 'Thành viên HĐKHCN', researcher: 'Nghiên cứu viên', admin: 'Admin', phong_khcn: 'Phòng KHCN', totruong_tham_dinh_tc: 'Tổ trưởng Tổ thẩm định TC', thanh_vien_tham_dinh_tc: 'Thành viên Tổ thẩm định TC' };
         const ALLOWED_DOMAIN = '@sci.edu.vn';
+
+        (function applyInitialMasterAdminDom() {
+            if (!isAdmin) return;
+            var masterOnly = document.getElementById('admin-team-master-only');
+            var nonMasterNote = document.getElementById('admin-team-non-master-note');
+            if (masterOnly) masterOnly.style.display = isMasterAdmin ? 'block' : 'none';
+            if (nonMasterNote) nonMasterNote.style.display = isMasterAdmin ? 'none' : 'block';
+            if (!isMasterAdmin) {
+                var opt = document.querySelector('#add-account-role option[value="admin"]');
+                if (opt) opt.remove();
+            }
+        })();
 
         function canAssignCouncilRole(email) {
             return (email || '').toLowerCase().endsWith(ALLOWED_DOMAIN);
@@ -883,6 +1055,28 @@
                 if (confirm('Xóa thành viên này khỏi Tổ thẩm định tài chính? Tài khoản sẽ chuyển thành Nghiên cứu viên.')) deleteBudgetMember(email);
             }
         });
+
+        async function loadStep7EmailSetting() {
+            const chk = document.getElementById('cap-vien-step7-email-enabled');
+            const msgEl = document.getElementById('step7-email-setting-msg');
+            if (!chk || !isAdmin || !token) return;
+            try {
+                const res = await fetch(apiBase + '/api/admin/cap-vien/settings/step7-complete-email', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data && typeof data.enabled === 'boolean') chk.checked = data.enabled;
+                else if (msgEl && !res.ok) {
+                    msgEl.style.display = 'block';
+                    msgEl.textContent = data.message || 'Không tải được cài đặt Bước 7.';
+                    msgEl.className = 'msg error';
+                }
+            } catch (e) {
+                if (msgEl) {
+                    msgEl.style.display = 'block';
+                    msgEl.textContent = 'Không kết nối được máy chủ.';
+                    msgEl.className = 'msg error';
+                }
+            }
+        }
 
         async function loadRecipients() {
             const wrap = document.getElementById('recipients-table-wrap');
@@ -1091,9 +1285,26 @@
                 .then(data => {
                     const list = data.submissions || [];
                     if (list.length === 0) { wrap.innerHTML = '<div class="empty-state">Chưa có hồ sơ nào.</div>'; return; }
-                    const statusLabels = { SUBMITTED: 'Đã nộp', NEED_REVISION: 'Yêu cầu bổ sung', VALIDATED: 'Hợp lệ', REVIEWED: 'Đã phản biện', IN_MEETING: 'Chờ họp', APPROVED: 'Đã phê duyệt', IMPLEMENTATION: 'Đang thực hiện', COMPLETED: 'Hoàn thành', REJECTED: 'Từ chối' };
+                    const statusLabels = { SUBMITTED: 'Đã nộp', NEED_REVISION: 'Yêu cầu bổ sung', VALIDATED: 'Hợp lệ', ASSIGNED: 'Đã phân công PB', UNDER_REVIEW: 'Đang phản biện', REVIEWED: 'Đã phản biện', IN_MEETING: 'Chờ họp', CONDITIONAL: 'Chờ cấp QĐ (B6)', APPROVED: 'Ký HĐ (B7)', CONTRACTED: 'Đã ký HĐ', IMPLEMENTATION: 'Đang thực hiện', COMPLETED: 'Hoàn thành', REJECTED: 'Từ chối' };
+                    const delStyle = 'margin-left:8px;padding:0.35rem 0.65rem;font-size:0.85rem;border:none;border-radius:6px;cursor:pointer;font-weight:600;background:#c0392b;color:#fff;';
                     wrap.innerHTML = '<table><thead><tr><th>Mã</th><th>Tên đề tài</th><th>Chủ nhiệm</th><th>Trạng thái</th><th>Ngày nộp</th><th>Thao tác</th></tr></thead><tbody>' +
-                        list.map(s => '<tr><td><code>' + (s.code || '-') + '</code></td><td>' + (s.title || '').replace(/</g, '&lt;') + '</td><td>' + (s.submittedByName || s.submittedBy || '-') + '</td><td>' + (statusLabels[s.status] || s.status) + '</td><td>' + (s.createdAt || '').slice(0, 10) + '</td><td><a href="theo-doi-de-tai-cap-vien-chi-tiet.html?id=' + s.id + '" class="btn-sm" style="text-decoration:none;">Chi tiết</a></td></tr>').join('') + '</tbody></table>';
+                        list.map(s => '<tr><td><code>' + (s.code || '-') + '</code></td><td>' + (s.title || '').replace(/</g, '&lt;') + '</td><td>' + (s.submittedByName || s.submittedBy || '-') + '</td><td>' + (statusLabels[s.status] || s.status) + '</td><td>' + (s.createdAt || '').slice(0, 10) + '</td><td style="white-space:nowrap;"><a href="theo-doi-de-tai-cap-vien-chi-tiet.html?id=' + s.id + '" class="btn-sm" style="text-decoration:none;">Chi tiết</a>' +
+                        '<button type="button" class="btn-admin-del-sub" data-sub-id="' + s.id + '" style="' + delStyle + '">Xóa</button></td></tr>').join('') + '</tbody></table>';
+                    wrap.querySelectorAll('.btn-admin-del-sub').forEach(function(btn) {
+                        btn.addEventListener('click', async function() {
+                            const id = this.getAttribute('data-sub-id');
+                            const tr = this.closest('tr');
+                            var titleHint = id;
+                            if (tr && tr.cells && tr.cells[1]) titleHint = (tr.cells[1].textContent || '').trim() || id;
+                            if (!confirm('Xóa vĩnh viễn hồ sơ đề tài cấp Viện sau? Không thể hoàn tác.\n\n' + titleHint)) return;
+                            try {
+                                const r = await fetch(apiBase + '/api/cap-vien/submissions/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+                                const d = await r.json().catch(function() { return {}; });
+                                if (r.ok) loadAdminSubmissions();
+                                else alert(d.message || 'Không xóa được hồ sơ.');
+                            } catch (e) { alert('Lỗi kết nối máy chủ.'); }
+                        });
+                    });
                 })
                 .catch(() => { wrap.innerHTML = '<div class="empty-state">Không tải được.</div>'; });
         }
@@ -1122,6 +1333,32 @@
         }
         if (isAdmin) {
             loadRecipients();
+            loadStep7EmailSetting();
+            var btnSaveStep7Mail = document.getElementById('btn-save-step7-email-setting');
+            if (btnSaveStep7Mail) btnSaveStep7Mail.addEventListener('click', async function() {
+                const chk = document.getElementById('cap-vien-step7-email-enabled');
+                const msgEl = document.getElementById('step7-email-setting-msg');
+                if (!chk || !token) return;
+                try {
+                    const res = await fetch(apiBase + '/api/admin/cap-vien/settings/step7-complete-email', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ enabled: !!chk.checked })
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (msgEl) {
+                        msgEl.style.display = 'block';
+                        msgEl.textContent = data.message || (res.ok ? 'Đã lưu.' : 'Lỗi');
+                        msgEl.className = 'msg ' + (res.ok ? 'success' : 'error');
+                    }
+                } catch (e) {
+                    if (msgEl) {
+                        msgEl.style.display = 'block';
+                        msgEl.textContent = 'Lỗi kết nối.';
+                        msgEl.className = 'msg error';
+                    }
+                }
+            });
             loadHomepageModules();
             loadStandardLabel();
             loadSidebarRssAdmin();
@@ -1475,15 +1712,90 @@
                     wrap.innerHTML = '<div class="empty-state">Chưa có Admin nào.</div>';
                     return;
                 }
-                wrap.innerHTML = '<table><thead><tr><th>Email</th><th>Họ tên</th><th>Ghi chú</th></tr></thead><tbody>' +
+                wrap.innerHTML = '<table><thead><tr><th>Email</th><th>Họ tên</th><th>Cấp</th><th>Ghi chú</th><th>Thao tác</th></tr></thead><tbody>' +
                     admins.map(function(u) {
-                        return '<tr><td>' + (u.email || '') + '</td><td>' + (u.fullname || '-') + '</td><td>Quản trị viên hệ thống</td></tr>';
+                        const isMasterRow = !!u.isMasterAdminAccount;
+                        const tierCell = isMasterRow
+                            ? '<span class="admin-tier-badge admin-tier-badge--master">Master</span>'
+                            : '<span class="admin-tier-badge admin-tier-badge--deputy">Admin phụ</span>';
+                        const note = isMasterRow ? 'Quản trị tối cao (nhà phát triển)' : 'Quản trị viên hệ thống';
+                        const emailEsc = (u.email || '').replace(/"/g, '&quot;');
+                        const demoteBtn = (isMasterAdmin && !isMasterRow)
+                            ? '<button type="button" class="btn-sm btn-demote-admin" data-email="' + emailEsc + '" style="background:#6c757d;color:#fff">Gỡ quyền Admin</button>'
+                            : '—';
+                        return '<tr><td>' + (u.email || '') + '</td><td>' + (u.fullname || '-') + '</td><td>' + tierCell + '</td><td>' + note + '</td><td>' + demoteBtn + '</td></tr>';
                     }).join('') + '</tbody></table>';
             } catch (err) {
                 wrap.innerHTML = '<div class="empty-state">Không thể tải danh sách.</div>';
             }
         }
-        if (isAdmin) loadAdminUsers();
+
+        function syncMasterAdminFromServer() {
+            if (!token || !isAdmin) return;
+            fetch(apiBase + '/api/me', { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(function(r) { return r.json().then(function(me) { return { ok: r.ok, me: me }; }); })
+                .then(function(x) {
+                    if (x.ok && x.me && typeof x.me.isMasterAdmin === 'boolean') {
+                        isMasterAdmin = x.me.isMasterAdmin;
+                        try {
+                            var u = JSON.parse(localStorage.getItem('user') || '{}');
+                            u.isMasterAdmin = isMasterAdmin;
+                            localStorage.setItem('user', JSON.stringify(u));
+                        } catch (e) { /* ignore */ }
+                    }
+                    var opt = document.querySelector('#add-account-role option[value="admin"]');
+                    if (opt && !isMasterAdmin) opt.remove();
+                    var masterOnly = document.getElementById('admin-team-master-only');
+                    var nonMasterNote = document.getElementById('admin-team-non-master-note');
+                    if (masterOnly) masterOnly.style.display = isMasterAdmin ? 'block' : 'none';
+                    if (nonMasterNote) nonMasterNote.style.display = isMasterAdmin ? 'none' : 'block';
+                    loadAdminUsers();
+                })
+                .catch(function() {
+                    var masterOnly = document.getElementById('admin-team-master-only');
+                    var nonMasterNote = document.getElementById('admin-team-non-master-note');
+                    if (masterOnly) masterOnly.style.display = isMasterAdmin ? 'block' : 'none';
+                    if (nonMasterNote) nonMasterNote.style.display = isMasterAdmin ? 'none' : 'block';
+                    loadAdminUsers();
+                });
+        }
+        if (isAdmin) syncMasterAdminFromServer();
+
+        async function demoteAdminRole(email) {
+            const msgEl = document.getElementById('msg-admin');
+            try {
+                const res = await fetch(apiBase + '/api/admin/users/role', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ email: email, role: 'researcher' }),
+                });
+                const data = await res.json().catch(function() { return {}; });
+                if (msgEl) {
+                    msgEl.style.display = 'block';
+                    msgEl.textContent = res.ok ? (data.message || 'Đã gỡ quyền Admin.') : (data.message || 'Thất bại.');
+                    msgEl.className = 'msg ' + (res.ok ? 'success' : 'error');
+                }
+                if (res.ok) {
+                    loadAdminUsers();
+                    loadMembers();
+                }
+            } catch (err) {
+                if (msgEl) {
+                    msgEl.style.display = 'block';
+                    msgEl.textContent = 'Lỗi kết nối.';
+                    msgEl.className = 'msg error';
+                }
+            }
+        }
+
+        document.getElementById('admin-table-wrap').addEventListener('click', function(e) {
+            var btn = e.target.closest('.btn-demote-admin');
+            if (!btn) return;
+            var email = btn.getAttribute('data-email');
+            if (!email) return;
+            if (!confirm('Gỡ quyền Admin của ' + email + '? Tài khoản chuyển thành Nghiên cứu viên (vẫn giữ đăng nhập và dữ liệu cá nhân).')) return;
+            demoteAdminRole(email);
+        });
 
         async function loadMembers() {
             const wrap = document.getElementById('members-table-wrap');
@@ -1535,11 +1847,30 @@
                             (isSelf ? '' : '<button type="button" class="btn-sm btn-ban-toggle" data-email="' + email + '" data-banned="' + (banned ? '1' : '0') + '" style="background:#6f42c1">' + (banned ? 'Mở khóa' : 'Khóa TK') + '</button>' +
                             '<button type="button" class="btn-sm btn-delete-member btn-delete" data-email="' + email + '">Xóa</button>') + '</div></td></tr>';
                     }).join('') + '</tbody></table>';
+                var filtEl = document.getElementById('accounts-member-filter');
+                if (filtEl && filtEl.value) filtEl.dispatchEvent(new Event('input', { bubbles: true }));
             } catch (err) {
                 wrap.innerHTML = '<div class="empty-state">Không thể tải danh sách.</div>';
             }
         }
         if (isAdmin) loadMembers();
+
+        (function initAccountsMemberFilter() {
+            var inp = document.getElementById('accounts-member-filter');
+            var wrap = document.getElementById('members-table-wrap');
+            if (!inp || !wrap) return;
+            function applyFilter() {
+                var q = (inp.value || '').trim().toLowerCase();
+                var tbody = wrap.querySelector('table tbody');
+                if (!tbody) return;
+                Array.prototype.forEach.call(tbody.rows, function(tr) {
+                    if (!q) { tr.hidden = false; return; }
+                    tr.hidden = tr.textContent.toLowerCase().indexOf(q) === -1;
+                });
+            }
+            inp.addEventListener('input', applyFilter);
+            inp.addEventListener('search', applyFilter);
+        })();
 
         document.getElementById('members-table-wrap').addEventListener('click', function(e) {
             const btn = e.target.closest('.btn-reset-pw, .btn-delete-member, .btn-ban-toggle');

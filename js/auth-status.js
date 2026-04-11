@@ -1,7 +1,7 @@
 /**
  * Hiển thị thông tin người đăng nhập ở góc trên bên phải (góc phải của nav/header)
  * Chưa đăng nhập: hiện nút "Đăng kí/Đăng nhập"
- * Đã đăng nhập: hiện "Xin chào [họ tên]" + nút "Đăng xuất"
+ * Đã đăng nhập: hiện lời chào (js/page-greeting.js: Viện trưởng Phạm Văn Phúc → "Xin chào Viện trưởng !") + nút "Đăng xuất"
  */
 (function() {
     /** Khớp SYSTEM_SUPER_ADMIN_EMAILS trong js/system-access.js và ADMIN_EMAIL trong server.js */
@@ -16,13 +16,17 @@
         var token = localStorage.getItem('token');
         var user = {};
         try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) {}
-        var namePart = (user.fullname && user.fullname.trim()) ? user.fullname.trim() : '';
-        if (!namePart && user.email) {
-            var em = (user.email || '').trim();
-            namePart = em.indexOf('@') !== -1 ? em.split('@')[0] : em;
-        }
-        if ((user.email || '').toLowerCase() === 'sinhnguyen@sci.edu.vn') namePart = 'Sinh';
-        var display = namePart ? ('Xin chào ' + namePart) : 'Xin chào';
+        var display = typeof window.getLoginGreetingDisplay === 'function'
+            ? window.getLoginGreetingDisplay(user)
+            : (function () {
+                var namePart = (user.fullname && user.fullname.trim()) ? user.fullname.trim() : '';
+                if (!namePart && user.email) {
+                    var em = (user.email || '').trim();
+                    namePart = em.indexOf('@') !== -1 ? em.split('@')[0] : em;
+                }
+                if ((user.email || '').toLowerCase() === 'sinhnguyen@sci.edu.vn' && (!namePart || namePart.toLowerCase() === 'sinh')) namePart = 'Nguyễn Trường Sinh';
+                return namePart ? ('Xin chào ' + namePart) : 'Xin chào';
+            })();
         var currentPage = window.location.pathname.replace(/^.*\//, '') || window.location.href.split('/').pop().split('?')[0];
 
         if (token && display) {

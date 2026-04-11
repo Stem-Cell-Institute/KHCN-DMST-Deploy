@@ -377,6 +377,7 @@
 <div class="notif" id="notif">✅ Thao tác thành công!</div>
 
 <script src="js/system-access.js"></script>
+<script src="js/page-greeting.js"></script>
 <script>
 var PUB_INSTITUTE_DOMAIN = '@sci.edu.vn';
 var PUB_INSTITUTE_OK = (function () {
@@ -445,6 +446,14 @@ function getLoggedInDisplayName() {
 function updateWelcomeUser() {
   var el = document.getElementById('welcome-user');
   if (!el) return;
+  try {
+    var token = localStorage.getItem('token');
+    var user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (token && typeof window.getLoginGreetingDisplay === 'function') {
+      el.textContent = window.getLoginGreetingDisplay(user);
+      return;
+    }
+  } catch (_) {}
   var name = getLoggedInDisplayName();
   el.textContent = name ? ('Xin chào, ' + name) : 'Xin chào!';
 }

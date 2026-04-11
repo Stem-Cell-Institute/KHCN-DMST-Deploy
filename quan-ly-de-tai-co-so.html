@@ -86,57 +86,580 @@
         }
 
         .sidebar {
-            width: 280px;
-            background: white;
-            border-right: 1px solid #e0e0e0;
+            width: 288px;
+            background: #ffffff;
+            border-right: 1px solid #e8ecf0;
             overflow-y: auto;
+            scrollbar-gutter: stable;
         }
 
-        .menu-section {
-            padding: 20px;
+        .sidebar-nav {
+            padding: 14px 10px 28px;
         }
 
-        .menu-title {
-            font-size: 12px;
-            color: #999;
+        .sidebar-nav__eyebrow {
+            margin: 0 0 10px;
+            padding: 0 10px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            font-weight: 600;
-            margin-bottom: 15px;
+            color: #64748b;
+        }
+
+        .sidebar-nav__block {
+            margin-bottom: 6px;
+        }
+
+        /* Accordion bộ lọc — có thể thu gọn, tương tác rõ */
+        .sidebar-accordion {
+            border-top: 1px solid #f1f5f9;
+            margin: 0 2px;
+        }
+        .sidebar-accordion:first-of-type {
+            margin-top: 10px;
+            padding-top: 2px;
+        }
+        .sidebar-accordion__summary {
+            list-style: none;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 12px 10px 10px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #64748b;
+            border-radius: 10px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        .sidebar-accordion__summary::-webkit-details-marker {
+            display: none;
+        }
+        .sidebar-accordion__summary::after {
+            content: '';
+            flex-shrink: 0;
+            width: 7px;
+            height: 7px;
+            margin-right: 4px;
+            border-right: 2px solid #94a3b8;
+            border-bottom: 2px solid #94a3b8;
+            transform: rotate(45deg);
+            transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s;
+        }
+        .sidebar-accordion[open] > .sidebar-accordion__summary::after {
+            transform: rotate(-135deg);
+            margin-top: 4px;
+            border-color: #6366f1;
+        }
+        .sidebar-accordion__summary:hover {
+            background: #f8fafc;
+            color: #4338ca;
+        }
+        .sidebar-accordion__panel {
+            padding: 2px 4px 12px;
         }
 
         .menu-item {
-            padding: 12px 15px;
-            margin-bottom: 5px;
-            border-radius: 8px;
+            position: relative;
+            padding: 11px 12px;
+            margin-bottom: 4px;
+            border-radius: 10px;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 10px;
-            transition: all 0.3s;
+            font-size: 0.9375rem;
+            color: #1e293b;
+            border: 1px solid transparent;
+            transition:
+                background 0.22s ease,
+                border-color 0.22s ease,
+                box-shadow 0.22s ease,
+                transform 0.18s ease;
+        }
+
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%) scaleY(0);
+            width: 3px;
+            height: 0;
+            border-radius: 0 3px 3px 0;
+            background: linear-gradient(180deg, #667eea, #764ba2);
+            opacity: 0;
+            transition: height 0.22s ease, opacity 0.22s ease, transform 0.22s ease;
         }
 
         .menu-item:hover {
-            background: #f0f0f0;
+            background: #f8fafc;
+            border-color: #eef2f6;
+            transform: translateX(2px);
+        }
+        .menu-item:hover::before {
+            opacity: 1;
+            height: 60%;
+            transform: translateY(-50%) scaleY(1);
         }
 
-        .menu-item.active {
-            background: #667eea;
-            color: white;
+        .menu-item:active {
+            transform: translateX(1px) scale(0.99);
+        }
+
+        .menu-item:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.35);
         }
 
         .menu-item .badge {
             margin-left: auto;
-            background: #ff4757;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
+            font-weight: 700;
+            padding: 5px 11px;
+            border-radius: 999px;
+            font-size: 12px;
+            min-width: 1.85rem;
+            line-height: 1.2;
+            text-align: center;
+            transition:
+                background 0.22s ease,
+                color 0.22s ease,
+                transform 0.28s cubic-bezier(0.34, 1.45, 0.64, 1),
+                box-shadow 0.22s ease,
+                border-color 0.22s ease,
+                filter 0.2s ease;
+        }
+
+        /* «Tất cả đề tài» + bộ lọc: cùng kiểu dòng; badge giống nhau */
+        .sidebar .menu-item.menu-item--primary {
+            font-weight: 600;
+            background: transparent;
+            border-color: transparent;
+        }
+        .sidebar .menu-item.menu-item--primary:hover {
+            background: #f8fafc;
+            border-color: #eef2f6;
+        }
+
+        /* Bộ lọc / mục chính đang chọn */
+        .sidebar .menu-item.menu-item--filter.active,
+        .sidebar .menu-item.menu-item--primary.active {
+            background: #eef2ff;
+            border-color: #c7d2fe;
+            color: #312e81;
+            font-weight: 600;
+            transform: translateX(2px);
+        }
+        .sidebar .menu-item.menu-item--filter.active:hover,
+        .sidebar .menu-item.menu-item--primary.active:hover {
+            background: #e0e7ff;
+            border-color: #a5b4fc;
+            color: #312e81;
+        }
+        .sidebar .menu-item.menu-item--filter.active::before,
+        .sidebar .menu-item.menu-item--primary.active::before {
+            opacity: 1;
+            height: 70%;
+            transform: translateY(-50%) scaleY(1);
+        }
+        /* Badge sidebar — tươi nhẹ, dễ đọc, không chói */
+        .sidebar .menu-item.menu-item--filter .badge.sidebar-badge--empty,
+        .sidebar .menu-item.menu-item--primary .badge.sidebar-badge--empty {
+            background: #f1f5f9;
+            color: #64748b;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+        .sidebar .menu-item.menu-item--filter .badge:not(.sidebar-badge--empty),
+        .sidebar .menu-item.menu-item--primary .badge:not(.sidebar-badge--empty) {
+            background: #dbeafe;
+            color: #1e40af;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            border: 1px solid #93c5fd;
+            box-shadow: 0 1px 3px rgba(30, 64, 175, 0.08);
+        }
+        .sidebar .menu-item.menu-item--filter:hover .badge.sidebar-badge--empty,
+        .sidebar .menu-item.menu-item--primary:hover .badge.sidebar-badge--empty {
+            color: #475569;
+            border-color: #cbd5e1;
+            background: #e8eef4;
+            transform: scale(1.03);
+            box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06);
+        }
+        .sidebar .menu-item.menu-item--filter:hover .badge:not(.sidebar-badge--empty),
+        .sidebar .menu-item.menu-item--primary:hover .badge:not(.sidebar-badge--empty) {
+            transform: scale(1.04);
+            background: #bfdbfe;
+            border-color: #60a5fa;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.14);
+        }
+        .sidebar .menu-item.menu-item--filter:active .badge:not(.sidebar-badge--empty),
+        .sidebar .menu-item.menu-item--primary:active .badge:not(.sidebar-badge--empty) {
+            transform: scale(1.01);
+        }
+        .sidebar .menu-item.menu-item--filter.active .badge:not(.sidebar-badge--empty),
+        .sidebar .menu-item.menu-item--primary.active .badge:not(.sidebar-badge--empty) {
+            background: #e0e7ff;
+            color: #3730a3;
+            border: 1px solid #a5b4fc;
+            box-shadow: 0 1px 4px rgba(67, 56, 202, 0.12);
+        }
+        .sidebar .menu-item.menu-item--filter.active .badge.sidebar-badge--empty,
+        .sidebar .menu-item.menu-item--primary.active .badge.sidebar-badge--empty {
+            background: #eef2ff;
+            color: #6d28d9;
+            border: 1px solid #c4b5fd;
+            box-shadow: 0 1px 3px rgba(109, 40, 217, 0.08);
+        }
+        .sidebar .menu-item.menu-item--filter.active:hover .badge:not(.sidebar-badge--empty),
+        .sidebar .menu-item.menu-item--primary.active:hover .badge:not(.sidebar-badge--empty) {
+            background: #ddd6fe;
+            border-color: #8b5cf6;
+            transform: scale(1.04);
+        }
+
+        .menu-item-ct-hd-ngoai .ct-hd-ngoai-label {
+            flex: 1;
+            min-width: 0;
+            line-height: 1.35;
+            font-size: 0.9rem;
+        }
+        .menu-item-ct-hd-ngoai .badge-ct-hd-ngoai {
+            flex-shrink: 0;
+        }
+        .badge-ct-hd-ngoai {
+            background: #fce7f3 !important;
+            color: #9d174d !important;
+            font-weight: 700 !important;
+            border: 1px solid #f9a8d4 !important;
+            box-shadow: 0 1px 3px rgba(157, 23, 77, 0.1) !important;
+        }
+        .badge-ct-hd-ngoai.badge-ct-hd--empty {
+            background: #fdf2f8 !important;
+            color: #a21caf !important;
+            border: 1px solid #f5d0fe !important;
+            box-shadow: 0 1px 2px rgba(162, 28, 175, 0.06) !important;
+        }
+        .menu-item-ct-hd-ngoai:hover .badge-ct-hd-ngoai:not(.badge-ct-hd--empty) {
+            transform: scale(1.04);
+            background: #fbcfe8 !important;
+            border-color: #f472b6 !important;
+            box-shadow: 0 2px 8px rgba(157, 23, 77, 0.12) !important;
+        }
+        .menu-item-ct-hd-ngoai:hover .badge-ct-hd-ngoai.badge-ct-hd--empty {
+            transform: scale(1.03);
+            border-color: #e879f9 !important;
+        }
+        .menu-item-ct-hd-ngoai:active .badge-ct-hd-ngoai {
+            transform: scale(1.02);
+        }
+
+        .menu-item-cap-vien-track {
+            position: relative;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 8px;
+            margin-bottom: 2px;
+            padding: 14px 12px 14px 14px;
+            border-radius: 12px;
+            background: linear-gradient(
+                145deg,
+                rgba(240, 249, 255, 0.94) 0%,
+                rgba(224, 242, 254, 0.88) 42%,
+                rgba(186, 230, 253, 0.62) 100%
+            );
+            border: 1px solid rgba(125, 211, 252, 0.9);
+            text-decoration: none;
+            color: inherit;
+            cursor: pointer;
+            box-shadow:
+                0 2px 8px rgba(14, 165, 233, 0.11),
+                0 1px 2px rgba(15, 23, 42, 0.04),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            transition:
+                background 0.28s ease,
+                border-color 0.28s ease,
+                box-shadow 0.32s ease,
+                transform 0.26s cubic-bezier(0.34, 1.2, 0.64, 1);
+        }
+        .menu-item-cap-vien-track::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 10px;
+            bottom: 10px;
+            width: 4px;
+            border-radius: 0 4px 4px 0;
+            background: linear-gradient(180deg, #0ea5e9, #38bdf8);
+            opacity: 0.92;
+            transition: opacity 0.25s ease, filter 0.25s ease, width 0.25s ease;
+        }
+        .menu-item-cap-vien-track--live::before {
+            animation: capVienTrackBarPulse 2.4s ease-in-out infinite;
+        }
+        .menu-item-cap-vien-track:hover {
+            background: linear-gradient(
+                145deg,
+                rgba(224, 242, 254, 0.98) 0%,
+                rgba(186, 230, 253, 0.85) 50%,
+                rgba(125, 211, 252, 0.55) 100%
+            );
+            border-color: rgba(56, 189, 248, 0.95);
+            box-shadow:
+                0 10px 28px rgba(14, 165, 233, 0.16),
+                0 4px 12px rgba(56, 189, 248, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.95);
+            transform: translateY(-2px);
+        }
+        .menu-item-cap-vien-track:hover::before {
+            opacity: 1;
+            filter: brightness(1.05);
+            width: 4px;
+        }
+        .menu-item-cap-vien-track:active {
+            transform: translateY(0) scale(0.99);
+            box-shadow:
+                0 2px 10px rgba(14, 165, 233, 0.14),
+                inset 0 1px 2px rgba(15, 23, 42, 0.06);
+            transition-duration: 0.12s;
+        }
+        .menu-item-cap-vien-track:focus-visible {
+            outline: 3px solid #0ea5e9;
+            outline-offset: 3px;
+        }
+        .menu-item-cap-vien-track:focus:not(:focus-visible) {
+            outline: none;
+        }
+        .cap-vien-track-text {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            line-height: 1.25;
+        }
+        .cap-vien-track-title {
+            font-weight: 700;
+            font-size: 13px;
+            color: #0c4a6e;
+            letter-spacing: -0.01em;
+            transition: color 0.22s ease;
+        }
+        .cap-vien-track-sub {
             font-size: 11px;
+            font-weight: 600;
+            color: #0284c7;
+            transition: color 0.22s ease;
+        }
+        .menu-item-cap-vien-track:hover .cap-vien-track-title {
+            color: #075985;
+        }
+        .menu-item-cap-vien-track:hover .cap-vien-track-sub {
+            color: #0369a1;
+        }
+        .menu-item-cap-vien-track .badge-cap-vien-track {
+            margin-left: auto;
+            flex-shrink: 0;
+            min-width: 1.75rem;
+            text-align: center;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 5px 11px;
+            border-radius: 999px;
+            position: relative;
+            z-index: 0;
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+            box-shadow:
+                0 1px 3px rgba(185, 28, 28, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.55);
+            transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, border-color 0.22s ease, filter 0.2s ease;
+        }
+        .badge-cap-vien-track.badge-cap-vien--empty {
+            background: #f1f5f9 !important;
+            color: #64748b !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+        }
+        .menu-item-cap-vien-track:hover .badge-cap-vien-track:not(.badge-cap-vien--empty) {
+            transform: scale(1.04);
+            background: #fecaca;
+            border-color: #f87171;
+            box-shadow:
+                0 2px 10px rgba(185, 28, 28, 0.16),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+        .menu-item-cap-vien-track:hover .badge-cap-vien-track.badge-cap-vien--empty {
+            transform: scale(1.03);
+            color: #475569 !important;
+            border-color: #cbd5e1 !important;
+        }
+        .menu-item-cap-vien-track:active .badge-cap-vien-track {
+            transform: scale(1.02);
+        }
+        /* Nháy mượt: glow riêng (::after), chỉ opacity + scale — tránh nhảy box-shadow */
+        .badge-cap-vien-track.badge-cap-vien--pulse::after {
+            content: '';
+            position: absolute;
+            z-index: -1;
+            left: 50%;
+            top: 50%;
+            width: 160%;
+            height: 160%;
+            min-width: 2.25rem;
+            min-height: 2.25rem;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            pointer-events: none;
+            background: radial-gradient(
+                circle,
+                rgba(251, 113, 133, 0.5) 0%,
+                rgba(252, 165, 165, 0.22) 48%,
+                rgba(254, 226, 226, 0) 72%
+            );
+            filter: blur(5px);
+            opacity: 0.42;
+            animation: capVienBadgeGlow 1.75s ease-in-out infinite;
+        }
+        @keyframes capVienBadgeGlow {
+            0%, 100% {
+                opacity: 0.38;
+                transform: translate(-50%, -50%) scale(0.94);
+            }
+            50% {
+                opacity: 0.92;
+                transform: translate(-50%, -50%) scale(1.08);
+            }
+        }
+        @keyframes capVienTrackBarPulse {
+            0%, 100% { opacity: 0.88; }
+            50% { opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .badge-cap-vien-track.badge-cap-vien--pulse::after {
+                animation: none;
+                opacity: 0.45;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            .menu-item-cap-vien-track--live::before {
+                animation: none;
+            }
+            .menu-item-cap-vien-track:hover .badge-cap-vien-track {
+                transform: none;
+            }
+            .menu-item-cap-vien-track:hover {
+                transform: none;
+            }
+            .menu-item-cap-vien-track:hover .cap-vien-track-arrow {
+                transform: none;
+            }
+            .menu-item-cap-vien-track:active .cap-vien-track-arrow {
+                transform: none;
+            }
+            .sidebar .menu-item.menu-item--filter:hover .badge,
+            .sidebar .menu-item.menu-item--primary:hover .badge,
+            .sidebar .menu-item.menu-item--filter:active .badge,
+            .sidebar .menu-item.menu-item--primary:active .badge,
+            .sidebar .menu-item.menu-item--filter.active:hover .badge,
+            .sidebar .menu-item.menu-item--primary.active:hover .badge {
+                transform: none;
+            }
+            .menu-item-ct-hd-ngoai:hover .badge-ct-hd-ngoai {
+                transform: none;
+            }
+        }
+        .cap-vien-track-arrow {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            margin-left: 4px;
+            border-radius: 9px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #0369a1;
+            background: rgba(14, 165, 233, 0.14);
+            border: 1px solid rgba(14, 165, 233, 0.32);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+            transition:
+                transform 0.28s cubic-bezier(0.34, 1.25, 0.64, 1),
+                color 0.22s ease,
+                background 0.22s ease,
+                border-color 0.22s ease,
+                box-shadow 0.22s ease;
+        }
+        .menu-item-cap-vien-track:hover .cap-vien-track-arrow {
+            transform: translateX(6px);
+            color: #0c4a6e;
+            background: rgba(56, 189, 248, 0.28);
+            border-color: rgba(14, 165, 233, 0.48);
+            box-shadow:
+                0 2px 8px rgba(14, 165, 233, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+        .menu-item-cap-vien-track:active .cap-vien-track-arrow {
+            transform: translateX(3px);
+        }
+
+        .menu-item--quiet {
+            font-size: 0.9rem;
+            color: #475569;
+        }
+        .menu-item--quiet:hover {
+            color: #1e293b;
+        }
+        .sidebar .menu-item.menu-item--quiet.active {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .sidebar .menu-item.menu-item--quiet.active::before {
+            opacity: 1;
+            height: 55%;
+            transform: translateY(-50%) scaleY(1);
         }
 
         .content-area {
             flex: 1;
             padding: 30px;
             overflow-y: auto;
+        }
+
+        #missions-list-anchor {
+            scroll-margin-top: 100px;
+        }
+
+        .missions-table-heading-block {
+            margin: 8px 0 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .missions-table-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+
+        .missions-table-subtitle {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-top: 6px;
+            line-height: 1.45;
         }
 
         .page-header {
@@ -345,6 +868,7 @@
         .status-cho_ct_hd_xet_duyet { background: #e8eaf6; color: #3949ab; }
         .status-buoc4a, .status-buoc4b { background: #e3f2fd; color: #1976d2; }
         .status-dung_khong_dat_dot { background: #ffebee; color: #c62828; }
+        .status-custom { background: #eceff1; color: #455a64; }
 
         .doc-section { padding: 5px 0; }
         .doc-section h4 { margin-bottom: 8px; color: #333; }
@@ -575,82 +1099,99 @@
 
     <div class="main-container">
         <div class="sidebar">
-            <div class="menu-section">
-                <div class="menu-title">Quản lý đề tài</div>
-                <div class="menu-item active" onclick="showSection('all-tasks')">
-                    <span>Tất cả đề tài</span>
-                    <span class="badge">156</span>
+            <nav class="sidebar-nav" aria-label="Điều hướng và lọc nhiệm vụ">
+                <div class="sidebar-nav__block">
+                    <p class="sidebar-nav__eyebrow">Quản lý đề tài</p>
+                    <div class="menu-item menu-item--primary active" tabindex="0" role="button" onclick="showSection('all-tasks')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showSection('all-tasks');}">
+                        <span>Tất cả đề tài</span>
+                        <span class="badge">156</span>
+                    </div>
+                    <a href="ct-hd-xet-duyet-de-tai.html" id="menu-ct-hd-ngoai-vien" class="menu-item menu-item-ct-hd-ngoai" style="text-decoration:none;color:inherit;" title="Đề tài đăng ký ngoài Viện đang chờ Chủ tịch HĐ KHCN xét duyệt (Bước 3)">
+                        <span class="ct-hd-ngoai-label">Đề tài ngoại Viện chờ xét duyệt</span>
+                        <span class="badge badge-ct-hd-ngoai" id="badge-ct-hd-ngoai-vien">—</span>
+                    </a>
+                    <a href="theo-doi-tien-trinh-de-tai-cap-vien.html" id="menu-cap-vien-track" class="menu-item menu-item-cap-vien-track" title="Mở danh sách hồ sơ và tiến trình xét duyệt đề tài cấp Viện">
+                        <span class="cap-vien-track-text">
+                            <span class="cap-vien-track-title">Theo dõi tiến trình</span>
+                            <span class="cap-vien-track-sub">Hồ sơ đề tài cấp Viện</span>
+                        </span>
+                        <span class="badge badge-cap-vien-track" id="badge-cap-vien-track">—</span>
+                        <span class="cap-vien-track-arrow" aria-hidden="true">→</span>
+                    </a>
                 </div>
-                <a href="ct-hd-xet-duyet-de-tai.html" class="menu-item" style="text-decoration:none;color:inherit;">
-                    <span>CT HĐ xét duyệt</span>
-                </a>
-            </div>
 
-            <div class="menu-section">
-                <div class="menu-title">Theo cấp</div>
-                <div class="menu-item" onclick="filterByLevel('national')">
-                    <span>Cấp Nhà nước</span>
-                    <span class="badge">8</span>
-                </div>
-                <div class="menu-item" onclick="filterByLevel('ministry')">
-                    <span>Cấp Bộ</span>
-                    <span class="badge">23</span>
-                </div>
-                <div class="menu-item" onclick="filterByLevel('university')">
-                    <span>Cấp ĐHQG</span>
-                    <span class="badge">34</span>
-                </div>
-                <div class="menu-item" onclick="filterByLevel('institute')">
-                    <span>Cấp Viện</span>
-                    <span class="badge">91</span>
-                </div>
-            </div>
+                <details class="sidebar-accordion" open>
+                    <summary class="sidebar-accordion__summary"><span>Theo cấp</span></summary>
+                    <div class="sidebar-accordion__panel">
+                        <div class="menu-item menu-item--filter" data-filter-level="national" tabindex="0" role="button" onclick="filterByLevel('national')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByLevel('national');}">
+                            <span>Cấp Nhà nước</span>
+                            <span class="badge">8</span>
+                        </div>
+                        <div class="menu-item menu-item--filter" data-filter-level="ministry" tabindex="0" role="button" onclick="filterByLevel('ministry')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByLevel('ministry');}">
+                            <span>Cấp Bộ</span>
+                            <span class="badge">23</span>
+                        </div>
+                        <div class="menu-item menu-item--filter" data-filter-level="university" tabindex="0" role="button" onclick="filterByLevel('university')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByLevel('university');}">
+                            <span>Cấp ĐHQG</span>
+                            <span class="badge">34</span>
+                        </div>
+                        <div class="menu-item menu-item--filter" data-filter-level="institute" tabindex="0" role="button" onclick="filterByLevel('institute')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByLevel('institute');}">
+                            <span>Cấp Viện</span>
+                            <span class="badge">91</span>
+                        </div>
+                    </div>
+                </details>
 
-            <div class="menu-section">
-                <div class="menu-title">Theo trạng thái</div>
-                <div class="menu-item" onclick="filterByStatus('planning')">
-                    <span>Lập kế hoạch</span>
-                    <span class="badge">0</span>
-                </div>
-                <div class="menu-item" onclick="filterByStatus('cho_vien_xet_chon,cho_ct_hd_xet_duyet,cho_bo_tham_dinh,cho_ngoai_xet_chon,cho_phe_duyet_ngoai')">
-                    <span>Chờ xét duyệt</span>
-                    <span class="badge">0</span>
-                </div>
-                <div class="menu-item" onclick="filterByStatus('da_phe_duyet,cho_ky_hop_dong,approved')">
-                    <span>Đã phê duyệt / Chờ ký HĐ</span>
-                    <span class="badge">0</span>
-                </div>
-                <div class="menu-item" onclick="filterByStatus('dang_thuc_hien,ongoing,xin_dieu_chinh')">
-                    <span>Đang thực hiện</span>
-                    <span class="badge">0</span>
-                </div>
-                <div class="menu-item" onclick="filterByStatus('cho_nghiem_thu_co_so,nghiem_thu_trung_gian,cho_nghiem_thu_bo_nn,nghiem_thu_tong_ket,hoan_thien_sau_nghiem_thu,review')">
-                    <span>Nghiệm thu</span>
-                    <span class="badge">0</span>
-                </div>
-                <div class="menu-item" onclick="filterByStatus('thanh_ly_hop_dong,hoan_thanh,completed')">
-                    <span>Hoàn thành</span>
-                    <span class="badge">0</span>
-                </div>
-                <div class="menu-item" onclick="filterByStatus('overdue')">
-                    <span>Quá hạn</span>
-                    <span class="badge">0</span>
-                </div>
-                <div class="menu-item" onclick="filterByStatus('khong_duoc_phe_duyet')">
-                    <span>Không được phê duyệt</span>
-                    <span class="badge">0</span>
-                </div>
-            </div>
+                <details class="sidebar-accordion" open>
+                    <summary class="sidebar-accordion__summary"><span>Theo trạng thái</span></summary>
+                    <div class="sidebar-accordion__panel">
+                        <div class="menu-item menu-item--filter" data-filter-status="planning" tabindex="0" role="button" onclick="filterByStatus('planning')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByStatus('planning');}">
+                            <span>Lập kế hoạch</span>
+                            <span class="badge">0</span>
+                        </div>
+                        <div class="menu-item menu-item--filter" data-filter-status="cho_vien_xet_chon,cho_ct_hd_xet_duyet,cho_bo_tham_dinh,cho_ngoai_xet_chon,cho_phe_duyet_ngoai" tabindex="0" role="button" onclick="filterByStatus('cho_vien_xet_chon,cho_ct_hd_xet_duyet,cho_bo_tham_dinh,cho_ngoai_xet_chon,cho_phe_duyet_ngoai')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByStatus('cho_vien_xet_chon,cho_ct_hd_xet_duyet,cho_bo_tham_dinh,cho_ngoai_xet_chon,cho_phe_duyet_ngoai');}">
+                            <span>Chờ xét duyệt</span>
+                            <span class="badge">0</span>
+                        </div>
+                        <div class="menu-item menu-item--filter" data-filter-status="da_phe_duyet,cho_ky_hop_dong,approved" tabindex="0" role="button" onclick="filterByStatus('da_phe_duyet,cho_ky_hop_dong,approved')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByStatus('da_phe_duyet,cho_ky_hop_dong,approved');}">
+                            <span>Đã phê duyệt / Chờ ký HĐ</span>
+                            <span class="badge">0</span>
+                        </div>
+                        <div class="menu-item menu-item--filter" data-filter-status="dang_thuc_hien,ongoing,xin_dieu_chinh" tabindex="0" role="button" onclick="filterByStatus('dang_thuc_hien,ongoing,xin_dieu_chinh')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByStatus('dang_thuc_hien,ongoing,xin_dieu_chinh');}">
+                            <span>Đang thực hiện</span>
+                            <span class="badge">0</span>
+                        </div>
+                        <div class="menu-item menu-item--filter" data-filter-status="cho_nghiem_thu_co_so,nghiem_thu_trung_gian,cho_nghiem_thu_bo_nn,nghiem_thu_tong_ket,hoan_thien_sau_nghiem_thu,review" tabindex="0" role="button" onclick="filterByStatus('cho_nghiem_thu_co_so,nghiem_thu_trung_gian,cho_nghiem_thu_bo_nn,nghiem_thu_tong_ket,hoan_thien_sau_nghiem_thu,review')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByStatus('cho_nghiem_thu_co_so,nghiem_thu_trung_gian,cho_nghiem_thu_bo_nn,nghiem_thu_tong_ket,hoan_thien_sau_nghiem_thu,review');}">
+                            <span>Nghiệm thu</span>
+                            <span class="badge">0</span>
+                        </div>
+                        <div class="menu-item menu-item--filter" data-filter-status="thanh_ly_hop_dong,hoan_thanh,completed" tabindex="0" role="button" onclick="filterByStatus('thanh_ly_hop_dong,hoan_thanh,completed')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByStatus('thanh_ly_hop_dong,hoan_thanh,completed');}">
+                            <span>Hoàn thành</span>
+                            <span class="badge">0</span>
+                        </div>
+                        <div class="menu-item menu-item--filter" data-filter-status="overdue" tabindex="0" role="button" onclick="filterByStatus('overdue')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByStatus('overdue');}">
+                            <span>Quá hạn</span>
+                            <span class="badge">0</span>
+                        </div>
+                        <div class="menu-item menu-item--filter" data-filter-status="khong_duoc_phe_duyet" tabindex="0" role="button" onclick="filterByStatus('khong_duoc_phe_duyet')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByStatus('khong_duoc_phe_duyet');}">
+                            <span>Không được phê duyệt</span>
+                            <span class="badge">0</span>
+                        </div>
+                    </div>
+                </details>
 
-            <div class="menu-section">
-                <div class="menu-title">Báo cáo</div>
-                <div class="menu-item" onclick="showSection('reports')">
-                    <span>Thống kê & Báo cáo</span>
-                </div>
-                <div class="menu-item" onclick="showSection('calendar')">
-                    <span>Lịch nghiệm thu</span>
-                </div>
-            </div>
+                <details class="sidebar-accordion">
+                    <summary class="sidebar-accordion__summary"><span>Báo cáo</span></summary>
+                    <div class="sidebar-accordion__panel">
+                        <div class="menu-item menu-item--quiet" tabindex="0" role="button" onclick="showSection('reports')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showSection('reports');}">
+                            <span>Thống kê &amp; Báo cáo</span>
+                        </div>
+                        <div class="menu-item menu-item--quiet" tabindex="0" role="button" onclick="showSection('calendar')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showSection('calendar');}">
+                            <span>Lịch nghiệm thu</span>
+                        </div>
+                    </div>
+                </details>
+            </nav>
         </div>
 
         <div class="content-area">
@@ -734,12 +1275,12 @@
                     </div>
                 </div>
 
-                <div class="filter-bar">
+                <div id="missions-list-anchor" class="filter-bar">
                     <h3 style="margin-bottom: 15px;">Bộ lọc nhanh</h3>
                     <div class="filter-row">
                         <div class="form-group">
                             <label>Tìm kiếm</label>
-                            <input type="text" placeholder="Tên đề tài, mã số, chủ nhiệm..." id="searchInput">
+                            <input type="text" placeholder="Mọi từ khóa: mã, tên, chủ nhiệm, cấp, trạng thái, ngày, tiến độ, kinh phí, nguồn…" id="searchInput" title="Nhiều từ cách nhau bằng khoảng trắng — mỗi từ đều phải khớp (giống Quản lý công bố). Không phân biệt dấu.">
                         </div>
                         <div class="form-group">
                             <label>Cấp đề tài</label>
@@ -800,8 +1341,13 @@
                     </div>
                 </div>
 
+                <div class="missions-table-heading-block" aria-live="polite">
+                    <h3 id="missions-table-title" class="missions-table-title">Danh sách nhiệm vụ KHCN</h3>
+                    <p id="missions-table-subtitle" class="missions-table-subtitle">Toàn bộ đề tài hiển thị theo quyền xem của bạn. Dùng thanh bên hoặc bộ lọc phía trên để thu hẹp.</p>
+                </div>
+
                 <div class="table-container">
-                    <table id="tasksTable">
+                    <table id="tasksTable" aria-labelledby="missions-table-title" aria-describedby="missions-table-subtitle">
                         <thead>
                             <tr>
                                 <th>Mã đề tài</th>
@@ -1049,35 +1595,14 @@
                             <input type="text" id="admin-manual-principal" placeholder="VD: TS. Nguyễn Văn A">
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group" style="grid-column: 1 / -1;">
                             <label>Trạng thái *</label>
-                            <select id="admin-manual-status">
-                                <option value="planning" selected>Lập kế hoạch</option>
-                                <option value="cho_vien_xet_chon">Chờ HĐ Viện xét chọn</option>
-                                <option value="cho_ct_hd_xet_duyet">Chờ CT HĐ KHCN xét duyệt</option>
-                                <option value="buoc4a">Bước 4A (Nhánh A)</option>
-                                <option value="buoc4b">Bước 4B (Nhánh B)</option>
-                                <option value="cho_bo_tham_dinh">Chờ Bộ thẩm định</option>
-                                <option value="cho_ngoai_xet_chon">Chờ cơ quan ngoài xét chọn</option>
-                                <option value="cho_phe_duyet_ngoai">Chờ phê duyệt ngoài</option>
-                                <option value="da_phe_duyet">Đã phê duyệt</option>
-                                <option value="cho_ky_hop_dong">Chờ ký hợp đồng</option>
-                                <option value="dang_thuc_hien">Đang thực hiện</option>
-                                <option value="xin_dieu_chinh">Xin điều chỉnh nội dung</option>
-                                <option value="cho_nghiem_thu_co_so">Chờ nghiệm thu cơ sở</option>
-                                <option value="nghiem_thu_trung_gian">Nghiệm thu cơ sở (Viện)</option>
-                                <option value="cho_nghiem_thu_bo_nn">Chờ nghiệm thu cấp Bộ/NN</option>
-                                <option value="nghiem_thu_tong_ket">Nghiệm thu cấp Bộ/NN</option>
-                                <option value="hoan_thien_sau_nghiem_thu">Hoàn thiện sau nghiệm thu</option>
-                                <option value="thanh_ly_hop_dong">Thanh lý hợp đồng</option>
-                                <option value="hoan_thanh">Hoàn thành</option>
-                                <option value="khong_duoc_phe_duyet">Không được phê duyệt</option>
-                                <option value="overdue">Quá hạn</option>
-                                <option value="approved">Đã phê duyệt (approved)</option>
-                                <option value="ongoing">Đang thực hiện (ongoing)</option>
-                                <option value="review">Nghiệm thu (review)</option>
-                                <option value="completed">Hoàn thành (completed)</option>
-                            </select>
+                            <select id="admin-manual-status"></select>
+                            <div id="admin-manual-status-custom-wrap" style="display:none;margin-top:10px;">
+                                <label for="admin-manual-status-custom" style="font-size:12px;color:#555;display:block;margin-bottom:4px;">Mô tả trạng thái tùy chỉnh (khi không khớp danh mục — tối đa 200 ký tự)</label>
+                                <input type="text" id="admin-manual-status-custom" maxlength="200" placeholder="VD: Tạm dừng theo chỉ đạo…" autocomplete="off">
+                            </div>
+                            <small style="display:block;margin-top:6px;color:#666;font-size:12px;">Ưu tiên chọn đúng mục trong danh mục để thống kê / lọc; chỉ gõ tay khi chọn «Khác — gõ tay».</small>
                         </div>
                         <div class="form-group">
                             <label>Tiến độ (%)</label>
@@ -1197,7 +1722,7 @@
                     <label>ORCID CN</label>
                     <input type="text" id="edit-principal-orcid" placeholder="VD: 0000-0001-2345-6789">
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="grid-column: 1 / -1;">
                     <label>Trạng thái *</label>
                     <select id="edit-status">
                         <optgroup label="Giai đoạn 1 — Trước hợp đồng">
@@ -1224,15 +1749,22 @@
                             <option value="thanh_ly_hop_dong">Thanh lý hợp đồng</option>
                             <option value="hoan_thanh">Hoàn thành</option>
                         </optgroup>
-                        <optgroup label="Khác">
-                            <option value="approved">Đã phê duyệt</option>
-                            <option value="ongoing">Đang thực hiện</option>
-                            <option value="review">Nghiệm thu</option>
-                            <option value="completed">Hoàn thành</option>
+                        <optgroup label="Khác / mã tổng hợp">
+                            <option value="approved">Đã phê duyệt (approved)</option>
+                            <option value="ongoing">Đang thực hiện (ongoing)</option>
+                            <option value="review">Nghiệm thu (review)</option>
+                            <option value="completed">Hoàn thành (completed)</option>
                             <option value="overdue">Quá hạn</option>
+                            <option value="cho_phe_duyet_chinh_thuc">Chờ phê duyệt chính thức</option>
                             <option value="dung_khong_dat_dot">Dừng — không đạt đợt này</option>
+                            <option value="__custom__">Khác — gõ trạng thái tùy chỉnh…</option>
                         </optgroup>
                     </select>
+                    <div id="edit-status-custom-wrap" style="display:none;margin-top:10px;">
+                        <label for="edit-status-custom" style="font-size:12px;color:#555;display:block;margin-bottom:4px;">Mô tả trạng thái (không có trong danh mục — tối đa 200 ký tự)</label>
+                        <input type="text" id="edit-status-custom" maxlength="200" placeholder="VD: Tạm dừng theo chỉ đạo…" autocomplete="off">
+                    </div>
+                    <small style="display:block;margin-top:6px;color:#666;font-size:12px;">Chọn đúng mục trong danh mục để thống kê và lọc; chỉ khi không có mục phù hợp, chọn «Khác — gõ trạng thái tùy chỉnh».</small>
                 </div>
                 <div class="form-group">
                     <label>Tiến độ (%)</label>
@@ -1259,12 +1791,15 @@
     </div>
 
     <script src="js/system-access.js"></script>
+    <script src="js/page-greeting.js"></script>
     <script>
         const apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
         const INSTITUTE_DOMAIN = '@sci.edu.vn';
         let tasks = [];
         let currentTask = null;
         let isAdmin = false;
+        let isPhongKhcn = false;
+        let isMasterAdmin = false;
         let currentUser = {};
         let stats = { total: 0, byLevel: {}, byStatus: {}, totalBudget: 0, overdue: 0, completionRate: 0, acceptanceThisMonth: 0, totalOngoing: 0 };
 
@@ -1308,8 +1843,12 @@
             return false;
         }
 
+        function canEditMissionDashboard() {
+            return isAdmin || isPhongKhcn;
+        }
+
         function canOpenMissionDetailModal(task) {
-            if (isAdmin) return true;
+            if (isAdmin || isPhongKhcn) return true;
             return missionPrincipalMatchesLoggedInUser(task);
         }
 
@@ -1329,34 +1868,110 @@
                 el.textContent = 'Xin chào! Vui lòng đăng nhập để đồng bộ quyền truy cập.';
                 return;
             }
-            // Ưu tiên fullname từ localStorage (được lưu khi đăng nhập)
+            function applyGreetingFromUser(u) {
+                if (typeof getLoginGreetingDisplay === 'function') {
+                    el.textContent = getLoginGreetingDisplay(u || {});
+                    return;
+                }
+                var n = (u && String(u.fullname || '').trim()) || '';
+                var em = (u && String(u.email || '').trim()) || '';
+                if (n) el.textContent = 'Xin chào, ' + n + '!';
+                else if (em) el.textContent = 'Xin chào, ' + em + '!';
+                else el.textContent = 'Xin chào!';
+            }
             var name = (currentUser && String(currentUser.fullname || '').trim()) || '';
             var email = (currentUser && String(currentUser.email || '').trim()) || '';
-            if (name) {
-                el.textContent = 'Xin chào, ' + name + '!';
+            if (name || email || (currentUser && currentUser.id)) {
+                applyGreetingFromUser(currentUser);
                 return;
             }
-            // Nếu localStorage chưa có fullname (hoặc token cũ từ session khác),
-            // gọi /api/me để lấy thông tin đầy đủ từ DB rồi cập nhật lại
             fetch(apiBase + '/api/me', { headers: { 'Authorization': 'Bearer ' + token } })
                 .then(function(r) { return r.ok ? r.json() : null; })
                 .then(function(data) {
-                    if (data && data.fullname && data.fullname.trim()) {
+                    if (data && data.id) {
                         currentUser = data;
-                        localStorage.setItem('user', JSON.stringify(data));
-                        var gEl = document.getElementById('header-greeting');
-                        if (gEl) gEl.textContent = 'Xin chào, ' + data.fullname.trim() + '!';
-                    } else if (data && data.email) {
-                        var gEl2 = document.getElementById('header-greeting');
-                        if (gEl2) gEl2.textContent = 'Xin chào, ' + data.email.trim() + '!';
+                        try { localStorage.setItem('user', JSON.stringify(data)); } catch (e) {}
+                    }
+                    applyGreetingFromUser(data || currentUser || {});
+                })
+                .catch(function() {
+                    applyGreetingFromUser(currentUser || {});
+                });
+        }
+
+        function setSidebarStatBadge(badge, value) {
+            if (!badge) return;
+            var n = Number(value);
+            if (!Number.isFinite(n) || n < 0) n = 0;
+            badge.textContent = n;
+            badge.classList.toggle('sidebar-badge--empty', n === 0);
+        }
+
+        function loadCapVienTrackBadge() {
+            var token = localStorage.getItem('token');
+            var badge = document.getElementById('badge-cap-vien-track');
+            var link = document.getElementById('menu-cap-vien-track');
+            if (!badge) return;
+            function setLive(on) {
+                if (link) {
+                    if (on) link.classList.add('menu-item-cap-vien-track--live');
+                    else link.classList.remove('menu-item-cap-vien-track--live');
+                }
+            }
+            if (!token) {
+                badge.textContent = '—';
+                badge.classList.remove('badge-cap-vien--pulse', 'badge-cap-vien--empty');
+                setLive(false);
+                return;
+            }
+            fetch(apiBase + '/api/cap-vien/submissions', {
+                headers: { 'Authorization': 'Bearer ' + token },
+                cache: 'no-store'
+            })
+                .then(function(r) { return r.ok ? r.json() : Promise.resolve([]); })
+                .then(function(data) {
+                    var items = Array.isArray(data) ? data : [];
+                    var n = items.length;
+                    badge.textContent = n;
+                    badge.classList.toggle('badge-cap-vien--empty', n === 0);
+                    if (n > 0) {
+                        badge.classList.add('badge-cap-vien--pulse');
+                        setLive(true);
                     } else {
-                        var gEl3 = document.getElementById('header-greeting');
-                        if (gEl3) gEl3.textContent = 'Xin chào!';
+                        badge.classList.remove('badge-cap-vien--pulse');
+                        setLive(false);
                     }
                 })
                 .catch(function() {
-                    var gEl4 = document.getElementById('header-greeting');
-                    if (gEl4) gEl4.textContent = (email ? 'Xin chào, ' + email + '!' : 'Xin chào!');
+                    badge.textContent = '—';
+                    badge.classList.remove('badge-cap-vien--pulse', 'badge-cap-vien--empty');
+                    setLive(false);
+                });
+        }
+
+        function loadCtHdNgoaiVienBadge() {
+            var token = localStorage.getItem('token');
+            var badge = document.getElementById('badge-ct-hd-ngoai-vien');
+            if (!badge) return;
+            if (!token) {
+                badge.textContent = '—';
+                badge.classList.remove('badge-ct-hd--empty');
+                return;
+            }
+            fetch(apiBase + '/api/missions/count-cho-ct-hd-ngoai-vien', {
+                headers: { 'Authorization': 'Bearer ' + token },
+                cache: 'no-store'
+            })
+                .then(function(r) { return r.ok ? r.json() : Promise.resolve({ count: 0 }); })
+                .then(function(data) {
+                    var n = data && data.count != null ? Number(data.count) : 0;
+                    n = Number.isFinite(n) ? n : 0;
+                    badge.textContent = n;
+                    badge.classList.toggle('badge-ct-hd--empty', n === 0);
+                })
+                .catch(function() {
+                    badge.textContent = '—';
+                    badge.classList.remove('badge-ct-hd--empty');
                 });
         }
 
@@ -1374,26 +1989,27 @@
                     else if (label.includes('Tỷ lệ hoàn thành')) el.textContent = (data.completionRate != null ? data.completionRate : 0) + '%';
                     else if (label.includes('Nghiệm thu') || label.includes('Đang nghiệm thu')) el.textContent = data.acceptanceThisMonth != null ? data.acceptanceThisMonth : 0;
                 });
-                const badges = document.querySelectorAll('.sidebar .menu-item .badge');
                 const byLevel = data.byLevel || {};
                 const byStatus = data.byStatus || {};
                 document.querySelectorAll('.menu-item').forEach((item, idx) => {
                     const badge = item.querySelector('.badge');
                     if (!badge) return;
+                    if (item.id === 'menu-cap-vien-track' || item.classList.contains('menu-item-cap-vien-track')) return;
+                    if (item.id === 'menu-ct-hd-ngoai-vien') return;
                     const text = (item.textContent || '').trim();
-                    if (text.includes('Tất cả đề tài')) badge.textContent = data.total || 0;
-                    else if (text.includes('Cấp Nhà nước')) badge.textContent = byLevel.national || 0;
-                    else if (text.includes('Cấp Bộ')) badge.textContent = byLevel.ministry || 0;
-                    else if (text.includes('Cấp ĐHQG')) badge.textContent = byLevel.university || 0;
-                    else if (text.includes('Cấp Viện')) badge.textContent = byLevel.institute || 0;
-                    else if (text.includes('Lập kế hoạch')) badge.textContent = byStatus.planning || 0;
-                    else if (text.includes('Chờ xét duyệt')) badge.textContent = (byStatus.cho_vien_xet_chon || 0) + (byStatus.cho_bo_tham_dinh || 0) + (byStatus.cho_ngoai_xet_chon || 0) + (byStatus.cho_phe_duyet_ngoai || 0);
-                    else if (text.includes('Đã phê duyệt') || text.includes('Chờ ký HĐ')) badge.textContent = (byStatus.da_phe_duyet || 0) + (byStatus.cho_ky_hop_dong || 0) + (byStatus.approved || 0);
-                    else if (text.includes('Đang thực hiện')) badge.textContent = (byStatus.dang_thuc_hien || 0) + (byStatus.ongoing || 0) + (byStatus.xin_dieu_chinh || 0);
-                    else if (text.includes('Nghiệm thu')) badge.textContent = (byStatus.cho_nghiem_thu_co_so || 0) + (byStatus.nghiem_thu_trung_gian || 0) + (byStatus.cho_nghiem_thu_bo_nn || 0) + (byStatus.nghiem_thu_tong_ket || 0) + (byStatus.hoan_thien_sau_nghiem_thu || 0) + (byStatus.review || 0);
-                    else if (text.includes('Hoàn thành')) badge.textContent = (byStatus.thanh_ly_hop_dong || 0) + (byStatus.hoan_thanh || 0) + (byStatus.completed || 0);
-                    else if (text.includes('Quá hạn')) badge.textContent = byStatus.overdue != null ? byStatus.overdue : (data.overdue || 0);
-                    else if (text.includes('Không được phê duyệt')) badge.textContent = byStatus.khong_duoc_phe_duyet || 0;
+                    if (text.includes('Tất cả đề tài')) setSidebarStatBadge(badge, data.total || 0);
+                    else if (text.includes('Cấp Nhà nước')) setSidebarStatBadge(badge, byLevel.national || 0);
+                    else if (text.includes('Cấp Bộ')) setSidebarStatBadge(badge, byLevel.ministry || 0);
+                    else if (text.includes('Cấp ĐHQG')) setSidebarStatBadge(badge, byLevel.university || 0);
+                    else if (text.includes('Cấp Viện')) setSidebarStatBadge(badge, byLevel.institute || 0);
+                    else if (text.includes('Lập kế hoạch')) setSidebarStatBadge(badge, byStatus.planning || 0);
+                    else if (text.includes('Chờ xét duyệt')) setSidebarStatBadge(badge, (byStatus.cho_vien_xet_chon || 0) + (byStatus.cho_bo_tham_dinh || 0) + (byStatus.cho_ngoai_xet_chon || 0) + (byStatus.cho_phe_duyet_ngoai || 0));
+                    else if (text.includes('Đã phê duyệt') || text.includes('Chờ ký HĐ')) setSidebarStatBadge(badge, (byStatus.da_phe_duyet || 0) + (byStatus.cho_ky_hop_dong || 0) + (byStatus.approved || 0));
+                    else if (text.includes('Đang thực hiện')) setSidebarStatBadge(badge, (byStatus.dang_thuc_hien || 0) + (byStatus.ongoing || 0) + (byStatus.xin_dieu_chinh || 0));
+                    else if (text.includes('Nghiệm thu')) setSidebarStatBadge(badge, (byStatus.cho_nghiem_thu_co_so || 0) + (byStatus.nghiem_thu_trung_gian || 0) + (byStatus.cho_nghiem_thu_bo_nn || 0) + (byStatus.nghiem_thu_tong_ket || 0) + (byStatus.hoan_thien_sau_nghiem_thu || 0) + (byStatus.review || 0));
+                    else if (text.includes('Hoàn thành')) setSidebarStatBadge(badge, (byStatus.thanh_ly_hop_dong || 0) + (byStatus.hoan_thanh || 0) + (byStatus.completed || 0));
+                    else if (text.includes('Quá hạn')) setSidebarStatBadge(badge, byStatus.overdue != null ? byStatus.overdue : (data.overdue || 0));
+                    else if (text.includes('Không được phê duyệt')) setSidebarStatBadge(badge, byStatus.khong_duoc_phe_duyet || 0);
                 });
             }).catch(() => {});
         }
@@ -1402,6 +2018,57 @@
             if (num >= 1e9) return (num / 1e9).toFixed(0) + ' tỷ';
             if (num >= 1e6) return (num / 1e6).toFixed(0) + ' tr';
             return (num || 0).toLocaleString('vi-VN');
+        }
+
+        function syncSidebarNavActive() {
+            var level = (document.getElementById('levelFilter') || {}).value || '';
+            var status = (document.getElementById('statusFilter') || {}).value || '';
+            document.querySelectorAll('.sidebar .menu-item').forEach(function(el) {
+                el.classList.remove('active');
+            });
+            if (!level && !status) {
+                var prim = document.querySelector('.sidebar .menu-item--primary');
+                if (prim) prim.classList.add('active');
+                return;
+            }
+            if (level) {
+                document.querySelectorAll('.sidebar [data-filter-level]').forEach(function(el) {
+                    if (el.getAttribute('data-filter-level') === level) el.classList.add('active');
+                });
+                return;
+            }
+            document.querySelectorAll('.sidebar [data-filter-status]').forEach(function(el) {
+                if (el.getAttribute('data-filter-status') === status) el.classList.add('active');
+            });
+        }
+
+        function scrollToMissionsList() {
+            var el = document.getElementById('missions-list-anchor');
+            if (!el) return;
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function updateMissionsListHeading() {
+            var subEl = document.getElementById('missions-table-subtitle');
+            if (!subEl) return;
+            var lf = document.getElementById('levelFilter');
+            var sf = document.getElementById('statusFilter');
+            var yf = document.getElementById('yearFilter');
+            var q = ((document.getElementById('searchInput') || {}).value || '').trim();
+            var bits = [];
+            if (lf && lf.value) {
+                var li = lf.selectedIndex >= 0 ? lf.options[lf.selectedIndex] : null;
+                bits.push('Cấp: ' + (li ? li.text : lf.value));
+            }
+            if (sf && sf.value) {
+                var si = sf.selectedIndex >= 0 ? sf.options[sf.selectedIndex] : null;
+                bits.push('Trạng thái: ' + (si ? si.text : 'Đã chọn'));
+            }
+            if (yf && yf.value) bits.push('Năm: ' + yf.value);
+            if (q) bits.push('Từ khóa: «' + q + '»');
+            subEl.textContent = bits.length
+                ? bits.join(' · ')
+                : 'Toàn bộ đề tài hiển thị theo quyền xem của bạn. Dùng thanh bên hoặc bộ lọc phía trên để thu hẹp.';
         }
 
         function loadMissions() {
@@ -1433,8 +2100,11 @@
                     source_type: m.source_type
                 }));
                 renderTasksTable();
+                syncSidebarNavActive();
+                updateMissionsListHeading();
             }).catch(() => {
                 document.getElementById('tasksTableBody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;">Không tải được dữ liệu. Kiểm tra kết nối máy chủ.</td></tr>';
+                updateMissionsListHeading();
             });
         }
 
@@ -1466,11 +2136,11 @@
                             <div class="progress-bar" style="width: ${Math.min(100, task.progress)}%"></div>
                         </div>
                     </td>
-                    <td><span class="status-badge status-${task.status}">${getStatusText(task.status)}</span></td>
+                    <td><span class="status-badge ${statusBadgeClass(task.status)}">${escapeHtml(getStatusText(task.status))}</span></td>
                     <td>
                         <div class="action-buttons">
                             ${detailBtn}
-                            ${typeof isAdmin !== 'undefined' && isAdmin && task.id ? `<button type="button" class="btn btn-danger" style="margin-left:6px;background:#c0392b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;" onclick="event.stopPropagation(); deleteTask(${task.id}, '${(task.code || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">Xóa</button>` : ''}
+                            ${typeof isMasterAdmin !== 'undefined' && isMasterAdmin && task.id ? `<button type="button" class="btn btn-danger" style="margin-left:6px;background:#c0392b;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;" onclick="event.stopPropagation(); deleteTask(${task.id}, '${(task.code || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">Xóa</button>` : ''}
                         </div>
                     </td>
                 </tr>
@@ -1482,6 +2152,13 @@
             const div = document.createElement('div');
             div.textContent = String(s);
             return div.innerHTML;
+        }
+
+        function statusBadgeClass(status) {
+            const s = String(status || '').trim();
+            if (!s) return 'status-planning';
+            if (/^[a-z0-9_]+$/.test(s)) return 'status-' + s;
+            return 'status-custom';
         }
 
         function getLevelText(level) {
@@ -1529,17 +2206,22 @@
                 if (statusSel) statusSel.value = '';
                 if (yearSel) yearSel.value = '';
                 loadMissions();
+                scrollToMissionsList();
             }
         }
         function filterByLevel(level) {
-            const sel = document.getElementById('levelFilter');
-            if (sel) { sel.value = level || ''; loadMissions(); }
-            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.sidebar .menu-item').forEach(el => { if ((el.textContent || '').includes('Cấp')) el.classList.toggle('active', (el.getAttribute('onclick') || '').includes(level)); });
+            var levelSel = document.getElementById('levelFilter');
+            var statusSel = document.getElementById('statusFilter');
+            if (statusSel) statusSel.value = '';
+            if (levelSel) { levelSel.value = level || ''; loadMissions(); }
+            scrollToMissionsList();
         }
         function filterByStatus(status) {
-            const sel = document.getElementById('statusFilter');
-            if (sel) { sel.value = status || ''; loadMissions(); }
+            var levelSel = document.getElementById('levelFilter');
+            var statusSel = document.getElementById('statusFilter');
+            if (levelSel) levelSel.value = '';
+            if (statusSel) { statusSel.value = status || ''; loadMissions(); }
+            scrollToMissionsList();
         }
 
         let addTaskSelectedLevel = null;
@@ -1632,6 +2314,8 @@
             // reset form nhẹ để admin nhập lại dễ hơn
             var f = document.getElementById('adminManualAddForm');
             if (f) f.reset();
+            cloneMissionStatusOptionsToManual();
+            onManualStatusSelectChange();
             m.classList.add('active');
         }
 
@@ -1651,12 +2335,20 @@
                 return;
             }
 
+            cloneMissionStatusOptionsToManual();
+            var stManual = getManualPayloadStatus();
+            var selMan = document.getElementById('admin-manual-status');
+            if (selMan && selMan.value === '__custom__' && !stManual) {
+                alert('Chọn mục trong danh mục trạng thái hoặc nhập mô tả khi chọn «Khác — gõ trạng thái tùy chỉnh».');
+                return;
+            }
+
             var payload = {
                 code: (document.getElementById('admin-manual-code') || {}).value,
                 title: (document.getElementById('admin-manual-title') || {}).value,
                 principal: (document.getElementById('admin-manual-principal') || {}).value,
                 level: (document.getElementById('admin-manual-level') || {}).value,
-                status: (document.getElementById('admin-manual-status') || {}).value,
+                status: stManual && String(stManual).trim() ? String(stManual).trim() : 'planning',
                 start_date: (document.getElementById('admin-manual-start-date') || {}).value,
                 end_date: (document.getElementById('admin-manual-end-date') || {}).value,
                 progress: (document.getElementById('admin-manual-progress') || {}).value,
@@ -1668,7 +2360,6 @@
                 return;
             }
             if (!payload.level) payload.level = 'institute';
-            if (!payload.status) payload.status = 'planning';
 
             var btn = document.getElementById('btn-admin-manual-submit');
             if (btn) btn.disabled = true;
@@ -1700,14 +2391,22 @@
 
         function deleteTask(id, code) {
             if (!id) return;
+            if (!isMasterAdmin) {
+                alert('Chỉ Master Admin mới được xóa đề tài khỏi hệ thống.');
+                return;
+            }
             var token = localStorage.getItem('token');
-            if (!token) { alert('Vui lòng đăng nhập (Admin) để xóa đề tài.'); return; }
+            if (!token) { alert('Vui lòng đăng nhập (Master Admin) để xóa đề tài.'); return; }
             var row = tasks.find(function(t) { return t.id === id; });
             var title = (row && row.name) ? String(row.name) : '';
+            var isCapVien = row && row.source_type === 'cap_vien' && row.source_id;
             var warn = 'Bạn có chắc muốn XÓA VĨNH VIỄN đề tài khỏi hệ thống?\n\n' +
                 'Mã: ' + (code || id) +
                 (title ? ('\nTên: ' + title) : '') +
                 '\n\nToàn bộ dòng tiến trình / hồ sơ đính kèm trên dashboard (nếu có) sẽ bị xóa theo. Hành động không thể hoàn tác.';
+            if (isCapVien) {
+                warn += '\n\n— Đề tài đồng bộ từ Hồ sơ cấp Viện: hệ thống sẽ XÓA LUÔN hồ sơ, file, lịch sử bước và mục trên trang Theo dõi tiến trình / Hội đồng (không chỉ ẩn khỏi bảng nhiệm vụ).';
+            }
             if (!confirm(warn)) return;
             fetch(apiBase + '/api/admin/missions/' + id, {
                 method: 'DELETE',
@@ -1729,7 +2428,7 @@
                     } else {
                         var msg = res.data && res.data.message;
                         if (res.status === 401) msg = 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
-                        else if (res.status === 403) msg = msg || 'Chỉ tài khoản Admin mới xóa được đề tài.';
+                        else if (res.status === 403) msg = msg || 'Chỉ Master Admin mới xóa được đề tài.';
                         alert(msg || 'Không thể xóa đề tài.');
                     }
                 })
@@ -1740,7 +2439,7 @@
             const task = tasks.find(t => t.code === code);
             if (!task) return;
             if (!canOpenMissionDetailModal(task)) {
-                alert('Bạn không có quyền xem chi tiết đề tài này. Chỉ Chủ nhiệm đề tài hoặc Admin mới được truy cập.');
+                alert('Bạn không có quyền xem chi tiết đề tài này. Chỉ Chủ nhiệm đề tài, Admin hoặc Phòng KHCN mới được truy cập.');
                 return;
             }
             currentTask = task;
@@ -1761,7 +2460,7 @@
                     <div><strong>Mã đề tài:</strong> ${escapeHtml(task.code)}</div>
                     <div><strong>Cấp:</strong> ${getLevelText(task.level)}</div>
                     <div><strong>Chủ nhiệm:</strong> ${escapeHtml(task.leader)}</div>
-                    <div><strong>Trạng thái:</strong> <span class="status-badge status-${task.status}">${getStatusText(task.status)}</span></div>
+                    <div><strong>Trạng thái:</strong> <span class="status-badge ${statusBadgeClass(task.status)}">${escapeHtml(getStatusText(task.status))}</span></div>
                     <div><strong>Thời gian:</strong> ${task.startDate && task.endDate ? (formatDate(task.startDate) + ' - ' + formatDate(task.endDate)) : '—'}</div>
                     <div><strong>Tiến độ:</strong> ${task.progress}%</div>
                     <div><strong>Tổng kinh phí:</strong> ${budgetStr}</div>
@@ -1922,10 +2621,89 @@
             document.getElementById('editTaskMsg').style.display = 'none';
         }
 
+        function missionStatusCatalogValues(sel) {
+            if (!sel) return [];
+            var a = [];
+            for (var i = 0; i < sel.options.length; i++) {
+                var v = sel.options[i].value;
+                if (v && v !== '__custom__') a.push(v);
+            }
+            return a;
+        }
+
+        function applyEditStatusFields(st) {
+            st = (st == null || st === '') ? 'planning' : String(st).trim();
+            var sel = document.getElementById('edit-status');
+            var wrap = document.getElementById('edit-status-custom-wrap');
+            var inp = document.getElementById('edit-status-custom');
+            if (!sel || !wrap || !inp) return;
+            var known = missionStatusCatalogValues(sel);
+            if (known.indexOf(st) >= 0) {
+                sel.value = st;
+                wrap.style.display = 'none';
+                inp.value = '';
+            } else {
+                sel.value = '__custom__';
+                wrap.style.display = '';
+                inp.value = st;
+            }
+        }
+
+        function onEditStatusSelectChange() {
+            var sel = document.getElementById('edit-status');
+            var wrap = document.getElementById('edit-status-custom-wrap');
+            var inp = document.getElementById('edit-status-custom');
+            if (!sel || !wrap) return;
+            if (sel.value === '__custom__') {
+                wrap.style.display = '';
+            } else {
+                wrap.style.display = 'none';
+                if (inp) inp.value = '';
+            }
+        }
+
+        function onManualStatusSelectChange() {
+            var sel = document.getElementById('admin-manual-status');
+            var wrap = document.getElementById('admin-manual-status-custom-wrap');
+            var inp = document.getElementById('admin-manual-status-custom');
+            if (!sel || !wrap) return;
+            if (sel.value === '__custom__') {
+                wrap.style.display = '';
+            } else {
+                wrap.style.display = 'none';
+                if (inp) inp.value = '';
+            }
+        }
+
+        function getEditPayloadStatus() {
+            var sel = document.getElementById('edit-status');
+            if (!sel) return 'planning';
+            if (sel.value === '__custom__') {
+                return (document.getElementById('edit-status-custom') || {}).value.trim();
+            }
+            return sel.value || 'planning';
+        }
+
+        function getManualPayloadStatus() {
+            var sel = document.getElementById('admin-manual-status');
+            if (!sel) return 'planning';
+            if (sel.value === '__custom__') {
+                return (document.getElementById('admin-manual-status-custom') || {}).value.trim();
+            }
+            return sel.value || 'planning';
+        }
+
+        function cloneMissionStatusOptionsToManual() {
+            var ed = document.getElementById('edit-status');
+            var adm = document.getElementById('admin-manual-status');
+            if (!ed || !adm || adm.options.length > 0) return;
+            adm.innerHTML = ed.innerHTML;
+        }
+
         function editTask() {
             if (!currentTask) return;
-            if (!isAdmin) {
-                alert('Chỉ Admin mới có quyền chỉnh sửa đề tài. Vui lòng đăng nhập bằng tài khoản Admin.');
+            if (!canEditMissionDashboard()) {
+                alert('Chỉ Admin hoặc Phòng KHCN mới có quyền chỉnh sửa đề tài.');
                 return;
             }
             if (!currentTask.id) {
@@ -1939,7 +2717,7 @@
             document.getElementById('edit-principal-don-vi').value = currentTask.principal_don_vi || '';
             document.getElementById('edit-principal-orcid').value = currentTask.principal_orcid || '';
             document.getElementById('edit-level').value = currentTask.level || 'institute';
-            document.getElementById('edit-status').value = currentTask.status || 'planning';
+            applyEditStatusFields(currentTask.status || 'planning');
             document.getElementById('edit-progress').value = currentTask.progress != null ? currentTask.progress : 0;
             document.getElementById('edit-start-date').value = currentTask.startDate || '';
             document.getElementById('edit-end-date').value = currentTask.endDate || '';
@@ -1954,7 +2732,11 @@
             if (!currentTask || !currentTask.id) return;
             var token = localStorage.getItem('token');
             if (!token) {
-                alert('Vui lòng đăng nhập (Admin) để chỉnh sửa.');
+                alert('Vui lòng đăng nhập để chỉnh sửa.');
+                return;
+            }
+            if (!canEditMissionDashboard()) {
+                alert('Chỉ Admin hoặc Phòng KHCN mới có quyền chỉnh sửa đề tài.');
                 return;
             }
             var code = document.getElementById('edit-code').value.trim();
@@ -1967,6 +2749,15 @@
                 msgEl.style.display = 'block';
                 return;
             }
+            var statusForSave = getEditPayloadStatus();
+            if ((document.getElementById('edit-status') || {}).value === '__custom__' && !statusForSave) {
+                var msgEl2 = document.getElementById('editTaskMsg');
+                msgEl2.textContent = 'Bạn đã chọn «Khác — gõ trạng thái tùy chỉnh» nhưng chưa nhập mô tả. Hãy nhập nội dung hoặc chọn một mục trong danh mục.';
+                msgEl2.style.background = '#f8d7da';
+                msgEl2.style.color = '#721c24';
+                msgEl2.style.display = 'block';
+                return;
+            }
             var payload = {
                 code: code,
                 title: title,
@@ -1975,7 +2766,7 @@
                 principal_don_vi: document.getElementById('edit-principal-don-vi').value.trim() || null,
                 principal_orcid: document.getElementById('edit-principal-orcid').value.trim() || null,
                 level: document.getElementById('edit-level').value,
-                status: document.getElementById('edit-status').value,
+                status: statusForSave || 'planning',
                 progress: parseInt(document.getElementById('edit-progress').value, 10) || 0,
                 start_date: document.getElementById('edit-start-date').value || null,
                 end_date: document.getElementById('edit-end-date').value || null,
@@ -2013,7 +2804,7 @@
                             task.budget = payload.budget;
                             document.getElementById('taskDetailTitle').textContent = payload.title;
                             var budgetStr = payload.budget != null ? formatCurrency(payload.budget) : '—';
-                            document.getElementById('taskOverviewContent').innerHTML = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;"><div><strong>Mã đề tài:</strong> ' + escapeHtml(payload.code) + '</div><div><strong>Cấp:</strong> ' + getLevelText(payload.level) + '</div><div><strong>Chủ nhiệm:</strong> ' + escapeHtml(payload.principal || '—') + '</div><div><strong>Trạng thái:</strong> <span class="status-badge status-' + payload.status + '">' + getStatusText(payload.status) + '</span></div><div><strong>Thời gian:</strong> ' + (payload.start_date && payload.end_date ? (formatDate(payload.start_date) + ' - ' + formatDate(payload.end_date)) : '—') + '</div><div><strong>Tiến độ:</strong> ' + payload.progress + '%</div><div><strong>Tổng kinh phí:</strong> ' + budgetStr + '</div></div>';
+                            document.getElementById('taskOverviewContent').innerHTML = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;"><div><strong>Mã đề tài:</strong> ' + escapeHtml(payload.code) + '</div><div><strong>Cấp:</strong> ' + getLevelText(payload.level) + '</div><div><strong>Chủ nhiệm:</strong> ' + escapeHtml(payload.principal || '—') + '</div><div><strong>Trạng thái:</strong> <span class="status-badge ' + statusBadgeClass(payload.status) + '">' + escapeHtml(getStatusText(payload.status)) + '</span></div><div><strong>Thời gian:</strong> ' + (payload.start_date && payload.end_date ? (formatDate(payload.start_date) + ' - ' + formatDate(payload.end_date)) : '—') + '</div><div><strong>Tiến độ:</strong> ' + payload.progress + '%</div><div><strong>Tổng kinh phí:</strong> ' + budgetStr + '</div></div>';
                         }
                         setTimeout(closeEditTaskModal, 1500);
                     } else {
@@ -2050,16 +2841,20 @@
                 var exportImportSection = document.getElementById('export-import-section');
                 if (exportImportSection) exportImportSection.style.display = isAdmin ? '' : 'none';
                 var btnEditTask = document.getElementById('btn-edit-task');
-                if (btnEditTask) btnEditTask.style.display = isAdmin ? '' : 'none';
+                if (btnEditTask) btnEditTask.style.display = (isAdmin || isPhongKhcn) ? '' : 'none';
                 var btnManualAdd = document.getElementById('btn-admin-add-manual-mission');
                 if (btnManualAdd) btnManualAdd.style.display = isAdmin ? '' : 'none';
             }
 
             function finishInit() {
                 isAdmin = (currentUser.role || '').toLowerCase() === 'admin';
+                isPhongKhcn = (currentUser.role || '').toLowerCase() === 'phong_khcn';
+                isMasterAdmin = !!(currentUser && currentUser.isMasterAdmin);
                 updateHeaderGreeting();
                 applyAdminUiVisibility();
                 loadStats();
+                loadCapVienTrackBadge();
+                loadCtHdNgoaiVienBadge();
                 loadMissions();
             }
 
@@ -2077,6 +2872,10 @@
             } else {
                 finishInit();
             }
+
+            cloneMissionStatusOptionsToManual();
+            document.getElementById('edit-status')?.addEventListener('change', onEditStatusSelectChange);
+            document.getElementById('admin-manual-status')?.addEventListener('change', onManualStatusSelectChange);
 
             document.getElementById('btn-save-edit-task')?.addEventListener('click', saveEditTask);
             document.getElementById('btnAddTaskStep0Next')?.addEventListener('click', onAddTaskStep0Next);
@@ -2150,6 +2949,7 @@
                         }
                         if (res.ok) {
                             loadStats();
+                            loadCtHdNgoaiVienBadge();
                             loadMissions();
                             if (fileInput) fileInput.value = '';
                         }

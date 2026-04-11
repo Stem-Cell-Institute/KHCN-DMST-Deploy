@@ -33,7 +33,7 @@ body {
 
 header {
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    color: var(--white);
+    color: #ffffff;
     padding: 2rem 0;
 }
 
@@ -65,15 +65,19 @@ header {
     box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 
+/* Chữ trên nền gradient: màu tường minh + chân chữ nhẹ (tránh bị CSS khác ghi đè màu tối) */
 .header-text h1 {
     font-family: 'Libre Baskerville', serif;
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
+    color: #ffffff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 .header-text p {
     font-size: 1.1rem;
-    opacity: 0.95;
+    color: rgba(255, 255, 255, 0.96);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
 
 nav {
@@ -104,6 +108,11 @@ nav a:hover, nav a.active {
     background: rgba(26, 77, 46, 0.05);
 }
 
+body.theme-cap-vien nav a:hover,
+body.theme-cap-vien nav a.active {
+    background: rgba(21, 101, 192, 0.1);
+}
+
 /* Nav gọn gàng cho trang Đăng nhập / Đăng ký: Trang chủ | Đăng nhập | Đăng ký | Quản trị */
 .nav-auth { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .nav-auth a { padding: 0.5rem 1rem; border-radius: 8px; }
@@ -122,6 +131,41 @@ nav a:hover, nav a.active {
 #auth-status .auth-btn-admin:hover { background: rgba(234, 88, 12, 0.25); }
 #auth-status .auth-btn-logout { color: var(--gray); }
 #auth-status .auth-btn-logout:hover { color: #dc3545; }
+
+/* Thanh điều hướng tối (đề tài cấp Viện): lời chào + Đăng xuất phải đọc được */
+nav.cap-vien-nav-dark #auth-status .auth-user-info {
+    color: #f1f5f9;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+nav.cap-vien-nav-dark #auth-status .auth-btn-logout {
+    color: #f8fafc;
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    background: rgba(30, 58, 138, 0.42);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+nav.cap-vien-nav-dark #auth-status .auth-btn-logout:hover {
+    color: #fecaca;
+    background: rgba(51, 65, 85, 0.65);
+    border-color: rgba(252, 165, 165, 0.65);
+}
+nav.cap-vien-nav-dark #auth-status .auth-btn-login {
+    color: #eff6ff;
+    background: rgba(37, 99, 235, 0.38);
+    border: 1px solid rgba(147, 197, 253, 0.5);
+}
+nav.cap-vien-nav-dark #auth-status .auth-btn-login:hover {
+    background: rgba(37, 99, 235, 0.52);
+    border-color: rgba(191, 219, 254, 0.65);
+}
+nav.cap-vien-nav-dark #auth-status .auth-btn-admin {
+    color: #ffedd5;
+    background: rgba(194, 65, 12, 0.4);
+    border: 1px solid rgba(251, 146, 60, 0.5);
+}
+nav.cap-vien-nav-dark #auth-status .auth-btn-admin:hover {
+    background: rgba(194, 65, 12, 0.55);
+}
 
 /* Nav dropdown: Nộp hồ sơ */
 .nav-dropdown {

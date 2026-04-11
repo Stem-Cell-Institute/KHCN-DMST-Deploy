@@ -7,37 +7,382 @@
     <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
-        .upload-page { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-        .upload-intro { background: var(--white); padding: 1.5rem 2rem; border-radius: 12px; margin-bottom: 2rem; border-left: 4px solid var(--accent); }
-        .upload-intro h2 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem; }
-        .upload-intro p { color: var(--gray); font-size: 0.95rem; }
-        .upload-section { background: var(--white); padding: 2rem; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); margin-bottom: 1.5rem; }
-        .upload-section h3 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 0.5rem; font-size: 1.2rem; }
-        .upload-section .code { display: inline-block; background: var(--accent); color: var(--white); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; margin-right: 0.5rem; }
-        .upload-section .desc { color: var(--gray); font-size: 0.9rem; margin-bottom: 1rem; }
+        body.theme-cap-vien {
+            background:
+                radial-gradient(circle at 10% 10%, rgba(37, 99, 235, 0.12), transparent 45%),
+                radial-gradient(circle at 90% 20%, rgba(14, 165, 233, 0.12), transparent 40%),
+                linear-gradient(180deg, #eef4ff 0%, #f8fbff 35%, #f5f7fb 100%);
+        }
+        nav {
+            background: rgba(8, 18, 48, 0.9);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(56, 189, 248, 0.25);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+            box-shadow: 0 12px 28px rgba(8, 18, 48, 0.3);
+        }
+        nav .container {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+            padding-top: 0.7rem;
+            padding-bottom: 0.7rem;
+        }
+        nav a {
+            position: relative;
+            color: #dbeafe;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.55rem 0.9rem;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            background: linear-gradient(145deg, rgba(30, 64, 175, 0.2), rgba(14, 165, 233, 0.06));
+            transition: transform 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        nav a::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(130deg, rgba(125, 211, 252, 0.7), rgba(59, 130, 246, 0.05) 55%, rgba(147, 197, 253, 0.5));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            opacity: 0.45;
+        }
+        nav a:hover {
+            transform: translateY(-1px);
+            color: #ffffff;
+            border-color: rgba(125, 211, 252, 0.48);
+            background: linear-gradient(145deg, rgba(37, 99, 235, 0.35), rgba(14, 165, 233, 0.22));
+            box-shadow: 0 10px 18px rgba(37, 99, 235, 0.26), inset 0 0 0 1px rgba(191, 219, 254, 0.22);
+        }
+        nav a[href="nop-de-tai-cap-vien.html"] {
+            color: #ffffff;
+            background: linear-gradient(145deg, rgba(14, 165, 233, 0.42), rgba(59, 130, 246, 0.38));
+            border-color: rgba(125, 211, 252, 0.55);
+            box-shadow: 0 12px 22px rgba(14, 165, 233, 0.3), inset 0 0 0 1px rgba(191, 219, 254, 0.28);
+        }
+        #auth-status {
+            margin-left: auto;
+            color: #cbd5e1;
+        }
+        .upload-page {
+            max-width: 980px;
+            margin: 2.5rem auto 3rem;
+            padding: 0 1rem;
+        }
+        .upload-intro {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(130deg, rgba(30, 64, 175, 0.96) 0%, rgba(37, 99, 235, 0.96) 65%, rgba(56, 189, 248, 0.88) 100%);
+            padding: 2rem 2.2rem;
+            border-radius: 20px;
+            margin-bottom: 1.2rem;
+            color: #fff;
+            box-shadow: 0 20px 45px rgba(30, 64, 175, 0.24);
+        }
+        .upload-intro::after {
+            content: "";
+            position: absolute;
+            right: -60px;
+            top: -50px;
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0) 70%);
+            pointer-events: none;
+        }
+        .upload-intro h2 {
+            font-family: 'Libre Baskerville', serif;
+            margin-bottom: 0.65rem;
+            font-size: 1.6rem;
+            color: #fff;
+        }
+        .upload-intro p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.98rem;
+            max-width: 800px;
+        }
+        .upload-section {
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(6px);
+            padding: 1.35rem 1.4rem;
+            border-radius: 18px;
+            box-shadow: 0 12px 32px rgba(30, 64, 175, 0.14);
+            margin-bottom: 1rem;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+        .upload-section:hover {
+            transform: translateY(-2px);
+            border-color: rgba(37, 99, 235, 0.26);
+            box-shadow: 0 16px 36px rgba(30, 64, 175, 0.18);
+        }
+        .upload-section h3 {
+            font-family: 'Libre Baskerville', serif;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 1.15rem;
+            line-height: 1.4;
+        }
+        .upload-section .code {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.55rem;
+            height: 1.55rem;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-right: 0.45rem;
+            box-shadow: 0 6px 12px rgba(249, 115, 22, 0.35);
+        }
+        .upload-section .desc { color: var(--gray); font-size: 0.9rem; margin-bottom: 0.95rem; }
         .upload-section .required { color: #dc3545; font-size: 0.85rem; }
-        .form-group { margin-bottom: 1.25rem; }
-        .form-group label { display: block; font-weight: 500; margin-bottom: 0.4rem; }
-        .form-group input[type="file"] { width: 100%; padding: 0.5rem; border: 2px dashed #dee2e6; border-radius: 8px; background: #f8f9fa; }
-        .form-group input[type="text"] { width: 100%; padding: 0.75rem 1rem; border: 2px solid #dee2e6; border-radius: 8px; }
-        .btn-submit { padding: 1rem 2rem; background: var(--primary); color: var(--white); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem; }
-        .btn-submit:hover { background: var(--primary-light); }
-        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
-        .msg.error { background: #f8d7da; color: #721c24; display: block; }
-        .user-bar { background: rgba(26, 77, 46, 0.08); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
-        .user-bar span { font-weight: 500; color: var(--primary); }
-        .user-bar a { color: var(--gray); font-size: 0.9rem; }
-        .resubmit-files-list { padding: 1rem; background: #fff; border: 1px solid #dee2e6; border-radius: 8px; }
+        .form-group { margin-bottom: 1.1rem; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 0.45rem; color: #1f2937; }
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 0.55rem;
+            border: 1px dashed #7aa7ff;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #f8fbff 0%, #edf4ff 100%);
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+        .form-group input[type="file"]:hover {
+            border-color: #3b82f6;
+            background: linear-gradient(180deg, #f3f8ff 0%, #e8f1ff 100%);
+        }
+        .form-group input[type="file"]::file-selector-button {
+            border: none;
+            border-radius: 8px;
+            padding: 0.45rem 0.8rem;
+            margin-right: 0.65rem;
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 0.82rem 1rem;
+            border: 1px solid #dbe3f1;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.94);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .form-group input[type="text"]:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16);
+            outline: none;
+        }
+        .btn-submit {
+            padding: 0.92rem 2rem;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 60%, #0ea5e9 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            cursor: pointer;
+            font-size: 0.98rem;
+            box-shadow: 0 14px 26px rgba(37, 99, 235, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.03);
+            box-shadow: 0 18px 32px rgba(37, 99, 235, 0.34);
+        }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+        .msg {
+            padding: 0.8rem 0.9rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: none;
+            border: 1px solid transparent;
+        }
+        .msg.error {
+            background: #fff1f2;
+            color: #9f1239;
+            border-color: #fecdd3;
+            display: block;
+        }
+        .user-bar {
+            background: rgba(30, 64, 175, 0.08);
+            border: 1px solid rgba(37, 99, 235, 0.18);
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .user-bar span { font-weight: 600; color: var(--primary); }
+        .user-bar a { color: #1d4ed8; font-size: 0.9rem; text-decoration: none; margin-left: 0.6rem; }
+        .user-bar a:hover { text-decoration: underline; }
+        .resubmit-files-list {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #dbe3f1;
+            border-radius: 12px;
+        }
         .resubmit-files-list .file-group { margin-bottom: 1rem; }
         .resubmit-files-list .file-group:last-child { margin-bottom: 0; }
-        .resubmit-files-list .file-group-title { font-weight: 600; color: var(--primary); margin-bottom: 0.5rem; font-size: 0.95rem; }
+        .resubmit-files-list .file-group-title { font-weight: 700; color: var(--primary); margin-bottom: 0.5rem; font-size: 0.95rem; }
         .resubmit-files-list .file-item { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; font-size: 0.9rem; }
         .resubmit-files-list .file-item a { color: var(--accent); text-decoration: none; }
         .resubmit-files-list .file-item a:hover { text-decoration: underline; }
-        .btn-add-file { padding: 0.5rem 1rem; background: #e9ecef; border: 1px solid #dee2e6; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
-        .btn-add-file:hover { background: #dee2e6; }
+        .btn-add-file {
+            padding: 0.55rem 1rem;
+            background: #eef2ff;
+            color: #1e40af;
+            border: 1px solid #c7d2fe;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .btn-add-file:hover { background: #e0e7ff; border-color: #a5b4fc; }
         .supplement-row { margin-bottom: 0.75rem; }
+        .form-shell {
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(30, 64, 175, 0.12);
+            border-radius: 18px;
+            padding: 1.1rem;
+            box-shadow: 0 10px 26px rgba(30, 64, 175, 0.12);
+        }
+        .progress-wrap { margin: 0.75rem 0 1.2rem; }
+        .progress-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+        .progress-head strong { color: #1e40af; }
+        .progress-track {
+            width: 100%;
+            height: 10px;
+            background: #dbeafe;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 45%, #0ea5e9 100%);
+            border-radius: inherit;
+            transition: width 0.25s ease;
+        }
+        .stepper {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.55rem;
+            margin-bottom: 1.2rem;
+        }
+        .step {
+            border: 1px solid #dbe3f1;
+            border-radius: 12px;
+            padding: 0.7rem;
+            background: #f8fbff;
+            font-size: 0.84rem;
+            color: #475569;
+            transition: all 0.2s ease;
+        }
+        .step strong { display: block; color: #1f2937; margin-bottom: 0.18rem; }
+        .step.done {
+            background: #ecfeff;
+            border-color: #67e8f9;
+            color: #155e75;
+        }
+        .step.active {
+            background: #eef2ff;
+            border-color: #93c5fd;
+            color: #1e3a8a;
+            box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.2);
+        }
+        .dropzone {
+            border: 1px dashed #7aa7ff;
+            border-radius: 12px;
+            padding: 0.95rem;
+            background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .dropzone:hover {
+            border-color: #2563eb;
+            background: linear-gradient(180deg, #f4f9ff 0%, #eaf2ff 100%);
+        }
+        .dropzone.dragover {
+            border-color: #0284c7;
+            background: #ecfeff;
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.16);
+        }
+        .dropzone-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 0.5rem;
+        }
+        .file-preview {
+            margin-top: 0.6rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+        .file-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.33rem 0.56rem;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            color: #0f172a;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+        }
+        .file-chip .ok { color: #0e7490; font-weight: 700; }
+        .checklist-hint {
+            margin: 0.1rem 0 0.8rem;
+            font-size: 0.82rem;
+            color: #64748b;
+        }
+        .submit-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .submit-note {
+            font-size: 0.82rem;
+            color: #475569;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0.5rem 0.7rem;
+        }
+        @media (max-width: 768px) {
+            nav .container { gap: 0.35rem; }
+            nav a { font-size: 0.82rem; padding: 0.48rem 0.62rem; border-radius: 10px; }
+            #auth-status { width: 100%; margin-left: 0; }
+            .upload-page { margin-top: 1.2rem; }
+            .upload-intro { padding: 1.25rem 1.2rem; border-radius: 14px; }
+            .upload-intro h2 { font-size: 1.25rem; }
+            .upload-section { padding: 1rem; border-radius: 14px; }
+            .stepper { grid-template-columns: 1fr; }
+            .submit-row { align-items: stretch; }
+        }
     </style>
 </head>
 <body class="theme-cap-vien" data-activity-module="cap_vien">
@@ -52,13 +397,14 @@
             </div>
         </div>
     </header>
-    <nav>
+    <nav class="cap-vien-nav-dark">
         <div class="container">
             <a href="index.html">🏠 Trang chủ</a>
             <a href="quan-ly-de-tai-co-so.html">📋 Nhiệm vụ KHCN</a>
             <a href="tai-mau-ho-so-de-tai-cap-vien.html">📥 Tải mẫu hồ sơ đề tài cấp Viện</a>
             <a href="nop-de-tai-cap-vien.html">📝 Nộp đề tài</a>
-            <a href="theo-doi-de-tai-cap-vien.html">📁 Theo dõi hồ sơ</a>
+            <a href="theo-doi-de-tai-cap-vien.html">📁 Hồ sơ chi tiết</a>
+            <a href="theo-doi-tien-trinh-de-tai-cap-vien.html">Trang theo dõi tiến trình hồ sơ đề tài cấp Viện</a>
             <a href="hoi-dong-de-tai-cap-vien.html">👥 Hội đồng</a>
             <div id="auth-status"></div>
         </div>
@@ -91,10 +437,22 @@
             </div>
             <div class="upload-intro">
                 <h2>Nộp hồ sơ đề tài cấp Viện</h2>
-                <p>Điền tên đề tài và tải lên Thuyết minh, Kế hoạch thực hiện và tài liệu đính kèm. Sau khi nộp, bạn có thể theo dõi tiến độ xét duyệt tại "Theo dõi hồ sơ của tôi".</p>
+                <p>Không gian nộp hồ sơ thế hệ mới: điền thông tin, tải file bắt buộc, đính kèm tài liệu liên quan và gửi trong một lần. Sau khi nộp, bạn theo dõi toàn bộ tiến độ tại mục "Hồ sơ chi tiết".</p>
             </div>
             <div id="msg" class="msg"></div>
-            <form id="form-nop-ho-so">
+            <form id="form-nop-ho-so" class="form-shell">
+                <div class="progress-wrap">
+                    <div class="progress-head">
+                        <span>Tiến độ hoàn tất hồ sơ</span>
+                        <strong id="progress-label">0%</strong>
+                    </div>
+                    <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+                </div>
+                <div class="stepper">
+                    <div class="step active" id="step-meta"><strong>Bước 1</strong>Nhập thông tin đề tài</div>
+                    <div class="step" id="step-required"><strong>Bước 2</strong>Tải đủ 3 file bắt buộc</div>
+                    <div class="step" id="step-submit"><strong>Bước 3</strong>Sẵn sàng gửi hồ sơ</div>
+                </div>
                 <input type="hidden" id="submission-title" name="title" value="">
                 <div class="form-group">
                     <label for="title">Tên đề tài / Mã hồ sơ</label>
@@ -108,34 +466,52 @@
                     <h3><span class="code">1</span> Thuyết minh đề tài</h3>
                     <p class="desc">Mô tả mục tiêu, nội dung, phương pháp và kết quả dự kiến. * Bắt buộc.</p>
                     <div class="form-group">
-                        <label>Tải file (PDF hoặc DOCX)</label>
-                        <input type="file" name="sci_ace_01" accept=".pdf,.doc,.docx">
+                        <label for="file-sci-01">Tải file (PDF hoặc DOCX, tối đa 200MB)</label>
+                        <div class="dropzone" data-target="file-sci-01" data-multiple="false">
+                            <div class="dropzone-title">Kéo thả file vào đây hoặc bấm để chọn file</div>
+                            <input id="file-sci-01" type="file" name="sci_ace_01" accept=".pdf,.doc,.docx">
+                            <div class="file-preview" id="preview-sci-01"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="upload-section">
                     <h3><span class="code">2</span> Kế hoạch thực hiện</h3>
                     <p class="desc">Tiến độ, nhân lực, kinh phí dự kiến. * Bắt buộc.</p>
                     <div class="form-group">
-                        <label>Tải file (PDF hoặc DOCX)</label>
-                        <input type="file" name="sci_ace_02" accept=".pdf,.doc,.docx">
+                        <label for="file-sci-02">Tải file (PDF hoặc DOCX, tối đa 200MB)</label>
+                        <div class="dropzone" data-target="file-sci-02" data-multiple="false">
+                            <div class="dropzone-title">Kéo thả file vào đây hoặc bấm để chọn file</div>
+                            <input id="file-sci-02" type="file" name="sci_ace_02" accept=".pdf,.doc,.docx">
+                            <div class="file-preview" id="preview-sci-02"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="upload-section">
                     <h3><span class="code">3</span> Tài liệu bổ sung</h3>
                     <p class="desc">Lý lịch khoa học, cam kết (nếu có). * Bắt buộc.</p>
                     <div class="form-group">
-                        <label>Tải file (PDF hoặc DOCX)</label>
-                        <input type="file" name="sci_ace_03" accept=".pdf,.doc,.docx">
+                        <label for="file-sci-03">Tải file (PDF hoặc DOCX, tối đa 200MB)</label>
+                        <div class="dropzone" data-target="file-sci-03" data-multiple="false">
+                            <div class="dropzone-title">Kéo thả file vào đây hoặc bấm để chọn file</div>
+                            <input id="file-sci-03" type="file" name="sci_ace_03" accept=".pdf,.doc,.docx">
+                            <div class="file-preview" id="preview-sci-03"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="upload-section">
                     <h3>Tài liệu đính kèm (tùy chọn)</h3>
                     <div class="form-group">
-                        <label>Tải file (có thể chọn nhiều)</label>
-                        <input type="file" name="attachments" accept=".pdf,.doc,.docx,.xls,.xlsx" multiple>
+                        <label for="file-attachments">Tải file (có thể chọn nhiều, tối đa 200MB mỗi file)</label>
+                        <div class="dropzone" data-target="file-attachments" data-multiple="true">
+                            <div class="dropzone-title">Kéo thả nhiều file hoặc bấm để chọn</div>
+                            <input id="file-attachments" type="file" name="attachments" accept=".pdf,.doc,.docx,.xls,.xlsx" multiple>
+                            <div class="file-preview" id="preview-attachments"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="form-group">
+                <p class="checklist-hint" id="checklist-hint">Hệ thống kiểm tra tự động: 3 tài liệu bắt buộc + tên đề tài trước khi cho phép gửi.</p>
+                <div class="form-group submit-row">
+                    <div class="submit-note" id="submit-state">Chưa đủ điều kiện gửi hồ sơ.</div>
                     <button type="submit" class="btn-submit" id="btn-submit">Gửi hồ sơ</button>
                 </div>
             </form>
@@ -146,12 +522,14 @@
             <p>&copy; 2026 Viện Tế bào gốc — Đề tài cấp Viện</p>
         </div>
     </footer>
+    <script src="js/page-greeting.js"></script>
     <script src="js/auth-status.js"></script>
     <script src="js/activity-tracker.js"></script>
     <script>
         var token = localStorage.getItem('token');
         var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
         var resubmitId = (function() { var m = /[?&]resubmit=(\d+)/.exec(window.location.search); return m ? parseInt(m[1], 10) : 0; })();
+        var MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024;
 
         (function loadSubmissionOptions() {
             var wrap = document.getElementById('submission-options-list');
@@ -261,7 +639,12 @@
         if (token && userBar) {
             try {
                 var user = JSON.parse(localStorage.getItem('user') || '{}');
-                if (user.email) { userEmail.textContent = user.email; userBar.style.display = 'flex'; }
+                if (user.email) {
+                    userEmail.textContent = typeof getLoginGreetingDisplay === 'function'
+                        ? getLoginGreetingDisplay(user)
+                        : user.email;
+                    userBar.style.display = 'flex';
+                }
             } catch (_) {}
         } else {
             var intro = document.querySelector('.upload-intro');
@@ -274,6 +657,137 @@
             }
         }
         if (btnLogout) { btnLogout.href = 'dang-nhap.html'; btnLogout.addEventListener('click', function() { localStorage.removeItem('token'); localStorage.removeItem('user'); }); }
+        (function setupSmartUploadUI() {
+            function fmtSize(size) {
+                if (size < 1024) return size + ' B';
+                if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB';
+                return (size / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+            function setErrorMessage(text) {
+                var msgEl = document.getElementById('msg');
+                if (!msgEl) return;
+                msgEl.textContent = text;
+                msgEl.className = 'msg error';
+                msgEl.style.display = 'block';
+            }
+            function validateFiles(input, files) {
+                var valid = [];
+                var rejected = [];
+                for (var i = 0; i < files.length; i++) {
+                    var f = files[i];
+                    if ((f.size || 0) > MAX_FILE_SIZE_BYTES) rejected.push(f);
+                    else valid.push(f);
+                }
+                if (rejected.length) {
+                    setErrorMessage('Có ' + rejected.length + ' file vượt quá 200MB. Vui lòng chọn file nhỏ hơn 200MB.');
+                }
+                return valid;
+            }
+            function clearInputFiles(input) {
+                try {
+                    var dt = new DataTransfer();
+                    input.files = dt.files;
+                } catch (_) {
+                    input.value = '';
+                }
+            }
+            function updatePreview(input) {
+                var previewId = '';
+                if (input.id === 'file-sci-01') previewId = 'preview-sci-01';
+                if (input.id === 'file-sci-02') previewId = 'preview-sci-02';
+                if (input.id === 'file-sci-03') previewId = 'preview-sci-03';
+                if (input.id === 'file-attachments') previewId = 'preview-attachments';
+                if (!previewId) return;
+                var el = document.getElementById(previewId);
+                if (!el) return;
+                if (!input.files || !input.files.length) { el.innerHTML = ''; return; }
+                var html = [];
+                for (var i = 0; i < input.files.length; i++) {
+                    var f = input.files[i];
+                    html.push('<span class="file-chip"><span class="ok">OK</span>' + f.name.replace(/</g, '&lt;').replace(/>/g, '&gt;') + ' (' + fmtSize(f.size || 0) + ')</span>');
+                }
+                el.innerHTML = html.join('');
+            }
+            function syncProgress() {
+                var titleOk = !!document.getElementById('title').value.trim();
+                var f01 = document.querySelector('input[name="sci_ace_01"]').files[0];
+                var f02 = document.querySelector('input[name="sci_ace_02"]').files[0];
+                var f03 = document.querySelector('input[name="sci_ace_03"]').files[0];
+                var requiredCount = (f01 ? 1 : 0) + (f02 ? 1 : 0) + (f03 ? 1 : 0);
+                var progress = 0;
+                if (titleOk) progress += 25;
+                progress += Math.round((requiredCount / 3) * 75);
+                var fill = document.getElementById('progress-fill');
+                var label = document.getElementById('progress-label');
+                if (fill) fill.style.width = progress + '%';
+                if (label) label.textContent = progress + '%';
+                var stepMeta = document.getElementById('step-meta');
+                var stepRequired = document.getElementById('step-required');
+                var stepSubmit = document.getElementById('step-submit');
+                if (stepMeta) stepMeta.className = 'step ' + (titleOk ? 'done' : 'active');
+                if (stepRequired) stepRequired.className = 'step ' + (requiredCount === 3 ? 'done' : (titleOk ? 'active' : ''));
+                if (stepSubmit) stepSubmit.className = 'step ' + ((titleOk && requiredCount === 3) ? 'done' : '');
+                var state = document.getElementById('submit-state');
+                if (state) {
+                    state.textContent = (titleOk && requiredCount === 3)
+                        ? 'Đã sẵn sàng gửi hồ sơ. Bạn có thể nhấn "Gửi hồ sơ".'
+                        : 'Chưa đủ điều kiện gửi hồ sơ. Vui lòng nhập tên đề tài và tải đủ 3 file bắt buộc.';
+                }
+            }
+            function setFilesAndRefresh(input, files) {
+                var filtered = validateFiles(input, files);
+                if (!filtered.length) {
+                    clearInputFiles(input);
+                    updatePreview(input);
+                    syncProgress();
+                    return;
+                }
+                try {
+                    var dt = new DataTransfer();
+                    for (var i = 0; i < filtered.length; i++) dt.items.add(filtered[i]);
+                    input.files = dt.files;
+                } catch (_) {
+                    return;
+                }
+                updatePreview(input);
+                syncProgress();
+            }
+            var zones = document.querySelectorAll('.dropzone[data-target]');
+            zones.forEach(function(zone) {
+                var input = document.getElementById(zone.getAttribute('data-target'));
+                if (!input) return;
+                zone.addEventListener('click', function(e) {
+                    if (e.target && e.target.tagName && e.target.tagName.toLowerCase() === 'input') return;
+                    input.click();
+                });
+                zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.classList.add('dragover'); });
+                zone.addEventListener('dragleave', function() { zone.classList.remove('dragover'); });
+                zone.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    zone.classList.remove('dragover');
+                    var dropped = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files : null;
+                    if (!dropped || !dropped.length) return;
+                    var multi = zone.getAttribute('data-multiple') === 'true';
+                    setFilesAndRefresh(input, multi ? dropped : [dropped[0]]);
+                });
+                input.addEventListener('change', function() {
+                    var source = input.files || [];
+                    var filtered = validateFiles(input, source);
+                    if (filtered.length !== source.length) {
+                        if (filtered.length) {
+                            setFilesAndRefresh(input, filtered);
+                            return;
+                        }
+                        clearInputFiles(input);
+                    }
+                    updatePreview(input);
+                    syncProgress();
+                });
+            });
+            var titleInput = document.getElementById('title');
+            if (titleInput) titleInput.addEventListener('input', syncProgress);
+            syncProgress();
+        })();
 
         document.getElementById('form-nop-ho-so').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -285,6 +799,12 @@
             var f01 = document.querySelector('input[name="sci_ace_01"]').files[0];
             var f02 = document.querySelector('input[name="sci_ace_02"]').files[0];
             var f03 = document.querySelector('input[name="sci_ace_03"]').files[0];
+            var oversize = [f01, f02, f03].some(function(f) { return f && (f.size || 0) > MAX_FILE_SIZE_BYTES; });
+            if (oversize) {
+                msgEl.textContent = 'Có file vượt quá 200MB. Vui lòng chọn lại.';
+                msgEl.className = 'msg error';
+                return;
+            }
             if (!f01 || !f02 || !f03) {
                 msgEl.textContent = 'Cần đủ 3 file: Thuyết minh, Kế hoạch, Tài liệu bổ sung.';
                 msgEl.className = 'msg error';
@@ -302,6 +822,13 @@
             formData.append('sci_ace_02', f02);
             formData.append('sci_ace_03', f03);
             var att = document.querySelector('input[name="attachments"]');
+            for (var j = 0; j < att.files.length; j++) {
+                if ((att.files[j].size || 0) > MAX_FILE_SIZE_BYTES) {
+                    msgEl.textContent = 'Tài liệu đính kèm vượt quá 200MB. Vui lòng chọn lại.';
+                    msgEl.className = 'msg error';
+                    return;
+                }
+            }
             if (att.files.length) for (var i = 0; i < att.files.length; i++) formData.append('attachments', att.files[i]);
             msgEl.className = 'msg'; msgEl.textContent = '';
             btn.disabled = true;

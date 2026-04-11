@@ -1741,6 +1741,295 @@
       width: 100%;
     }
   }
+
+  /* ── BRIGHT ACADEMIC (BLUE/INDIGO) UI REFRESH ── */
+  :root {
+    --bg: #f5f7fc;
+    --bg2: #edf1f9;
+    --bg3: #e5ebf6;
+    --surface: #ffffff;
+    --border: #d2dbea;
+    --border-strong: #b7c5de;
+    --text: #1a2b47;
+    --text-2: #3d4f6d;
+    --text-3: #697b98;
+    --accent: #2f5fa8;
+    --accent-light: #eaf0fb;
+    --accent-2: #4f6fbf;
+    --accent-2-light: #eef2fd;
+    --green: #1f8d66;
+    --green-light: #e8f5ef;
+    --amber: #b68027;
+    --amber-light: #f9f2e4;
+    --shadow: 0 6px 16px rgba(28, 46, 82, .08);
+    --shadow-lg: 0 12px 28px rgba(28, 46, 82, .12);
+  }
+
+  body {
+    background:
+      radial-gradient(1200px 640px at 94% -10%, rgba(119, 146, 205, 0.24), rgba(119, 146, 205, 0)),
+      radial-gradient(820px 420px at -10% 24%, rgba(131, 154, 204, 0.14), rgba(131, 154, 204, 0)),
+      linear-gradient(180deg, #f8faff 0%, #f1f4fb 56%, #edf2fa 100%);
+    color: var(--text);
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(rgba(57, 87, 142, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(57, 87, 142, 0.03) 1px, transparent 1px);
+    background-size: 36px 36px;
+    mask-image: radial-gradient(circle at 50% 18%, rgba(0, 0, 0, 0.9), transparent 76%);
+    z-index: -1;
+  }
+
+  .page-header {
+    background: linear-gradient(118deg, #2f4f83 0%, #3b629f 52%, #4c74b3 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 8px 20px rgba(35, 56, 94, 0.2);
+  }
+  .page-header h1 {
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(19, 34, 62, 0.28);
+  }
+  .header-home-btn {
+    color: #304f80;
+    background: linear-gradient(180deg, #ffffff 0%, #f0f4fc 100%);
+    border: 1px solid rgba(193, 208, 234, 0.95);
+    box-shadow: 0 3px 10px rgba(42, 64, 104, 0.14);
+  }
+  .header-home-btn:hover {
+    background: linear-gradient(180deg, #ffffff 0%, #e7edf8 100%);
+    box-shadow: 0 5px 12px rgba(42, 64, 104, 0.18);
+  }
+  .welcome-user {
+    color: #f2f6ff;
+    background: rgba(255,255,255,.18);
+    border-color: rgba(255,255,255,.36);
+  }
+  .hstat-num { color: #ffffff; }
+  .hstat-lbl { color: rgba(237, 246, 255, 0.92); }
+
+  .sidebar,
+  .main-zone--dashboard,
+  .chart-card,
+  .stat-card,
+  .pub-table-wrapper,
+  .nv-admin-panel {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+    border-color: #d2dbea;
+    box-shadow: var(--shadow);
+    backdrop-filter: none;
+  }
+  .sidebar {
+    border-right-color: #d8e0ee;
+  }
+  .sidebar-label {
+    color: #49679c;
+  }
+  .sidebar-item {
+    color: #415777;
+  }
+  .sidebar-item:hover {
+    background: #f0f4fb;
+  }
+  .sidebar-item.active {
+    background: linear-gradient(90deg, #e9eef9 0%, #eef2fb 100%);
+    border-left-color: #4f6fbf;
+    color: #2f4c79;
+  }
+  .sidebar-item .si-count {
+    background: #edf1f9;
+    color: #48608a;
+  }
+
+  .main-zone--dashboard {
+    background: linear-gradient(165deg, #f8faff 0%, #f2f5fc 42%, #ffffff 100%);
+    border: 1px solid #cedaeb;
+    box-shadow: 0 8px 22px rgba(35, 58, 97, 0.1);
+  }
+  .stat-card {
+    border: 1px solid #d3dff0;
+    background:
+      radial-gradient(circle at 92% 0%, rgba(139, 162, 214, 0.24), transparent 50%),
+      linear-gradient(170deg, #ffffff 0%, #f4f7fd 100%);
+  }
+  .stat-card .sc-num {
+    color: #2f5fa8;
+    text-shadow: none;
+  }
+  .stat-card .sc-lbl { color: #425a82; }
+  .stat-card .sc-sub { color: #6a7e9f; }
+
+  .filter-bar {
+    background: linear-gradient(180deg, #fbfcff 0%, #f3f6fc 100%);
+    border: 1px solid #d0dced;
+    border-radius: 12px;
+  }
+  .filter-group label {
+    color: #4c6083;
+  }
+  .filter-group select,
+  .filter-group input {
+    background: #ffffff;
+    color: #243a5e;
+    border-color: #c6d4ea;
+  }
+  .filter-group select:focus,
+  .filter-group input:focus {
+    border-color: #5b7bc3;
+    box-shadow: 0 0 0 3px rgba(91, 123, 195, 0.16);
+  }
+
+  .table-top {
+    background: linear-gradient(92deg, #edf1fa 0%, #f2f5fc 100%);
+    border-color: #d0dced;
+  }
+  .table-top-title {
+    color: #3c5682;
+  }
+  #pubTable {
+    background: #ffffff;
+  }
+  #pubTable thead th {
+    background: linear-gradient(180deg, #f3f6fc 0%, #edf2fa 100%);
+    color: #435b82;
+    border-bottom: 1px solid #d5deec;
+  }
+  #pubTable tbody tr.pub-row {
+    border-bottom: 1px solid #e3e9f4;
+    transition: background .2s ease, transform .2s ease;
+  }
+  #pubTable tbody tr.pub-row:nth-child(even) {
+    background: #fafbfe;
+  }
+  #pubTable tbody tr.pub-row:hover {
+    background: linear-gradient(90deg, #eef2fa 0%, #f2f5fc 100%);
+    transform: translateX(2px);
+  }
+
+  .btn,
+  button,
+  [type="button"],
+  [type="submit"] {
+    border-radius: 10px;
+  }
+  .btn-primary,
+  .nv-admin-panel .btn-primary,
+  #sjrImportForm .btn-primary {
+    background: linear-gradient(135deg, #4469ab, #5e80c4);
+    border: 1px solid rgba(255, 255, 255, 0.92);
+    color: #ffffff;
+    box-shadow: 0 8px 16px rgba(46, 73, 121, 0.24);
+  }
+  .btn-primary:hover,
+  .nv-admin-panel .btn-primary:hover,
+  #sjrImportForm .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(46, 73, 121, 0.3);
+  }
+
+  .chart-card {
+    border: 1px solid #d2dcec;
+  }
+
+  .notif {
+    background: linear-gradient(120deg, #3d6dae, #5a86c7);
+    color: #f5fffb;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+  }
+
+  /* ── INTERACTION BOOST ── */
+  .pub-list-stack .toolbar,
+  .pub-list-stack .filter-bar {
+    position: sticky;
+    z-index: 30;
+    transition: box-shadow .18s ease, transform .18s ease, background .18s ease;
+  }
+  .pub-list-stack .toolbar { top: 8px; }
+  .pub-list-stack .filter-bar { top: 72px; }
+  .pub-list-stack .toolbar.is-stuck,
+  .pub-list-stack .filter-bar.is-stuck {
+    box-shadow: 0 10px 24px rgba(42, 67, 111, 0.16);
+  }
+  .pub-list-stack .toolbar.is-stuck {
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(6px);
+  }
+  .pub-list-stack .filter-bar.is-stuck {
+    background: rgba(250, 252, 255, 0.96);
+    backdrop-filter: blur(5px);
+  }
+
+  .filter-state-chips {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 10px 0 12px;
+    padding: 10px 12px;
+    border: 1px dashed #c6d4ea;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #f8fbff 0%, #f1f5fc 100%);
+  }
+  .filter-state-chips.is-visible { display: flex; }
+  .filter-state-label {
+    font-size: 12px;
+    color: #4b6286;
+    font-weight: 600;
+    margin-right: 2px;
+  }
+  .filter-chip {
+    border: 1px solid #c2d3ea;
+    background: #fff;
+    color: #35527f;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .15s ease;
+  }
+  .filter-chip:hover {
+    background: #edf3fc;
+    border-color: #a9bfdc;
+    transform: translateY(-1px);
+  }
+
+  .stat-card {
+    transform-origin: center;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .stat-card.is-hovered {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 22px rgba(36, 60, 101, .15);
+    border-color: #b5c6df;
+  }
+
+  #pubTable tbody tr.pub-row {
+    cursor: pointer;
+  }
+  #pubTable tbody tr.pub-row:active {
+    transform: translateX(1px) scale(.998);
+  }
+  .pub-hl {
+    background: linear-gradient(180deg, #fff2a8 0%, #ffe27a 100%);
+    color: #523a00;
+    padding: 0 2px;
+    border-radius: 3px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stat-card,
+    .pub-list-stack .toolbar,
+    .pub-list-stack .filter-bar,
+    .filter-chip,
+    #pubTable tbody tr.pub-row {
+      transition: none !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -2208,6 +2497,7 @@
       </div>
       <button type="button" class="btn btn-filter-clear" onclick="clearFilters()">✕ Xóa lọc</button>
     </div>
+    <div id="filterStateChips" class="filter-state-chips" aria-live="polite"></div>
 
     <!-- Table -->
     <div class="pub-table-wrapper">
@@ -2623,6 +2913,7 @@
 <div class="notif" id="notif">✅ Thao tác thành công!</div>
 
 <script src="js/system-access.js"></script>
+<script src="js/page-greeting.js"></script>
 <script>
 // ── TRUY CẬP VIỆN (@sci.edu.vn hoặc super admin hệ thống) ──
 var PUB_INSTITUTE_DOMAIN = '@sci.edu.vn';
@@ -2717,6 +3008,14 @@ function getLoggedInDisplayName() {
 function updateWelcomeUser() {
   const el = document.getElementById('welcome-user');
   if (!el) return;
+  try {
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (token && typeof window.getLoginGreetingDisplay === 'function') {
+      el.textContent = window.getLoginGreetingDisplay(user);
+      return;
+    }
+  } catch (_) {}
   const name = getLoggedInDisplayName();
   el.textContent = name ? ('Xin chào, ' + name) : 'Xin chào!';
 }
@@ -4430,6 +4729,8 @@ function filterTable() {
   document.getElementById('rowCount').textContent = count;
   pubSyncSelectAllAfterFilter();
   updatePubTableFooterLine(count);
+  renderFilterStateChips(count);
+  applySearchHighlights(searchRaw);
   refreshDashboardIfTableScope();
 }
 
@@ -4469,6 +4770,182 @@ function clearFilters() {
   ['filterYear','filterTypeSelect','filterQSelect','filterStatusSelect'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('searchInput').value = '';
   filterTable();
+}
+
+function renderFilterStateChips(visibleCountValue) {
+  var wrap = document.getElementById('filterStateChips');
+  if (!wrap) return;
+  var search = (document.getElementById('searchInput') || {}).value || '';
+  var year = (document.getElementById('filterYear') || {}).value || '';
+  var type = (document.getElementById('filterTypeSelect') || {}).value || '';
+  var q = (document.getElementById('filterQSelect') || {}).value || '';
+  var status = (document.getElementById('filterStatusSelect') || {}).value || '';
+  var typeLabels = { journal: 'Bài báo', conference: 'Hội nghị', book: 'Sách/Chương', patent: 'Sáng chế', preprint: 'Preprint' };
+  var statusLabels = { published: 'Đã đăng', accepted: 'Chấp nhận', 'under-review': 'Phản biện', preprint: 'Preprint' };
+  var chips = [];
+  if (search.trim()) chips.push({ key: 'search', label: 'Từ khóa: ' + search.trim().slice(0, 32) });
+  if (year) chips.push({ key: 'year', label: 'Năm: ' + year });
+  if (type) chips.push({ key: 'type', label: 'Loại: ' + (typeLabels[type] || type) });
+  if (q) chips.push({ key: 'q', label: 'Phân hạng: ' + q });
+  if (status) chips.push({ key: 'status', label: 'Trạng thái: ' + (statusLabels[status] || status) });
+  if (!chips.length) {
+    wrap.classList.remove('is-visible');
+    wrap.innerHTML = '';
+    return;
+  }
+  var count = typeof visibleCountValue === 'number' ? visibleCountValue : visibleCount();
+  wrap.classList.add('is-visible');
+  wrap.innerHTML =
+    '<span class="filter-state-label">Đang lọc ' + chips.length + ' tiêu chí · ' + count + ' kết quả</span>'
+    + chips.map(function (c) {
+      return '<button type="button" class="filter-chip" data-clear-filter="' + c.key + '" title="Bỏ tiêu chí này">✕ ' + escHtmlPub(c.label) + '</button>';
+    }).join('')
+    + '<button type="button" class="filter-chip" data-clear-filter="all" title="Xóa toàn bộ bộ lọc">Xóa tất cả</button>';
+}
+
+function escapeRegExpPub(s) {
+  return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function removeSearchHighlightMarks(root) {
+  if (!root) return;
+  root.querySelectorAll('mark.pub-hl').forEach(function (m) {
+    var txt = document.createTextNode(m.textContent || '');
+    m.replaceWith(txt);
+  });
+}
+
+function highlightTextNodesInElement(el, regex) {
+  if (!el || !regex) return;
+  var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+    acceptNode: function (node) {
+      if (!node || !node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      var p = node.parentElement;
+      if (!p) return NodeFilter.FILTER_REJECT;
+      if (p.closest('mark.pub-hl, button, .status-pill, .badge, .orcid-chip, .pub-import-badge')) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  var nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(function (node) {
+    var text = node.nodeValue;
+    regex.lastIndex = 0;
+    if (!regex.test(text)) return;
+    var frag = document.createDocumentFragment();
+    regex.lastIndex = 0;
+    var last = 0;
+    var match;
+    while ((match = regex.exec(text)) !== null) {
+      var start = match.index;
+      var end = start + match[0].length;
+      if (start > last) frag.appendChild(document.createTextNode(text.slice(last, start)));
+      var mk = document.createElement('mark');
+      mk.className = 'pub-hl';
+      mk.textContent = text.slice(start, end);
+      frag.appendChild(mk);
+      last = end;
+      if (match[0].length === 0) break;
+    }
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    node.parentNode.replaceChild(frag, node);
+  });
+}
+
+function applySearchHighlights(queryRaw) {
+  var tokens = String(queryRaw || '')
+    .trim()
+    .split(/\s+/)
+    .filter(function (t) { return t.length >= 2; })
+    .slice(0, 8);
+  var pattern = tokens
+    .map(escapeRegExpPub)
+    .sort(function (a, b) { return b.length - a.length; })
+    .join('|');
+  var regex = pattern ? new RegExp('(' + pattern + ')', 'gi') : null;
+
+  document.querySelectorAll('#pubTbody tr.pub-row').forEach(function (row) {
+    var titleCell = row.querySelector('.pub-title-cell');
+    var journalCell = row.children && row.children[2] ? row.children[2] : null;
+    [titleCell, journalCell].forEach(function (cell) {
+      if (!cell) return;
+      removeSearchHighlightMarks(cell);
+      if (regex && row.style.display !== 'none') highlightTextNodesInElement(cell, regex);
+    });
+  });
+}
+
+function setupInteractiveBoost() {
+  var searchInput = document.getElementById('searchInput');
+  var toolbar = document.querySelector('.pub-list-stack .toolbar');
+  var filterBar = document.querySelector('.pub-list-stack .filter-bar');
+  var chipsWrap = document.getElementById('filterStateChips');
+
+  if (chipsWrap && !chipsWrap.dataset.wired) {
+    chipsWrap.dataset.wired = '1';
+    chipsWrap.addEventListener('click', function (e) {
+      var t = e.target && e.target.closest ? e.target.closest('[data-clear-filter]') : null;
+      if (!t) return;
+      var key = t.getAttribute('data-clear-filter');
+      if (key === 'all') return clearFilters();
+      if (key === 'search' && searchInput) searchInput.value = '';
+      if (key === 'year') document.getElementById('filterYear').value = '';
+      if (key === 'type') document.getElementById('filterTypeSelect').value = '';
+      if (key === 'q') document.getElementById('filterQSelect').value = '';
+      if (key === 'status') document.getElementById('filterStatusSelect').value = '';
+      filterTable();
+    });
+  }
+
+  document.querySelectorAll('.stat-card').forEach(function (card) {
+    if (card.dataset.boostWired) return;
+    card.dataset.boostWired = '1';
+    card.addEventListener('mouseenter', function () { card.classList.add('is-hovered'); });
+    card.addEventListener('mouseleave', function () { card.classList.remove('is-hovered'); });
+  });
+
+  document.querySelectorAll('.sidebar-item').forEach(function (item) {
+    if (item.tagName === 'A') return;
+    if (!item.hasAttribute('tabindex')) item.setAttribute('tabindex', '0');
+    if (item.dataset.keyWired) return;
+    item.dataset.keyWired = '1';
+    item.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        item.click();
+      }
+    });
+  });
+
+  if (!window.__pubShortcutsWired) {
+    window.__pubShortcutsWired = true;
+    document.addEventListener('keydown', function (e) {
+      var tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+      var inTyping = tag === 'input' || tag === 'textarea' || document.activeElement.isContentEditable;
+      if ((e.key === '/' && !inTyping) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')) {
+        if (!searchInput) return;
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+      }
+      if (e.key === 'Escape' && searchInput && document.activeElement === searchInput && searchInput.value) {
+        searchInput.value = '';
+        filterTable();
+        showNotif('Đã xóa nhanh từ khóa tìm kiếm.');
+      }
+    });
+  }
+
+  if (!window.__pubStickyWired && toolbar && filterBar) {
+    window.__pubStickyWired = true;
+    var onScroll = function () {
+      var y = window.scrollY || window.pageYOffset || 0;
+      toolbar.classList.toggle('is-stuck', y > 180);
+      filterBar.classList.toggle('is-stuck', y > 220);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
 }
 
 function filterType(type) {
@@ -5222,6 +5699,7 @@ if (PUB_INSTITUTE_OK) {
     initPubAnalyticsNavUi().catch(function () {});
     renderPubTable();
     filterTable();
+    setupInteractiveBoost();
     hydratePubsFromServerAndRender().catch(function () {});
     wirePublicationStatsUI();
     loadPublicationStats().catch(function () {});

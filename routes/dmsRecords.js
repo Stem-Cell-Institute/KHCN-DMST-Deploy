@@ -1,0 +1,1285 @@
+/**
+ * Module Quản lý tài liệu & hồ sơ (giấy tờ hành chính) — /api/dms/*
+ * RBAC: admin hệ thống toàn quyền module; manager / uploader / viewer trong dms_user_roles.
+ * Gán vai trò module (dms_user_roles): chỉ Master Admin; chỉ cho user đã có trong dms_module_access.
+ */
+
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+const archiver = require('archiver');
+const XLSX = require('xlsx');
+const {
+  DMS_NO_FILE,
+  parseWorkbookBuffer,
+  countDuplicateSummary,
+  runQuyetDinhImport,
+} = require('./dmsQuyetDinhImport');
+
+const DMS_ROLES = ['manager', 'uploader', 'viewer'];
+
+function userHasDmsModuleAccess(db, user) {
+  if (!user || user.id == null) return false;
+  const sys = String(user.role || '').toLowerCase();
+  if (sys === 'admin') return true;
+  try {
+    const row = db.prepare('SELECT 1 AS x FROM dms_module_access WHERE user_id = ?').get(user.id);
+    return !!(row && row.x);
+  } catch (_) {
+    return false;
+  }
+}
+
+function getDmsModuleRole(db, user) {
+  const sys = String(user && user.role || '').toLowerCase();
+  if (sys === 'admin') return 'admin';
+  if (!userHasDmsModuleAccess(db, user)) return null;
+  try {
+    const row = db.prepare('SELECT role FROM dms_user_roles WHERE user_id = ?').get(user.id);
+    return row && row.role ? String(row.role) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function permFlags(role, sysAdmin, masterAdmin, accessListed) {
+  const r = role || null;
+  const isSysAdmin = !!sysAdmin;
+  return {
+    role: r,
+    canView: !!r,
+    canUpload: r === 'admin' || r === 'manager' || r === 'uploader',
+    canManageCatalog: r === 'admin' || r === 'manager',
+    canManageAllDocs: r === 'admin' || r === 'manager',
+    canAssignRoles: !!masterAdmin,
+    isSysAdmin,
+    isMasterAdmin: !!masterAdmin,
+    dmsAccessListed: !!accessListed,
+  };
+}
+
+function requireDmsView(db) {
+  return (req, res, next) => {
+    const sys = String(req.user.role || '').toLowerCase();
+    if (sys === 'admin') {
+      req.dmsRole = 'admin';
+      return next();
+    }
+    if (!userHasDmsModuleAccess(db, req.user)) {
+      return res.status(403).json({
+        ok: false,
+        message:
+          'Bạn chưa nằm trong danh sách được mở truy cập module Tài liệu & hồ sơ. Liên hệ Master Admin.',
+      });
+    }
+    let r = null;
+    try {
+      const row = db.prepare('SELECT role FROM dms_user_roles WHERE user_id = ?').get(req.user.id);
+      r = row && row.role ? String(row.role) : null;
+    } catch (_) {}
+    if (!r) {
+      return res.status(403).json({
+        ok: false,
+        message:
+          'Tài khoản đã được mở truy cập module nhưng chưa được gán vai trò (Quản lý / Tải lên / Chỉ xem). Liên hệ Master Admin.',
+      });
+    }
+    req.dmsRole = r;
+    next();
+  };
+}
+
+function requireDmsUpload(db) {
+  return (req, res, next) => {
+    const role = getDmsModuleRole(db, req.user);
+    if (!role || !['admin', 'manager', 'uploader'].includes(role)) {
+      return res.status(403).json({ ok: false, message: 'Không có quyền tải lên tài liệu.' });
+    }
+    req.dmsRole = role;
+    next();
+  };
+}
+
+function requireDmsCatalog(db) {
+  return (req, res, next) => {
+    const role = getDmsModuleRole(db, req.user);
+    if (!role || !['admin', 'manager'].includes(role)) {
+      return res.status(403).json({ ok: false, message: 'Chỉ Quản lý module hoặc Admin mới chỉnh danh mục.' });
+    }
+    req.dmsRole = role;
+    next();
+  };
+}
+
+function requireDmsManageDocs(db) {
+  return (req, res, next) => {
+    const role = getDmsModuleRole(db, req.user);
+    if (!role || !['admin', 'manager'].includes(role)) {
+      return res.status(403).json({ ok: false, message: 'Không có quyền thao tác hàng loạt / xóa tài liệu người khác.' });
+    }
+    req.dmsRole = role;
+    next();
+  };
+}
+
+function canEditDocument(role, doc, userId) {
+  if (role === 'admin' || role === 'manager') return true;
+  if (role === 'uploader' && doc && Number(doc.uploaded_by_id) === Number(userId)) return true;
+  return false;
+}
+
+function canDeleteDocument(role, doc, userId) {
+  if (role === 'admin' || role === 'manager') return true;
+  if (role === 'uploader' && doc && Number(doc.uploaded_by_id) === Number(userId)) {
+    return String(doc.status || '').toLowerCase() === 'draft';
+  }
+  return false;
+}
+
+function categorySubtreeIds(db, rootId) {
+  if (rootId == null || rootId === '' || rootId === 'all') return null;
+  const id = Number(rootId);
+  if (!Number.isFinite(id)) return [];
+  try {
+    const rows = db
+      .prepare(
+        `WITH RECURSIVE sub AS (
+           SELECT id FROM dms_categories WHERE id = ? AND COALESCE(is_active,1) = 1
+           UNION ALL
+           SELECT c.id FROM dms_categories c JOIN sub s ON c.parent_id = s.id
+           WHERE COALESCE(c.is_active,1) = 1
+         ) SELECT id FROM sub`
+      )
+      .all(id);
+    return rows.map((r) => r.id);
+  } catch (_) {
+    return [id];
+  }
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysStr(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+module.exports = function createDmsRecordsRouter({
+  db,
+  adminOnly,
+  masterAdminOnly,
+  isMasterAdmin,
+  uploadsDir,
+}) {
+  const router = express.Router();
+  const dmsDir = uploadsDir || path.join(__dirname, '..', 'uploads', 'dms');
+  fs.mkdirSync(dmsDir, { recursive: true });
+
+  const storage = multer.diskStorage({
+    destination: function (_req, _file, cb) {
+      cb(null, dmsDir);
+    },
+    filename: function (_req, file, cb) {
+      const ext = path.extname(file.originalname || '') || '';
+      const base = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      cb(null, base + ext);
+    },
+  });
+  const upload = multer({
+    storage,
+    limits: { fileSize: 80 * 1024 * 1024 },
+  });
+  const uploadXlsx = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 35 * 1024 * 1024 },
+    fileFilter(_req, file, cb) {
+      const n = (file.originalname || '').toLowerCase();
+      if (!/\.(xlsx|xls)$/i.test(n)) {
+        return cb(new Error('Chỉ chấp nhận .xlsx hoặc .xls'));
+      }
+      cb(null, true);
+    },
+  });
+
+  const needView = requireDmsView(db);
+  const needUpload = requireDmsUpload(db);
+  const needCatalog = requireDmsCatalog(db);
+  const needManageDocs = requireDmsManageDocs(db);
+
+  router.get('/me', (req, res) => {
+    const sysAdmin = String(req.user.role || '').toLowerCase() === 'admin';
+    const accessListed = sysAdmin || userHasDmsModuleAccess(db, req.user);
+    const role = getDmsModuleRole(db, req.user);
+    const master =
+      typeof isMasterAdmin === 'function' ? !!isMasterAdmin(req) : false;
+    res.json({
+      ok: true,
+      userId: req.user.id,
+      ...permFlags(role, sysAdmin, master, accessListed),
+    });
+  });
+
+  router.get('/stats', needView, (req, res) => {
+    try {
+      const now = todayStr();
+      const soon = addDaysStr(30);
+      const total = db.prepare('SELECT COUNT(*) AS c FROM dms_documents').get().c;
+      const active = db
+        .prepare(`SELECT COUNT(*) AS c FROM dms_documents WHERE lower(status) = 'active'`)
+        .get().c;
+      const draft = db
+        .prepare(`SELECT COUNT(*) AS c FROM dms_documents WHERE lower(status) = 'draft'`)
+        .get().c;
+      const expired = db
+        .prepare(
+          `SELECT COUNT(*) AS c FROM dms_documents WHERE lower(status) IN ('expired','revoked')`
+        )
+        .get().c;
+      const expiringSoon = db
+        .prepare(
+          `SELECT COUNT(*) AS c FROM dms_documents
+           WHERE lower(status) = 'active' AND valid_until IS NOT NULL AND TRIM(valid_until) != ''
+             AND date(valid_until) >= date(?) AND date(valid_until) <= date(?)`
+        )
+        .get(now, soon).c;
+      const dup = countDuplicateSummary(db);
+      res.json({
+        ok: true,
+        total,
+        active,
+        draft,
+        expired,
+        expiringSoon,
+        duplicateGroups: dup.duplicateGroups,
+        documentsInDuplicateGroups: dup.documentsInDuplicateGroups,
+      });
+    } catch (e) {
+      console.error('[dms/stats]', e);
+      res.status(500).json({ ok: false, message: e.message || 'Lỗi' });
+    }
+  });
+
+  router.get('/categories', needView, (req, res) => {
+    try {
+      const rows = db
+        .prepare(
+          `SELECT id, parent_id, name, sort_order, is_active FROM dms_categories
+           ORDER BY COALESCE(parent_id, -1), sort_order, id`
+        )
+        .all();
+      const counts = {};
+      for (const c of rows) {
+        const sub = categorySubtreeIds(db, c.id);
+        if (!sub || !sub.length) {
+          counts[c.id] = 0;
+          continue;
+        }
+        const ph = sub.map(() => '?').join(',');
+        const cntRow = db
+          .prepare(`SELECT COUNT(*) AS c FROM dms_documents WHERE category_id IN (${ph})`)
+          .get(...sub);
+        counts[c.id] = cntRow ? cntRow.c : 0;
+      }
+      res.json({ ok: true, categories: rows, counts });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/categories', needCatalog, (req, res) => {
+    try {
+      const name = String(req.body.name || '').trim();
+      if (!name) return res.status(400).json({ ok: false, message: 'Thiếu tên danh mục' });
+      const parentId =
+        req.body.parent_id != null && req.body.parent_id !== ''
+          ? Number(req.body.parent_id)
+          : null;
+      const sortOrder = Number(req.body.sort_order) || 0;
+      const r = db
+        .prepare(
+          `INSERT INTO dms_categories (parent_id, name, sort_order, is_active) VALUES (?, ?, ?, 1)`
+        )
+        .run(Number.isFinite(parentId) ? parentId : null, name, sortOrder);
+      res.json({ ok: true, id: r.lastInsertRowid });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.patch('/categories/:id', needCatalog, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const name = req.body.name != null ? String(req.body.name).trim() : null;
+      const sortOrder = req.body.sort_order != null ? Number(req.body.sort_order) : null;
+      const isActive = req.body.is_active != null ? (req.body.is_active ? 1 : 0) : null;
+      const cur = db.prepare('SELECT * FROM dms_categories WHERE id = ?').get(id);
+      if (!cur) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      db.prepare(
+        `UPDATE dms_categories SET
+           name = COALESCE(?, name),
+           sort_order = COALESCE(?, sort_order),
+           is_active = COALESCE(?, is_active)
+         WHERE id = ?`
+      ).run(name || null, Number.isFinite(sortOrder) ? sortOrder : null, isActive, id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.delete('/categories/:id', needCatalog, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const child = db.prepare('SELECT id FROM dms_categories WHERE parent_id = ? LIMIT 1').get(id);
+      if (child) return res.status(400).json({ ok: false, message: 'Còn danh mục con — không xóa được.' });
+      const used = db.prepare('SELECT id FROM dms_documents WHERE category_id = ? LIMIT 1').get(id);
+      if (used) return res.status(400).json({ ok: false, message: 'Đang có tài liệu — không xóa được.' });
+      db.prepare('DELETE FROM dms_categories WHERE id = ?').run(id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.get('/document-types', needView, (req, res) => {
+    try {
+      const rows = db
+        .prepare(
+          `SELECT id, name, code, sort_order, is_active FROM dms_document_types ORDER BY sort_order, id`
+        )
+        .all();
+      res.json({ ok: true, types: rows });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/document-types', needCatalog, (req, res) => {
+    try {
+      const name = String(req.body.name || '').trim();
+      if (!name) return res.status(400).json({ ok: false, message: 'Thiếu tên loại' });
+      const code = req.body.code != null ? String(req.body.code).trim() : null;
+      const sortOrder = Number(req.body.sort_order) || 0;
+      const r = db
+        .prepare(
+          `INSERT INTO dms_document_types (name, code, sort_order, is_active) VALUES (?, ?, ?, 1)`
+        )
+        .run(name, code, sortOrder);
+      res.json({ ok: true, id: r.lastInsertRowid });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.patch('/document-types/:id', needCatalog, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const cur = db.prepare('SELECT * FROM dms_document_types WHERE id = ?').get(id);
+      if (!cur) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const name =
+        req.body.name != null ? String(req.body.name).trim() || cur.name : cur.name;
+      const code = req.body.code !== undefined ? String(req.body.code || '').trim() || null : cur.code;
+      const sortOrder =
+        req.body.sort_order != null && Number.isFinite(Number(req.body.sort_order))
+          ? Number(req.body.sort_order)
+          : cur.sort_order;
+      const isActive =
+        req.body.is_active != null ? (req.body.is_active ? 1 : 0) : cur.is_active;
+      db.prepare(
+        `UPDATE dms_document_types SET name = ?, code = ?, sort_order = ?, is_active = ? WHERE id = ?`
+      ).run(name, code, sortOrder, isActive, id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.delete('/document-types/:id', needCatalog, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const used = db.prepare('SELECT id FROM dms_documents WHERE document_type_id = ? LIMIT 1').get(id);
+      if (used) return res.status(400).json({ ok: false, message: 'Đang được dùng — không xóa.' });
+      db.prepare('DELETE FROM dms_document_types WHERE id = ?').run(id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.get('/tags', needView, (req, res) => {
+    try {
+      const rows = db.prepare(`SELECT id, name, color, sort_order FROM dms_tags ORDER BY sort_order, name`).all();
+      res.json({ ok: true, tags: rows });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/tags', needCatalog, (req, res) => {
+    try {
+      const name = String(req.body.name || '').trim();
+      if (!name) return res.status(400).json({ ok: false, message: 'Thiếu tên thẻ' });
+      const color = String(req.body.color || '#64748b').trim();
+      const sortOrder = Number(req.body.sort_order) || 0;
+      const r = db.prepare(`INSERT INTO dms_tags (name, color, sort_order) VALUES (?, ?, ?)`).run(
+        name,
+        color,
+        sortOrder
+      );
+      res.json({ ok: true, id: r.lastInsertRowid });
+    } catch (e) {
+      if (String(e.message || '').includes('UNIQUE')) {
+        return res.status(400).json({ ok: false, message: 'Tên thẻ đã tồn tại' });
+      }
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.patch('/tags/:id', needCatalog, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const name = req.body.name != null ? String(req.body.name).trim() : null;
+      const color = req.body.color != null ? String(req.body.color).trim() : null;
+      const sortOrder = req.body.sort_order != null ? Number(req.body.sort_order) : null;
+      db.prepare(
+        `UPDATE dms_tags SET
+           name = COALESCE(NULLIF(?, ''), name),
+           color = COALESCE(NULLIF(?, ''), color),
+           sort_order = COALESCE(?, sort_order)
+         WHERE id = ?`
+      ).run(name || '', color || '', Number.isFinite(sortOrder) ? sortOrder : null, id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.delete('/tags/:id', needCatalog, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      db.prepare('DELETE FROM dms_document_tags WHERE tag_id = ?').run(id);
+      db.prepare('DELETE FROM dms_tags WHERE id = ?').run(id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  function buildDocumentListQuery(filters) {
+    const {
+      q,
+      categoryId,
+      status,
+      year,
+      docTypeId,
+      tagIds,
+      quick,
+      sort,
+      duplicatesOnly,
+    } = filters;
+    const params = [];
+    let where = '1=1';
+
+    if (duplicatesOnly) {
+      where += ` AND d.id IN (
+        SELECT d2.id FROM dms_documents d2
+        INNER JOIN (
+          SELECT lower(trim(COALESCE(ref_number,''))) AS r, issue_date AS idate
+          FROM dms_documents
+          WHERE COALESCE(trim(ref_number), '') != '' AND COALESCE(trim(issue_date), '') != ''
+          GROUP BY lower(trim(COALESCE(ref_number,''))), issue_date
+          HAVING COUNT(*) > 1
+        ) dup ON lower(trim(COALESCE(d2.ref_number,''))) = dup.r AND d2.issue_date = dup.idate
+      )`;
+    }
+
+    if (q && String(q).trim()) {
+      const like = `%${String(q).trim().toLowerCase().replace(/%/g, '').slice(0, 120)}%`;
+      where += ` AND (
+        lower(COALESCE(d.title,'')) LIKE ?
+        OR lower(COALESCE(d.ref_number,'')) LIKE ?
+        OR lower(COALESCE(d.notes,'')) LIKE ?
+        OR lower(COALESCE(d.issuing_unit,'')) LIKE ?
+        OR lower(COALESCE(d.external_scan_link,'')) LIKE ?
+        OR lower(COALESCE(d.external_word_link,'')) LIKE ?
+      )`;
+      params.push(like, like, like, like, like, like);
+    }
+
+    if (categoryId != null && categoryId !== '' && categoryId !== 'all') {
+      const ids = categorySubtreeIds(db, categoryId);
+      if (ids && ids.length) {
+        where += ` AND d.category_id IN (${ids.map(() => '?').join(',')})`;
+        params.push(...ids);
+      } else if (Array.isArray(ids) && ids.length === 0) {
+        where += ' AND 1=0';
+      }
+    }
+
+    if (docTypeId != null && docTypeId !== '') {
+      where += ' AND d.document_type_id = ?';
+      params.push(Number(docTypeId));
+    }
+
+    if (status && String(status).toLowerCase() !== 'all') {
+      where += ' AND lower(d.status) = ?';
+      params.push(String(status).toLowerCase());
+    }
+
+    if (quick) {
+      const qk = String(quick).toLowerCase();
+      if (qk === 'active') where += ` AND lower(d.status) = 'active'`;
+      else if (qk === 'draft') where += ` AND lower(d.status) = 'draft'`;
+      else if (qk === 'expired_revoked')
+        where += ` AND lower(d.status) IN ('expired','revoked')`;
+    }
+
+    if (year != null && String(year).trim() && String(year) !== 'all') {
+      const y = String(year).slice(0, 4);
+      if (/^\d{4}$/.test(y)) {
+        where += ` AND (
+          strftime('%Y', COALESCE(d.issue_date, d.uploaded_at)) = ?
+        )`;
+        params.push(y);
+      }
+    }
+
+    if (tagIds && tagIds.length) {
+      const placeholders = tagIds.map(() => '?').join(',');
+      where += ` AND d.id IN (
+        SELECT document_id FROM dms_document_tags WHERE tag_id IN (${placeholders})
+      )`;
+      params.push(...tagIds);
+    }
+
+    let orderBy = 'd.uploaded_at DESC';
+    if (sort === 'issue_date') orderBy = 'd.issue_date DESC, d.id DESC';
+    if (sort === 'title') orderBy = 'd.title COLLATE NOCASE ASC';
+    if (sort === 'valid_until') orderBy = 'd.valid_until ASC, d.id DESC';
+
+    return { where, params, orderBy };
+  }
+
+  router.get('/duplicates-summary', needView, (req, res) => {
+    try {
+      res.json({ ok: true, ...countDuplicateSummary(db) });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  function handleXlsxUpload(req, res, next) {
+    uploadXlsx.single('file')(req, res, (err) => {
+      if (err) return res.status(400).json({ ok: false, message: err.message || String(err) });
+      next();
+    });
+  }
+
+  router.post('/import/excel-preview', needUpload, handleXlsxUpload, (req, res) => {
+    try {
+      if (!req.file || !req.file.buffer) {
+        return res.status(400).json({ ok: false, message: 'Thiếu file Excel (.xlsx / .xls)' });
+      }
+      const parsed = parseWorkbookBuffer(req.file.buffer);
+      const categoryId = req.body.category_id ? Number(req.body.category_id) : null;
+      const documentTypeId = req.body.document_type_id ? Number(req.body.document_type_id) : null;
+      const defaultStatus = String(req.body.default_status || 'active').toLowerCase();
+      const dry = runQuyetDinhImport(db, parsed, {
+        userId: req.user.id,
+        categoryId,
+        documentTypeId,
+        defaultStatus,
+        dryRun: true,
+      });
+      res.json({
+        ok: true,
+        preview: true,
+        parseErrors: parsed.errors,
+        sheetSummary: parsed.sheets.map((s) => ({ name: s.name, headerRow: s.headerRow, dataRows: s.rowCount })),
+        wouldImport: dry.imported,
+        wouldSkipDb: dry.skippedDbDuplicate,
+        wouldSkipBatch: dry.skippedBatchDuplicate,
+        parseRowErrors: dry.errors,
+        details: dry.details,
+      });
+    } catch (e) {
+      console.error('[dms import preview]', e);
+      res.status(500).json({ ok: false, message: e.message || 'Lỗi đọc Excel' });
+    }
+  });
+
+  router.post('/import/excel', needUpload, handleXlsxUpload, (req, res) => {
+    try {
+      if (!req.file || !req.file.buffer) {
+        return res.status(400).json({ ok: false, message: 'Thiếu file Excel (.xlsx / .xls)' });
+      }
+      const parsed = parseWorkbookBuffer(req.file.buffer);
+      if (parsed.errors.length && !parsed.sheets.length) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Không đọc được sheet hợp lệ',
+          parseErrors: parsed.errors,
+        });
+      }
+      const categoryId = req.body.category_id ? Number(req.body.category_id) : null;
+      const documentTypeId = req.body.document_type_id ? Number(req.body.document_type_id) : null;
+      const defaultStatus = String(req.body.default_status || 'active').toLowerCase();
+      const result = runQuyetDinhImport(db, parsed, {
+        userId: req.user.id,
+        categoryId,
+        documentTypeId,
+        defaultStatus,
+        dryRun: false,
+      });
+      res.json({
+        ok: true,
+        imported: result.imported,
+        skippedDbDuplicate: result.skippedDbDuplicate,
+        skippedBatchDuplicate: result.skippedBatchDuplicate,
+        parseErrors: parsed.errors,
+        rowErrors: result.errors,
+        details: result.details,
+        message: `Đã nhập ${result.imported} dòng. Bỏ qua ${result.skippedDbDuplicate} trùng CSDL, ${result.skippedBatchDuplicate} trùng trong file.`,
+      });
+    } catch (e) {
+      console.error('[dms import excel]', e);
+      res.status(500).json({ ok: false, message: e.message || 'Lỗi import' });
+    }
+  });
+
+  router.post('/documents/bulk-delete', needManageDocs, express.json(), (req, res) => {
+    try {
+      const ids = Array.isArray(req.body.ids) ? req.body.ids.map((x) => Number(x)).filter((n) => n > 0) : [];
+      if (!ids.length) return res.status(400).json({ ok: false, message: 'Thiếu danh sách' });
+      const sel = db.prepare('SELECT * FROM dms_documents WHERE id = ?');
+      const del = db.prepare('DELETE FROM dms_documents WHERE id = ?');
+      for (const id of ids) {
+        const doc = sel.get(id);
+        if (!doc) continue;
+        const abs = path.isAbsolute(doc.file_path)
+          ? doc.file_path
+          : path.join(dmsDir, path.basename(doc.file_path));
+        del.run(id);
+        try {
+          if (doc.file_path && doc.file_path !== DMS_NO_FILE && fs.existsSync(abs)) fs.unlinkSync(abs);
+        } catch (_) {}
+      }
+      res.json({ ok: true, deleted: ids.length });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/documents/bulk-move', needManageDocs, express.json(), (req, res) => {
+    try {
+      const ids = Array.isArray(req.body.ids) ? req.body.ids.map((x) => Number(x)).filter((n) => n > 0) : [];
+      const categoryId = req.body.category_id != null ? Number(req.body.category_id) : null;
+      if (!ids.length) return res.status(400).json({ ok: false, message: 'Thiếu danh sách' });
+      const stmt = db.prepare(
+        `UPDATE dms_documents SET category_id = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+      );
+      for (const id of ids) {
+        stmt.run(Number.isFinite(categoryId) ? categoryId : null, id);
+      }
+      res.json({ ok: true, moved: ids.length });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/documents/bulk-download', needView, express.json(), (req, res) => {
+    try {
+      const ids = Array.isArray(req.body.ids) ? req.body.ids.map((x) => Number(x)).filter((n) => n > 0) : [];
+      if (!ids.length) return res.status(400).json({ ok: false, message: 'Thiếu danh sách' });
+      if (ids.length > 50) return res.status(400).json({ ok: false, message: 'Tối đa 50 tệp mỗi lần' });
+
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', 'attachment; filename="tai-lieu-stims.zip"');
+      const archive = archiver('zip', { zlib: { level: 6 } });
+      archive.on('error', (err) => {
+        console.error('[dms zip]', err);
+        if (!res.headersSent) res.status(500).end();
+      });
+      archive.pipe(res);
+
+      const sel = db.prepare('SELECT id, file_path, original_name FROM dms_documents WHERE id = ?');
+      const usedNames = {};
+      for (const id of ids) {
+        const doc = sel.get(id);
+        if (!doc) continue;
+        const abs = path.isAbsolute(doc.file_path)
+          ? doc.file_path
+          : path.join(dmsDir, path.basename(doc.file_path));
+        if (!doc.file_path || doc.file_path === DMS_NO_FILE || !fs.existsSync(abs)) continue;
+        let base = (doc.original_name || `file_${id}`).replace(/[/\\?%*:|"<>]/g, '_');
+        if (usedNames[base]) {
+          const ext = path.extname(base);
+          const stem = path.basename(base, ext);
+          usedNames[base] += 1;
+          base = `${stem}_${usedNames[base]}${ext}`;
+        } else {
+          usedNames[base] = 1;
+        }
+        archive.file(abs, { name: base });
+      }
+      archive.finalize();
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.get('/documents', needView, (req, res) => {
+    try {
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 30));
+      const offset = (page - 1) * limit;
+      const tagIds = String(req.query.tag_ids || '')
+        .split(',')
+        .map((x) => Number(x.trim()))
+        .filter((n) => Number.isFinite(n) && n > 0);
+
+      const { where, params, orderBy } = buildDocumentListQuery({
+        q: req.query.q,
+        categoryId: req.query.category_id,
+        status: req.query.status,
+        year: req.query.year,
+        docTypeId: req.query.document_type_id,
+        tagIds,
+        quick: req.query.quick,
+        sort: req.query.sort,
+        duplicatesOnly: String(req.query.duplicates_only || '') === '1' || String(req.query.duplicates_only || '').toLowerCase() === 'true',
+      });
+
+      const countRow = db.prepare(`SELECT COUNT(*) AS c FROM dms_documents d WHERE ${where}`).get(...params);
+      const total = countRow.c;
+      const rows = db
+        .prepare(
+          `SELECT d.*, u.fullname AS uploader_name, u.email AS uploader_email,
+            dt.name AS document_type_name,
+            c.name AS category_name
+           FROM dms_documents d
+           LEFT JOIN users u ON u.id = d.uploaded_by_id
+           LEFT JOIN dms_document_types dt ON dt.id = d.document_type_id
+           LEFT JOIN dms_categories c ON c.id = d.category_id
+           WHERE ${where}
+           ORDER BY ${orderBy}
+           LIMIT ? OFFSET ?`
+        )
+        .all(...params, limit, offset);
+
+      const ids = rows.map((r) => r.id);
+      const tagMap = {};
+      if (ids.length) {
+        const ph = ids.map(() => '?').join(',');
+        const trows = db
+          .prepare(
+            `SELECT dt.document_id, t.id, t.name, t.color
+             FROM dms_document_tags dt
+             JOIN dms_tags t ON t.id = dt.tag_id
+             WHERE dt.document_id IN (${ph})`
+          )
+          .all(...ids);
+        for (const tr of trows) {
+          if (!tagMap[tr.document_id]) tagMap[tr.document_id] = [];
+          tagMap[tr.document_id].push({ id: tr.id, name: tr.name, color: tr.color });
+        }
+      }
+
+      const list = rows.map((r) => ({
+        ...r,
+        tags: tagMap[r.id] || [],
+      }));
+
+      res.json({ ok: true, documents: list, total, page, limit });
+    } catch (e) {
+      console.error('[dms/documents]', e);
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.get('/documents/:id', needView, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const row = db
+        .prepare(
+          `SELECT d.*, u.fullname AS uploader_name FROM dms_documents d
+           LEFT JOIN users u ON u.id = d.uploaded_by_id WHERE d.id = ?`
+        )
+        .get(id);
+      if (!row) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const tags = db
+        .prepare(
+          `SELECT t.id, t.name, t.color FROM dms_document_tags dt
+           JOIN dms_tags t ON t.id = dt.tag_id WHERE dt.document_id = ?`
+        )
+        .all(id);
+      res.json({ ok: true, document: { ...row, tags } });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.get('/documents/:id/file', needView, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const row = db.prepare('SELECT file_path, original_name, mime_type FROM dms_documents WHERE id = ?').get(id);
+      if (!row) return res.status(404).send('Not found');
+      if (!row.file_path || row.file_path === DMS_NO_FILE) {
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        return res
+          .status(404)
+          .send(
+            'Tài liệu chưa có file PDF đính kèm trên hệ thống. Kiểm tra cột Link scan trong Excel hoặc tải file lên khi sửa hồ sơ.'
+          );
+      }
+      const abs = path.isAbsolute(row.file_path) ? row.file_path : path.join(dmsDir, path.basename(row.file_path));
+      if (!fs.existsSync(abs)) return res.status(404).send('File missing');
+      if (row.mime_type) res.setHeader('Content-Type', row.mime_type);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${encodeURIComponent(row.original_name || 'file')}"`
+      );
+      return res.sendFile(abs);
+    } catch (e) {
+      res.status(500).send(e.message);
+    }
+  });
+
+  function syncDocumentTags(documentId, tagIds) {
+    db.prepare('DELETE FROM dms_document_tags WHERE document_id = ?').run(documentId);
+    const ins = db.prepare('INSERT INTO dms_document_tags (document_id, tag_id) VALUES (?, ?)');
+    for (const tid of tagIds) {
+      if (Number.isFinite(tid) && tid > 0) ins.run(documentId, tid);
+    }
+  }
+
+  router.post('/documents', needUpload, upload.single('file'), (req, res) => {
+    try {
+      const refNumber = String(req.body.ref_number || '').trim() || null;
+      const categoryId = req.body.category_id ? Number(req.body.category_id) : null;
+      const documentTypeId = req.body.document_type_id ? Number(req.body.document_type_id) : null;
+      const status = String(req.body.status || 'draft').toLowerCase();
+      const allowed = ['active', 'draft', 'expired', 'revoked'];
+      const st = allowed.includes(status) ? status : 'draft';
+      const issueDate = String(req.body.issue_date || '').trim() || null;
+      const validUntil = String(req.body.valid_until || '').trim() || null;
+      const notes = String(req.body.notes || '').trim() || null;
+      const issuingUnit = String(req.body.issuing_unit || '').trim() || null;
+      const externalScanLink = String(req.body.external_scan_link || '').trim() || null;
+      const externalWordLink = String(req.body.external_word_link || '').trim() || null;
+      let tagIds = [];
+      try {
+        const raw = req.body.tag_ids;
+        if (raw) tagIds = JSON.parse(raw);
+      } catch (_) {}
+      if (!Array.isArray(tagIds)) tagIds = [];
+
+      let title = String(req.body.title || '').trim();
+      if (req.file) {
+        title = title || req.file.originalname;
+        const relPath = req.file.filename;
+        const r = db
+          .prepare(
+            `INSERT INTO dms_documents (
+            title, ref_number, category_id, document_type_id, status,
+            issue_date, valid_until, file_path, original_name, file_size, mime_type, notes,
+            issuing_unit, external_scan_link, external_word_link, import_sheet, uploaded_by_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`
+          )
+          .run(
+            title,
+            refNumber,
+            Number.isFinite(categoryId) ? categoryId : null,
+            Number.isFinite(documentTypeId) ? documentTypeId : null,
+            st,
+            issueDate,
+            validUntil,
+            relPath,
+            req.file.originalname,
+            req.file.size,
+            req.file.mimetype || null,
+            notes,
+            issuingUnit,
+            externalScanLink,
+            externalWordLink,
+            req.user.id
+          );
+        const newId = r.lastInsertRowid;
+        syncDocumentTags(
+          newId,
+          tagIds.map((x) => Number(x)).filter((n) => Number.isFinite(n))
+        );
+        return res.json({ ok: true, id: newId });
+      }
+
+      if (!title) {
+        return res.status(400).json({ ok: false, message: 'Cần tiêu đề hoặc file đính kèm' });
+      }
+      const origHint =
+        String(req.body.original_name_hint || '').trim() ||
+        externalScanLink ||
+        '(Chưa có file đính kèm)';
+      const r = db
+        .prepare(
+          `INSERT INTO dms_documents (
+            title, ref_number, category_id, document_type_id, status,
+            issue_date, valid_until, file_path, original_name, file_size, mime_type, notes,
+            issuing_unit, external_scan_link, external_word_link, import_sheet, uploaded_by_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?, NULL, ?)`
+        )
+        .run(
+          title,
+          refNumber,
+          Number.isFinite(categoryId) ? categoryId : null,
+          Number.isFinite(documentTypeId) ? documentTypeId : null,
+          st,
+          issueDate,
+          validUntil,
+          DMS_NO_FILE,
+          origHint,
+          notes,
+          issuingUnit,
+          externalScanLink,
+          externalWordLink,
+          req.user.id
+        );
+      const newId = r.lastInsertRowid;
+      syncDocumentTags(
+        newId,
+        tagIds.map((x) => Number(x)).filter((n) => Number.isFinite(n))
+      );
+      res.json({ ok: true, id: newId });
+    } catch (e) {
+      if (req.file && req.file.path) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (_) {}
+      }
+      console.error('[dms/documents POST]', e);
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.patch('/documents/:id', needUpload, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const doc = db.prepare('SELECT * FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const role = getDmsModuleRole(db, req.user);
+      if (!canEditDocument(role, doc, req.user.id)) {
+        return res.status(403).json({ ok: false, message: 'Không có quyền sửa tài liệu này' });
+      }
+
+      const title = req.body.title != null ? String(req.body.title).trim() : null;
+      const refNumber = req.body.ref_number !== undefined ? String(req.body.ref_number || '').trim() : undefined;
+      const categoryId = req.body.category_id !== undefined ? Number(req.body.category_id) : undefined;
+      const documentTypeId =
+        req.body.document_type_id !== undefined ? Number(req.body.document_type_id) : undefined;
+      const status = req.body.status != null ? String(req.body.status).toLowerCase() : null;
+      const issueDate = req.body.issue_date !== undefined ? String(req.body.issue_date || '').trim() : undefined;
+      const validUntil = req.body.valid_until !== undefined ? String(req.body.valid_until || '').trim() : undefined;
+      const notes = req.body.notes !== undefined ? String(req.body.notes || '').trim() : undefined;
+
+      let tagIds;
+      if (req.body.tag_ids !== undefined) {
+        try {
+          tagIds = JSON.parse(req.body.tag_ids);
+        } catch (_) {
+          tagIds = [];
+        }
+      }
+
+      const allowed = ['active', 'draft', 'expired', 'revoked'];
+      const st = status && allowed.includes(status) ? status : null;
+
+      db.prepare(
+        `UPDATE dms_documents SET
+           title = COALESCE(?, title),
+           ref_number = CASE WHEN ? THEN ? ELSE ref_number END,
+           category_id = CASE WHEN ? THEN ? ELSE category_id END,
+           document_type_id = CASE WHEN ? THEN ? ELSE document_type_id END,
+           status = COALESCE(?, status),
+           issue_date = CASE WHEN ? THEN ? ELSE issue_date END,
+           valid_until = CASE WHEN ? THEN ? ELSE valid_until END,
+           notes = CASE WHEN ? THEN ? ELSE notes END,
+           updated_at = datetime('now','localtime')
+         WHERE id = ?`
+      ).run(
+        title,
+        refNumber !== undefined ? 1 : 0,
+        refNumber !== undefined ? refNumber || null : null,
+        categoryId !== undefined ? 1 : 0,
+        categoryId !== undefined && Number.isFinite(categoryId) ? categoryId : null,
+        documentTypeId !== undefined ? 1 : 0,
+        documentTypeId !== undefined && Number.isFinite(documentTypeId) ? documentTypeId : null,
+        st,
+        issueDate !== undefined ? 1 : 0,
+        issueDate !== undefined ? issueDate || null : null,
+        validUntil !== undefined ? 1 : 0,
+        validUntil !== undefined ? validUntil || null : null,
+        notes !== undefined ? 1 : 0,
+        notes !== undefined ? notes || null : null,
+        id
+      );
+
+      if (req.body.issuing_unit !== undefined) {
+        db.prepare(
+          `UPDATE dms_documents SET issuing_unit = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+        ).run(String(req.body.issuing_unit || '').trim() || null, id);
+      }
+      if (req.body.external_scan_link !== undefined) {
+        db.prepare(
+          `UPDATE dms_documents SET external_scan_link = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+        ).run(String(req.body.external_scan_link || '').trim() || null, id);
+      }
+      if (req.body.external_word_link !== undefined) {
+        db.prepare(
+          `UPDATE dms_documents SET external_word_link = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+        ).run(String(req.body.external_word_link || '').trim() || null, id);
+      }
+
+      if (Array.isArray(tagIds)) {
+        syncDocumentTags(
+          id,
+          tagIds.map((x) => Number(x)).filter((n) => Number.isFinite(n))
+        );
+      }
+
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.delete('/documents/:id', needUpload, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const doc = db.prepare('SELECT * FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const role = getDmsModuleRole(db, req.user);
+      if (!canDeleteDocument(role, doc, req.user.id)) {
+        return res.status(403).json({ ok: false, message: 'Không có quyền xóa' });
+      }
+      const abs = path.isAbsolute(doc.file_path)
+        ? doc.file_path
+        : path.join(dmsDir, path.basename(doc.file_path));
+      db.prepare('DELETE FROM dms_documents WHERE id = ?').run(id);
+      try {
+        if (doc.file_path && doc.file_path !== DMS_NO_FILE && fs.existsSync(abs)) fs.unlinkSync(abs);
+      } catch (_) {}
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.get('/export.xlsx', needView, (req, res) => {
+    try {
+      const tagIds = String(req.query.tag_ids || '')
+        .split(',')
+        .map((x) => Number(x.trim()))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      const { where, params, orderBy } = buildDocumentListQuery({
+        q: req.query.q,
+        categoryId: req.query.category_id,
+        status: req.query.status,
+        year: req.query.year,
+        docTypeId: req.query.document_type_id,
+        tagIds,
+        quick: req.query.quick,
+        sort: req.query.sort,
+        duplicatesOnly: String(req.query.duplicates_only || '') === '1',
+      });
+
+      const rows = db
+        .prepare(
+          `SELECT d.title, d.ref_number, d.status, d.issue_date, d.valid_until, d.uploaded_at,
+            u.fullname AS uploader, dt.name AS loai, c.name AS danh_muc, d.original_name, d.file_size,
+            d.issuing_unit, d.external_scan_link, d.external_word_link, d.import_sheet
+           FROM dms_documents d
+           LEFT JOIN users u ON u.id = d.uploaded_by_id
+           LEFT JOIN dms_document_types dt ON dt.id = d.document_type_id
+           LEFT JOIN dms_categories c ON c.id = d.category_id
+           WHERE ${where}
+           ORDER BY ${orderBy}`
+        )
+        .all(...params);
+
+      const sheet = rows.map((r) => ({
+        'Tên tài liệu': r.title,
+        'Số hiệu': r.ref_number,
+        'Loại': r.loai,
+        'Danh mục': r.danh_muc,
+        'Trạng thái': r.status,
+        'Ngày ban hành': r.issue_date,
+        'Hiệu lực đến': r.valid_until,
+        'ĐV ban hành': r.issuing_unit,
+        'Link scan': r.external_scan_link,
+        'Link Word': r.external_word_link,
+        'Sheet import': r.import_sheet,
+        'Ngày tải lên': r.uploaded_at,
+        'Người tải': r.uploader,
+        'Tên file': r.original_name,
+        'Dung lượng': r.file_size,
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(sheet);
+      XLSX.utils.book_append_sheet(wb, ws, 'Tai lieu');
+      const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="tai-lieu-hanh-chinh.xlsx"');
+      res.send(Buffer.from(buf));
+    } catch (e) {
+      console.error('[dms export]', e);
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  /** Chỉ Master Admin phân quyền module (trùng ADMIN_EMAIL). */
+  router.get('/admin/module-users', masterAdminOnly, (req, res) => {
+    try {
+      const rows = db
+        .prepare(
+          `SELECT r.user_id, r.role, r.granted_at, r.granted_by, u.fullname, u.email, u.role AS system_role
+           FROM dms_user_roles r
+           JOIN users u ON u.id = r.user_id
+           ORDER BY u.fullname COLLATE NOCASE`
+        )
+        .all();
+      res.json({ ok: true, users: rows });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/admin/module-users', masterAdminOnly, express.json(), (req, res) => {
+    try {
+      const userId = Number(req.body.user_id);
+      const role = String(req.body.role || '').toLowerCase();
+      if (!Number.isFinite(userId) || userId <= 0) {
+        return res.status(400).json({ ok: false, message: 'user_id không hợp lệ' });
+      }
+      if (!DMS_ROLES.includes(role)) {
+        return res.status(400).json({ ok: false, message: 'role phải là manager | uploader | viewer' });
+      }
+      const u = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+      if (!u) return res.status(404).json({ ok: false, message: 'Không tìm thấy user' });
+      const acc = db.prepare('SELECT 1 AS x FROM dms_module_access WHERE user_id = ?').get(userId);
+      if (!acc) {
+        return res.status(400).json({
+          ok: false,
+          message:
+            'Chỉ gán vai trò cho tài khoản đã có trong «Danh sách được mở truy cập module». Thêm người dùng vào danh sách đó trước.',
+        });
+      }
+      db.prepare(
+        `INSERT INTO dms_user_roles (user_id, role, granted_by, granted_at)
+         VALUES (?, ?, ?, datetime('now','localtime'))
+         ON CONFLICT(user_id) DO UPDATE SET
+           role = excluded.role,
+           granted_by = excluded.granted_by,
+           granted_at = excluded.granted_at`
+      ).run(userId, role, req.user.id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.delete('/admin/module-users/:userId', masterAdminOnly, (req, res) => {
+    try {
+      const userId = Number(req.params.userId);
+      db.prepare('DELETE FROM dms_user_roles WHERE user_id = ?').run(userId);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  /** Danh sách được mở truy cập nội dung module (trước khi gán vai trò). */
+  router.get('/admin/module-access', masterAdminOnly, (req, res) => {
+    try {
+      const rows = db
+        .prepare(
+          `SELECT a.user_id, a.granted_at, a.granted_by, u.fullname, u.email, u.role AS system_role,
+                  r.role AS module_role
+           FROM dms_module_access a
+           JOIN users u ON u.id = a.user_id
+           LEFT JOIN dms_user_roles r ON r.user_id = a.user_id
+           ORDER BY u.fullname COLLATE NOCASE`
+        )
+        .all();
+      res.json({ ok: true, users: rows });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/admin/module-access', masterAdminOnly, express.json(), (req, res) => {
+    try {
+      if (req.body && req.body.all_institute === true) {
+        const info = db
+          .prepare(
+            `INSERT OR IGNORE INTO dms_module_access (user_id, granted_by, granted_at)
+             SELECT id, ?, datetime('now','localtime') FROM users
+             WHERE COALESCE(is_banned, 0) = 0`
+          )
+          .run(req.user.id);
+        const added = Number(info.changes) || 0;
+        db.prepare(
+          `INSERT OR IGNORE INTO dms_user_roles (user_id, role, granted_by, granted_at)
+           SELECT a.user_id, 'viewer', ?, datetime('now','localtime')
+           FROM dms_module_access a
+           LEFT JOIN dms_user_roles r ON r.user_id = a.user_id
+           WHERE r.user_id IS NULL`
+        ).run(req.user.id);
+        return res.json({
+          ok: true,
+          added,
+          message: added
+            ? `Đã thêm ${added} tài khoản (mặc định vai trò module: chỉ xem).`
+            : 'Không có tài khoản mới (đã có trong danh sách hoặc không hợp lệ). Người chưa có vai trò đã được gán «chỉ xem» nếu cần.',
+        });
+      }
+      const userId = Number(req.body.user_id);
+      if (!Number.isFinite(userId) || userId <= 0) {
+        return res.status(400).json({ ok: false, message: 'user_id không hợp lệ' });
+      }
+      const u = db.prepare('SELECT id FROM users WHERE id = ? AND COALESCE(is_banned,0)=0').get(userId);
+      if (!u) return res.status(404).json({ ok: false, message: 'Không tìm thấy user hoặc tài khoản đang bị khóa' });
+      db.prepare(
+        `INSERT OR IGNORE INTO dms_module_access (user_id, granted_by, granted_at)
+         VALUES (?, ?, datetime('now','localtime'))`
+      ).run(userId, req.user.id);
+      const row = db.prepare('SELECT 1 AS x FROM dms_module_access WHERE user_id = ?').get(userId);
+      if (!row) {
+        return res.status(500).json({ ok: false, message: 'Không thể thêm vào danh sách' });
+      }
+      db.prepare(
+        `INSERT OR IGNORE INTO dms_user_roles (user_id, role, granted_by, granted_at)
+         VALUES (?, 'viewer', ?, datetime('now','localtime'))`
+      ).run(userId, req.user.id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.delete('/admin/module-access/:userId', masterAdminOnly, (req, res) => {
+    try {
+      const userId = Number(req.params.userId);
+      db.prepare('DELETE FROM dms_user_roles WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM dms_module_access WHERE user_id = ?').run(userId);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  return router;
+};

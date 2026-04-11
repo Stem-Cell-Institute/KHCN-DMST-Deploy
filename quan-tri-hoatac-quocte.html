@@ -212,6 +212,7 @@ tbody tr:hover td { background: #eef2f9 !important; }
   <a href="module-hoatac-quocte.html" class="btn btn-primary">Quay lại Hợp tác Quốc tế</a>
 </div>
 
+<script src="js/page-greeting.js"></script>
 <script>
 (function() {
   var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : (window.location.origin || '');
@@ -251,10 +252,14 @@ tbody tr:hover td { background: #eef2f9 !important; }
   }
 
   function setUserGreeting() {
-    var display = (user.fullname && user.fullname.trim()) ? user.fullname.trim() : (user.email || 'Admin');
     var greetingEl = document.getElementById('user-greeting');
     var avatarEl = document.getElementById('user-avatar');
-    if (greetingEl) greetingEl.textContent = display;
+    if (greetingEl) {
+      greetingEl.textContent = typeof getLoginGreetingDisplay === 'function'
+        ? getLoginGreetingDisplay(user)
+        : ((user.fullname && user.fullname.trim()) ? user.fullname.trim() : (user.email || 'Admin'));
+    }
+    var display = (user.fullname && user.fullname.trim()) ? user.fullname.trim() : (user.email || 'Admin');
     if (avatarEl) {
       var initials = (user.fullname || user.email || 'AD').trim().split(/\s+/).map(function(s) { return (s[0] || '').toUpperCase(); }).slice(0, 2).join('') || 'AD';
       avatarEl.textContent = initials;

@@ -153,6 +153,7 @@
         .module-card[data-module="facilities"] .module-icon-bg svg { stroke: #0f766e !important; }
         .module-card[data-module="ethics_integrity"] .module-icon-bg svg { stroke: #4f46e5 !important; }
         .module-card[data-module="reward"] .module-icon-bg svg { stroke: #ca8a04 !important; }
+        .module-card[data-module="dms"] .module-icon-bg svg { stroke: #4338ca !important; }
 
         .module-card--disabled .module-icon-bg {
             background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%);
@@ -647,6 +648,30 @@
                 <button type="button" class="btn-access" onclick="window.location.href='module-hoatac-quocte.html'">Truy cập →</button>
             </div>
 
+            <!-- 7b. Quản lý tài liệu & hồ sơ (hành chính) -->
+            <div class="module-card" data-module="dms">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg></span></div>
+                <div class="module-title">Quản lý tài liệu &amp; hồ sơ</div>
+                <div class="module-description">
+                    Lưu trữ văn bản pháp lý nội bộ, hợp đồng, hồ sơ đề tài KHCN, biên bản — tìm kiếm, hạn hiệu lực, phân loại và phân quyền theo vai trò.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat" data-stat="dmsMini" data-facility-key="total">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Tổng tài liệu</div>
+                    </div>
+                    <div class="mini-stat" data-stat="dmsMini" data-facility-key="active">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Có hiệu lực</div>
+                    </div>
+                    <div class="mini-stat" data-stat="dmsMini" data-facility-key="expiringSoon">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Sắp hết hạn</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-access" onclick="window.location.href='tai-lieu-hanh-chinh.html'">Truy cập →</button>
+            </div>
+
             <!-- 8. Quản lý Chuyển giao Công nghệ -->
             <div class="module-card module-card--disabled" data-module="tech_transfer">
                 <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"></path><path d="M4 7h16"></path><path d="m16 21 4-4-4-4"></path><path d="M20 17H4"></path></svg></span></div>
@@ -746,6 +771,7 @@
         </div>
     </div>
     <script src="/node_modules/sortablejs/Sortable.min.js"></script>
+    <script src="js/page-greeting.js"></script>
     <script src="js/auth-status.js"></script>
     <script>
         window.goCrdBookingV2 = function () {
@@ -781,7 +807,7 @@
                 isAdmin = (u.role || '').toLowerCase() === 'admin';
             } catch (e) {}
             var LS_ORDER_KEY = 'homepage_module_order';
-            var HOMEPAGE_CODES = ['missions','ethics_ace','personnel','ip','finance','publications','cooperation','tech_transfer','facilities','ethics_integrity','reward'];
+            var HOMEPAGE_CODES = ['missions','ethics_ace','personnel','ip','finance','publications','cooperation','dms','tech_transfer','facilities','ethics_integrity','reward'];
             function distinctSortOrderCount(modules) {
                 var seen = {};
                 var n = 0;

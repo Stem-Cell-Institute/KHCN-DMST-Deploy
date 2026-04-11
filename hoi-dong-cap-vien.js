@@ -9,7 +9,9 @@
     var apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://localhost:3000' : '';
 
     if (token && user && user.email) {
-        userEmail.textContent = user.email + (user.role ? ' (' + user.role + ')' : '');
+        userEmail.textContent = typeof getLoginGreetingDisplay === 'function'
+            ? getLoginGreetingDisplay(user)
+            : (user.email + (user.role ? ' (' + user.role + ')' : ''));
         userBar.style.display = 'flex';
     }
 
