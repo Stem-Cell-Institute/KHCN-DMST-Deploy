@@ -46,9 +46,7 @@ function main() {
 
   let usedNull = false;
   try {
-    const upd = db.prepare(
-      `UPDATE users SET password = NULL, password_support_hint = NULL WHERE ${WHERE_ROLES}`
-    );
+    const upd = db.prepare(`UPDATE users SET password = NULL WHERE ${WHERE_ROLES}`);
     const info = upd.run();
     usedNull = true;
     console.log('[migrate:reset-precreated] Đã UPDATE (password = NULL), số dòng:', info.changes);
@@ -56,9 +54,7 @@ function main() {
     const msg = String(e.message || e);
     if (msg.includes('NOT NULL') || e.code === 'SQLITE_CONSTRAINT_NOTNULL' || msg.includes('constraint')) {
       console.log('[migrate:reset-precreated] Không ghi được NULL → dùng chuỗi rỗng làm sentinel (NOT NULL).');
-      const upd = db.prepare(
-        `UPDATE users SET password = '', password_support_hint = NULL WHERE ${WHERE_ROLES}`
-      );
+      const upd = db.prepare(`UPDATE users SET password = '' WHERE ${WHERE_ROLES}`);
       const info = upd.run();
       console.log('[migrate:reset-precreated] Đã UPDATE (password = \'\'), số dòng:', info.changes);
     } else {

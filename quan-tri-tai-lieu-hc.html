@@ -15,7 +15,7 @@
     <div class="dms-topbar-brand">
       <p class="dms-kicker">STIMS — VIỆN TẾ BÀO GỐC</p>
       <h1>Công cụ quản trị module</h1>
-      <p class="dms-subtitle">Danh mục, loại văn bản, thẻ nhãn và phân quyền truy cập module Tài liệu &amp; hồ sơ.</p>
+      <p class="dms-subtitle">Danh mục, loại văn bản, thẻ nhãn, <strong>mẫu biểu (template ISO)</strong> và phân quyền truy cập module Tài liệu &amp; hồ sơ.</p>
     </div>
     <div class="dms-top-actions">
       <a href="tai-lieu-hanh-chinh.html" class="dms-btn dms-btn-ghost" style="text-decoration:none">← Quản lý tài liệu</a>
@@ -25,12 +25,11 @@
   </header>
 
   <main class="dms-admin-main" id="dms-admin-content">
-    <p class="dms-admin-lead">Tab <strong>Phân quyền module</strong> (chỉ <strong>Master Admin</strong>, email <code>ADMIN_EMAIL</code>): mở truy cập từng người hoặc <strong>toàn viện</strong>, sau đó gán vai trò Quản lý / Tải lên / Chỉ xem <em>trên đúng danh sách đó</em>.</p>
-
     <div class="dms-adm-tabs">
       <button type="button" class="adm-tab-btn on" id="tab-btn-cats" data-go="cats">Danh mục</button>
       <button type="button" class="adm-tab-btn" id="tab-btn-types" data-go="types">Loại tài liệu</button>
       <button type="button" class="adm-tab-btn" id="tab-btn-tags" data-go="tags">Thẻ nhãn</button>
+      <button type="button" class="adm-tab-btn" id="tab-btn-templates" data-go="templates">Mẫu biểu (ISO)</button>
       <button type="button" class="adm-tab-btn" id="tab-btn-roles" data-go="roles">Phân quyền module</button>
     </div>
 
@@ -70,6 +69,89 @@
       </form>
       <div class="dms-adm-table-scroll">
         <table><thead><tr><th>ID</th><th>Tên</th><th>Màu</th><th></th></tr></thead><tbody id="tbl-tags"></tbody></table>
+      </div>
+    </div>
+
+    <div class="adm-tab" data-tab="templates">
+      <h2 class="dms-adm-section-title">Mẫu biểu &amp; định danh kiểm soát (ISO)</h2>
+      <p class="note">Mỗi mẫu có <strong>mã (code)</strong> duy nhất, <strong>phiên bản</strong>, trạng thái (nháp / hiệu hành / ngừng), phân loại <em>tài liệu</em> vs <em>hồ sơ</em> (record), chính sách lưu trữ và liên kết file mẫu trống. Gắn mẫu vào từng bản ghi tài liệu ở trang «Thêm / Sửa tài liệu» hoặc lọc theo mẫu trên danh sách.</p>
+
+      <h3 class="dms-adm-subhead">Thêm mẫu mới</h3>
+      <form class="dms-adm-form-stack" id="form-new-template" style="max-width:52rem">
+        <div class="dms-adm-inline-grid">
+          <label>Mã mẫu (ID nghiệp vụ) *<input type="text" id="new-tpl-code" required placeholder="VD: HC-QD-001"></label>
+          <label>Tên mẫu *<input type="text" id="new-tpl-name" required placeholder="Tên hiển thị"></label>
+          <label>Phiên bản<input type="text" id="new-tpl-version" value="1.0"></label>
+          <label>Thứ tự<input type="number" id="new-tpl-sort" value="0"></label>
+        </div>
+        <div class="dms-adm-inline-grid">
+          <label>Trạng thái mẫu
+            <select id="new-tpl-status">
+              <option value="draft">Nháp</option>
+              <option value="active" selected>Hiệu hành</option>
+              <option value="retired">Ngừng / thay thế</option>
+            </select>
+          </label>
+          <label>Loại (ISO)
+            <select id="new-tpl-record-kind">
+              <option value="record" selected>Hồ sơ (record)</option>
+              <option value="document">Tài liệu (document)</option>
+            </select>
+          </label>
+          <label>Đơn vị sở hữu mẫu<input type="text" id="new-tpl-owning" placeholder="VD: Phòng HC"></label>
+          <label>Thay thế bởi mẫu (ID, tùy chọn)<input type="number" id="new-tpl-superseded" min="1" placeholder="Để trống"></label>
+        </div>
+        <div class="dms-adm-textarea-pair">
+          <label class="dms-adm-field-block">Mô tả / phạm vi áp dụng<textarea id="new-tpl-desc" rows="3" placeholder="Mục đích, quy trình điền…"></textarea></label>
+          <label class="dms-adm-field-block">Chính sách lưu trữ (gợi ý)<textarea id="new-tpl-retention" rows="3" placeholder="Thời hạn, điều kiện tiêu hủy…"></textarea></label>
+        </div>
+        <div class="dms-adm-inline-grid">
+          <label>Ghi chú phương tiện (giấy/điện tử)<input type="text" id="new-tpl-medium" placeholder="VD: Bản giấy ký + PDF scan"></label>
+          <label>Hiệu lực từ<input type="date" id="new-tpl-eff-from"></label>
+          <label>Hiệu lực đến<input type="date" id="new-tpl-eff-until"></label>
+          <label>Link file mẫu trống<input type="text" id="new-tpl-blank-url" placeholder="URL hoặc đường dẫn nội bộ"></label>
+        </div>
+        <label class="dms-adm-check"><input type="checkbox" id="new-tpl-active" checked> Hiển thị trong danh sách chọn khi thêm tài liệu</label>
+        <button type="submit" class="adm-btn adm-btn--primary" style="align-self:flex-start">Tạo mẫu</button>
+      </form>
+
+      <h3 class="dms-adm-subhead">Danh sách mẫu</h3>
+      <div class="dms-adm-table-scroll">
+        <table><thead><tr><th>ID</th><th>Mã</th><th>Tên</th><th>Ver</th><th>Trạng thái</th><th>Loại</th><th>Số HS gắn</th><th>Hiện</th><th></th></tr></thead><tbody id="tbl-templates"></tbody></table>
+      </div>
+
+      <div id="tpl-edit-wrap" class="dms-adm-edit-panel" hidden>
+        <h3 class="dms-adm-subhead" id="tpl-edit-heading">Sửa mẫu</h3>
+        <input type="hidden" id="tpl-edit-id" value="">
+        <form class="dms-adm-form-stack" id="form-edit-template" style="max-width:52rem">
+          <div class="dms-adm-inline-grid">
+            <label>Mã *<input type="text" id="tpl-edit-code" required></label>
+            <label>Tên *<input type="text" id="tpl-edit-name" required></label>
+            <label>Phiên bản<input type="text" id="tpl-edit-version"></label>
+            <label>Thứ tự<input type="number" id="tpl-edit-sort"></label>
+          </div>
+          <div class="dms-adm-inline-grid">
+            <label>Trạng thái<select id="tpl-edit-status"><option value="draft">Nháp</option><option value="active">Hiệu hành</option><option value="retired">Ngừng</option></select></label>
+            <label>Loại ISO<select id="tpl-edit-record-kind"><option value="record">Hồ sơ</option><option value="document">Tài liệu</option></select></label>
+            <label>Đơn vị sở hữu<input type="text" id="tpl-edit-owning"></label>
+            <label>Thay thế bởi (ID)<input type="number" id="tpl-edit-superseded" min="1"></label>
+          </div>
+          <div class="dms-adm-textarea-pair">
+            <label class="dms-adm-field-block">Mô tả<textarea id="tpl-edit-desc" rows="3"></textarea></label>
+            <label class="dms-adm-field-block">Chính sách lưu trữ<textarea id="tpl-edit-retention" rows="3"></textarea></label>
+          </div>
+          <div class="dms-adm-inline-grid">
+            <label>Phương tiện<input type="text" id="tpl-edit-medium"></label>
+            <label>Hiệu lực từ<input type="date" id="tpl-edit-eff-from"></label>
+            <label>Hiệu lực đến<input type="date" id="tpl-edit-eff-until"></label>
+            <label>Link mẫu trống<input type="text" id="tpl-edit-blank-url"></label>
+          </div>
+          <label class="dms-adm-check"><input type="checkbox" id="tpl-edit-active"> Hiển thị khi thêm tài liệu</label>
+          <div class="dms-adm-actions-row">
+            <button type="submit" class="adm-btn adm-btn--primary">Lưu thay đổi</button>
+            <button type="button" class="adm-btn" id="tpl-edit-cancel">Hủy</button>
+          </div>
+        </form>
       </div>
     </div>
 

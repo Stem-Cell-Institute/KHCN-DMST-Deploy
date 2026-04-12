@@ -21,9 +21,12 @@ if (!process.env.TZ) {
 const path = require('path');
 const { startWorker } = require(path.join(__dirname, 'services', 'enrichmentWorker.js'));
 const fs = require('fs');
+const appPaths = require('./lib/appPaths');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 const cors = require('cors');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
@@ -48,8 +51,55 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const BYTES_PER_MB = 1024 * 1024;
+/** application/json — không áp dụng multipart/form-data (multer tự đọc stream, không qua express.json). */
+const BODY_JSON_LIMIT_STR =
+  process.env.BODY_JSON_LIMIT != null && String(process.env.BODY_JSON_LIMIT).trim() !== ''
+    ? String(process.env.BODY_JSON_LIMIT).trim()
+    : '12mb';
+/** Kích thước từng file upload (multipart). Độc lập với BODY_JSON_LIMIT_STR. */
+const UPLOAD_FILE_BYTES_SUBMISSION = 20 * BYTES_PER_MB;
+const UPLOAD_FILE_BYTES_SJR_CSV = 60 * BYTES_PER_MB;
+const UPLOAD_FILE_BYTES_CAP_PUBLIC_TEMPLATE = 80 * BYTES_PER_MB;
+const UPLOAD_FILE_BYTES_CAP_VIEN = 200 * BYTES_PER_MB;
+/** Trường text không phải file trong multipart (mặc định multer 1MB). Đồng bộ mức với body JSON mặc định. */
+const MULTIPART_MAX_FIELD_BYTES = 12 * BYTES_PER_MB;
+
+// Sau reverse proxy (Nginx/Traefik) trên Ubuntu/container: TRUST_PROXY=1 để req.ip / req.secure đúng
+(function applyTrustProxy() {
+  const raw = process.env.TRUST_PROXY;
+  if (raw == null || String(raw).trim() === '' || raw === '0' || String(raw).toLowerCase() === 'false') {
+    return;
+  }
+  const n = parseInt(raw, 10);
+  app.set('trust proxy', Number.isFinite(n) && n > 0 ? n : 1);
+})();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
+
+// Lỗi không bắt được trong async / callback — log để vận hành (PM2/Docker) còn dấu vết.
+// uncaughtException: trạng thái process không an toàn; nhiều nơi gọi process.exit(1) sau log để tiến trình giám sát tự restart.
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] uncaughtException:', err && err.stack ? err.stack : err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] unhandledRejection:', reason instanceof Error ? reason.stack || reason : reason);
+});
+
+// Giới hạn tốc độ toàn bộ /api/* trước express.json — giảm nguy cơ flood body JSON (RAM/CPU).
+(function mountApiRateLimitEarly() {
+  const windowMs = Math.max(1000, parseInt(process.env.API_RATE_LIMIT_WINDOW_MS || '900000', 10) || 900000);
+  const max = Math.max(1, parseInt(process.env.API_RATE_LIMIT_MAX || '400', 10) || 400);
+  const apiRateLimiter = rateLimit({
+    windowMs,
+    max,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Quá nhiều yêu cầu tới API, vui lòng thử lại sau.' },
+  });
+  app.use('/api', apiRateLimiter);
+})();
 
 // Route kiểm tra sớm nhất (trước middleware)
 app.get('/api/health', (req, res) => {
@@ -130,7 +180,11 @@ app.get('/images/logo-vien-te-bao-goc.png', (req, res) => {
   }
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sci-ace-secret-change-in-production';
+const JWT_SECRET = String(process.env.JWT_SECRET || '').trim();
+if (!JWT_SECRET) {
+  console.error('[FATAL] JWT_SECRET chưa được cấu hình trong môi trường (.env hoặc biến hệ thống). Dừng ứng dụng.');
+  process.exit(1);
+}
 const ALLOWED_EMAIL_DOMAIN = '@sci.edu.vn';
 /** Chỉ dùng đặt lịch thiết bị CRD — JWT có role này chỉ được gọi /api/crd/* (+ me, logout, health). */
 const CRD_ONLY_USER_ROLE = 'crd_user';
@@ -142,23 +196,201 @@ const ADMIN_EMAIL = 'ntsinh0409@gmail.com';
 // Database đã được khởi tạo từ ./lib/db-bridge.js (dòng trên)
 // db-bridge tự động chọn SQLite (local) hoặc Turso (Cloudflare) dựa trên DATABASE_URL trong .env
 
-// Tạo các thư mục cần thiết
-fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'uploads'), { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'uploads-cap-vien'), { recursive: true });
-const capVienPublicTemplatesFsDir = path.join(__dirname, 'uploads-cap-vien', 'public-templates');
+// Thư mục dữ liệu (DB + upload): mặc định cạnh code; production đặt APP_DATA_DIR để tách khỏi mã nguồn
+fs.mkdirSync(appPaths.sqliteDataDir(), { recursive: true });
+const uploadDir = appPaths.uploadsRoot();
+const uploadDirCapVien = appPaths.uploadsCapVienRoot();
+const capVienPublicTemplatesFsDir = appPaths.capVienPublicTemplatesDir();
+fs.mkdirSync(uploadDir, { recursive: true });
+fs.mkdirSync(uploadDirCapVien, { recursive: true });
 fs.mkdirSync(capVienPublicTemplatesFsDir, { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'uploads', 'htqt-doan-ra'), { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'uploads', 'htqt-doan-vao'), { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'uploads', 'htqt-mou'), { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'uploads', 'htqt-ytnn'), { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'uploads', 'events'), { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'uploads', 'htqt-thoa-thuan'), { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'uploads', 'dms'), { recursive: true });
+for (const sub of ['htqt-doan-ra', 'htqt-doan-vao', 'htqt-mou', 'htqt-ytnn', 'events', 'htqt-thoa-thuan', 'dms', 'conference']) {
+  fs.mkdirSync(path.join(uploadDir, sub), { recursive: true });
+}
 fs.mkdirSync(path.join(__dirname, 'templates', 'events'), { recursive: true });
+if (appPaths.appDataDir) {
+  console.log('[paths] APP_DATA_DIR=' + appPaths.appDataDir + ' | DB dir=' + appPaths.sqliteDataDir() + ' | uploads=' + uploadDir);
+}
 
-// Đề tài cấp Viện: cùng file sci-ace.db (gom DB). File data/de-tai-cap-vien.db cũ được migrate một lần khi khởi động.
-const legacyCapVienDbPath = path.join(__dirname, 'data', 'de-tai-cap-vien.db');
+// --- Giới hạn đường dẫn khi xóa file/thư mục (chống path traversal / xóa nhầm mã nguồn) ---
+const RESOLVED_UPLOADS_ROOT = path.resolve(uploadDir);
+const RESOLVED_CAP_VIEN_UPLOADS_ROOT = path.resolve(uploadDirCapVien);
+
+/**
+ * Chuỗi đường dẫn lưu trong CSDL → file thật trên đĩa.
+ * Hỗ trợ tiền tố uploads/ và uploads-cap-vien/ (cũ: relative từ thư mục code).
+ */
+function resolveStoredFileFromDb(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return null;
+  if (path.isAbsolute(s)) return path.normalize(path.resolve(s));
+  const n = s.replace(/\\/g, '/');
+  if (n.startsWith('uploads-cap-vien/')) {
+    return path.normalize(path.resolve(uploadDirCapVien, n.slice('uploads-cap-vien/'.length)));
+  }
+  if (n.startsWith('uploads/')) {
+    return path.normalize(path.resolve(uploadDir, n.slice('uploads/'.length)));
+  }
+  return path.normalize(path.resolve(uploadDir, n));
+}
+
+function pathIsStrictlyInsideResolvedRoot(resolvedRootAbs, candidateAbs) {
+  const root = path.resolve(resolvedRootAbs);
+  const cand = path.resolve(candidateAbs);
+  if (cand === root) return false;
+  const rel = path.relative(root, cand);
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
+function downloadPathIsAllowed(normAbs) {
+  const norm = path.resolve(normAbs);
+  return (
+    pathIsStrictlyInsideResolvedRoot(RESOLVED_UPLOADS_ROOT, norm) ||
+    pathIsStrictlyInsideResolvedRoot(RESOLVED_CAP_VIEN_UPLOADS_ROOT, norm)
+  );
+}
+
+/** Kiểm tra path từ DB trước khi res.download (defense-in-depth). Trả { norm } hoặc { err: 403|404 }. */
+function normalizeAndCheckDownloadPath(storedPath) {
+  const raw = storedPath == null ? '' : String(storedPath).trim();
+  if (!raw) return { err: 404 };
+  const norm = path.resolve(raw);
+  if (!downloadPathIsAllowed(norm)) return { err: 403 };
+  try {
+    if (!fs.existsSync(norm) || !fs.statSync(norm).isFile()) return { err: 404 };
+  } catch (_) {
+    return { err: 404 };
+  }
+  return { norm };
+}
+
+function safeDownload(res, storedPath, downloadName) {
+  const r = normalizeAndCheckDownloadPath(storedPath);
+  if (r.err === 403) return res.status(403).json({ message: 'Truy cập bị từ chối' });
+  if (r.err) return res.status(404).json({ message: 'File không tồn tại' });
+  return res.download(r.norm, downloadName);
+}
+
+/** Chuẩn bị danh sách file cho ZIP; đã gửi lỗi thì trả null. */
+function prepareDownloadFileList(res, files) {
+  const out = [];
+  for (let i = 0; i < (files || []).length; i++) {
+    const f = files[i];
+    const r = normalizeAndCheckDownloadPath(f && f.path);
+    if (r.err === 403) {
+      res.status(403).json({ message: 'Truy cập bị từ chối' });
+      return null;
+    }
+    if (r.err) {
+      res.status(404).json({ message: 'File không tồn tại' });
+      return null;
+    }
+    out.push({ norm: r.norm, originalName: f.originalName });
+  }
+  return out;
+}
+
+/** Chỉ file trong uploads/missions/<missionId>/ (đúng cách lưu khi upload). */
+function resolveMissionUploadFileForUnlink(storedPath, missionId) {
+  const mid = parseInt(missionId, 10);
+  if (!Number.isFinite(mid) || mid <= 0) return null;
+  const raw = String(storedPath || '').trim();
+  if (!raw) return null;
+  const missionRoot = path.resolve(uploadDir, 'missions', String(mid));
+  const full = path.isAbsolute(raw) ? path.resolve(raw) : path.resolve(uploadDir, raw);
+  const norm = path.normalize(full);
+  if (!pathIsStrictlyInsideResolvedRoot(missionRoot, norm)) return null;
+  try {
+    if (!fs.existsSync(norm) || !fs.statSync(norm).isFile()) return null;
+  } catch (_) {
+    return null;
+  }
+  return norm;
+}
+
+/** Chỉ thư mục .../submission_<id>/ nằm trong uploads/ — tránh rmSync nhầm project root. */
+function resolveGdSubmissionDirForRmSync(submissionId, sampleFilePathFromDb) {
+  const sid = parseInt(submissionId, 10);
+  if (!Number.isFinite(sid) || sid <= 0) return null;
+  const raw = String(sampleFilePathFromDb || '').trim();
+  if (!raw) return null;
+  const fileAbs = path.isAbsolute(raw) ? path.resolve(raw) : resolveStoredFileFromDb(raw);
+  if (!fileAbs || !pathIsStrictlyInsideResolvedRoot(RESOLVED_UPLOADS_ROOT, fileAbs)) return null;
+  const dir = path.dirname(fileAbs);
+  if (path.basename(dir) !== 'submission_' + sid) return null;
+  try {
+    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return null;
+  } catch (_) {
+    return null;
+  }
+  return dir;
+}
+
+function resolveEventUploadFileForUnlink(storedPath, eventId) {
+  const eid = parseInt(eventId, 10);
+  if (!Number.isFinite(eid) || eid <= 0) return null;
+  const raw = String(storedPath || '').trim();
+  if (!raw) return null;
+  const eventRoot = path.resolve(uploadDir, 'events', String(eid));
+  const full = resolveStoredFileFromDb(raw);
+  if (!full) return null;
+  const norm = full;
+  if (!pathIsStrictlyInsideResolvedRoot(eventRoot, norm)) return null;
+  try {
+    if (!fs.existsSync(norm) || !fs.statSync(norm).isFile()) return null;
+  } catch (_) {
+    return null;
+  }
+  return norm;
+}
+
+function coopHtqtVanBanUnlinkRoots() {
+  return [
+    path.resolve(uploadDir, 'htqt-doan-ra'),
+    path.resolve(uploadDir, 'htqt-doan-vao'),
+    path.resolve(uploadDir, 'htqt-mou'),
+    path.resolve(uploadDir, 'htqt-ytnn'),
+    path.resolve(uploadDir, 'htqt-thoa-thuan'),
+  ];
+}
+
+function resolveCoopVanBanWordFileForUnlink(storedPath) {
+  const raw = String(storedPath || '').trim();
+  if (!raw) return null;
+  const full = resolveStoredFileFromDb(raw);
+  if (!full) return null;
+  const norm = full;
+  for (const root of coopHtqtVanBanUnlinkRoots()) {
+    if (pathIsStrictlyInsideResolvedRoot(root, norm)) {
+      try {
+        if (fs.existsSync(norm) && fs.statSync(norm).isFile()) return norm;
+      } catch (_) {
+        return null;
+      }
+      return null;
+    }
+  }
+  return null;
+}
+
+function resolveCapVienPublicTemplateStoredFileForUnlink(storedPath) {
+  const root = path.resolve(capVienPublicTemplatesFsDir);
+  const raw = String(storedPath || '').trim();
+  if (!raw) return null;
+  const full = resolveStoredFileFromDb(raw);
+  if (!full) return null;
+  const norm = full;
+  if (!pathIsStrictlyInsideResolvedRoot(root, norm)) return null;
+  try {
+    if (fs.existsSync(norm) && fs.statSync(norm).isFile()) return norm;
+  } catch (_) {
+    return null;
+  }
+  return null;
+}
+
+// Đề tài cấp Viện: cùng file sci-ace.db (gom DB). File de-tai-cap-vien.db cũ được migrate một lần khi khởi động.
+const legacyCapVienDbPath = path.join(appPaths.sqliteDataDir(), 'de-tai-cap-vien.db');
 db.exec(`
   CREATE TABLE IF NOT EXISTS cap_vien_submissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -234,7 +466,12 @@ db.exec(`
 `);
 try { db.prepare('ALTER TABLE users ADD COLUMN academicTitle TEXT').run(); } catch (e) { /* đã tồn tại */ }
 try { db.prepare('ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0').run(); } catch (e) { /* đã tồn tại */ }
-try { db.prepare('ALTER TABLE users ADD COLUMN password_support_hint TEXT').run(); } catch (e) { /* đã tồn tại — ghi chú MK do Admin đặt/cấp lại (nội bộ) */ }
+try {
+  db.prepare('UPDATE users SET password_support_hint = NULL WHERE password_support_hint IS NOT NULL').run();
+} catch (e) { /* không có cột password_support_hint */ }
+try {
+  db.exec('ALTER TABLE users DROP COLUMN password_support_hint');
+} catch (e) { /* SQLite < 3.35 hoặc cột đã xóa / chưa từng có */ }
 
 // ─── CRD Lab Booking (đặt lịch thiết bị) ─────────────────────────────────
 db.exec(`
@@ -508,16 +745,65 @@ try {
 } catch (e) {
   /* cột đã tồn tại */
 }
+
+/**
+ * Cho phép ALTER ... ADD COLUMN chỉ với (bảng, cột, định nghĩa kiểu) đã khai báo — tránh SQL injection nếu sau này gọi từ input.
+ * Khi thêm migration cột mới: bổ sung Map tương ứng bên dưới.
+ */
+const CRD_ENSURE_COLUMN_ALLOWED = new Map([
+  [
+    'crd_bookings',
+    new Map([
+      ['created_at', new Set(['TEXT'])],
+      ['research_group', new Set(['TEXT'])],
+    ]),
+  ],
+]);
+
+function crdEnsureColumnIsWhitelisted(tableName, columnName, columnDefSql) {
+  const table = String(tableName || '').trim().toLowerCase();
+  const col = String(columnName || '').trim().toLowerCase();
+  const def = String(columnDefSql || '').trim().replace(/\s+/g, ' ');
+  const byTable = CRD_ENSURE_COLUMN_ALLOWED.get(table);
+  if (!byTable) {
+    console.warn(`[CRD] Ensure column: bảng không nằm trong whitelist: ${tableName}`);
+    return false;
+  }
+  const allowedDefs = byTable.get(col);
+  if (!allowedDefs || !allowedDefs.has(def)) {
+    console.warn(
+      `[CRD] Ensure column: cột hoặc kiểu SQL không được phép: ${table}.${col} — "${def}"`
+    );
+    return false;
+  }
+  return true;
+}
+
+function crdQuoteSqlIdent(name) {
+  const s = String(name || '').trim();
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(s)) return null;
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+
 function crdEnsureColumn(tableName, columnName, columnDefSql) {
-  // Better-sqlite3: PRAGMA table_info trả về danh sách cột
+  if (!crdEnsureColumnIsWhitelisted(tableName, columnName, columnDefSql)) return false;
+  const tableCanon = String(tableName || '').trim().toLowerCase();
+  const colCanon = String(columnName || '').trim().toLowerCase();
+  const qTable = crdQuoteSqlIdent(tableCanon);
+  const qCol = crdQuoteSqlIdent(colCanon);
+  if (!qTable || !qCol) {
+    console.warn('[CRD] Ensure column: tên bảng/cột không hợp lệ (chỉ chữ, số, gạch dưới).');
+    return false;
+  }
+  const def = String(columnDefSql || '').trim().replace(/\s+/g, ' ');
   try {
-    const cols = db.prepare(`PRAGMA table_info(${tableName})`).all();
-    const exists = (cols || []).some(c => String(c.name) === String(columnName));
+    const cols = db.prepare(`PRAGMA table_info(${qTable})`).all();
+    const exists = (cols || []).some((c) => String(c.name).toLowerCase() === colCanon);
     if (exists) return true;
-    db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefSql}`).run();
+    db.prepare(`ALTER TABLE ${qTable} ADD COLUMN ${qCol} ${def}`).run();
     return true;
   } catch (e) {
-    console.warn(`[CRD] Ensure column failed: ${tableName}.${columnName}:`, e && e.message ? e.message : String(e));
+    console.warn(`[CRD] Ensure column failed: ${tableCanon}.${colCanon}:`, e && e.message ? e.message : String(e));
     return false;
   }
 }
@@ -2054,17 +2340,41 @@ function deleteMissionCascade(missionId) {
       }
     }
   })();
-  const projRoot = path.resolve(__dirname);
   for (const rel of pathsToRemove) {
     try {
-      const full = path.isAbsolute(rel) ? path.resolve(rel) : path.resolve(__dirname, rel);
-      const norm = path.normalize(full);
-      if (norm !== projRoot && !norm.startsWith(projRoot + path.sep)) continue;
-      if (fs.existsSync(norm)) fs.unlinkSync(norm);
+      const abs = resolveMissionUploadFileForUnlink(rel, mid);
+      if (abs) fs.unlinkSync(abs);
     } catch (eUn) {
       /* bỏ qua file không xóa được */
     }
   }
+}
+
+function resolveCapVienUploadRoot() {
+  return path.resolve(uploadDirCapVien);
+}
+
+/** Chỉ chấp nhận đường dẫn nằm trong uploads-cap-vien — tránh xóa nhầm mã nguồn (server.js, …). */
+function normalizePathUnderCapVienUploads(relOrAbs) {
+  const root = resolveCapVienUploadRoot();
+  let full = path.isAbsolute(relOrAbs) ? path.resolve(relOrAbs) : resolveStoredFileFromDb(relOrAbs);
+  if (!full && relOrAbs != null && String(relOrAbs).trim()) {
+    full = path.resolve(uploadDirCapVien, String(relOrAbs).trim());
+  }
+  if (!full) return null;
+  const norm = path.normalize(full);
+  if (norm !== root && !norm.startsWith(root + path.sep)) return null;
+  return norm;
+}
+
+function safeUnlinkCapVienStoredFile(storedPath) {
+  try {
+    const norm = normalizePathUnderCapVienUploads(storedPath);
+    if (!norm || !fs.existsSync(norm)) return;
+    const st = fs.statSync(norm);
+    if (!st.isFile()) return;
+    fs.unlinkSync(norm);
+  } catch (_) {}
 }
 
 /**
@@ -2106,8 +2416,6 @@ function deleteCapVienSubmissionCascade(submissionId) {
       if (f && f.path) pathsToRemove.push(String(f.path));
     }
   } catch (e) {}
-  let submissionDir = null;
-  if (pathsToRemove.length) submissionDir = path.dirname(pathsToRemove[0]);
   const capStmts = [
     'DELETE FROM cap_vien_submission_files WHERE submissionId = ?',
     'DELETE FROM cap_vien_step2_history WHERE submissionId = ?',
@@ -2126,18 +2434,37 @@ function deleteCapVienSubmissionCascade(submissionId) {
       }
     }
   })();
-  const projRoot = path.resolve(__dirname);
   for (const rel of pathsToRemove) {
     try {
-      const full = path.isAbsolute(rel) ? path.resolve(rel) : path.resolve(__dirname, rel);
-      const norm = path.normalize(full);
-      if (norm !== projRoot && !norm.startsWith(projRoot + path.sep)) continue;
-      if (fs.existsSync(norm)) fs.unlinkSync(norm);
+      const norm = normalizePathUnderCapVienUploads(rel);
+      if (!norm || !fs.existsSync(norm)) continue;
+      const st = fs.statSync(norm);
+      if (st.isFile()) fs.unlinkSync(norm);
     } catch (eUn) {}
   }
-  if (submissionDir && fs.existsSync(submissionDir)) {
+  let submissionDirSafe = null;
+  const capRoot = resolveCapVienUploadRoot();
+  const expectedBase = 'submission_' + String(sid);
+  for (const rel of pathsToRemove) {
+    const fileNorm = normalizePathUnderCapVienUploads(rel);
+    if (!fileNorm) continue;
+    let dir = path.dirname(fileNorm);
+    while (dir && dir.length >= capRoot.length) {
+      if (!dir.startsWith(capRoot + path.sep) && dir !== capRoot) break;
+      if (path.basename(dir) === expectedBase) {
+        submissionDirSafe = normalizePathUnderCapVienUploads(dir);
+        break;
+      }
+      if (dir === capRoot) break;
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+    if (submissionDirSafe) break;
+  }
+  if (submissionDirSafe && fs.existsSync(submissionDirSafe)) {
     try {
-      fs.rmSync(submissionDir, { recursive: true });
+      fs.rmSync(submissionDirSafe, { recursive: true });
     } catch (eRm) {}
   }
 }
@@ -2174,7 +2501,6 @@ function sanitizeFolderName(name) {
 }
 
 // Multer: lưu file tạm, sau khi tạo submission sẽ chuyển vào uploads/<Họ tên NCV>/submission_<id>/
-const uploadDir = path.join(__dirname, 'uploads');
 const tempUploadDir = path.join(uploadDir, 'temp');
 fs.mkdirSync(tempUploadDir, { recursive: true });
 const storage = multer.diskStorage({
@@ -2192,20 +2518,18 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 }
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES },
 });
 
 /** Upload CSV SCImago (memory) — POST /api/admin/sjr-csv-import */
 const uploadSjrCsv = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 60 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SJR_CSV, fieldSize: MULTIPART_MAX_FIELD_BYTES },
 });
 
 // Multer cho Đề tài cấp Viện (thư mục riêng)
-const uploadDirCapVien = path.join(__dirname, 'uploads-cap-vien');
 const tempUploadDirCapVien = path.join(uploadDirCapVien, 'temp');
 fs.mkdirSync(tempUploadDirCapVien, { recursive: true });
-const CAP_VIEN_MAX_FILE_SIZE = 200 * 1024 * 1024; // 200MB mỗi file
 const storageCapVien = multer.diskStorage({
   destination: function (req, file, cb) {
     if (!req._uploadDirCapVien) {
@@ -2221,7 +2545,7 @@ const storageCapVien = multer.diskStorage({
 });
 const uploadCapVien = multer({
   storage: storageCapVien,
-  limits: { fileSize: CAP_VIEN_MAX_FILE_SIZE }
+  limits: { fileSize: UPLOAD_FILE_BYTES_CAP_VIEN, fieldSize: MULTIPART_MAX_FIELD_BYTES },
 });
 
 /** Mẫu hồ sơ công khai (trang tải mẫu đề tài cấp Viện) — mọi định dạng, tối đa 80MB */
@@ -2238,10 +2562,10 @@ const storageCapVienPublicTemplate = multer.diskStorage({
 });
 const uploadCapVienPublicTemplate = multer({
   storage: storageCapVienPublicTemplate,
-  limits: { fileSize: 80 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_CAP_PUBLIC_TEMPLATE, fieldSize: MULTIPART_MAX_FIELD_BYTES },
 });
 
-const htqtDoanRaDir = path.join(__dirname, 'uploads', 'htqt-doan-ra');
+const htqtDoanRaDir = path.join(uploadDir, 'htqt-doan-ra');
 const DOAN_RA_TO_TRINH_TEMPLATE_PATH = path.join(htqtDoanRaDir, 'to-trinh-template.docx');
 const storageHtqtDoanRa = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -2255,7 +2579,7 @@ const storageHtqtDoanRa = multer.diskStorage({
 });
 const uploadHtqtDoanRa = multer({
   storage: storageHtqtDoanRa,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES },
   fileFilter: function (req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.(doc|docx)$/.test(n)) {
@@ -2275,7 +2599,7 @@ const storageToTrinhTemplate = multer.diskStorage({
 });
 const uploadToTrinhTemplate = multer({
   storage: storageToTrinhTemplate,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES },
   fileFilter: function (req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.docx$/i.test(n)) {
@@ -2285,7 +2609,7 @@ const uploadToTrinhTemplate = multer({
   }
 });
 
-const htqtDoanVaoDir = path.join(__dirname, 'uploads', 'htqt-doan-vao');
+const htqtDoanVaoDir = path.join(uploadDir, 'htqt-doan-vao');
 const DOAN_VAO_TO_TRINH_TEMPLATE_PATH = path.join(htqtDoanVaoDir, 'to-trinh-template.docx');
 const storageHtqtDoanVao = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -2299,7 +2623,7 @@ const storageHtqtDoanVao = multer.diskStorage({
 });
 const uploadHtqtDoanVao = multer({
   storage: storageHtqtDoanVao,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES },
   fileFilter: function (req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.(doc|docx)$/.test(n)) {
@@ -2318,7 +2642,7 @@ const storageToTrinhTemplateDoanVao = multer.diskStorage({
 });
 const uploadToTrinhTemplateDoanVao = multer({
   storage: storageToTrinhTemplateDoanVao,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES },
   fileFilter: function (req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.docx$/i.test(n)) {
@@ -2328,7 +2652,7 @@ const uploadToTrinhTemplateDoanVao = multer({
   }
 });
 
-const htqtMouDir = path.join(__dirname, 'uploads', 'htqt-mou');
+const htqtMouDir = path.join(uploadDir, 'htqt-mou');
 const MOU_TO_TRINH_TEMPLATE_PATH = path.join(htqtMouDir, 'to-trinh-template.docx');
 const storageHtqtMou = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -2342,7 +2666,7 @@ const storageHtqtMou = multer.diskStorage({
 });
 const uploadHtqtMou = multer({
   storage: storageHtqtMou,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES },
   fileFilter: function (req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.(doc|docx)$/.test(n)) {
@@ -2361,7 +2685,7 @@ const storageToTrinhTemplateMou = multer.diskStorage({
 });
 const uploadToTrinhTemplateMou = multer({
   storage: storageToTrinhTemplateMou,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES },
   fileFilter: function (req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.docx$/i.test(n)) {
@@ -2371,7 +2695,7 @@ const uploadToTrinhTemplateMou = multer({
   }
 });
 
-const htqtYtnnDir = path.join(__dirname, 'uploads', 'htqt-ytnn');
+const htqtYtnnDir = path.join(uploadDir, 'htqt-ytnn');
 const YTNN_TO_TRINH_TEMPLATE_PATH = path.join(htqtYtnnDir, 'to-trinh-template.docx');
 const storageHtqtYtnn = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -2385,7 +2709,7 @@ const storageHtqtYtnn = multer.diskStorage({
 });
 const uploadHtqtYtnn = multer({
   storage: storageHtqtYtnn,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES },
   fileFilter: function (req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.(doc|docx)$/.test(n)) {
@@ -2394,7 +2718,7 @@ const uploadHtqtYtnn = multer({
     cb(null, true);
   }
 });
-const htqtThoaThuanDir = path.join(__dirname, 'uploads', 'htqt-thoa-thuan');
+const htqtThoaThuanDir = path.join(uploadDir, 'htqt-thoa-thuan');
 const uploadHtqtThoaThuanScan = multer({
   storage: multer.diskStorage({
     destination: function (_req, _file, cb) { cb(null, htqtThoaThuanDir); },
@@ -2404,7 +2728,7 @@ const uploadHtqtThoaThuanScan = multer({
       cb(null, 'thoa_thuan_' + Date.now() + '_' + safe + ext.toLowerCase());
     },
   }),
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES },
   fileFilter: function (_req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.(pdf|doc|docx|jpg|jpeg|png)$/i.test(n)) return cb(new Error('Scan chỉ nhận PDF, DOC, DOCX, JPG, PNG'));
@@ -2420,7 +2744,7 @@ const uploadHtqtThoaThuanTermination = multer({
       cb(null, 'thoa_thuan_termination_' + Date.now() + '_' + safe + ext.toLowerCase());
     },
   }),
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES },
   fileFilter: function (_req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.(pdf|doc|docx|jpg|jpeg|png)$/i.test(n)) return cb(new Error('Termination file: PDF, DOC, DOCX, JPG, PNG only'));
@@ -2437,7 +2761,7 @@ const storageToTrinhTemplateYtnn = multer.diskStorage({
 });
 const uploadToTrinhTemplateYtnn = multer({
   storage: storageToTrinhTemplateYtnn,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES },
   fileFilter: function (req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.docx$/i.test(n)) {
@@ -2640,6 +2964,115 @@ try {
 } catch (e) {
   /* đã có */
 }
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN physical_location TEXT').run();
+} catch (e) {
+  /* đã có */
+}
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN physical_copy_type TEXT').run();
+} catch (e) {
+  /* đã có */
+}
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN physical_sheet_count INTEGER').run();
+} catch (e) {
+  /* đã có */
+}
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN physical_page_count INTEGER').run();
+} catch (e) {
+  /* đã có */
+}
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN retention_until TEXT').run();
+} catch (e) {
+  /* đã có */
+}
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN destruction_eligible_date TEXT').run();
+} catch (e) {
+  /* đã có */
+}
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN parent_case_ref TEXT').run();
+} catch (e) {
+  /* đã có */
+}
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN template_id INTEGER').run();
+} catch (e) {
+  /* đã có */
+}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS dms_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    version TEXT NOT NULL DEFAULT '1.0',
+    status TEXT NOT NULL DEFAULT 'active',
+    record_kind TEXT DEFAULT 'record',
+    description TEXT,
+    retention_policy TEXT,
+    medium_notes TEXT,
+    owning_unit TEXT,
+    effective_from TEXT,
+    effective_until TEXT,
+    blank_form_url TEXT,
+    superseded_by_id INTEGER,
+    sort_order INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_by_id INTEGER REFERENCES users(id),
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    updated_at TEXT,
+    FOREIGN KEY (superseded_by_id) REFERENCES dms_templates(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_dms_documents_template ON dms_documents(template_id);
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS dms_document_loans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_id INTEGER NOT NULL REFERENCES dms_documents(id) ON DELETE CASCADE,
+    borrower_name TEXT NOT NULL,
+    reason TEXT,
+    borrowed_at TEXT DEFAULT (datetime('now','localtime')),
+    due_at TEXT,
+    returned_at TEXT,
+    created_by_id INTEGER REFERENCES users(id),
+    notes TEXT
+  );
+  CREATE TABLE IF NOT EXISTS dms_document_handovers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_id INTEGER NOT NULL REFERENCES dms_documents(id) ON DELETE CASCADE,
+    from_party TEXT NOT NULL,
+    to_party TEXT NOT NULL,
+    handed_at TEXT DEFAULT (datetime('now','localtime')),
+    notes TEXT,
+    created_by_id INTEGER REFERENCES users(id)
+  );
+  CREATE TABLE IF NOT EXISTS dms_inventory_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    started_at TEXT DEFAULT (datetime('now','localtime')),
+    closed_at TEXT,
+    started_by_id INTEGER REFERENCES users(id),
+    notes TEXT
+  );
+  CREATE TABLE IF NOT EXISTS dms_inventory_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL REFERENCES dms_inventory_sessions(id) ON DELETE CASCADE,
+    document_id INTEGER NOT NULL REFERENCES dms_documents(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    physical_location_found TEXT,
+    notes TEXT,
+    checked_at TEXT DEFAULT (datetime('now','localtime')),
+    checked_by_id INTEGER REFERENCES users(id),
+    UNIQUE(session_id, document_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_dms_loans_doc ON dms_document_loans(document_id);
+  CREATE INDEX IF NOT EXISTS idx_dms_loans_open ON dms_document_loans(document_id) WHERE returned_at IS NULL;
+  CREATE INDEX IF NOT EXISTS idx_dms_handover_doc ON dms_document_handovers(document_id);
+`);
 /** Người đã có vai trò module trước đây → tự thêm vào danh sách mở truy cập (một lần). */
 (function backfillDmsModuleAccessFromRoles() {
   try {
@@ -2739,12 +3172,17 @@ if (process.env.SMTP_HOST && process.env.SMTP_USER) {
   });
 }
 
-/** From gửi SMTP: có tên hiển thị (tránh Gmail hiện chỉ local-part như ntsinh0409). Có thể ghi đè bằng SMTP_FROM_NAME hoặc SMTP_FROM dạng "Tên" <email>. */
+/** From gửi SMTP: có tên hiển thị (tránh Gmail hiện chỉ local-part như ntsinh0409). SMTP_FROM có thể: địa chỉ email; "Tên" <email>; hoặc chỉ tên (không có @) → dùng cùng SMTP_USER làm địa chỉ. SMTP_FROM_NAME: tên mặc định khi SMTP_FROM là email thuần. */
 function getSmtpFrom() {
   const raw = (process.env.SMTP_FROM || '').trim();
   const user = (process.env.SMTP_USER || '').trim();
   if (raw.includes('<') && raw.includes('>')) {
     return raw;
+  }
+  // Chỉ tên hiển thị, ví dụ STIMS SCI — gửi từ địa chỉ SMTP_USER
+  if (raw && !raw.includes('@')) {
+    if (!user) return undefined;
+    return { name: raw, address: user };
   }
   const address = (raw.includes('@') ? raw : user) || '';
   if (!address) return undefined;
@@ -2940,7 +3378,7 @@ function coopSendMailTuChoi(loaiKey, row, id, who, note) {
   if (!row || !row.submitted_by_email) return Promise.resolve();
   const ma = row.ma_de_xuat || coopGenMa(loaiKey, id);
   const whoLabel = who === 'phong' ? 'Phòng KHCN&QHĐN' : 'Viện trưởng';
-  const titleByLoai = { doan_ra: 'Đoàn ra', doan_vao: 'Đoàn vào', mou: 'MOU / Thỏa thuận', ytnn: 'Đề tài YTNN' };
+  const titleByLoai = { doan_ra: 'Đoàn ra', doan_vao: 'Đoàn vào', mou: 'MOU / Thỏa thuận', ytnn: 'Đề tài có yếu tố nước ngoài' };
   const t = titleByLoai[loaiKey] || 'Đề xuất';
   const modUrl = (process.env.BASE_URL || ('http://localhost:' + PORT)) + '/module-hoatac-quocte.html';
   const subj = `[Hợp tác QT] Từ chối đề xuất — ${t} — ${ma}`;
@@ -4075,10 +4513,96 @@ function sendRoleAssignmentEmail(toEmail, fullname, role, tempPassword) {
   }).catch(err => console.error('Email role assignment error:', err.message));
 }
 
+/** Chuẩn hoá origin cho so khớp (scheme + host + port, không path). */
+function normalizeCorsOriginValue(s) {
+  const t = String(s || '').trim();
+  if (!t) return '';
+  try {
+    const u = new URL(t);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return '';
+  }
+}
+
+function buildCorsOriginAllowlist() {
+  const allow = new Set();
+  const add = (raw) => {
+    const n = normalizeCorsOriginValue(raw);
+    if (n) allow.add(n);
+  };
+  const corsOriginsEnv = process.env.CORS_ORIGINS;
+  if (corsOriginsEnv != null && String(corsOriginsEnv).trim()) {
+    String(corsOriginsEnv)
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .forEach(add);
+  }
+  if (process.env.BASE_URL != null && String(process.env.BASE_URL).trim()) {
+    add(process.env.BASE_URL);
+  }
+  const isProd = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+  if (!isProd) {
+    const p = String(PORT);
+    add(`http://localhost:${p}`);
+    add(`http://127.0.0.1:${p}`);
+    add('http://localhost:3000');
+    add('http://127.0.0.1:3000');
+  }
+  return allow;
+}
+
+const CORS_ORIGIN_ALLOWLIST = buildCorsOriginAllowlist();
+(function assertCorsConfiguredInProduction() {
+  const isProd = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+  if (!isProd || CORS_ORIGIN_ALLOWLIST.size > 0) return;
+  console.error(
+    '[FATAL] Production: danh sách CORS rỗng. Đặt BASE_URL và/hoặc CORS_ORIGINS (các origin cách nhau bằng dấu phẩy, ví dụ https://app.example.com,https://admin.example.com).'
+  );
+  process.exit(1);
+})();
+
+function corsOriginCallback(origin, callback) {
+  if (!origin) return callback(null, true);
+  const isProd = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+  if (!isProd && origin === 'null') return callback(null, true);
+  const n = normalizeCorsOriginValue(origin);
+  if (n && CORS_ORIGIN_ALLOWLIST.has(n)) return callback(null, origin);
+  return callback(null, false);
+}
+
 // Middleware (static đặt sau API để /api/* luôn do API xử lý)
-app.use(cors({ origin: '*' })); // Cho phép mọi origin (kể cả file:// khi mở từ ổ đĩa)
-// BibTeX lớn (JSON hoặc preview) cần > giới hạn mặc định ~100kb
-app.use(express.json({ limit: '12mb' }));
+(function mountSecurityHeaders() {
+  const isProd = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+  app.use(
+    helmet({
+      crossOriginEmbedderPolicy: false,
+      strictTransportSecurity: isProd ? undefined : false,
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          frameAncestors: ["'self'"],
+          objectSrc: ["'none'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          scriptSrcAttr: ["'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https:', 'http:'],
+          imgSrc: ["'self'", 'data:', 'blob:', 'https:', 'http:'],
+          fontSrc: ["'self'", 'https:', 'data:'],
+          connectSrc: ["'self'", 'https:', 'wss:', 'http:', 'ws:'],
+          frameSrc: ["'self'", 'https:', 'http:'],
+          upgradeInsecureRequests: isProd ? [] : null,
+        },
+      },
+    })
+  );
+})();
+app.use(cors({ origin: corsOriginCallback }));
+// BibTeX lớn (JSON) cần > 100kb mặc định của Express — không liên quan giới hạn file của multer (multipart).
+app.use(express.json({ limit: BODY_JSON_LIMIT_STR }));
 
 function getCookieFromReq(req, name) {
   const raw = req.headers.cookie || '';
@@ -4415,7 +4939,7 @@ app.post('/api/register', async (req, res) => {
     } catch (e) {
       return res.status(500).json({ message: 'Không thể kích hoạt tài khoản. Vui lòng thử lại.' });
     }
-    db.prepare('UPDATE users SET password = ?, fullname = ?, password_support_hint = NULL WHERE id = ?').run(hash, fn, existing.id);
+    db.prepare('UPDATE users SET password = ?, fullname = ? WHERE id = ?').run(hash, fn, existing.id);
     const user = { id: existing.id, email: em, fullname: fn, role: existing.role };
     if ((user.role || '').toLowerCase() === 'admin') {
       user.isMasterAdmin = userEmailIsMasterAdmin(user.email);
@@ -4454,6 +4978,9 @@ app.post('/api/register', async (req, res) => {
 // Đăng nhập
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body || {};
+  if (typeof password !== 'string' || !password || password.length > 128) {
+    return res.status(400).json({ message: 'Mật khẩu không hợp lệ' });
+  }
   const em = (email || '').trim().toLowerCase();
   const row = db.prepare('SELECT id, email, password, fullname, role, COALESCE(is_banned, 0) AS is_banned FROM users WHERE email = ?').get(em);
   if (!row) {
@@ -4607,6 +5134,10 @@ app.post('/api/crd/public/register', async (req, res) => {
   }
 });
 
+/** email (chuẩn hoá) → thời điểm gửi mail quên mật khẩu gần nhất — chống email bomb SMTP */
+const forgotPasswordLastSentByEmail = new Map();
+const FORGOT_PASSWORD_COOLDOWN_MS = 60_000;
+
 // Quên mật khẩu: gửi email chứa link đặt lại (chỉ tài khoản tồn tại, không tiết lộ)
 app.post('/api/forgot-password', async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
@@ -4617,11 +5148,23 @@ app.post('/api/forgot-password', async (req, res) => {
   if (!row) {
     return res.json({ message: 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu qua email.' });
   }
+  const now = Date.now();
+  const last = forgotPasswordLastSentByEmail.get(email) || 0;
+  if (now - last < FORGOT_PASSWORD_COOLDOWN_MS) {
+    return res.status(429).json({ message: 'Vui lòng đợi 1 phút trước khi gửi lại.' });
+  }
+  forgotPasswordLastSentByEmail.set(email, now);
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
   db.prepare('DELETE FROM password_reset_tokens WHERE email = ?').run(email);
   db.prepare('INSERT INTO password_reset_tokens (token, email, expiresAt) VALUES (?, ?, ?)').run(token, email, expiresAt);
-  await sendPasswordResetEmail(email, token);
+  try {
+    await sendPasswordResetEmail(email, token);
+  } catch (err) {
+    forgotPasswordLastSentByEmail.delete(email);
+    console.error('[forgot-password] SMTP:', err && err.message ? err.message : err);
+    return res.status(503).json({ message: 'Không gửi được email lúc này. Vui lòng thử lại sau.' });
+  }
   return res.json({ message: 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu qua email.' });
 });
 
@@ -4636,7 +5179,7 @@ app.post('/api/reset-password', async (req, res) => {
     return res.status(400).json({ message: 'Link đã hết hạn hoặc không hợp lệ. Vui lòng yêu cầu quên mật khẩu lại.' });
   }
   const hash = await bcrypt.hash(password, 10);
-  db.prepare('UPDATE users SET password = ?, password_support_hint = NULL WHERE email = ?').run(hash, row.email);
+  db.prepare('UPDATE users SET password = ? WHERE email = ?').run(hash, row.email);
   db.prepare('DELETE FROM password_reset_tokens WHERE token = ?').run(token);
   return res.json({ message: 'Đã đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.' });
 });
@@ -5200,8 +5743,8 @@ app.get('/api/submissions/:id/file/:fieldName', authMiddleware, (req, res) => {
     return res.status(403).json({ message: 'Bạn không có quyền tải file này' });
   }
   const row = db.prepare('SELECT path, originalName FROM submission_files WHERE submissionId = ? AND fieldName = ?').get(id, fieldName);
-  if (!row || !fs.existsSync(row.path)) return res.status(404).json({ message: 'Không tìm thấy file' });
-  res.download(row.path, row.originalName || fieldName);
+  if (!row) return res.status(404).json({ message: 'Không tìm thấy file' });
+  return safeDownload(res, row.path, row.originalName || fieldName);
 });
 
 // Thư ký Hội đồng xử lý GĐ3 (kiểm tra hồ sơ): pass / reject / need_supplement / need_revision
@@ -5348,8 +5891,8 @@ app.get('/api/submissions/:id/review-file/:slot', authMiddleware, (req, res) => 
   const row = db.prepare(
     'SELECT path, originalName FROM submission_files WHERE submissionId = ? AND fieldName = ?'
   ).get(id, 'gd5_review_' + slot);
-  if (!row || !fs.existsSync(row.path)) return res.status(404).json({ message: 'Không tìm thấy file phản biện' });
-  res.download(row.path, row.originalName || 'phản biện ' + slot + '.pdf');
+  if (!row) return res.status(404).json({ message: 'Không tìm thấy file phản biện' });
+  return safeDownload(res, row.path, row.originalName || 'phản biện ' + slot + '.pdf');
 });
 
 // GĐ5: Phản biện upload file đánh giá (PDF/docx có chữ ký hoặc bản scan)
@@ -5443,16 +5986,18 @@ app.get('/api/submissions/:id/download', authMiddleware, (req, res) => {
   }
   const files = db.prepare('SELECT path, originalName FROM submission_files WHERE submissionId = ?').all(id);
   if (files.length === 0) return res.status(404).json({ message: 'Không tìm thấy file hồ sơ' });
-  if (files.length === 1) return res.download(files[0].path, files[0].originalName);
+  const prepared = prepareDownloadFileList(res, files);
+  if (!prepared) return;
+  if (prepared.length === 1) return res.download(prepared[0].norm, prepared[0].originalName);
   try {
     const archiver = require('archiver');
     res.attachment('ho-so-' + id + '.zip');
     const archive = archiver('zip', { zlib: { level: 9 } });
     archive.pipe(res);
-    files.forEach(f => archive.file(f.path, { name: f.originalName }));
+    prepared.forEach((p) => archive.file(p.norm, { name: p.originalName }));
     archive.finalize();
   } catch (e) {
-    res.download(files[0].path, files[0].originalName);
+    return res.download(prepared[0].norm, prepared[0].originalName);
   }
 });
 
@@ -5463,7 +6008,7 @@ app.delete('/api/submissions/:id', authMiddleware, adminOnly, (req, res) => {
   const sub = db.prepare('SELECT id FROM submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const files = db.prepare('SELECT path FROM submission_files WHERE submissionId = ?').all(id);
-  const submissionDir = files.length > 0 ? path.dirname(files[0].path) : null;
+  const submissionDir = files.length > 0 ? resolveGdSubmissionDirForRmSync(id, files[0].path) : null;
   db.transaction(() => {
     db.prepare('DELETE FROM submission_files WHERE submissionId = ?').run(id);
     db.prepare('DELETE FROM submissions WHERE id = ?').run(id);
@@ -5606,9 +6151,9 @@ app.get('/api/cap-vien/public-templates/:taskCode/file', (req, res) => {
   if (!row) {
     return res.status(404).json({ message: 'Chưa có file mẫu cho mã này. Vui lòng liên hệ quản trị hoặc thử lại sau.' });
   }
-  const abs = path.resolve(__dirname, row.stored_path);
+  const abs = resolveStoredFileFromDb(row.stored_path);
   const baseDir = path.resolve(capVienPublicTemplatesFsDir);
-  if (!abs.startsWith(baseDir) || !fs.existsSync(abs)) {
+  if (!abs || !pathIsStrictlyInsideResolvedRoot(baseDir, abs) || !fs.existsSync(abs)) {
     return res.status(404).json({ message: 'File không còn trên máy chủ' });
   }
   res.set('Cache-Control', 'no-store');
@@ -5634,8 +6179,8 @@ app.post(
     try {
       const prev = db.prepare('SELECT stored_path FROM cap_vien_public_template_files WHERE task_code = ?').get(taskCode);
       if (prev && prev.stored_path) {
-        const oldAbs = path.resolve(__dirname, prev.stored_path);
-        if (fs.existsSync(oldAbs)) {
+        const oldAbs = resolveCapVienPublicTemplateStoredFileForUnlink(prev.stored_path);
+        if (oldAbs) {
           try {
             fs.unlinkSync(oldAbs);
           } catch (_) {}
@@ -5671,8 +6216,8 @@ app.delete('/api/cap-vien/public-templates/:taskCode', authMiddleware, adminOnly
     return res.status(404).json({ message: 'Không có file để xóa' });
   }
   try {
-    const p = path.resolve(__dirname, row.stored_path);
-    if (fs.existsSync(p)) {
+    const p = resolveCapVienPublicTemplateStoredFileForUnlink(row.stored_path);
+    if (p) {
       try {
         fs.unlinkSync(p);
       } catch (_) {}
@@ -6090,9 +6635,7 @@ app.post('/api/cap-vien/submissions/:id/steps/6/upload-decision', authMiddleware
     }
     const oldFile = db.prepare('SELECT path FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ? LIMIT 1').get(id, fieldName);
     db.prepare('DELETE FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ?').run(id, fieldName);
-    if (oldFile && oldFile.path && fs.existsSync(oldFile.path)) {
-      try { fs.unlinkSync(oldFile.path); } catch (_) {}
-    }
+    if (oldFile && oldFile.path) safeUnlinkCapVienStoredFile(oldFile.path);
     const storedName = fixFilenameEncoding(file.originalname) || path.basename(file.path);
     const newPath = path.join(baseDir, fieldName + '_' + Date.now() + (ext || '.pdf'));
     try { fs.renameSync(file.path, newPath); } catch (e) { try { fs.copyFileSync(file.path, newPath); } catch (_) {} }
@@ -6140,9 +6683,7 @@ app.post('/api/cap-vien/submissions/:id/steps/7/upload-contract', authMiddleware
   const uploadedAt = new Date().toISOString();
   const oldFile = db.prepare('SELECT path FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ? LIMIT 1').get(id, fieldName);
   db.prepare('DELETE FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ?').run(id, fieldName);
-  if (oldFile && oldFile.path && fs.existsSync(oldFile.path)) {
-    try { fs.unlinkSync(oldFile.path); } catch (_) {}
-  }
+  if (oldFile && oldFile.path) safeUnlinkCapVienStoredFile(oldFile.path);
   const storedName = fixFilenameEncoding(file.originalname) || path.basename(file.path);
   const newPath = path.join(baseDir, fieldName + '_' + Date.now() + (ext || '.pdf'));
   try {
@@ -6221,9 +6762,7 @@ app.post('/api/cap-vien/submissions/:id/steps/8/upload-ethics-decision', authMid
   const uploadedAt = new Date().toISOString();
   const oldFile = db.prepare('SELECT path FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ? LIMIT 1').get(id, fieldName);
   db.prepare('DELETE FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ?').run(id, fieldName);
-  if (oldFile && oldFile.path && fs.existsSync(oldFile.path)) {
-    try { fs.unlinkSync(oldFile.path); } catch (_) {}
-  }
+  if (oldFile && oldFile.path) safeUnlinkCapVienStoredFile(oldFile.path);
   const storedName = fixFilenameEncoding(file.originalname) || path.basename(file.path);
   const newPath = path.join(baseDir, fieldName + '_' + Date.now() + (ext || '.pdf'));
   try {
@@ -6285,9 +6824,7 @@ app.post(
     const oldF = db.prepare('SELECT id, path FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ? LIMIT 1').get(id, fieldName);
     if (oldF) {
       db.prepare('DELETE FROM cap_vien_submission_files WHERE id = ?').run(oldF.id);
-      if (oldF.path && fs.existsSync(oldF.path)) {
-        try { fs.unlinkSync(oldF.path); } catch (_) {}
-      }
+      if (oldF.path) safeUnlinkCapVienStoredFile(oldF.path);
     }
     const storedName = fixFilenameEncoding(file.originalname) || path.basename(file.path);
     const newPath = path.join(baseDir, fieldName + '_' + Date.now() + (ext || '.pdf'));
@@ -6662,9 +7199,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/upload-minutes', authMiddleware,
 
   const oldFile = db.prepare('SELECT path FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ? LIMIT 1').get(id, step5MinutesField);
   db.prepare('DELETE FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ?').run(id, step5MinutesField);
-  if (oldFile && oldFile.path && fs.existsSync(oldFile.path)) {
-    try { fs.unlinkSync(oldFile.path); } catch (e) {}
-  }
+  if (oldFile && oldFile.path) safeUnlinkCapVienStoredFile(oldFile.path);
 
   const storedName = fixFilenameEncoding(file.originalname) || path.basename(file.path);
   const newPath = path.join(baseDir, 'step5_bien_ban_' + Date.now() + path.extname(storedName || '.pdf'));
@@ -6841,9 +7376,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/council-revision-upload', authMi
   const prevRows = db.prepare("SELECT path FROM cap_vien_submission_files WHERE submissionId = ? AND revisionRound = ? AND fieldName LIKE 'step5_council_revision_f_%'").all(id, round);
   db.transaction(() => {
     prevRows.forEach((r) => {
-      if (r.path && fs.existsSync(r.path)) {
-        try { fs.unlinkSync(r.path); } catch (e) { /* ignore */ }
-      }
+      if (r.path) safeUnlinkCapVienStoredFile(r.path);
     });
     db.prepare("DELETE FROM cap_vien_submission_files WHERE submissionId = ? AND revisionRound = ? AND fieldName LIKE 'step5_council_revision_f_%'").run(id, round);
     let idx = 0;
@@ -7298,9 +7831,7 @@ app.post('/api/cap-vien/submissions/:id/steps/4/reviewer-upload', authMiddleware
 
   const oldFile = db.prepare('SELECT path FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ? LIMIT 1').get(id, 'reviewer_phieu_' + slot);
   db.prepare('DELETE FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ?').run(id, 'reviewer_phieu_' + slot);
-  if (oldFile && oldFile.path && fs.existsSync(oldFile.path)) {
-    try { fs.unlinkSync(oldFile.path); } catch (e) {}
-  }
+  if (oldFile && oldFile.path) safeUnlinkCapVienStoredFile(oldFile.path);
 
   const storedName = fixFilenameEncoding(file.originalname) || path.basename(file.path);
   const newPath = path.join(baseDir, 'reviewer_' + slot + '_' + Date.now() + path.extname(storedName || '.pdf'));
@@ -7381,9 +7912,7 @@ app.post('/api/cap-vien/submissions/:id/steps/4/reviewer-delete', authMiddleware
   const row = db.prepare('SELECT id, path FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ? LIMIT 1').get(id, 'reviewer_phieu_' + slot);
   if (!row) return res.status(400).json({ message: 'Chưa có file phản biện ' + slot + ' để xóa' });
   db.prepare('DELETE FROM cap_vien_submission_files WHERE id = ?').run(row.id);
-  if (row.path && fs.existsSync(row.path)) {
-    try { fs.unlinkSync(row.path); } catch (e) {}
-  }
+  if (row.path) safeUnlinkCapVienStoredFile(row.path);
   db.prepare('UPDATE cap_vien_submissions SET step_4_reviewer' + slot + '_done = 0, status = CASE WHEN status = ? THEN ? ELSE status END WHERE id = ?')
     .run('REVIEWED', 'UNDER_REVIEW', id);
   insertCapVienHistory(id, '4', 'reviewer_delete', req.user.id, 'reviewer', 'Xóa file phản biện ' + slot + ' để upload lại');
@@ -7740,19 +8269,13 @@ app.post('/api/cap-vien/submissions/:id/dev-reset-step/:step', authMiddleware, (
     const newStatus = (st === 'IN_MEETING' || st === 'CONDITIONAL') ? 'REVIEWED' : (sub.status || 'SUBMITTED');
     db.transaction(() => {
       rows.forEach((r) => {
-        if (r.path && fs.existsSync(r.path)) {
-          try { fs.unlinkSync(r.path); } catch (e) { /* ignore */ }
-        }
+        if (r.path) safeUnlinkCapVienStoredFile(r.path);
       });
       extraRows.forEach((r) => {
-        if (r.path && fs.existsSync(r.path)) {
-          try { fs.unlinkSync(r.path); } catch (e) { /* ignore */ }
-        }
+        if (r.path) safeUnlinkCapVienStoredFile(r.path);
       });
       revRows.forEach((r) => {
-        if (r.path && fs.existsSync(r.path)) {
-          try { fs.unlinkSync(r.path); } catch (e) { /* ignore */ }
-        }
+        if (r.path) safeUnlinkCapVienStoredFile(r.path);
       });
       db.prepare('DELETE FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName = ?').run(id, step5MinutesField);
       db.prepare("DELETE FROM cap_vien_submission_files WHERE submissionId = ? AND fieldName LIKE 'step5_hd_extra_%'").run(id);
@@ -7890,16 +8413,18 @@ app.get('/api/cap-vien/submissions/:id/download', authMiddleware, (req, res) => 
   }
   const files = db.prepare('SELECT path, originalName FROM cap_vien_submission_files WHERE submissionId = ?').all(id);
   if (files.length === 0) return res.status(404).json({ message: 'Không tìm thấy file hồ sơ' });
-  if (files.length === 1) return res.download(files[0].path, files[0].originalName);
+  const preparedCv = prepareDownloadFileList(res, files);
+  if (!preparedCv) return;
+  if (preparedCv.length === 1) return res.download(preparedCv[0].norm, preparedCv[0].originalName);
   try {
     const archiver = require('archiver');
     res.attachment('ho-so-cap-vien-' + id + '.zip');
     const archive = archiver('zip', { zlib: { level: 9 } });
     archive.pipe(res);
-    files.forEach(f => archive.file(f.path, { name: f.originalName }));
+    preparedCv.forEach((p) => archive.file(p.norm, { name: p.originalName }));
     archive.finalize();
   } catch (e) {
-    res.download(files[0].path, files[0].originalName);
+    return res.download(preparedCv[0].norm, preparedCv[0].originalName);
   }
 });
 
@@ -7915,8 +8440,7 @@ app.get('/api/cap-vien/submissions/:id/files/:fileId/download', authMiddleware, 
   if (!isCouncilOrAdmin && !isOwner) return res.status(403).json({ message: 'Bạn không có quyền tải file này' });
   const file = db.prepare('SELECT id, path, originalName FROM cap_vien_submission_files WHERE id = ? AND submissionId = ?').get(fileId, id);
   if (!file || !file.path) return res.status(404).json({ message: 'Không tìm thấy file' });
-  if (!fs.existsSync(file.path)) return res.status(404).json({ message: 'File không tồn tại trên đĩa' });
-  res.download(file.path, file.originalName);
+  return safeDownload(res, file.path, file.originalName);
 });
 
 app.delete('/api/cap-vien/submissions/:id', authMiddleware, adminOnly, (req, res) => {
@@ -7937,7 +8461,7 @@ app.delete('/api/cap-vien/submissions/:id', authMiddleware, adminOnly, (req, res
 // Admin: danh sách user (không trả hash password; có cờ activated)
 app.get('/api/admin/users', authMiddleware, adminOnly, (req, res) => {
   const rows = db.prepare(
-    'SELECT id, email, fullname, role, academicTitle, createdAt, COALESCE(is_banned, 0) AS is_banned, password_support_hint, password FROM users ORDER BY createdAt DESC'
+    'SELECT id, email, fullname, role, academicTitle, createdAt, COALESCE(is_banned, 0) AS is_banned, password FROM users ORDER BY createdAt DESC'
   ).all();
   const users = rows.map((r) => {
     const activated = userHasLoginPassword(r.password);
@@ -7950,7 +8474,6 @@ app.get('/api/admin/users', authMiddleware, adminOnly, (req, res) => {
       academicTitle: r.academicTitle,
       createdAt: r.createdAt,
       is_banned: r.is_banned,
-      password_support_hint: r.password_support_hint,
       activated,
       isMasterAdminAccount: roleLower === 'admin' && userEmailIsMasterAdmin(r.email),
     };
@@ -8054,18 +8577,17 @@ app.post('/api/admin/users', authMiddleware, adminOnly, async (req, res) => {
   }
   if (plainPassword.length >= 6) {
     const hash = await bcrypt.hash(plainPassword, 10);
-    db.prepare('INSERT INTO users (email, password, fullname, role, academicTitle, password_support_hint) VALUES (?, ?, ?, ?, ?, ?)').run(
+    db.prepare('INSERT INTO users (email, password, fullname, role, academicTitle) VALUES (?, ?, ?, ?, ?)').run(
       em,
       hash,
       (fullname || '').trim(),
       r,
-      acadTitle,
-      plainPassword
+      acadTitle
     );
     return res.status(201).json({ message: 'Đã thêm tài khoản với mật khẩu do bạn đặt.', activated: true });
   }
   // Để trống mật khẩu: tài khoản chưa kích hoạt (sentinel '' do cột password thường NOT NULL)
-  db.prepare('INSERT INTO users (email, password, fullname, role, academicTitle, password_support_hint) VALUES (?, ?, ?, ?, ?, NULL)').run(
+  db.prepare('INSERT INTO users (email, password, fullname, role, academicTitle) VALUES (?, ?, ?, ?, ?)').run(
     em,
     '',
     (fullname || '').trim(),
@@ -8095,7 +8617,7 @@ app.post('/api/admin/reset-user-password', authMiddleware, adminOnly, (req, res)
   if (Number(row.id) === Number(req.user.id)) {
     return res.status(400).json({ message: 'Không thể reset chính tài khoản đang đăng nhập' });
   }
-  db.prepare('UPDATE users SET password = ?, password_support_hint = NULL WHERE id = ?').run('', userId);
+  db.prepare('UPDATE users SET password = ? WHERE id = ?').run('', userId);
   return res.json({
     message: 'Đã reset. User cần đăng ký lại (trang Đăng ký @sci.edu.vn) để đặt mật khẩu mới.',
   });
@@ -8161,9 +8683,35 @@ app.get('/api/homepage-stats', (req, res) => {
   } catch (e) {
     /* bảng missions thiếu cột hoặc lỗi DB — giữ 0 */
   }
-  /** Nhân lực KHCN: bảng module `personnel`, không phải số tài khoản `users` */
-  const personnel = dbCount('SELECT COUNT(*) as c FROM personnel');
-  const ip = dbCount('SELECT COUNT(*) as c FROM ip_assets');
+  /**
+   * Nhân lực KHCN: đếm bảng `personnel` chỉ khi module được bật trên trang chủ.
+   * Module chưa triển khai (enabled = 0) → null để tránh hiển thị 0 gây hiểu nhầm.
+   */
+  let personnel = null;
+  try {
+    const hm = db
+      .prepare('SELECT COALESCE(enabled, 0) AS en FROM homepage_modules WHERE code = ?')
+      .get('personnel');
+    if (hm && Number(hm.en) === 1) {
+      personnel = dbCount('SELECT COUNT(*) as c FROM personnel');
+    }
+  } catch (e) {
+    personnel = null;
+  }
+  /**
+   * Tài sản trí tuệ: đếm `ip_assets` chỉ khi module được bật; tắt → null (không hiển thị 0).
+   */
+  let ip = null;
+  try {
+    const hmIp = db
+      .prepare('SELECT COALESCE(enabled, 0) AS en FROM homepage_modules WHERE code = ?')
+      .get('ip');
+    if (hmIp && Number(hmIp.en) === 1) {
+      ip = dbCount('SELECT COUNT(*) as c FROM ip_assets');
+    }
+  } catch (e) {
+    ip = null;
+  }
   const publications = dbCount(
     "SELECT COUNT(*) as c FROM publications WHERE COALESCE(status, '') != 'retracted'"
   );
@@ -8651,7 +9199,7 @@ app.get('/api/missions/:id/files/:fileId/download', authMiddleware, (req, res) =
   if (!id || !fileId) return res.status(400).json({ message: 'ID không hợp lệ' });
   const row = db.prepare('SELECT id, mission_id, original_name, path FROM missions_files WHERE id = ? AND mission_id = ?').get(fileId, id);
   if (!row) return res.status(404).json({ message: 'Không tìm thấy file' });
-  const fullPath = path.join(__dirname, 'uploads', row.path);
+  const fullPath = path.join(uploadDir, row.path);
   if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File không tồn tại' });
   const safeName = (row.original_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
   res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '"');
@@ -8665,7 +9213,7 @@ app.get('/api/missions/:id/files/:fileId/view', authMiddleware, (req, res) => {
   if (!id || !fileId) return res.status(400).json({ message: 'ID không hợp lệ' });
   const row = db.prepare('SELECT id, mission_id, original_name, path FROM missions_files WHERE id = ? AND mission_id = ?').get(fileId, id);
   if (!row) return res.status(404).json({ message: 'Không tìm thấy file' });
-  const fullPath = path.join(__dirname, 'uploads', row.path);
+  const fullPath = path.join(uploadDir, row.path);
   if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File không tồn tại' });
   const ext = (row.original_name || '').split('.').pop().toLowerCase();
   if (ext === 'pdf') {
@@ -9591,7 +10139,7 @@ app.post('/api/missions/:id/files', authMiddleware, upload.single('file'), (req,
   const ext = (req.file.originalname || '').split('.').pop().toLowerCase();
   const allowedExt = ['pdf', 'doc', 'docx'];
   if (!allowedExt.includes(ext)) return res.status(400).json({ message: 'Chỉ chấp nhận file PDF, Word (.doc, .docx)' });
-  const destDir = path.join(__dirname, 'uploads', 'missions', String(id));
+  const destDir = path.join(uploadDir, 'missions', String(id));
   fs.mkdirSync(destDir, { recursive: true });
   const finalName = Date.now() + '_' + (req.file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
   const destPath = path.join(destDir, finalName);
@@ -9627,7 +10175,7 @@ app.post('/api/missions/:id/ho-so-ngoai', authMiddleware, upload.single('file'),
   const ext = (req.file.originalname || '').split('.').pop().toLowerCase();
   const allowed = ['pdf', 'doc', 'docx', 'xls', 'xlsx'];
   if (!allowed.includes(ext)) return res.status(400).json({ message: 'Chỉ chấp nhận file PDF, Word, Excel' });
-  const destDir = path.join(__dirname, 'uploads', 'missions', String(id));
+  const destDir = path.join(uploadDir, 'missions', String(id));
   fs.mkdirSync(destDir, { recursive: true });
   const finalName = Date.now() + '_' + (req.file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
   const destPath = path.join(destDir, finalName);
@@ -9653,7 +10201,7 @@ app.get('/api/missions/:id/ho-so-ngoai/:fileId/download', authMiddleware, (req, 
   }
   const row = db.prepare('SELECT id, mission_id, original_name, path FROM missions_ho_so_ngoai WHERE id = ? AND mission_id = ?').get(fileId, id);
   if (!row) return res.status(404).json({ message: 'Không tìm thấy file' });
-  const fullPath = path.join(__dirname, 'uploads', row.path);
+  const fullPath = path.join(uploadDir, row.path);
   if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File không tồn tại' });
   const safeName = (row.original_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
   res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '"');
@@ -9674,7 +10222,7 @@ app.get('/api/missions-templates/:type/download', (req, res) => {
   if (!TEMPLATE_TYPES.includes(type)) return res.status(400).json({ message: 'Loại mẫu không hợp lệ' });
   const row = db.prepare('SELECT template_type, original_name, path FROM missions_templates WHERE template_type = ?').get(type);
   if (!row) return res.status(404).json({ message: 'Chưa có mẫu này' });
-  const fullPath = path.join(__dirname, 'uploads', 'templates', row.path);
+  const fullPath = path.join(uploadDir, 'templates', row.path);
   if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File không tồn tại' });
   const safeName = (row.original_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
   res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '"');
@@ -9687,7 +10235,7 @@ app.post('/api/admin/missions-templates', authMiddleware, adminOnly, upload.sing
   if (!req.file || !req.file.path) return res.status(400).json({ message: 'Vui lòng chọn file để upload' });
   const ext = (req.file.originalname || '').split('.').pop().toLowerCase();
   if (!['pdf', 'doc', 'docx'].includes(ext)) return res.status(400).json({ message: 'Chỉ chấp nhận PDF, Word (.doc, .docx)' });
-  const destDir = path.join(__dirname, 'uploads', 'templates');
+  const destDir = path.join(uploadDir, 'templates');
   fs.mkdirSync(destDir, { recursive: true });
   const finalName = type + '_' + Date.now() + '.' + ext;
   const destPath = path.join(destDir, finalName);
@@ -11059,7 +11607,7 @@ app.get('/api/cooperation/de-xuat-cua-toi', authMiddleware, (req, res) => {
           id: r.id,
           ma_de_xuat: r.ma_de_xuat || coopGenMa('ytnn', r.id),
           ten: r.ten,
-          title: 'Đề tài YTNN — ' + (r.ten || '—'),
+          title: 'Đề tài có yếu tố nước ngoài — ' + (r.ten || '—'),
           ngay_gui: (r.created_at || '').slice(0, 10),
           status: r.status || 'cho_phong_duyet',
           step: 1,
@@ -11922,7 +12470,7 @@ app.put('/api/admin/users/:email/password', authMiddleware, adminOnly, async (re
     if (wantRandomTemp) {
       const temp = crypto.randomBytes(8).toString('hex');
       const hash = await bcrypt.hash(temp, 10);
-      db.prepare('UPDATE users SET password = ?, password_support_hint = ? WHERE email = ?').run(hash, temp, em);
+      db.prepare('UPDATE users SET password = ? WHERE email = ?').run(hash, em);
       return res.json({
         message: 'Đã cấp mật khẩu tạm ngẫu nhiên.',
         tempPassword: temp,
@@ -11935,7 +12483,7 @@ app.put('/api/admin/users/:email/password', authMiddleware, adminOnly, async (re
     if (em === selfEm) {
       return res.status(400).json({ message: 'Không thể đưa chính tài khoản đang đăng nhập về chưa kích hoạt.' });
     }
-    db.prepare('UPDATE users SET password = ?, password_support_hint = NULL WHERE email = ?').run('', em);
+    db.prepare('UPDATE users SET password = ? WHERE email = ?').run('', em);
     return res.json({
       message: 'Đã đưa tài khoản về chưa kích hoạt. User vào trang Đăng ký (@sci.edu.vn) để đặt mật khẩu.',
       activated: false,
@@ -11943,7 +12491,7 @@ app.put('/api/admin/users/:email/password', authMiddleware, adminOnly, async (re
   }
 
   const hash = await bcrypt.hash(newPassword, 10);
-  db.prepare('UPDATE users SET password = ?, password_support_hint = ? WHERE email = ?').run(hash, newPassword, em);
+  db.prepare('UPDATE users SET password = ? WHERE email = ?').run(hash, em);
   return res.json({
     message: 'Đã cấp lại mật khẩu. Gửi mật khẩu tạm cho thành viên qua email nếu cần.',
     tempPassword: newPassword,
@@ -13019,7 +13567,7 @@ try {
 /** Quản lý tài liệu & hồ sơ (hành chính) — /api/dms */
 try {
   const createDmsRecordsRouter = require('./routes/dmsRecords');
-  const dmsUploadsRoot = path.join(__dirname, 'uploads', 'dms');
+  const dmsUploadsRoot = appPaths.dmsUploadsDir();
   app.use(
     '/api/dms',
     authMiddleware,
@@ -13544,7 +14092,7 @@ function coopBuildEmail(title, intro, rows, footer, link) {
 
 try {
   const createConferenceRegistrationRouter = require('./routes/conferenceRegistration');
-  const confUploadDir = path.join(__dirname, 'uploads', 'conference');
+  const confUploadDir = path.join(uploadDir, 'conference');
   fs.mkdirSync(confUploadDir, { recursive: true });
   app.use(
     '/api/conference-registrations',
@@ -13606,8 +14154,8 @@ function coopCanDownloadDoanRaVanBan(req, row) {
 function coopUnlinkDoanRaVanBanFile(row) {
   if (!row || !row.van_ban_word_path) return;
   try {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (fs.existsSync(abs)) fs.unlinkSync(abs);
+    const abs = resolveCoopVanBanWordFileForUnlink(row.van_ban_word_path);
+    if (abs) fs.unlinkSync(abs);
   } catch (e) {}
 }
 
@@ -13618,8 +14166,8 @@ function coopCanDownloadDoanVaoVanBan(req, row) {
 function coopUnlinkDoanVaoVanBanFile(row) {
   if (!row || !row.van_ban_word_path) return;
   try {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (fs.existsSync(abs)) fs.unlinkSync(abs);
+    const abs = resolveCoopVanBanWordFileForUnlink(row.van_ban_word_path);
+    if (abs) fs.unlinkSync(abs);
   } catch (e) {}
 }
 
@@ -13630,8 +14178,8 @@ function coopCanDownloadMouVanBan(req, row) {
 function coopUnlinkMouVanBanFile(row) {
   if (!row || !row.van_ban_word_path) return;
   try {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (fs.existsSync(abs)) fs.unlinkSync(abs);
+    const abs = resolveCoopVanBanWordFileForUnlink(row.van_ban_word_path);
+    if (abs) fs.unlinkSync(abs);
   } catch (e) {}
 }
 
@@ -13642,8 +14190,8 @@ function coopCanDownloadYtnnVanBan(req, row) {
 function coopUnlinkYtnnVanBanFile(row) {
   if (!row || !row.van_ban_word_path) return;
   try {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (fs.existsSync(abs)) fs.unlinkSync(abs);
+    const abs = resolveCoopVanBanWordFileForUnlink(row.van_ban_word_path);
+    if (abs) fs.unlinkSync(abs);
   } catch (e) {}
 }
 
@@ -14945,7 +15493,7 @@ app.get('/api/cooperation/doan-ra/:id/van-ban-word', authMiddleware, (req, res) 
   row = coopEnsureFreshDoanRaVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
   const abs = path.join(__dirname, row.van_ban_word_path);
-  const baseDir = path.resolve(path.join(__dirname, 'uploads', 'htqt-doan-ra'));
+  const baseDir = path.resolve(path.join(uploadDir, 'htqt-doan-ra'));
   if (!abs.startsWith(baseDir) || abs.includes('..')) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
@@ -15045,7 +15593,7 @@ app.get('/api/cooperation/doan-vao/:id/van-ban-word', authMiddleware, (req, res)
   row = coopEnsureFreshDoanVaoVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
   const abs = path.join(__dirname, row.van_ban_word_path);
-  const baseDir = path.resolve(path.join(__dirname, 'uploads', 'htqt-doan-vao'));
+  const baseDir = path.resolve(path.join(uploadDir, 'htqt-doan-vao'));
   if (!abs.startsWith(baseDir) || abs.includes('..')) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
@@ -15145,7 +15693,7 @@ app.get('/api/cooperation/mou/:id/van-ban-word', authMiddleware, (req, res) => {
   row = coopEnsureFreshMouVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
   const abs = path.join(__dirname, row.van_ban_word_path);
-  const baseDir = path.resolve(path.join(__dirname, 'uploads', 'htqt-mou'));
+  const baseDir = path.resolve(path.join(uploadDir, 'htqt-mou'));
   if (!abs.startsWith(baseDir) || abs.includes('..')) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
@@ -15245,7 +15793,7 @@ app.get('/api/cooperation/ytnn/:id/van-ban-word', authMiddleware, (req, res) => 
   row = coopEnsureFreshYtnnVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
   const abs = path.join(__dirname, row.van_ban_word_path);
-  const baseDir = path.resolve(path.join(__dirname, 'uploads', 'htqt-ytnn'));
+  const baseDir = path.resolve(path.join(uploadDir, 'htqt-ytnn'));
   if (!abs.startsWith(baseDir) || abs.includes('..')) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
@@ -16074,7 +16622,7 @@ const uploadEventFiles = multer({
   storage: multer.diskStorage({
     destination: function (req, _file, cb) {
       const id = parseInt(req.params.id, 10);
-      const dir = path.join(__dirname, 'uploads', 'events', String(id));
+      const dir = path.join(uploadDir, 'events', String(id));
       fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
     },
@@ -16084,7 +16632,7 @@ const uploadEventFiles = multer({
       cb(null, Date.now() + '_' + safe + ext.toLowerCase());
     },
   }),
-  limits: { fileSize: 20 * 1024 * 1024, files: 10 },
+  limits: { fileSize: UPLOAD_FILE_BYTES_SUBMISSION, fieldSize: MULTIPART_MAX_FIELD_BYTES, files: 10 },
   fileFilter: function (_req, file, cb) {
     const n = (file.originalname || '').toLowerCase();
     if (!/\.(pdf|doc|docx|jpg|jpeg|png)$/i.test(n)) return cb(new Error('Chỉ nhận PDF, DOC, DOCX, JPG, PNG'));
@@ -16199,7 +16747,10 @@ app.delete('/api/events/:id/files/:fileId', authMiddleware, coopPhongOrAdmin, (r
   const fid = parseInt(req.params.fileId, 10);
   const row = db.prepare('SELECT * FROM event_files WHERE id = ? AND event_id = ?').get(fid, id);
   if (!row) return res.status(404).json({ message: 'Không tìm thấy file' });
-  try { const abs = path.resolve(__dirname, row.duong_dan); if (fs.existsSync(abs)) fs.unlinkSync(abs); } catch (_) {}
+  try {
+    const abs = resolveEventUploadFileForUnlink(row.duong_dan, id);
+    if (abs) fs.unlinkSync(abs);
+  } catch (_) {}
   db.prepare('DELETE FROM event_files WHERE id = ?').run(fid);
   return res.json({ ok: true });
 });
@@ -16232,7 +16783,7 @@ app.post('/api/events/:id/export/to-trinh', authMiddleware, coopPhongOrAdmin, as
     };
     const buf = await buildEventPermissionDocBuffer(data);
     const fn = 'to_trinh_xin_phep_' + id + '_' + Date.now() + '.docx';
-    const dir = path.join(__dirname, 'uploads', 'events', String(id)); fs.mkdirSync(dir, { recursive: true });
+    const dir = path.join(uploadDir, 'events', String(id)); fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, fn), buf);
     const rel = path.join('uploads', 'events', String(id), fn).replace(/\\/g, '/');
     db.prepare('INSERT INTO event_files (event_id, loai_file, ten_file, duong_dan, mo_ta, nguoi_upload) VALUES (?, ?, ?, ?, ?, ?)').run(id, 'to_trinh_xin_phep', fn, rel, 'Word tờ trình sinh tự động', req.user.fullname || req.user.email || '');
@@ -16254,7 +16805,7 @@ app.post('/api/events/:id/export/bao-cao', authMiddleware, coopPhongOrAdmin, asy
     const data = { tieu_de: ev.tieu_de || '', ngay_bat_dau: ev.ngay_bat_dau || '', ngay_ket_thuc: ev.ngay_ket_thuc || '', so_nguoi_tham_du_thuc_te: ev.so_nguoi_tham_du_thuc_te || '', ket_qua_su_kien: ev.ket_qua_su_kien || '', de_xuat_kien_nghi: ev.de_xuat_kien_nghi || '', bai_hoc_kinh_nghiem: ev.bai_hoc_kinh_nghiem || '', uu_diem: ev.uu_diem || '', han_che: ev.han_che || '', lich_trinh: sessions };
     const buf = await buildEventReportDocBuffer(data);
     const fn = 'bao_cao_su_kien_' + id + '_' + Date.now() + '.docx';
-    const dir = path.join(__dirname, 'uploads', 'events', String(id)); fs.mkdirSync(dir, { recursive: true });
+    const dir = path.join(uploadDir, 'events', String(id)); fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, fn), buf);
     const rel = path.join('uploads', 'events', String(id), fn).replace(/\\/g, '/');
     db.prepare('INSERT INTO event_files (event_id, loai_file, ten_file, duong_dan, mo_ta, nguoi_upload) VALUES (?, ?, ?, ?, ?, ?)').run(id, 'bao_cao_su_kien', fn, rel, 'Word báo cáo sinh tự động', req.user.fullname || req.user.email || '');
@@ -16267,16 +16818,64 @@ app.post('/api/events/:id/export/bao-cao', authMiddleware, coopPhongOrAdmin, asy
 // ============================================================
 // ROUTE MỚI — ADMIN: SỬA/XÓA ĐỀ XUẤT
 // ============================================================
+const COOP_ADMIN_DENY_COLS = new Set(['id', 'created_at', 'updated_at']);
+
+function coopAdminUpdateSetsFromBody(body, allowedColSet) {
+  const sets = [];
+  const vals = [];
+  const b = body && typeof body === 'object' ? body : {};
+  for (const k of Object.keys(b)) {
+    if (COOP_ADMIN_DENY_COLS.has(k)) continue;
+    if (!allowedColSet.has(k)) continue;
+    sets.push(`${k}=?`);
+    vals.push(b[k]);
+  }
+  return { sets, vals };
+}
+
+const COOP_ADMIN_COLS_DOAN_RA = new Set([
+  'submitted_by_email', 'submitted_by_name', 'muc_dich', 'quoc_gia', 'ngay_di', 'ngay_ve', 'thanh_vien', 'nguon_kinh_phi', 'du_toan', 'status',
+  'ma_de_xuat', 'submitted_by_id', 'ghi_chu', 'note_phong', 'note_vt', 'phong_xu_ly_id', 'phong_xu_ly_at', 'vt_xu_ly_id', 'vt_xu_ly_at',
+  'van_ban_word_path', 'van_ban_word_original_name', 'van_ban_word_uploaded_at', 'coop_reminder_last_at',
+]);
+const COOP_ADMIN_COLS_DOAN_VAO = new Set([
+  'submitted_by_email', 'submitted_by_name', 'muc_dich', 'don_vi_de_xuat', 'ngay_den', 'ngay_roi_di', 'thanh_phan_doan', 'noi_dung_lam_viec',
+  'kinh_phi_nguon', 'ho_tro_visa', 'status',
+  'ma_de_xuat', 'submitted_by_id', 'ghi_chu', 'note_phong', 'note_vt', 'phong_xu_ly_id', 'phong_xu_ly_at', 'vt_xu_ly_id', 'vt_xu_ly_at',
+  'van_ban_word_path', 'van_ban_word_original_name', 'van_ban_word_uploaded_at', 'coop_reminder_last_at',
+]);
+const COOP_ADMIN_COLS_MOU = new Set([
+  'submitted_by_email', 'submitted_by_name', 'loai_thoa_thuan', 'ten_doi_tac', 'quoc_gia', 'thoi_han_nam', 'gia_tri_tai_chinh', 'don_vi_de_xuat',
+  'noi_dung_hop_tac', 'status',
+  'ma_de_xuat', 'submitted_by_id', 'ghi_chu', 'note_phong', 'note_vt', 'phong_xu_ly_id', 'phong_xu_ly_at', 'vt_xu_ly_id', 'vt_xu_ly_at',
+  'van_ban_word_path', 'van_ban_word_original_name', 'van_ban_word_uploaded_at', 'coop_reminder_last_at',
+]);
+const COOP_ADMIN_COLS_YTNN = new Set([
+  'ma_de_xuat', 'ten', 'mo_ta', 'doi_tac_ten', 'doi_tac_quoc_gia', 'doi_tac_nguoi_dai_dien', 'doi_tac_website', 'hinh_thuc_hop_tac',
+  'chu_nhiem_ten', 'chu_nhiem_hoc_vi', 'chu_nhiem_don_vi', 'thanh_vien_json', 'ngay_bat_dau', 'ngay_ket_thuc', 'thoi_gian_thang',
+  'kinh_phi', 'don_vi_tien_te', 'kinh_phi_vnd', 'loai_hinh', 'to_phan_loai_json', 'to_trinh_phong_khcn', 'de_nghi_vt', 'vt_y_kien',
+  'vt_ngay_ky', 'vt_so_van_ban', 'vt_nguoi_ky_id', 'ly_do_khong_duyet', 'han_xu_ly_vt', 'muc_do_uu_tien', 'ghi_chu_noi_bo', 'nguoi_phu_trach_id',
+  'phi_quan_ly_pct', 'phi_quan_ly_vnd', 'submitted_by_email', 'submitted_by_name', 'submitted_by_id', 'status', 'ngay_tiep_nhan',
+  'note_phong', 'note_vt', 'phong_xu_ly_id', 'phong_xu_ly_at', 'vt_xu_ly_id', 'vt_xu_ly_at',
+  'van_ban_word_path', 'van_ban_word_original_name', 'van_ban_word_uploaded_at', 'coop_reminder_last_at',
+]);
+
+const COOP_ADMIN_COLS_BY_EP = {
+  'doan-ra': COOP_ADMIN_COLS_DOAN_RA,
+  'doan-vao': COOP_ADMIN_COLS_DOAN_VAO,
+  mou: COOP_ADMIN_COLS_MOU,
+};
+
 ['doan-ra','doan-vao','mou'].forEach(ep => {
   const tableMap = { 'doan-ra':'cooperation_doan_ra', 'doan-vao':'cooperation_doan_vao', 'mou':'cooperation_mou_de_xuat' };
   const loaiMap = { 'doan-ra':'doan_ra', 'doan-vao':'doan_vao', 'mou':'mou' };
   const tbl = tableMap[ep];
   const loai = loaiMap[ep];
+  const colWhitelist = COOP_ADMIN_COLS_BY_EP[ep];
   app.put(`/api/admin/cooperation/${ep}/:id`, authMiddleware, adminOnly, (req, res) => {
     const id = parseInt(req.params.id, 10);
     const body = req.body || {};
-    const sets = [], vals = [];
-    for (const [k,v] of Object.entries(body)) { if (!['id','created_at'].includes(k)) { sets.push(`${k}=?`); vals.push(v); } }
+    const { sets, vals } = coopAdminUpdateSetsFromBody(body, colWhitelist);
     if (!sets.length) return res.status(400).json({ message:'Không có gì cập nhật.' });
     sets.push("updated_at=datetime('now','localtime')"); vals.push(id);
     try {
@@ -16322,12 +16921,12 @@ app.post('/api/events/:id/export/bao-cao', authMiddleware, coopPhongOrAdmin, asy
 app.put('/api/admin/cooperation/ytnn/:id', authMiddleware, adminOnly, (req, res) => {
   const id = parseInt(req.params.id, 10);
   const body = req.body || {};
-  const sets = [], vals = [];
-  for (const [k,v] of Object.entries(body)) { if (!['id','created_at'].includes(k)) { sets.push(`${k}=?`); vals.push(v); } }
+  const { sets, vals } = coopAdminUpdateSetsFromBody(body, COOP_ADMIN_COLS_YTNN);
   if (!sets.length) return res.status(400).json({ message:'Không có gì cập nhật.' });
   sets.push("updated_at=datetime('now','localtime')"); vals.push(id);
   try {
-    db.prepare(`UPDATE htqt_de_xuat SET ${sets.join(',')} WHERE id=?`).run(...vals);
+    const r = db.prepare(`UPDATE htqt_de_xuat SET ${sets.join(',')} WHERE id=?`).run(...vals);
+    if (r.changes === 0) return res.status(404).json({ message: 'Không tìm thấy.' });
     coopAddHistory('ytnn', id, 0, 'admin_edit', 'Admin chỉnh sửa', req.user, JSON.stringify(body));
     if (String(body.status || '').toLowerCase() === 'da_duyet') {
       try {
@@ -16360,7 +16959,7 @@ function coopBuildTitle(loai, r) {
   if (loai==='doan_ra') return `Đoàn ra — ${r.quoc_gia||'—'}${r.muc_dich?' ('+r.muc_dich+')':''}`;
   if (loai==='doan_vao') return `Đoàn vào — ${r.muc_dich||r.don_vi_de_xuat||'—'}`;
   if (loai==='mou') return `MOU — ${r.ten_doi_tac||'—'}${r.quoc_gia?', '+r.quoc_gia:''}`;
-  if (loai==='ytnn') return `YTNN — ${r.ten||'—'}`;
+  if (loai==='ytnn') return `Đề tài có yếu tố nước ngoài — ${r.ten||'—'}`;
   return '—';
 }
 
@@ -16494,6 +17093,42 @@ app.use((req, res, next) => {
     const base = path.basename(reqPath);
     return res.redirect(302, '/dang-nhap.html?returnUrl=' + encodeURIComponent(base));
   }
+});
+
+/** Không cho tải source / cấu hình qua static (trước đây chỉ .html có auth). */
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  let p = (req.path || '').replace(/\\/g, '/');
+  try {
+    p = decodeURIComponent(p);
+  } catch (_) {
+    return res.status(400).end();
+  }
+  if (p.includes('..')) return res.status(403).end();
+  p = p.split('?')[0].toLowerCase();
+  const blocked = [
+    /^\/server\.js$/,
+    /^\/server-backup.*\.js$/,
+    /^\/package(-lock)?\.json$/,
+    /^\/\.env/,
+    /^\/lib\//,
+    /^\/routes\//,
+    /^\/services\//,
+    /^\/views\//,
+    /^\/templates\//,
+    /^\/node_modules\//,
+    /^\/middleware\//,
+    /^\/migrations\//,
+    /^\/scripts\//,
+    /^\/database\//,
+    /^\/sci-khcn-publications\//,
+    /^\/data\//,
+    /^\/\.git/,
+    /^\/crd-lab-booking\/main\.jsx$/,
+    /^\/(fix-crd-created-at|test-insert-created-at)\.js$/,
+  ];
+  if (blocked.some((r) => r.test(p))) return res.status(403).end();
+  return next();
 });
 
 app.use(
@@ -16821,6 +17456,10 @@ async function mountSciKhcnPublicationsRouters() {
 
   app.delete('/api/publications/admin/clear-all', authMiddleware, adminOnly, (req, res) => {
     try {
+      const { confirm } = req.body && typeof req.body === 'object' ? req.body : {};
+      if (confirm !== 'XOA-TOAN-BO') {
+        return res.status(400).json({ message: 'Cần xác nhận bằng chuỗi "XOA-TOAN-BO" trong body JSON (confirm).' });
+      }
       const rPub = db.prepare('DELETE FROM publications').run();
       let queueChanges = 0;
       try {
@@ -16899,9 +17538,14 @@ async function mountSciKhcnPublicationsRouters() {
     });
   });
 
-  app.listen(PORT, () => {
-    console.log('SCI-ACE server chạy tại http://localhost:' + PORT);
-    console.log('Kiểm tra kết nối: http://localhost:' + PORT + '/api/health');
+  const bindHost =
+    process.env.BIND_HOST != null && String(process.env.BIND_HOST).trim() !== ''
+      ? String(process.env.BIND_HOST).trim()
+      : undefined;
+  function onListen() {
+    const hostLabel = bindHost || '(mặc định Node)';
+    console.log('SCI-ACE server lắng nghe PORT=' + PORT + ' host=' + hostLabel);
+    console.log('Kiểm tra kết nối: http://127.0.0.1:' + PORT + '/api/health');
     console.log(`[clock] TZ=${process.env.TZ} (Vietnam civil time / ICT; override with TZ in .env)`);
     logServerTimeDriftVsGoogle();
     if (transporter) console.log('SMTP đã cấu hình — email thông báo sẽ gửi khi có sự kiện (nộp hồ sơ, yêu cầu bổ sung, kết quả họp...)');
@@ -16912,5 +17556,10 @@ async function mountSciKhcnPublicationsRouters() {
     } catch (e) {
       console.error('[EnrichWorker] Không khởi động được:', e.message || e);
     }
-  });
+  }
+  if (bindHost) {
+    app.listen(PORT, bindHost, onListen);
+  } else {
+    app.listen(PORT, onListen);
+  }
 })();

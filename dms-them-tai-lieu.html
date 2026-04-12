@@ -57,6 +57,11 @@
             <select id="f-type"></select>
           </div>
         </div>
+        <div class="dms-add-field" style="grid-column:1/-1">
+          <label>Mẫu biểu (template — định danh kiểm soát ISO)</label>
+          <select id="f-template"></select>
+          <p class="dms-add-note" style="margin-top:6px">Khai báo danh mục mẫu tại <strong>Công cụ quản trị</strong> → tab «Mẫu biểu (ISO)». Gắn mẫu giúp thống nhất metadata và lưu trữ hồ sơ giấy.</p>
+        </div>
         <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
           <div class="dms-add-field">
             <label>Trạng thái</label>
@@ -80,15 +85,59 @@
           <div class="dms-add-field">
             <label>Ngày ban hành</label>
             <input type="date" id="f-issue">
+            <p class="dms-add-note dms-date-hint" id="f-issue-hint" style="margin-top:4px"></p>
           </div>
           <div class="dms-add-field">
             <label>Ngày / Hiệu lực đến</label>
             <input type="date" id="f-valid">
+            <p class="dms-add-note dms-date-hint" id="f-valid-hint" style="margin-top:4px"></p>
           </div>
         </div>
         <div class="dms-add-field" style="grid-column:1/-1">
           <label>Ghi chú</label>
           <textarea id="f-notes" rows="2" placeholder="Ghi chú nội bộ…"></textarea>
+        </div>
+        <h3 style="grid-column:1/-1;margin:12px 0 4px;font-size:1rem;font-weight:700">Lưu trữ vật lý &amp; tuân thủ</h3>
+        <p class="dms-add-note" style="grid-column:1/-1;margin-top:0">Vị trí kho giấy, bản gốc/sao, thời hạn bảo quản — phục vụ vận hành kho và quy chế nội bộ.</p>
+        <div class="dms-add-field" style="grid-column:1/-1">
+          <label>Vị trí lưu trữ (mã kho / kệ / tủ / hộp)</label>
+          <input type="text" id="f-phys-loc" placeholder="VD: K1-T2-H05 / Phòng 302">
+        </div>
+        <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
+          <div class="dms-add-field">
+            <label>Bản giấy</label>
+            <select id="f-phys-copy">
+              <option value="">— Chọn —</option>
+              <option value="original">Bản gốc</option>
+              <option value="copy">Bản sao</option>
+              <option value="both">Gốc + sao</option>
+              <option value="scan_copy">Bản scan lưu kho</option>
+            </select>
+          </div>
+          <div class="dms-add-field">
+            <label>Liên kết hồ sơ / CV gốc (cùng vụ việc)</label>
+            <input type="text" id="f-parent-case" placeholder="Số công văn hoặc mã hồ sơ gốc">
+          </div>
+        </div>
+        <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
+          <div class="dms-add-field">
+            <label>Số tờ (tùy quy trình)</label>
+            <input type="number" id="f-phys-sheets" min="0" placeholder="Để trống nếu không dùng">
+          </div>
+          <div class="dms-add-field">
+            <label>Số trang</label>
+            <input type="number" id="f-phys-pages" min="0" placeholder="Để trống nếu không dùng">
+          </div>
+        </div>
+        <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
+          <div class="dms-add-field">
+            <label>Thời hạn bảo quản đến</label>
+            <input type="date" id="f-retention">
+          </div>
+          <div class="dms-add-field">
+            <label>Ngày đủ điều kiện tiêu hủy</label>
+            <input type="date" id="f-destruction">
+          </div>
         </div>
         <div class="dms-add-field" style="grid-column:1/-1">
           <label>File đính kèm (PDF, Word…)</label>

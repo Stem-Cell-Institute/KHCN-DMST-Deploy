@@ -1817,7 +1817,7 @@
                 function escHtml(s) {
                     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
                 }
-                wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Email</th><th>Họ tên</th><th>Kích hoạt / MK (ghi chú)</th><th>Học hàm/HV</th><th>Vai trò</th><th>Ngày tạo</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>' +
+                wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Email</th><th>Họ tên</th><th>Kích hoạt đăng nhập</th><th>Học hàm/HV</th><th>Vai trò</th><th>Ngày tạo</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>' +
                     users.map(function(u) {
                         const email = (u.email || '').replace(/"/g, '&quot;');
                         const date = (u.createdAt || '').slice(0, 10);
@@ -1833,9 +1833,6 @@
                             pwdCell = '<span style="display:inline-block;padding:0.2rem 0.55rem;border-radius:6px;background:#fffbeb;color:#f59e0b;font-size:0.82rem;font-weight:600;">⏳ Chưa kích hoạt</span>';
                         } else {
                             pwdCell = '<span style="display:inline-block;padding:0.2rem 0.55rem;border-radius:6px;background:#ecfdf5;color:#15803d;font-size:0.82rem;font-weight:600;">✅ Đã kích hoạt</span>';
-                            if (u.password_support_hint && String(u.password_support_hint).trim()) {
-                                pwdCell += ' <code style="font-size:0.85rem;word-break:break-all;">' + escHtml(u.password_support_hint) + '</code>';
-                            }
                         }
                         const uid = u.id != null ? String(u.id) : '';
                         const isRowAdmin = (u.role || '').toLowerCase() === 'admin';

@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*
+data
+uploads
+uploads-cap-vien
+_test_data
+.cursor
+*.db
+*.db-journal

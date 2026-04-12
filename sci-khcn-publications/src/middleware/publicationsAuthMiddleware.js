@@ -5,8 +5,11 @@
 
 import jwt from 'jsonwebtoken';
 
-/** Cùng giá trị mặc định như server.js — tránh 500 khi .env chưa có JWT_SECRET */
-const JWT_SECRET_DEFAULT = 'sci-ace-secret-change-in-production';
+const JWT_SECRET = String(process.env.JWT_SECRET || '').trim();
+if (!JWT_SECRET) {
+  console.error('[FATAL] JWT_SECRET chưa được cấu hình. Module publications cần cùng secret với server chính.');
+  process.exit(1);
+}
 
 function getCookie(req, name) {
   const raw = req.headers.cookie || '';
@@ -36,13 +39,12 @@ function getTokenFromReq(req) {
 }
 
 export function publicationsAuthMiddleware(req, res, next) {
-  const secret = process.env.JWT_SECRET || JWT_SECRET_DEFAULT;
   const token = getTokenFromReq(req);
   if (!token) {
     return res.status(401).json({ message: 'Chưa đăng nhập' });
   }
   try {
-    req.user = jwt.verify(token, secret);
+    req.user = jwt.verify(token, JWT_SECRET);
     next();
   } catch {
     return res.status(401).json({ message: 'Phiên đăng nhập hết hạn' });

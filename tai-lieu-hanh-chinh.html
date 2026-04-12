@@ -21,6 +21,7 @@
       <a href="index.html" class="dms-btn dms-btn-ghost" style="text-decoration:none">← Trang chủ</a>
       <a href="quan-tri-tai-lieu-hc.html" id="dms-admin-link" class="dms-btn dms-btn-ghost" style="text-decoration:none;display:none">Công cụ quản trị</a>
       <button type="button" class="dms-btn dms-btn-primary" id="dms-btn-export">Xuất Excel</button>
+      <button type="button" class="dms-btn dms-btn-ghost" id="dms-btn-summary" title="Tổng hợp theo đơn vị / năm / loại">Báo cáo tổng hợp</button>
       <a href="dms-them-tai-lieu.html" class="dms-btn dms-btn-primary" id="dms-btn-add" style="display:none;text-decoration:none">Thêm tài liệu</a>
       <div class="dms-auth-slot" id="auth-status"></div>
     </div>
@@ -34,50 +35,15 @@
           <nav id="dms-cat-nav" class="dms-nav-stack" aria-label="Danh mục tài liệu"></nav>
           <h3 class="dms-section-title"><span class="dms-section-dot dms-section-dot--amber" aria-hidden="true"></span>Lọc nhanh</h3>
           <nav id="dms-quick-nav" class="dms-nav-stack" aria-label="Lọc theo trạng thái"></nav>
+          <h3 class="dms-section-title"><span class="dms-section-dot dms-section-dot--violet" aria-hidden="true"></span>Biểu mẫu</h3>
+          <nav id="dms-template-sidebar" class="dms-template-sidebar" aria-label="Biểu mẫu ISO và lọc">
+            <div id="dms-template-sidebar-inner"></div>
+          </nav>
           <h3 class="dms-section-title"><span class="dms-section-dot dms-section-dot--teal" aria-hidden="true"></span>Thẻ nhãn</h3>
           <div id="dms-tags-nav" class="dms-tag-cloud" role="group" aria-label="Lọc theo thẻ"></div>
         </div>
       </aside>
       <main class="dms-main" id="dms-main">
-        <section class="dms-toolbar-panel" aria-label="Tìm kiếm và lọc">
-        <div class="dms-search-hero" id="dms-search-hero" role="search">
-          <label class="dms-search-label" for="dms-search">Tìm kiếm tài liệu</label>
-          <div class="dms-search-row">
-            <div class="dms-search-field">
-              <input type="search" id="dms-search" placeholder="Nhập tên, số hiệu, đơn vị ban hành…" autocomplete="off" enterkeyhint="search" inputmode="search">
-            </div>
-            <button type="button" class="dms-search-clear" id="dms-search-clear" hidden aria-label="Xóa từ khóa">×</button>
-            <button type="button" class="dms-search-submit" id="dms-search-submit">Tìm</button>
-          </div>
-          <p class="dms-search-hint">Gõ và chờ gợi ý hoặc bấm <strong>Tìm</strong> / phím <kbd>Enter</kbd> — tìm trong tiêu đề, số văn bản, ghi chú, đơn vị, link.</p>
-        </div>
-        <div class="dms-toolbar-filters">
-          <span class="dms-filters-kicker" id="dms-filters-kicker">Bộ lọc nhanh</span>
-          <div class="dms-toolbar dms-toolbar--filters">
-            <select class="dms-select" id="filter-doc-type" aria-describedby="dms-filters-kicker"></select>
-            <select class="dms-select" id="filter-status" aria-describedby="dms-filters-kicker">
-              <option value="all">Trạng thái: Tất cả</option>
-              <option value="active">Có hiệu lực</option>
-              <option value="draft">Dự thảo</option>
-              <option value="expired">Hết hạn</option>
-              <option value="revoked">Thu hồi</option>
-            </select>
-            <select class="dms-select" id="filter-year" aria-describedby="dms-filters-kicker"></select>
-            <select class="dms-select" id="filter-sort" aria-describedby="dms-filters-kicker">
-              <option value="uploaded_at">Sắp xếp: Ngày tải lên</option>
-              <option value="issue_date">Ngày ban hành</option>
-              <option value="valid_until">Hiệu lực đến</option>
-              <option value="title">Tên A–Z</option>
-            </select>
-            <select class="dms-select dms-select--dup" id="filter-dup" title="Lọc trùng theo Số QĐ + ngày ban hành" aria-describedby="dms-filters-kicker">
-              <option value="">Trùng lặp: Tất cả</option>
-              <option value="1">Chỉ bản ghi trùng khóa</option>
-            </select>
-          </div>
-        </div>
-        <p id="dms-dup-hint" style="margin:10px 0 0;font-size:0.8125rem;color:var(--dms-muted,#5c6b84);"></p>
-        </section>
-
         <section class="dms-cards" aria-label="Thống kê nhanh">
           <article class="dms-card dms-card--stat dms-card--indigo">
             <div class="dms-card-stat-inner">
@@ -117,6 +83,104 @@
           </article>
         </section>
 
+        <h3 class="dms-cards-section-kicker">Thống kê mẫu biểu (ISO)</h3>
+        <section class="dms-cards dms-cards--templates" aria-label="Thống kê mẫu biểu">
+          <article class="dms-card dms-card--stat dms-card--violet">
+            <div class="dms-card-stat-inner">
+              <span class="dms-card-icon" aria-hidden="true">📋</span>
+              <div class="dms-card-stat-text">
+                <div class="val tabular-nums" id="dms-stat-tpl-total">—</div>
+                <div class="lbl">Tổng mẫu trong danh mục</div>
+              </div>
+            </div>
+          </article>
+          <article class="dms-card dms-card--stat dms-card--green">
+            <div class="dms-card-stat-inner">
+              <span class="dms-card-icon" aria-hidden="true">✓</span>
+              <div class="dms-card-stat-text">
+                <div class="val tabular-nums" id="dms-stat-tpl-active">—</div>
+                <div class="lbl">Mẫu hiệu hành</div>
+              </div>
+            </div>
+          </article>
+          <article class="dms-card dms-card--stat dms-card--amber">
+            <div class="dms-card-stat-inner">
+              <span class="dms-card-icon" aria-hidden="true">✎</span>
+              <div class="dms-card-stat-text">
+                <div class="val tabular-nums" id="dms-stat-tpl-draft">—</div>
+                <div class="lbl">Mẫu nháp</div>
+              </div>
+            </div>
+          </article>
+          <article class="dms-card dms-card--stat dms-card--zinc">
+            <div class="dms-card-stat-inner">
+              <span class="dms-card-icon" aria-hidden="true">◆</span>
+              <div class="dms-card-stat-text">
+                <div class="val tabular-nums" id="dms-stat-tpl-retired">—</div>
+                <div class="lbl">Mẫu ngừng / thay thế</div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="dms-phys-panel" aria-label="Lọc hồ sơ giấy và tuân thủ">
+          <h3 class="dms-phys-panel-title">Hồ sơ giấy &amp; tuân thủ</h3>
+          <p class="dms-phys-panel-desc">Lọc danh sách theo PDF trên máy chủ, link scan, hạn xử lý tiêu hủy hoặc hồ sơ đang mượn.</p>
+          <nav id="dms-phys-nav" class="dms-phys-nav-row" aria-label="Lọc kho giấy và tuân thủ"></nav>
+        </section>
+
+        <section class="dms-toolbar-panel" aria-label="Tìm kiếm và lọc">
+        <div class="dms-search-hero" id="dms-search-hero" role="search">
+          <label class="dms-search-label" for="dms-search">Tìm kiếm tài liệu</label>
+          <div class="dms-search-row">
+            <div class="dms-search-field">
+              <input type="search" id="dms-search" placeholder="Nhập tên, số hiệu, đơn vị ban hành…" autocomplete="off" enterkeyhint="search" inputmode="search">
+            </div>
+            <button type="button" class="dms-search-clear" id="dms-search-clear" hidden aria-label="Xóa từ khóa">×</button>
+            <button type="button" class="dms-search-submit" id="dms-search-submit">Tìm</button>
+          </div>
+          <p class="dms-search-hint">Gõ và chờ gợi ý hoặc bấm <strong>Tìm</strong> / phím <kbd>Enter</kbd> — tìm trong tiêu đề, số văn bản, ghi chú, đơn vị, link.</p>
+        </div>
+        <div class="dms-toolbar-filters">
+          <span class="dms-filters-kicker" id="dms-filters-kicker">Bộ lọc nhanh</span>
+          <div class="dms-toolbar dms-toolbar--filters">
+            <select class="dms-select" id="filter-doc-type" aria-describedby="dms-filters-kicker"></select>
+            <select class="dms-select" id="filter-template" aria-describedby="dms-filters-kicker" title="Lọc theo mẫu biểu (quản trị ISO)">
+              <option value="">Mẫu biểu: Tất cả</option>
+            </select>
+            <select class="dms-select" id="filter-status" aria-describedby="dms-filters-kicker">
+              <option value="all">Trạng thái: Tất cả</option>
+              <option value="active">Có hiệu lực</option>
+              <option value="draft">Dự thảo</option>
+              <option value="expired">Hết hạn</option>
+              <option value="revoked">Thu hồi</option>
+            </select>
+            <select class="dms-select" id="filter-year" aria-describedby="dms-filters-kicker"></select>
+            <select class="dms-select" id="filter-sort" aria-describedby="dms-filters-kicker">
+              <option value="uploaded_at">Sắp xếp: Ngày tải lên</option>
+              <option value="issue_date">Ngày ban hành</option>
+              <option value="valid_until">Hiệu lực đến</option>
+              <option value="title">Tên A–Z</option>
+            </select>
+            <select class="dms-select" id="filter-dup" title="Lọc trùng theo Số QĐ + ngày ban hành" aria-describedby="dms-filters-kicker">
+              <option value="">Trùng lặp: Tất cả</option>
+              <option value="1">Chỉ bản ghi trùng khóa</option>
+            </select>
+            <select class="dms-select" id="filter-file-mode" aria-describedby="dms-filters-kicker" title="Lọc theo file PDF trên máy chủ">
+              <option value="">File: Tất cả</option>
+              <option value="missing_pdf">Chưa có PDF trên máy chủ</option>
+              <option value="scan_only">Chỉ có link scan (không PDF)</option>
+            </select>
+            <select class="dms-select" id="filter-compliance" aria-describedby="dms-filters-kicker">
+              <option value="">Tuân thủ / mượn: Tất cả</option>
+              <option value="retention_alert">Cảnh báo tiêu hủy (≤90 ngày tới hạn)</option>
+              <option value="out_on_loan">Đang mượn ngoài kho</option>
+            </select>
+          </div>
+        </div>
+        <p id="dms-dup-hint" style="margin:10px 0 0;font-size:0.8125rem;color:var(--dms-muted,#5c6b84);"></p>
+        </section>
+
         <div class="dms-table-wrap">
           <div class="dms-bulk-bar" id="dms-bulk-bar">
             <strong id="dms-bulk-count">0 mục đã chọn</strong>
@@ -140,14 +204,52 @@
                 <th>Số hiệu</th>
                 <th>Ngày ban hành</th>
                 <th>Hiệu lực đến</th>
+                <th>Kho / tuân thủ</th>
                 <th>Trạng thái</th>
               </tr>
             </thead>
             <tbody id="dms-tbody"></tbody>
           </table>
           </div>
+          <div class="dms-pagination" id="dms-pagination" hidden>
+            <p class="dms-pagination-info" id="dms-pagination-info" aria-live="polite"></p>
+            <div class="dms-pagination-row">
+              <label class="dms-pagination-size">
+                Mỗi trang
+                <select id="dms-page-size" class="dms-select dms-select--compact" aria-label="Số dòng mỗi trang">
+                  <option value="30">30</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="200">200</option>
+                  <option value="500">500 (tối đa)</option>
+                </select>
+              </label>
+              <div class="dms-pagination-nav" role="navigation" aria-label="Phân trang danh sách">
+                <button type="button" class="dms-btn dms-btn-sm dms-page-btn" id="dms-page-prev">← Trước</button>
+                <div class="dms-pagination-pages" id="dms-pagination-pages"></div>
+                <button type="button" class="dms-btn dms-btn-sm dms-page-btn" id="dms-page-next">Sau →</button>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
+    </div>
+  </div>
+
+  <div id="dms-phys-modal" class="dms-modal" hidden aria-hidden="true">
+    <div class="dms-modal-backdrop" data-phys-close="1"></div>
+    <div class="dms-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="dms-phys-modal-title">
+      <div class="dms-modal-head">
+        <h2 id="dms-phys-modal-title">Hồ sơ lưu trữ giấy</h2>
+        <button type="button" class="dms-modal-x" data-phys-close="1" aria-label="Đóng">×</button>
+      </div>
+      <div class="dms-modal-tabs" id="dms-phys-tabs">
+        <button type="button" class="dms-modal-tab dms-modal-tab--on" data-phys-tab="place">Vị trí &amp; tuân thủ</button>
+        <button type="button" class="dms-modal-tab" data-phys-tab="loan">Mượn / trả</button>
+        <button type="button" class="dms-modal-tab" data-phys-tab="hand">Bàn giao</button>
+        <button type="button" class="dms-modal-tab" data-phys-tab="inv" id="dms-phys-tab-inv" hidden>Kiểm kê</button>
+      </div>
+      <div class="dms-modal-body" id="dms-phys-body"></div>
     </div>
   </div>
 

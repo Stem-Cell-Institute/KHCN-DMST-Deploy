@@ -17,6 +17,13 @@ const {
   runQuyetDinhImport,
 } = require('./dmsQuyetDinhImport');
 
+let QRCode;
+try {
+  QRCode = require('qrcode');
+} catch (_) {
+  QRCode = null;
+}
+
 const DMS_ROLES = ['manager', 'uploader', 'viewer'];
 
 function userHasDmsModuleAccess(db, user) {
@@ -178,6 +185,20 @@ module.exports = function createDmsRecordsRouter({
   const router = express.Router();
   const dmsDir = uploadsDir || path.join(__dirname, '..', 'uploads', 'dms');
   fs.mkdirSync(dmsDir, { recursive: true });
+  const dmsDirResolved = path.resolve(dmsDir);
+  function resolveDmsStoredFileForUnlink(filePath) {
+    if (!filePath || filePath === DMS_NO_FILE) return null;
+    const full = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(dmsDir, path.basename(filePath));
+    const norm = path.normalize(full);
+    const rel = path.relative(dmsDirResolved, norm);
+    if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return null;
+    try {
+      if (!fs.existsSync(norm) || !fs.statSync(norm).isFile()) return null;
+    } catch (_) {
+      return null;
+    }
+    return norm;
+  }
 
   const storage = multer.diskStorage({
     destination: function (_req, _file, cb) {
@@ -209,6 +230,13 @@ module.exports = function createDmsRecordsRouter({
   const needUpload = requireDmsUpload(db);
   const needCatalog = requireDmsCatalog(db);
   const needManageDocs = requireDmsManageDocs(db);
+
+  function parseBodyInt(v) {
+    if (v === undefined) return undefined;
+    if (v === null || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.trunc(n) : null;
+  }
 
   router.get('/me', (req, res) => {
     const sysAdmin = String(req.user.role || '').toLowerCase() === 'admin';
@@ -247,6 +275,55 @@ module.exports = function createDmsRecordsRouter({
         )
         .get(now, soon).c;
       const dup = countDuplicateSummary(db);
+      const missingPdf = db
+        .prepare(
+          `SELECT COUNT(*) AS c FROM dms_documents
+           WHERE file_path IS NULL OR TRIM(COALESCE(file_path,'')) = '' OR file_path = ?`
+        )
+        .get(DMS_NO_FILE).c;
+      const scanOnly = db
+        .prepare(
+          `SELECT COUNT(*) AS c FROM dms_documents
+           WHERE (file_path IS NULL OR file_path = ?) AND TRIM(COALESCE(external_scan_link,'')) != ''`
+        )
+        .get(DMS_NO_FILE).c;
+      const destructionAlertHorizon = addDaysStr(90);
+      const destructionAlert = db
+        .prepare(
+          `SELECT COUNT(*) AS c FROM dms_documents
+           WHERE destruction_eligible_date IS NOT NULL AND TRIM(destruction_eligible_date) != ''
+             AND date(destruction_eligible_date) <= date(?)`
+        )
+        .get(destructionAlertHorizon).c;
+      const outOnLoan = db
+        .prepare(
+          `SELECT COUNT(DISTINCT document_id) AS c FROM dms_document_loans WHERE returned_at IS NULL`
+        )
+        .get().c;
+
+      let templatesTotal = 0;
+      let templatesActive = 0;
+      let templatesDraft = 0;
+      let templatesRetired = 0;
+      let documentsWithTemplate = 0;
+      try {
+        templatesTotal = db.prepare('SELECT COUNT(*) AS c FROM dms_templates').get().c;
+        templatesActive = db
+          .prepare(`SELECT COUNT(*) AS c FROM dms_templates WHERE lower(trim(COALESCE(status,''))) = 'active'`)
+          .get().c;
+        templatesDraft = db
+          .prepare(`SELECT COUNT(*) AS c FROM dms_templates WHERE lower(trim(COALESCE(status,''))) = 'draft'`)
+          .get().c;
+        templatesRetired = db
+          .prepare(`SELECT COUNT(*) AS c FROM dms_templates WHERE lower(trim(COALESCE(status,''))) = 'retired'`)
+          .get().c;
+        documentsWithTemplate = db
+          .prepare('SELECT COUNT(*) AS c FROM dms_documents WHERE template_id IS NOT NULL')
+          .get().c;
+      } catch (te) {
+        console.warn('[dms/stats] template counts:', te.message);
+      }
+
       res.json({
         ok: true,
         total,
@@ -256,6 +333,15 @@ module.exports = function createDmsRecordsRouter({
         expiringSoon,
         duplicateGroups: dup.duplicateGroups,
         documentsInDuplicateGroups: dup.documentsInDuplicateGroups,
+        missingPdf,
+        scanOnly,
+        destructionAlert,
+        outOnLoan,
+        templatesTotal,
+        templatesActive,
+        templatesDraft,
+        templatesRetired,
+        documentsWithTemplate,
       });
     } catch (e) {
       console.error('[dms/stats]', e);
@@ -469,6 +555,218 @@ module.exports = function createDmsRecordsRouter({
     }
   });
 
+  /** Mẫu biểu / template — định danh kiểm soát (ISO / quản lý hồ sơ): mã, phiên bản, phân loại, lưu trữ… */
+  router.get('/templates', needView, (req, res) => {
+    try {
+      const rows = db
+        .prepare(
+          `SELECT t.*,
+            (SELECT COUNT(*) FROM dms_documents d WHERE d.template_id = t.id) AS document_count
+           FROM dms_templates t
+           ORDER BY COALESCE(t.sort_order, 0), lower(t.name), t.id`
+        )
+        .all();
+      res.json({ ok: true, templates: rows });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/templates', needCatalog, express.json(), (req, res) => {
+    try {
+      const code = String(req.body.code || '').trim();
+      const name = String(req.body.name || '').trim();
+      if (!code) return res.status(400).json({ ok: false, message: 'Thiếu mã mẫu biểu (code).' });
+      if (!name) return res.status(400).json({ ok: false, message: 'Thiếu tên mẫu biểu.' });
+      const version = String(req.body.version || '1.0').trim() || '1.0';
+      const status = String(req.body.status || 'active').toLowerCase();
+      const st = ['draft', 'active', 'retired'].includes(status) ? status : 'active';
+      const recordKind = String(req.body.record_kind || 'record').toLowerCase();
+      const rk = ['document', 'record'].includes(recordKind) ? recordKind : 'record';
+      const description = req.body.description != null ? String(req.body.description).trim() || null : null;
+      const retentionPolicy =
+        req.body.retention_policy != null ? String(req.body.retention_policy).trim() || null : null;
+      const mediumNotes = req.body.medium_notes != null ? String(req.body.medium_notes).trim() || null : null;
+      const owningUnit = req.body.owning_unit != null ? String(req.body.owning_unit).trim() || null : null;
+      const effectiveFrom =
+        req.body.effective_from != null ? String(req.body.effective_from || '').trim() || null : null;
+      const effectiveUntil =
+        req.body.effective_until != null ? String(req.body.effective_until || '').trim() || null : null;
+      const blankFormUrl =
+        req.body.blank_form_url != null ? String(req.body.blank_form_url || '').trim() || null : null;
+      let supersededById = null;
+      if (req.body.superseded_by_id != null && req.body.superseded_by_id !== '') {
+        const sid = Number(req.body.superseded_by_id);
+        if (Number.isFinite(sid) && sid > 0) {
+          const ex = db.prepare('SELECT id FROM dms_templates WHERE id = ?').get(sid);
+          if (ex) supersededById = sid;
+        }
+      }
+      const sortOrder = Number(req.body.sort_order) || 0;
+      const isActive = req.body.is_active != null ? (req.body.is_active ? 1 : 0) : 1;
+      const r = db
+        .prepare(
+          `INSERT INTO dms_templates (
+            code, name, version, status, record_kind, description, retention_policy, medium_notes,
+            owning_unit, effective_from, effective_until, blank_form_url, superseded_by_id,
+            sort_order, is_active, created_by_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          code,
+          name,
+          version,
+          st,
+          rk,
+          description,
+          retentionPolicy,
+          mediumNotes,
+          owningUnit,
+          effectiveFrom,
+          effectiveUntil,
+          blankFormUrl,
+          supersededById,
+          sortOrder,
+          isActive,
+          req.user.id
+        );
+      res.json({ ok: true, id: r.lastInsertRowid });
+    } catch (e) {
+      if (String(e.message || '').includes('UNIQUE')) {
+        return res.status(400).json({ ok: false, message: 'Mã mẫu biểu (code) đã tồn tại.' });
+      }
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.patch('/templates/:id', needCatalog, express.json(), (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const cur = db.prepare('SELECT * FROM dms_templates WHERE id = ?').get(id);
+      if (!cur) return res.status(404).json({ ok: false, message: 'Không tìm thấy mẫu biểu.' });
+      const code = req.body.code != null ? String(req.body.code).trim() || cur.code : cur.code;
+      const name = req.body.name != null ? String(req.body.name).trim() || cur.name : cur.name;
+      const version = req.body.version != null ? String(req.body.version).trim() || cur.version : cur.version;
+      let status = cur.status;
+      if (req.body.status != null) {
+        const s = String(req.body.status).toLowerCase();
+        if (['draft', 'active', 'retired'].includes(s)) status = s;
+      }
+      let recordKind = cur.record_kind || 'record';
+      if (req.body.record_kind != null) {
+        const rk = String(req.body.record_kind).toLowerCase();
+        if (['document', 'record'].includes(rk)) recordKind = rk;
+      }
+      const description =
+        req.body.description !== undefined
+          ? String(req.body.description || '').trim() || null
+          : cur.description;
+      const retentionPolicy =
+        req.body.retention_policy !== undefined
+          ? String(req.body.retention_policy || '').trim() || null
+          : cur.retention_policy;
+      const mediumNotes =
+        req.body.medium_notes !== undefined
+          ? String(req.body.medium_notes || '').trim() || null
+          : cur.medium_notes;
+      const owningUnit =
+        req.body.owning_unit !== undefined
+          ? String(req.body.owning_unit || '').trim() || null
+          : cur.owning_unit;
+      const effectiveFrom =
+        req.body.effective_from !== undefined
+          ? String(req.body.effective_from || '').trim() || null
+          : cur.effective_from;
+      const effectiveUntil =
+        req.body.effective_until !== undefined
+          ? String(req.body.effective_until || '').trim() || null
+          : cur.effective_until;
+      const blankFormUrl =
+        req.body.blank_form_url !== undefined
+          ? String(req.body.blank_form_url || '').trim() || null
+          : cur.blank_form_url;
+      let supersededById = cur.superseded_by_id;
+      if (req.body.superseded_by_id !== undefined) {
+        if (req.body.superseded_by_id === null || req.body.superseded_by_id === '') {
+          supersededById = null;
+        } else {
+          const sid = Number(req.body.superseded_by_id);
+          if (Number.isFinite(sid) && sid > 0 && sid !== id) {
+            const ex = db.prepare('SELECT id FROM dms_templates WHERE id = ?').get(sid);
+            if (ex) supersededById = sid;
+          }
+        }
+      }
+      const sortOrder =
+        req.body.sort_order != null && Number.isFinite(Number(req.body.sort_order))
+          ? Number(req.body.sort_order)
+          : cur.sort_order;
+      const isActive = req.body.is_active != null ? (req.body.is_active ? 1 : 0) : cur.is_active;
+      db.prepare(
+        `UPDATE dms_templates SET
+          code = ?, name = ?, version = ?, status = ?, record_kind = ?,
+          description = ?, retention_policy = ?, medium_notes = ?, owning_unit = ?,
+          effective_from = ?, effective_until = ?, blank_form_url = ?, superseded_by_id = ?,
+          sort_order = ?, is_active = ?, updated_at = datetime('now','localtime')
+        WHERE id = ?`
+      ).run(
+        code,
+        name,
+        version,
+        status,
+        recordKind,
+        description,
+        retentionPolicy,
+        mediumNotes,
+        owningUnit,
+        effectiveFrom,
+        effectiveUntil,
+        blankFormUrl,
+        supersededById,
+        sortOrder,
+        isActive,
+        id
+      );
+      res.json({ ok: true });
+    } catch (e) {
+      if (String(e.message || '').includes('UNIQUE')) {
+        return res.status(400).json({ ok: false, message: 'Mã mẫu biểu (code) đã tồn tại.' });
+      }
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.delete('/templates/:id', needCatalog, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const used = db.prepare('SELECT id FROM dms_documents WHERE template_id = ? LIMIT 1').get(id);
+      if (used) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Còn tài liệu đang gắn mẫu này — gỡ mẫu khỏi tài liệu trước khi xóa.',
+        });
+      }
+      db.prepare('DELETE FROM dms_templates WHERE id = ?').run(id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  function dmsDocListFromClause() {
+    return `FROM dms_documents d
+      LEFT JOIN dms_templates tpl ON tpl.id = d.template_id`;
+  }
+
+  function validateDmsTemplateId(raw) {
+    if (raw === undefined || raw === null || raw === '') return { ok: true, id: null };
+    const id = Number(raw);
+    if (!Number.isFinite(id) || id <= 0) return { ok: false, message: 'Mã mẫu biểu (template) không hợp lệ.' };
+    const row = db.prepare('SELECT id FROM dms_templates WHERE id = ?').get(id);
+    if (!row) return { ok: false, message: 'Không tồn tại mẫu biểu với ID đã chọn.' };
+    return { ok: true, id };
+  }
+
   function buildDocumentListQuery(filters) {
     const {
       q,
@@ -476,13 +774,24 @@ module.exports = function createDmsRecordsRouter({
       status,
       year,
       docTypeId,
+      templateId,
+      hasTemplate,
       tagIds,
       quick,
       sort,
       duplicatesOnly,
+      documentId,
     } = filters;
     const params = [];
     let where = '1=1';
+
+    if (documentId != null && documentId !== '') {
+      const did = Number(documentId);
+      if (Number.isFinite(did) && did > 0) {
+        where += ' AND d.id = ?';
+        params.push(did);
+      }
+    }
 
     if (duplicatesOnly) {
       where += ` AND d.id IN (
@@ -506,8 +815,10 @@ module.exports = function createDmsRecordsRouter({
         OR lower(COALESCE(d.issuing_unit,'')) LIKE ?
         OR lower(COALESCE(d.external_scan_link,'')) LIKE ?
         OR lower(COALESCE(d.external_word_link,'')) LIKE ?
+        OR lower(COALESCE(tpl.code,'')) LIKE ?
+        OR lower(COALESCE(tpl.name,'')) LIKE ?
       )`;
-      params.push(like, like, like, like, like, like);
+      params.push(like, like, like, like, like, like, like, like);
     }
 
     if (categoryId != null && categoryId !== '' && categoryId !== 'all') {
@@ -523,6 +834,21 @@ module.exports = function createDmsRecordsRouter({
     if (docTypeId != null && docTypeId !== '') {
       where += ' AND d.document_type_id = ?';
       params.push(Number(docTypeId));
+    }
+
+    if (templateId != null && templateId !== '') {
+      const tid = Number(templateId);
+      if (Number.isFinite(tid) && tid > 0) {
+        where += ' AND d.template_id = ?';
+        params.push(tid);
+      }
+    }
+
+    const ht = hasTemplate != null ? String(hasTemplate).trim() : '';
+    if (ht === '1') {
+      where += ' AND d.template_id IS NOT NULL';
+    } else if (ht === '0') {
+      where += ' AND d.template_id IS NULL';
     }
 
     if (status && String(status).toLowerCase() !== 'all') {
@@ -554,6 +880,28 @@ module.exports = function createDmsRecordsRouter({
         SELECT document_id FROM dms_document_tags WHERE tag_id IN (${placeholders})
       )`;
       params.push(...tagIds);
+    }
+
+    const fileMode = filters.fileMode != null ? String(filters.fileMode).toLowerCase() : '';
+    if (fileMode === 'missing_pdf') {
+      where += ` AND (d.file_path IS NULL OR TRIM(COALESCE(d.file_path,'')) = '' OR d.file_path = ?)`;
+      params.push(DMS_NO_FILE);
+    } else if (fileMode === 'scan_only') {
+      where += ` AND (d.file_path IS NULL OR d.file_path = ?) AND TRIM(COALESCE(d.external_scan_link,'')) != ''`;
+      params.push(DMS_NO_FILE);
+    }
+
+    if (filters.retentionAlert) {
+      const horizon = addDaysStr(90);
+      where += ` AND d.destruction_eligible_date IS NOT NULL AND TRIM(d.destruction_eligible_date) != ''
+        AND date(d.destruction_eligible_date) <= date(?)`;
+      params.push(horizon);
+    }
+
+    if (filters.outOnLoan) {
+      where += ` AND EXISTS (
+        SELECT 1 FROM dms_document_loans L WHERE L.document_id = d.id AND L.returned_at IS NULL
+      )`;
     }
 
     let orderBy = 'd.uploaded_at DESC';
@@ -660,12 +1008,10 @@ module.exports = function createDmsRecordsRouter({
       for (const id of ids) {
         const doc = sel.get(id);
         if (!doc) continue;
-        const abs = path.isAbsolute(doc.file_path)
-          ? doc.file_path
-          : path.join(dmsDir, path.basename(doc.file_path));
+        const abs = resolveDmsStoredFileForUnlink(doc.file_path);
         del.run(id);
         try {
-          if (doc.file_path && doc.file_path !== DMS_NO_FILE && fs.existsSync(abs)) fs.unlinkSync(abs);
+          if (abs) fs.unlinkSync(abs);
         } catch (_) {}
       }
       res.json({ ok: true, deleted: ids.length });
@@ -732,36 +1078,288 @@ module.exports = function createDmsRecordsRouter({
     }
   });
 
+  router.get('/documents/:id/label.html', needView, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const row = db
+        .prepare(
+          `SELECT id, title, ref_number, physical_location, physical_copy_type FROM dms_documents WHERE id = ?`
+        )
+        .get(id);
+      if (!row) return res.status(404).send('Không tìm thấy');
+      const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
+      const host = req.get('host') || '';
+      const listUrl = `${proto}://${host}/tai-lieu-hanh-chinh.html?highlightDoc=${encodeURIComponent(String(id))}`;
+      let qrDataUrl = '';
+      if (QRCode) {
+        try {
+          qrDataUrl = await QRCode.toDataURL(listUrl, { width: 160, margin: 1, errorCorrectionLevel: 'M' });
+        } catch (err) {
+          console.error('[dms label qr]', err);
+        }
+      }
+      const esc = (s) =>
+        String(s || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/"/g, '&quot;');
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(`<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><title>Nhãn DMS #${id}</title>
+<style>
+body{font-family:system-ui,sans-serif;padding:16px;max-width:420px;}
+.box{border:2px solid #333;padding:12px;display:inline-block;}
+h1{font-size:15px;margin:0 0 8px;font-weight:600;}
+.mono{font-family:ui-monospace,monospace;font-size:12px;line-height:1.4;}
+</style></head><body>
+<p><button type="button" onclick="window.print()">In nhãn</button></p>
+<div class="box">
+  ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR" width="160" height="160"><br>` : '<p class="mono">(Cài qrcode trên máy chủ để có QR)</p>'}
+  <h1>${esc(row.title || 'Tài liệu')}</h1>
+  <div class="mono">ID hệ thống: ${id}</div>
+  ${row.ref_number ? `<div class="mono">Số hiệu: ${esc(row.ref_number)}</div>` : ''}
+  ${row.physical_location ? `<div class="mono">Vị trí kho: ${esc(row.physical_location)}</div>` : ''}
+  ${row.physical_copy_type ? `<div class="mono">Bản giấy: ${esc(row.physical_copy_type)}</div>` : ''}
+</div>
+<p class="mono" style="font-size:10px;word-break:break-all;margin-top:10px;">${esc(listUrl)}</p>
+</body></html>`);
+    } catch (e) {
+      console.error('[dms label]', e);
+      res.status(500).send(e.message || 'Lỗi');
+    }
+  });
+
+  router.get('/documents/:id/physical-bundle', needView, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const doc = db.prepare('SELECT * FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const loans = db
+        .prepare(`SELECT * FROM dms_document_loans WHERE document_id = ? ORDER BY id DESC`)
+        .all(id);
+      const handovers = db
+        .prepare(
+          `SELECT h.*, u.fullname AS creator_name FROM dms_document_handovers h
+           LEFT JOIN users u ON u.id = h.created_by_id
+           WHERE h.document_id = ? ORDER BY h.id DESC`
+        )
+        .all(id);
+      const activeLoan = loans.find((l) => !l.returned_at) || null;
+      res.json({ ok: true, document: doc, loans, handovers, activeLoan });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/documents/:id/loans', needUpload, express.json(), (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const doc = db.prepare('SELECT id FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const borrower = String(req.body.borrower_name || '').trim();
+      if (!borrower) return res.status(400).json({ ok: false, message: 'Thiếu tên người mượn' });
+      const reason = String(req.body.reason || '').trim() || null;
+      const dueAt = String(req.body.due_at || '').trim() || null;
+      const notes = String(req.body.notes || '').trim() || null;
+      const open = db
+        .prepare('SELECT id FROM dms_document_loans WHERE document_id = ? AND returned_at IS NULL')
+        .get(id);
+      if (open) {
+        return res.status(400).json({
+          ok: false,
+          message: 'Hồ sơ đang có phiếu mượn chưa trả. Ghi nhận trả trước khi mượn tiếp.',
+        });
+      }
+      const r = db
+        .prepare(
+          `INSERT INTO dms_document_loans (document_id, borrower_name, reason, due_at, created_by_id, notes)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(id, borrower, reason, dueAt, req.user.id, notes);
+      res.json({ ok: true, id: r.lastInsertRowid });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/documents/:id/loans/:loanId/return', needUpload, express.json(), (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const loanId = Number(req.params.loanId);
+      const row = db.prepare('SELECT * FROM dms_document_loans WHERE id = ? AND document_id = ?').get(loanId, id);
+      if (!row) return res.status(404).json({ ok: false, message: 'Không tìm thấy phiếu' });
+      if (row.returned_at) return res.json({ ok: true, already: true });
+      const returnedAt = String(req.body.returned_at || '').trim() || null;
+      db.prepare(
+        `UPDATE dms_document_loans SET returned_at = COALESCE(?, datetime('now','localtime')) WHERE id = ?`
+      ).run(returnedAt || null, loanId);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/documents/:id/handovers', needUpload, express.json(), (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const doc = db.prepare('SELECT id FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const fromP = String(req.body.from_party || '').trim();
+      const toP = String(req.body.to_party || '').trim();
+      if (!fromP || !toP) return res.status(400).json({ ok: false, message: 'Cần bên giao và bên nhận' });
+      const notes = String(req.body.notes || '').trim() || null;
+      const r = db
+        .prepare(
+          `INSERT INTO dms_document_handovers (document_id, from_party, to_party, notes, created_by_id)
+           VALUES (?, ?, ?, ?, ?)`
+        )
+        .run(id, fromP, toP, notes, req.user.id);
+      res.json({ ok: true, id: r.lastInsertRowid });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/inventory/sessions', needManageDocs, express.json(), (req, res) => {
+    try {
+      const name =
+        String(req.body.name || '').trim() ||
+        `Kiểm kê ${new Date().toISOString().slice(0, 10)}`;
+      const notes = String(req.body.notes || '').trim() || null;
+      const r = db
+        .prepare(`INSERT INTO dms_inventory_sessions (name, notes, started_by_id) VALUES (?, ?, ?)`)
+        .run(name, notes, req.user.id);
+      res.json({ ok: true, id: r.lastInsertRowid });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.get('/inventory/sessions', needView, (req, res) => {
+    try {
+      const rows = db
+        .prepare(
+          `SELECT s.*, u.fullname AS starter_name,
+            (SELECT COUNT(*) FROM dms_inventory_items i WHERE i.session_id = s.id) AS item_count
+           FROM dms_inventory_sessions s
+           LEFT JOIN users u ON u.id = s.started_by_id
+           ORDER BY s.id DESC LIMIT 80`
+        )
+        .all();
+      res.json({ ok: true, sessions: rows });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.get('/inventory/sessions/:sid', needView, (req, res) => {
+    try {
+      const sid = Number(req.params.sid);
+      const s = db.prepare('SELECT * FROM dms_inventory_sessions WHERE id = ?').get(sid);
+      if (!s) return res.status(404).json({ ok: false, message: 'Không tìm thấy phiên' });
+      const items = db
+        .prepare(
+          `SELECT i.*, d.title, d.ref_number, d.physical_location AS doc_location
+           FROM dms_inventory_items i
+           JOIN dms_documents d ON d.id = i.document_id
+           WHERE i.session_id = ?
+           ORDER BY i.id DESC`
+        )
+        .all(sid);
+      res.json({ ok: true, session: s, items });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/inventory/sessions/:sid/items', needManageDocs, express.json(), (req, res) => {
+    try {
+      const sid = Number(req.params.sid);
+      const sess = db.prepare('SELECT * FROM dms_inventory_sessions WHERE id = ?').get(sid);
+      if (!sess) return res.status(404).json({ ok: false, message: 'Không tìm thấy phiên' });
+      if (sess.closed_at) return res.status(400).json({ ok: false, message: 'Phiên đã đóng' });
+      const documentId = Number(req.body.document_id);
+      const status = String(req.body.status || 'ok').toLowerCase();
+      const allowed = ['ok', 'missing', 'wrong_location'];
+      const st = allowed.includes(status) ? status : 'ok';
+      const locFound = String(req.body.physical_location_found || '').trim() || null;
+      const notes = String(req.body.notes || '').trim() || null;
+      if (!Number.isFinite(documentId) || documentId <= 0) {
+        return res.status(400).json({ ok: false, message: 'document_id không hợp lệ' });
+      }
+      const doc = db.prepare('SELECT id FROM dms_documents WHERE id = ?').get(documentId);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy tài liệu' });
+      db.prepare(
+        `INSERT INTO dms_inventory_items (session_id, document_id, status, physical_location_found, notes, checked_by_id)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(session_id, document_id) DO UPDATE SET
+           status = excluded.status,
+           physical_location_found = excluded.physical_location_found,
+           notes = excluded.notes,
+           checked_at = datetime('now','localtime'),
+           checked_by_id = excluded.checked_by_id`
+      ).run(sid, documentId, st, locFound, notes, req.user.id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.patch('/inventory/sessions/:sid/close', needManageDocs, (req, res) => {
+    try {
+      const sid = Number(req.params.sid);
+      const sess = db.prepare('SELECT * FROM dms_inventory_sessions WHERE id = ?').get(sid);
+      if (!sess) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      db.prepare(`UPDATE dms_inventory_sessions SET closed_at = datetime('now','localtime') WHERE id = ?`).run(sid);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
   router.get('/documents', needView, (req, res) => {
     try {
       const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 30));
+      const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 30));
       const offset = (page - 1) * limit;
       const tagIds = String(req.query.tag_ids || '')
         .split(',')
         .map((x) => Number(x.trim()))
         .filter((n) => Number.isFinite(n) && n > 0);
 
+      const docFrom = dmsDocListFromClause();
       const { where, params, orderBy } = buildDocumentListQuery({
         q: req.query.q,
         categoryId: req.query.category_id,
         status: req.query.status,
         year: req.query.year,
         docTypeId: req.query.document_type_id,
+        templateId: req.query.template_id,
+        hasTemplate: req.query.has_template,
         tagIds,
         quick: req.query.quick,
         sort: req.query.sort,
         duplicatesOnly: String(req.query.duplicates_only || '') === '1' || String(req.query.duplicates_only || '').toLowerCase() === 'true',
+        fileMode: req.query.file_mode,
+        retentionAlert: String(req.query.retention_alert || '') === '1',
+        outOnLoan: String(req.query.out_on_loan || '') === '1',
+        documentId: req.query.document_id,
       });
 
-      const countRow = db.prepare(`SELECT COUNT(*) AS c FROM dms_documents d WHERE ${where}`).get(...params);
+      const countRow = db.prepare(`SELECT COUNT(*) AS c ${docFrom} WHERE ${where}`).get(...params);
       const total = countRow.c;
       const rows = db
         .prepare(
           `SELECT d.*, u.fullname AS uploader_name, u.email AS uploader_email,
             dt.name AS document_type_name,
-            c.name AS category_name
-           FROM dms_documents d
+            c.name AS category_name,
+            tpl.code AS template_code,
+            tpl.name AS template_name,
+            tpl.version AS template_version,
+            tpl.status AS template_status,
+            tpl.record_kind AS template_record_kind,
+            (SELECT COUNT(*) FROM dms_document_loans L WHERE L.document_id = d.id AND L.returned_at IS NULL) AS open_loan_count
+           ${docFrom}
            LEFT JOIN users u ON u.id = d.uploaded_by_id
            LEFT JOIN dms_document_types dt ON dt.id = d.document_type_id
            LEFT JOIN dms_categories c ON c.id = d.category_id
@@ -806,8 +1404,23 @@ module.exports = function createDmsRecordsRouter({
       const id = Number(req.params.id);
       const row = db
         .prepare(
-          `SELECT d.*, u.fullname AS uploader_name FROM dms_documents d
-           LEFT JOIN users u ON u.id = d.uploaded_by_id WHERE d.id = ?`
+          `SELECT d.*, u.fullname AS uploader_name,
+            tpl.code AS template_code,
+            tpl.name AS template_name,
+            tpl.version AS template_version,
+            tpl.status AS template_status,
+            tpl.record_kind AS template_record_kind,
+            tpl.description AS template_description,
+            tpl.retention_policy AS template_retention_policy,
+            tpl.medium_notes AS template_medium_notes,
+            tpl.owning_unit AS template_owning_unit,
+            tpl.effective_from AS template_effective_from,
+            tpl.effective_until AS template_effective_until,
+            tpl.blank_form_url AS template_blank_form_url
+           FROM dms_documents d
+           LEFT JOIN users u ON u.id = d.uploaded_by_id
+           LEFT JOIN dms_templates tpl ON tpl.id = d.template_id
+           WHERE d.id = ?`
         )
         .get(id);
       if (!row) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
@@ -878,6 +1491,18 @@ module.exports = function createDmsRecordsRouter({
       } catch (_) {}
       if (!Array.isArray(tagIds)) tagIds = [];
 
+      const physicalLocation = String(req.body.physical_location || '').trim() || null;
+      const physicalCopyType = String(req.body.physical_copy_type || '').trim() || null;
+      const physicalSheetCount = parseBodyInt(req.body.physical_sheet_count);
+      const physicalPageCount = parseBodyInt(req.body.physical_page_count);
+      const retentionUntil = String(req.body.retention_until || '').trim() || null;
+      const destructionEligibleDate = String(req.body.destruction_eligible_date || '').trim() || null;
+      const parentCaseRef = String(req.body.parent_case_ref || '').trim() || null;
+
+      const tplCheck = validateDmsTemplateId(req.body.template_id);
+      if (!tplCheck.ok) return res.status(400).json({ ok: false, message: tplCheck.message });
+      const templateId = tplCheck.id;
+
       let title = String(req.body.title || '').trim();
       if (req.file) {
         title = title || req.file.originalname;
@@ -887,8 +1512,11 @@ module.exports = function createDmsRecordsRouter({
             `INSERT INTO dms_documents (
             title, ref_number, category_id, document_type_id, status,
             issue_date, valid_until, file_path, original_name, file_size, mime_type, notes,
-            issuing_unit, external_scan_link, external_word_link, import_sheet, uploaded_by_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`
+            issuing_unit, external_scan_link, external_word_link,
+            physical_location, physical_copy_type, physical_sheet_count, physical_page_count,
+            retention_until, destruction_eligible_date, parent_case_ref,
+            import_sheet, template_id, uploaded_by_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`
           )
           .run(
             title,
@@ -906,6 +1534,14 @@ module.exports = function createDmsRecordsRouter({
             issuingUnit,
             externalScanLink,
             externalWordLink,
+            physicalLocation,
+            physicalCopyType,
+            physicalSheetCount,
+            physicalPageCount,
+            retentionUntil,
+            destructionEligibleDate,
+            parentCaseRef,
+            templateId,
             req.user.id
           );
         const newId = r.lastInsertRowid;
@@ -928,8 +1564,11 @@ module.exports = function createDmsRecordsRouter({
           `INSERT INTO dms_documents (
             title, ref_number, category_id, document_type_id, status,
             issue_date, valid_until, file_path, original_name, file_size, mime_type, notes,
-            issuing_unit, external_scan_link, external_word_link, import_sheet, uploaded_by_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?, NULL, ?)`
+            issuing_unit, external_scan_link, external_word_link,
+            physical_location, physical_copy_type, physical_sheet_count, physical_page_count,
+            retention_until, destruction_eligible_date, parent_case_ref,
+            import_sheet, template_id, uploaded_by_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`
         )
         .run(
           title,
@@ -945,6 +1584,14 @@ module.exports = function createDmsRecordsRouter({
           issuingUnit,
           externalScanLink,
           externalWordLink,
+          physicalLocation,
+          physicalCopyType,
+          physicalSheetCount,
+          physicalPageCount,
+          retentionUntil,
+          destructionEligibleDate,
+          parentCaseRef,
+          templateId,
           req.user.id
         );
       const newId = r.lastInsertRowid;
@@ -1041,6 +1688,50 @@ module.exports = function createDmsRecordsRouter({
           `UPDATE dms_documents SET external_word_link = ?, updated_at = datetime('now','localtime') WHERE id = ?`
         ).run(String(req.body.external_word_link || '').trim() || null, id);
       }
+      if (req.body.physical_location !== undefined) {
+        db.prepare(
+          `UPDATE dms_documents SET physical_location = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+        ).run(String(req.body.physical_location || '').trim() || null, id);
+      }
+      if (req.body.physical_copy_type !== undefined) {
+        db.prepare(
+          `UPDATE dms_documents SET physical_copy_type = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+        ).run(String(req.body.physical_copy_type || '').trim() || null, id);
+      }
+      if (req.body.physical_sheet_count !== undefined) {
+        db.prepare(
+          `UPDATE dms_documents SET physical_sheet_count = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+        ).run(parseBodyInt(req.body.physical_sheet_count), id);
+      }
+      if (req.body.physical_page_count !== undefined) {
+        db.prepare(
+          `UPDATE dms_documents SET physical_page_count = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+        ).run(parseBodyInt(req.body.physical_page_count), id);
+      }
+      if (req.body.retention_until !== undefined) {
+        db.prepare(
+          `UPDATE dms_documents SET retention_until = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+        ).run(String(req.body.retention_until || '').trim() || null, id);
+      }
+      if (req.body.destruction_eligible_date !== undefined) {
+        db.prepare(
+          `UPDATE dms_documents SET destruction_eligible_date = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+        ).run(String(req.body.destruction_eligible_date || '').trim() || null, id);
+      }
+      if (req.body.parent_case_ref !== undefined) {
+        db.prepare(
+          `UPDATE dms_documents SET parent_case_ref = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+        ).run(String(req.body.parent_case_ref || '').trim() || null, id);
+      }
+      if (req.body.template_id !== undefined) {
+        const tplCheck = validateDmsTemplateId(
+          req.body.template_id === '' || req.body.template_id === null ? null : req.body.template_id
+        );
+        if (!tplCheck.ok) return res.status(400).json({ ok: false, message: tplCheck.message });
+        db.prepare(
+          `UPDATE dms_documents SET template_id = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+        ).run(tplCheck.id, id);
+      }
 
       if (Array.isArray(tagIds)) {
         syncDocumentTags(
@@ -1064,12 +1755,10 @@ module.exports = function createDmsRecordsRouter({
       if (!canDeleteDocument(role, doc, req.user.id)) {
         return res.status(403).json({ ok: false, message: 'Không có quyền xóa' });
       }
-      const abs = path.isAbsolute(doc.file_path)
-        ? doc.file_path
-        : path.join(dmsDir, path.basename(doc.file_path));
+      const abs = resolveDmsStoredFileForUnlink(doc.file_path);
       db.prepare('DELETE FROM dms_documents WHERE id = ?').run(id);
       try {
-        if (doc.file_path && doc.file_path !== DMS_NO_FILE && fs.existsSync(abs)) fs.unlinkSync(abs);
+        if (abs) fs.unlinkSync(abs);
       } catch (_) {}
       res.json({ ok: true });
     } catch (e) {
@@ -1083,24 +1772,35 @@ module.exports = function createDmsRecordsRouter({
         .split(',')
         .map((x) => Number(x.trim()))
         .filter((n) => Number.isFinite(n) && n > 0);
+      const docFrom = dmsDocListFromClause();
       const { where, params, orderBy } = buildDocumentListQuery({
         q: req.query.q,
         categoryId: req.query.category_id,
         status: req.query.status,
         year: req.query.year,
         docTypeId: req.query.document_type_id,
+        templateId: req.query.template_id,
+        hasTemplate: req.query.has_template,
         tagIds,
         quick: req.query.quick,
         sort: req.query.sort,
         duplicatesOnly: String(req.query.duplicates_only || '') === '1',
+        fileMode: req.query.file_mode,
+        retentionAlert: String(req.query.retention_alert || '') === '1',
+        outOnLoan: String(req.query.out_on_loan || '') === '1',
+        documentId: req.query.document_id,
       });
 
       const rows = db
         .prepare(
           `SELECT d.title, d.ref_number, d.status, d.issue_date, d.valid_until, d.uploaded_at,
             u.fullname AS uploader, dt.name AS loai, c.name AS danh_muc, d.original_name, d.file_size,
-            d.issuing_unit, d.external_scan_link, d.external_word_link, d.import_sheet
-           FROM dms_documents d
+            d.issuing_unit, d.external_scan_link, d.external_word_link, d.import_sheet,
+            d.physical_location, d.physical_copy_type, d.physical_sheet_count, d.physical_page_count,
+            d.retention_until, d.destruction_eligible_date, d.parent_case_ref, d.file_path,
+            tpl.code AS template_code, tpl.name AS template_name, tpl.version AS template_version,
+            tpl.record_kind AS template_record_kind
+           ${docFrom}
            LEFT JOIN users u ON u.id = d.uploaded_by_id
            LEFT JOIN dms_document_types dt ON dt.id = d.document_type_id
            LEFT JOIN dms_categories c ON c.id = d.category_id
@@ -1112,6 +1812,10 @@ module.exports = function createDmsRecordsRouter({
       const sheet = rows.map((r) => ({
         'Tên tài liệu': r.title,
         'Số hiệu': r.ref_number,
+        'Mã mẫu biểu': r.template_code || '',
+        'Tên mẫu biểu': r.template_name || '',
+        'Phiên bản mẫu': r.template_version || '',
+        'Loại ISO (doc/record)': r.template_record_kind || '',
         'Loại': r.loai,
         'Danh mục': r.danh_muc,
         'Trạng thái': r.status,
@@ -1120,6 +1824,14 @@ module.exports = function createDmsRecordsRouter({
         'ĐV ban hành': r.issuing_unit,
         'Link scan': r.external_scan_link,
         'Link Word': r.external_word_link,
+        'Vị trí kho (giấy)': r.physical_location,
+        'Bản gốc/sao': r.physical_copy_type,
+        'Số tờ': r.physical_sheet_count,
+        'Số trang': r.physical_page_count,
+        'Bảo quản đến': r.retention_until,
+        'Đủ ĐK tiêu hủy': r.destruction_eligible_date,
+        'Liên kết hồ sơ gốc': r.parent_case_ref,
+        'Có PDF server': r.file_path && r.file_path !== DMS_NO_FILE ? 'Có' : 'Không',
         'Sheet import': r.import_sheet,
         'Ngày tải lên': r.uploaded_at,
         'Người tải': r.uploader,
@@ -1136,6 +1848,43 @@ module.exports = function createDmsRecordsRouter({
       res.send(Buffer.from(buf));
     } catch (e) {
       console.error('[dms export]', e);
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.get('/reports/summary.xlsx', needView, (req, res) => {
+    try {
+      const byUnit = db
+        .prepare(
+          `SELECT COALESCE(NULLIF(TRIM(issuing_unit), ''), '(Chưa ghi đơn vị)') AS don_vi, COUNT(*) AS so_luong
+           FROM dms_documents GROUP BY don_vi ORDER BY so_luong DESC`
+        )
+        .all();
+      const byYear = db
+        .prepare(
+          `SELECT COALESCE(strftime('%Y', COALESCE(issue_date, uploaded_at)), '(Không rõ)') AS nam,
+            COUNT(*) AS so_luong
+           FROM dms_documents GROUP BY nam ORDER BY nam DESC`
+        )
+        .all();
+      const byType = db
+        .prepare(
+          `SELECT COALESCE(dt.name, '(Chưa gán loại)') AS loai, COUNT(*) AS so_luong
+           FROM dms_documents d
+           LEFT JOIN dms_document_types dt ON dt.id = d.document_type_id
+           GROUP BY loai ORDER BY so_luong DESC`
+        )
+        .all();
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(byUnit), 'Theo don vi');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(byYear), 'Theo nam');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(byType), 'Theo loai');
+      const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="dms-bao-cao-tong-hop.xlsx"');
+      res.send(Buffer.from(buf));
+    } catch (e) {
+      console.error('[dms summary]', e);
       res.status(500).json({ ok: false, message: e.message });
     }
   });

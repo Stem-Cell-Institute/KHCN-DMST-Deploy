@@ -775,7 +775,7 @@ textarea{resize:vertical;min-height:80px}
   <div class="nav-item" onclick="gotoPanel(this,'gui-doan-vao')">Đăng ký Đoàn vào<span class="nav-badge blue nav-badge--zero" id="bdg-gui-doan-vao">0</span></div>
   <div class="nav-item" onclick="gotoPanel(this,'gui-mou')">Đề xuất Thỏa thuận<span class="nav-badge blue nav-badge--zero" id="bdg-gui-mou">0</span></div>
   <a class="nav-item" href="/hop-tac/hoi-nghi-hoi-thao/dang-ky" style="text-decoration:none;color:inherit">Đăng ký tham dự Hội nghị/Hội thảo<span class="nav-badge blue nav-badge--zero" id="bdg-hnht">0</span></a>
-  <div class="nav-item" onclick="gotoPanel(this,'gui-ytnn')">Đề tài YTNN<span class="nav-badge blue nav-badge--zero" id="bdg-gui-ytnn">0</span></div>
+  <div class="nav-item" onclick="gotoPanel(this,'gui-ytnn')">Đề tài có yếu tố nước ngoài<span class="nav-badge blue nav-badge--zero" id="bdg-gui-ytnn">0</span></div>
 
   <div class="nav-divider mgr-block hidden"></div>
   <div class="nav-label nav-label-mixed-case mgr-block hidden">Viện trưởng phê duyệt đề xuất</div>
@@ -890,19 +890,19 @@ textarea{resize:vertical;min-height:80px}
   </div>
 </div>
 
-<!-- GUI YTNN -->
+<!-- Gửi đề xuất: đề tài có yếu tố nước ngoài -->
 <div class="panel" id="panel-gui-ytnn">
-  <div class="page-header"><h1>Đề tài có yếu tố nước ngoài (YTNN)</h1><p>Tiếp nhận tài trợ / hợp tác nghiên cứu từ tổ chức quốc tế — Chương VII Quy chế KHCN-ĐMST SCI 2026</p></div>
+  <div class="page-header"><h1>Đề tài có yếu tố nước ngoài</h1><p>Tiếp nhận tài trợ / hợp tác nghiên cứu từ tổ chức quốc tế — Chương VII Quy chế KHCN-ĐMST SCI 2026</p></div>
   <!-- Bảng «đã gửi» đặt trên form để luôn thấy sau khi gửi (form có nhiều tab, dễ đẩy khối dưới ra ngoài màn hình) -->
   <div class="card dr-sent-section" id="yt-sent-section">
-    <div class="card-header dr-sent-header"><h2 class="dr-sent-title">Đề xuất YTNN đã gửi</h2></div>
+    <div class="card-header dr-sent-header"><h2 class="dr-sent-title">Đề xuất đề tài có yếu tố nước ngoài đã gửi</h2></div>
     <div class="card-body" style="padding-top:0">
     <table><thead><tr><th>Mã</th><th>Tên đề tài / Đối tác</th><th>Chủ nhiệm</th><th>Trạng thái</th><th></th></tr></thead>
     <tbody id="yt-tbody"><tr><td colspan="5"><div class="loading"><div class="spin"></div>Đang tải...</div></td></tr></tbody></table>
     </div>
   </div>
   <div class="card">
-    <div class="card-header"><h2>Thông tin Đề tài YTNN</h2></div>
+    <div class="card-header"><h2>Thông tin đề tài có yếu tố nước ngoài</h2></div>
     <div class="card-body">
       <div class="alert info">Quy trình: <strong>Bạn gửi</strong> → Phòng KHCN thẩm định → Viện trưởng phê duyệt. Sau phê duyệt có thể tải Tờ trình Word (khi Admin đã cấu hình mẫu). Bạn nhận email ở mỗi bước.</div>
       <div id="msg-ytnn" class="alert hidden"></div>
@@ -938,7 +938,7 @@ textarea{resize:vertical;min-height:80px}
           <div class="form-group"><label>Đơn vị tiền tệ</label><select id="yt-tien-te"><option value="VNĐ">VNĐ</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="JPY">JPY</option></select></div>
         </div>
       </div>
-      <div class="form-actions" style="margin-top:20px"><button class="btn btn-primary" onclick="submitYTNN()">Gửi đề xuất Đề tài YTNN</button></div>
+      <div class="form-actions" style="margin-top:20px"><button class="btn btn-primary" onclick="submitYTNN()">Gửi đề xuất đề tài có yếu tố nước ngoài</button></div>
     </div>
   </div>
 </div>
@@ -959,7 +959,7 @@ textarea{resize:vertical;min-height:80px}
 <div class="panel" id="panel-tat-ca">
   <div class="page-header"><h1>Tất cả đề xuất</h1><p>Danh sách toàn bộ đề xuất trong hệ thống</p></div>
   <div class="card" style="margin-bottom:16px"><div class="card-body" style="padding:12px 16px;display:flex;gap:12px;flex-wrap:wrap">
-    <select id="fil-loai" style="width:170px" onchange="loadTatCa()"><option value="">Tất cả loại</option><option value="doan_ra">Đoàn ra</option><option value="doan_vao">Đoàn vào</option><option value="mou">MOU</option><option value="ytnn">YTNN</option><option value="hnht">HN/HT</option></select>
+    <select id="fil-loai" style="width:220px;max-width:100%" onchange="loadTatCa()"><option value="">Tất cả loại</option><option value="doan_ra">Đoàn ra</option><option value="doan_vao">Đoàn vào</option><option value="mou">MOU</option><option value="ytnn">Đề tài có yếu tố nước ngoài</option><option value="hnht">HN/HT</option></select>
         <select id="fil-status" style="width:200px" onchange="loadTatCa()"><option value="">Tất cả trạng thái</option><option value="cho_phong_duyet">Chờ Phòng KHCN</option><option value="yeu_cau_bo_sung">Yêu cầu bổ sung</option><option value="cho_vt_duyet">Chờ Viện trưởng</option><option value="da_duyet">Đã phê duyệt</option><option value="tu_choi">Không phê duyệt</option><option value="ket_thuc_boi_nguoi_nop">Đã kết thúc (người gửi)</option></select>
     <button class="btn btn-outline btn-sm" onclick="loadTatCa()">Làm mới</button>
   </div></div>
@@ -1163,7 +1163,7 @@ var STATUS_CLASS = {
   tu_choi:'badge-red',khong_phe_duyet:'badge-red',hoan_thanh:'badge-green',
   dang_tham_dinh:'badge-amber',cho_ky_duyet:'badge-blue',cho_tham_dinh:'badge-amber',
 };
-var LOAI_LABEL = {doan_ra:'Đoàn ra',doan_vao:'Đoàn vào',mou:'MOU',ytnn:'YTNN',hnht:'HN/HT'};
+var LOAI_LABEL = {doan_ra:'Đoàn ra',doan_vao:'Đoàn vào',mou:'MOU',ytnn:'Đề tài có yếu tố nước ngoài',hnht:'HN/HT'};
 
 // ============================================================
 // AUTH
@@ -1429,7 +1429,7 @@ async function loadDashboardPage() {
     + tile('✈️', bl.doan_ra != null ? bl.doan_ra : 0, 'Đoàn ra', 'violet')
     + tile('🏛️', bl.doan_vao != null ? bl.doan_vao : 0, 'Đoàn vào', 'blue')
     + tile('🤝', bl.mou != null ? bl.mou : 0, 'Thỏa thuận (MOU…)', 'blue')
-    + tile('📋', bl.ytnn != null ? bl.ytnn : 0, 'Đề tài YTNN', 'blue')
+    + tile('📋', bl.ytnn != null ? bl.ytnn : 0, 'Đề tài có yếu tố nước ngoài', 'blue')
     + '</div></section>'
 
     + '<section class="coop-dash-section" aria-labelledby="dash-st-h">'
@@ -1542,7 +1542,7 @@ function buildTitle(loai, r) {
   if (loai==='doan_ra') return 'Đoàn ra — '+(r.quoc_gia||r.title||'—');
   if (loai==='doan_vao') return 'Đoàn vào — '+(r.don_vi_de_xuat||r.title||'—');
   if (loai==='mou') return 'MOU — '+(r.ten_doi_tac||r.title||'—');
-  if (loai==='ytnn') return 'YTNN — '+(r.ten||r.title||'—');
+  if (loai==='ytnn') return 'Đề tài có yếu tố nước ngoài — '+(r.ten||r.title||'—');
   if (loai==='hnht') return r.title || ('HN/HT — '+(r.conf_name||'—'));
   return r.title||'—';
 }
@@ -1786,7 +1786,7 @@ async function loadYtnnList(highlightId, highlightMa, flashNewestIfNoMatch) {
   var d = await apiGet('/api/cooperation/ytnn?t=' + Date.now());
   var list = (d && d.list) || [];
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Chưa có đề xuất YTNN nào</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">Chưa có đề xuất đề tài có yếu tố nước ngoài nào</div></td></tr>';
     return;
   }
   var hi = highlightId != null && highlightId !== '' ? parseInt(highlightId, 10) : NaN;
@@ -1924,7 +1924,7 @@ async function openModal(loai, id) {
     return;
   }
   var r = payload.data;
-  var loaiTitle = {doan_ra:'Đoàn ra',doan_vao:'Đoàn vào',mou:'MOU / Thỏa thuận',ytnn:'Đề tài YTNN'};
+  var loaiTitle = {doan_ra:'Đoàn ra',doan_vao:'Đoàn vào',mou:'MOU / Thỏa thuận',ytnn:'Đề tài có yếu tố nước ngoài'};
   document.getElementById('modal-title').textContent = loaiTitle[loai]||loai;
   document.getElementById('modal-ma').textContent = r.ma_de_xuat||'';
 
@@ -2260,15 +2260,15 @@ async function openModal(loai, id) {
     vanBanHtml = '';
     if (IS_ADMIN) {
       vanBanHtml += '<div style="margin-top:20px;padding:14px;border:1px dashed var(--accent);border-radius:8px;background:#f0f9ff">'
-        + '<div style="font-size:12px;font-weight:700;margin-bottom:4px"><span style="color:var(--accent)">[1]</span> Mẫu Tờ trình <span style="font-weight:800">Đề tài YTNN</span> (một file .docx)</div>'
-        + '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">Chỉ dùng cho loại đề xuất <strong>Đề tài YTNN</strong>. Có thể sao chép cấu trúc placeholder từ mẫu MOU (ví dụ <code>{ma_so}</code>, <code>{ten_de_tai}</code>, <code>{ten_doi_tac}</code>, <code>{quoc_gia}</code>…).</p>'
+        + '<div style="font-size:12px;font-weight:700;margin-bottom:4px"><span style="color:var(--accent)">[1]</span> Mẫu Tờ trình <span style="font-weight:800">đề tài có yếu tố nước ngoài</span> (một file .docx)</div>'
+        + '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">Chỉ dùng cho loại đề xuất <strong>đề tài có yếu tố nước ngoài</strong>. Có thể sao chép cấu trúc placeholder từ mẫu MOU (ví dụ <code>{ma_so}</code>, <code>{ten_de_tai}</code>, <code>{ten_doi_tac}</code>, <code>{quoc_gia}</code>…).</p>'
         + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
         + '<input type="file" id="to-trinh-template-file-yt" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px"/>'
-        + '<button type="button" class="btn btn-outline btn-sm" onclick="uploadToTrinhTemplateYtnn()">Lưu mẫu YTNN</button>';
+        + '<button type="button" class="btn btn-outline btn-sm" onclick="uploadToTrinhTemplateYtnn()">Lưu mẫu tờ trình</button>';
       if (hasTplYt) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="downloadToTrinhTemplateYtnn()" title="File .docx mẫu trên máy chủ — chưa ghép dữ liệu đề xuất này">Tải mẫu .docx gốc (chưa merge)</button>';
       vanBanHtml += '</div>'
         + '<p style="font-size:11px;color:#b45309;margin:8px 0 0;line-height:1.5"><strong>Admin:</strong> Nút <em>Tải mẫu .docx gốc</em> chỉ tải <strong>khung mẫu</strong>. Bản <strong>đã ghép dữ liệu</strong> — dùng nút xanh <strong>«Tải văn bản Word»</strong> ở khối [2] bên dưới.</p>'
-        + '<details style="margin-top:8px;font-size:12px"><summary>Danh sách placeholder (YTNN)</summary><ul style="margin:8px 0 0 18px;line-height:1.65">'
+        + '<details style="margin-top:8px;font-size:12px"><summary>Danh sách placeholder (đề tài có yếu tố nước ngoài)</summary><ul style="margin:8px 0 0 18px;line-height:1.65">'
         + '<li><code>{ma_so}</code>, <code>{ten_de_tai}</code>, <code>{ten_doi_tac}</code>, <code>{quoc_gia}</code>, <code>{loai_hinh}</code>, <code>{mo_ta}</code>, <code>{gia_tri_tai_chinh}</code>, <code>{chu_nhiem}</code>…</li>'
         + '<li><code>{tieu_de_to_trinh}</code>, <code>{can_cu_trinh_bay}</code>, <code>{nguoi_phe_duyet}</code>, <code>{ngay_phe_duyet}</code> (tương tự mẫu MOU)</li>'
         + '</ul></details></div>';
@@ -2276,11 +2276,11 @@ async function openModal(loai, id) {
     vanBanHtml += '<div style="margin-top:20px;padding:16px;border:1px solid var(--border);border-radius:8px;background:#f8fafc">'
       + '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-muted);margin-bottom:4px"><span style="color:#64748b">'+(IS_ADMIN?'[2] ':'')+'</span>Văn bản Word đã merge — <span style="font-weight:800">đề xuất này</span></div>';
     if (IS_ADMIN) {
-      vanBanHtml += '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">File <strong>đã điền dữ liệu</strong> cho mã <code>'+esc(r.ma_de_xuat||'—')+'</code>. Hệ thống <strong>tự tạo</strong> sau khi Viện trưởng phê duyệt từ <strong>mẫu YTNN</strong> [1].</p>';
+      vanBanHtml += '<p style="font-size:11px;color:var(--ink-muted);margin:0 0 10px;line-height:1.5">File <strong>đã điền dữ liệu</strong> cho mã <code>'+esc(r.ma_de_xuat||'—')+'</code>. Hệ thống <strong>tự tạo</strong> sau khi Viện trưởng phê duyệt từ <strong>mẫu tờ trình</strong> [1].</p>';
     }
     if (IS_ADMIN || IS_MANAGER || IS_VT) {
       if (!IS_ADMIN) {
-        vanBanHtml += '<p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px;line-height:1.5">Sau khi <strong>Viện trưởng phê duyệt</strong>, hệ thống <strong>tự sinh file Word</strong> từ mẫu <strong>YTNN</strong> [1] (nếu đã có mẫu <code>.docx</code>).</p>';
+        vanBanHtml += '<p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px;line-height:1.5">Sau khi <strong>Viện trưởng phê duyệt</strong>, hệ thống <strong>tự sinh file Word</strong> từ <strong>mẫu tờ trình</strong> [1] (nếu đã có mẫu <code>.docx</code>).</p>';
       }
     }
     vanBanHtml += '<div style="margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#ecfdf5;border:1px solid #a7f3d0;font-size:12px;line-height:1.55">';
@@ -2289,7 +2289,7 @@ async function openModal(loai, id) {
     } else if (!hasVByt) {
       vanBanHtml += '<strong>Nút tải file:</strong> nằm <em>trong khối này</em> (nút xanh <strong>«Tải văn bản Word»</strong>). ';
       if (!hasTplYt) {
-        vanBanHtml += '<span style="color:#b45309">Chưa có <strong>mẫu Tờ trình YTNN</strong> (.docx) — Admin cần <strong>Lưu mẫu YTNN</strong> [1] một lần.</span>';
+        vanBanHtml += '<span style="color:#b45309">Chưa có <strong>mẫu Tờ trình đề tài có yếu tố nước ngoài</strong> (.docx) — Admin cần <strong>Lưu mẫu tờ trình</strong> [1] một lần.</span>';
       } else {
         vanBanHtml += '<span style="color:#b45309">Chưa thấy file — thử <strong>đóng và mở lại</strong> chi tiết; nếu vẫn không có, Admin bấm <strong>Sinh từ mẫu</strong> hoặc <strong>Tải lên thủ công</strong>.</span>';
       }
@@ -2306,11 +2306,11 @@ async function openModal(loai, id) {
     if (approvedYt && IS_ADMIN) {
       vanBanHtml += '<details style="margin-top:10px;margin-bottom:10px;border:1px dashed var(--border);border-radius:8px;padding:8px 10px;background:#fff">'
         + '<summary style="font-size:12px;font-weight:700;cursor:pointer;user-select:none;color:var(--ink-soft)">Tùy chọn: thay thế bản Word của đề xuất này</summary>'
-        + '<p style="font-size:11px;color:var(--ink-muted);margin:10px 0 8px;line-height:1.5">Chỉ dùng khi cần <strong>sửa tay</strong> hoặc <strong>sinh lại</strong> từ mẫu YTNN [1].</p>'
+        + '<p style="font-size:11px;color:var(--ink-muted);margin:10px 0 8px;line-height:1.5">Chỉ dùng khi cần <strong>sửa tay</strong> hoặc <strong>sinh lại</strong> từ mẫu tờ trình [1].</p>'
         + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
         + '<input type="file" id="van-ban-word-file-yt" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="font-size:12px;max-width:100%"/>'
         + '<button type="button" class="btn btn-primary btn-sm" onclick="uploadVanBanYtnn('+id+')">Tải file đã chỉnh (thay bản đang lưu)</button>';
-      if (hasTplYt) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="sinhToTrinhWordYtnn('+id+')">Sinh lại từ mẫu YTNN [1]</button>';
+      if (hasTplYt) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="sinhToTrinhWordYtnn('+id+')">Sinh lại từ mẫu tờ trình [1]</button>';
       if (hasVByt) vanBanHtml += '<button type="button" class="btn btn-outline btn-sm" onclick="deleteVanBanYtnn('+id+')">Xóa bản đã lưu</button>';
       vanBanHtml += '</div></details>';
     }
@@ -2319,7 +2319,7 @@ async function openModal(loai, id) {
     }
     if (approvedYt && !hasVByt && !IS_ADMIN) {
       if (!hasTplYt) {
-        vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted)">Chưa có mẫu Tờ trình YTNN (.docx) — cần Admin <strong>Lưu mẫu YTNN</strong> [1] một lần.</div>';
+        vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted)">Chưa có mẫu Tờ trình đề tài có yếu tố nước ngoài (.docx) — cần Admin <strong>Lưu mẫu tờ trình</strong> [1] một lần.</div>';
       } else {
         vanBanHtml += '<div style="font-size:12px;color:var(--ink-muted)">Nếu vẫn chưa có file, hãy đóng và mở lại chi tiết đề xuất.</div>';
       }
@@ -2438,7 +2438,7 @@ function buildModalActions(loai, id, status, isManagerFlag, isOwner, row) {
       +'<span style="font-size:11px;color:var(--red);font-weight:700">ADMIN:</span>'
       +'<select id="admin-st" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px">'
       +'<option value="">— Đổi trạng thái —</option>'
-      +'<option value="cho_phong_duyet">Chờ Phòng KHCN</option><option value="cho_phan_loai">Chờ phân loại (YTNN)</option><option value="yeu_cau_bo_sung">Yêu cầu bổ sung</option>'
+      +'<option value="cho_phong_duyet">Chờ Phòng KHCN</option><option value="cho_phan_loai">Chờ phân loại (đề tài có yếu tố nước ngoài)</option><option value="yeu_cau_bo_sung">Yêu cầu bổ sung</option>'
       +'<option value="cho_vt_duyet">Chờ Viện trưởng</option><option value="da_duyet">Đã phê duyệt</option><option value="tu_choi">Không phê duyệt</option>'
       +'<option value="ket_thuc_boi_nguoi_nop">Đã kết thúc (người gửi)</option>'
       +'</select>'
@@ -2742,7 +2742,7 @@ async function downloadVanBanYtnn(id, filename) {
 }
 async function uploadToTrinhTemplateYtnn() {
   var inp = document.getElementById('to-trinh-template-file-yt');
-  if (!inp || !inp.files || !inp.files[0]) { toast('Chọn file .docx (mẫu Tờ trình Đề tài YTNN)', 'error'); return; }
+  if (!inp || !inp.files || !inp.files[0]) { toast('Chọn file .docx (mẫu Tờ trình đề tài có yếu tố nước ngoài)', 'error'); return; }
   var fd = new FormData();
   fd.append('file', inp.files[0]);
   var token = getToken();
@@ -2927,7 +2927,7 @@ async function submitYTNN() {
   }
   if (r&&r.ok) {
     var m = (r.data && r.data.ma_de_xuat) || '';
-    toast('Đã gửi YTNN! Mã: ' + m, 'success');
+    toast('Đã gửi đề xuất đề tài có yếu tố nước ngoài! Mã: ' + m, 'success');
     showMsg('msg-ytnn', 'Đã gửi thành công! Mã: ' + m, false);
     scrollYtnnSentIntoView();
     await loadYtnnList(r.data && r.data.id, r.data && r.data.ma_de_xuat, true);

@@ -4312,10 +4312,12 @@ async function clearAllPublicationsOnServer() {
     var token = localStorage.getItem('token');
     var headers = {};
     if (token) headers['Authorization'] = 'Bearer ' + token;
+    headers['Content-Type'] = 'application/json';
     var res = await fetch(API_BASE + '/publications/admin/clear-all', {
       method: 'DELETE',
       credentials: 'include',
-      headers: headers
+      headers: headers,
+      body: JSON.stringify({ confirm: 'XOA-TOAN-BO' })
     });
     var data = await res.json().catch(function () { return {}; });
     if (!res.ok) throw new Error(data.message || ('HTTP ' + res.status));

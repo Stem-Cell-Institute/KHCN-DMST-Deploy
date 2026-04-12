@@ -77,7 +77,19 @@
     if (r === 'manager') return 'Quản lý module';
     if (r === 'uploader') return 'Người tải lên';
     if (r === 'viewer') return 'Chỉ xem';
-    return role ? escapeHtml(role) : '—';
+    return role ? String(role).trim() : '—';
+  }
+
+  /** Nhãn vai trò module có màu riêng (viewer / uploader / manager). */
+  function dmsModuleRoleBadgeHtml(role) {
+    var r = String(role || '').toLowerCase();
+    var pill = 'dms-role-pill';
+    if (r === 'manager') pill += ' dms-role-pill--manager';
+    else if (r === 'uploader') pill += ' dms-role-pill--uploader';
+    else if (r === 'viewer') pill += ' dms-role-pill--viewer';
+    else pill += ' dms-role-pill--unknown';
+    var text = dmsModuleRoleLabel(role);
+    return '<span class="' + pill + '">' + escapeHtml(text) + '</span>';
   }
 
   var state = {
@@ -85,6 +97,7 @@
     categories: [],
     types: [],
     tags: [],
+    templates: [],
     moduleUsers: [],
     moduleAccess: [],
     accessIdSet: null,
@@ -182,6 +195,105 @@
     });
   }
 
+  function templateStatusLabel(s) {
+    var x = String(s || '').toLowerCase();
+    if (x === 'draft') return 'Nháp';
+    if (x === 'active') return 'Hiệu hành';
+    if (x === 'retired') return 'Ngừng';
+    return s || '—';
+  }
+
+  function recordKindLabel(k) {
+    return String(k || '').toLowerCase() === 'document' ? 'Tài liệu' : 'Hồ sơ';
+  }
+
+  function openTplEdit(t) {
+    var w = el('tpl-edit-wrap');
+    if (!w || !t) return;
+    el('tpl-edit-id').value = String(t.id);
+    el('tpl-edit-heading').textContent = 'Sửa mẫu #' + t.id + ' — ' + (t.code || '');
+    el('tpl-edit-code').value = t.code || '';
+    el('tpl-edit-name').value = t.name || '';
+    el('tpl-edit-version').value = t.version || '1.0';
+    el('tpl-edit-sort').value = t.sort_order != null ? String(t.sort_order) : '0';
+    el('tpl-edit-status').value = t.status || 'active';
+    el('tpl-edit-record-kind').value = t.record_kind === 'document' ? 'document' : 'record';
+    el('tpl-edit-owning').value = t.owning_unit || '';
+    el('tpl-edit-superseded').value =
+      t.superseded_by_id != null && t.superseded_by_id !== '' ? String(t.superseded_by_id) : '';
+    el('tpl-edit-desc').value = t.description || '';
+    el('tpl-edit-retention').value = t.retention_policy || '';
+    el('tpl-edit-medium').value = t.medium_notes || '';
+    el('tpl-edit-eff-from').value = t.effective_from ? String(t.effective_from).slice(0, 10) : '';
+    el('tpl-edit-eff-until').value = t.effective_until ? String(t.effective_until).slice(0, 10) : '';
+    el('tpl-edit-blank-url').value = t.blank_form_url || '';
+    el('tpl-edit-active').checked = !!t.is_active;
+    w.hidden = false;
+    w.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function closeTplEdit() {
+    var w = el('tpl-edit-wrap');
+    if (w) w.hidden = true;
+    el('tpl-edit-id').value = '';
+  }
+
+  async function refreshTemplates() {
+    var d = await api('/templates');
+    state.templates = d.templates || [];
+    var tb = el('tbl-templates');
+    if (!tb) return;
+    tb.innerHTML = state.templates
+      .map(function (t) {
+        return (
+          '<tr><td>' +
+          t.id +
+          '</td><td><code>' +
+          escapeHtml(t.code || '') +
+          '</code></td><td>' +
+          escapeHtml(t.name || '') +
+          '</td><td>' +
+          escapeHtml(t.version || '') +
+          '</td><td>' +
+          escapeHtml(templateStatusLabel(t.status)) +
+          '</td><td>' +
+          escapeHtml(recordKindLabel(t.record_kind)) +
+          '</td><td>' +
+          (t.document_count != null ? t.document_count : '—') +
+          '</td><td>' +
+          (t.is_active ? 'Có' : 'Ẩn') +
+          '</td><td><button type="button" class="adm-btn" data-edit-tpl="' +
+          t.id +
+          '">Sửa</button> <button type="button" class="adm-btn adm-btn-danger" data-del-tpl="' +
+          t.id +
+          '">Xóa</button></td></tr>'
+        );
+      })
+      .join('');
+    tb.querySelectorAll('[data-edit-tpl]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = Number(btn.getAttribute('data-edit-tpl'));
+        var t = state.templates.filter(function (x) {
+          return x.id === id;
+        })[0];
+        if (t) openTplEdit(t);
+      });
+    });
+    tb.querySelectorAll('[data-del-tpl]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var id = Number(btn.getAttribute('data-del-tpl'));
+        if (!confirm('Xóa mẫu #' + id + '? Chỉ xóa được khi không còn tài liệu gắn mẫu.')) return;
+        try {
+          await api('/templates/' + id, { method: 'DELETE' });
+          closeTplEdit();
+          await refreshTemplates();
+        } catch (e) {
+          alert(e.message);
+        }
+      });
+    });
+  }
+
   async function refreshTags() {
     var d = await api('/tags');
     state.tags = d.tags || [];
@@ -232,7 +344,7 @@
           '</td><td>' +
           escapeHtml(u.email || '') +
           '</td><td>' +
-          dmsModuleRoleLabel(u.module_role) +
+          dmsModuleRoleBadgeHtml(u.module_role) +
           '</td><td>' +
           escapeHtml(u.granted_at || '') +
           '</td><td><button type="button" class="adm-btn adm-btn-danger" data-del-access="' +
@@ -273,9 +385,9 @@
           escapeHtml(u.fullname || '') +
           '</td><td>' +
           escapeHtml(u.email || '') +
-          '</td><td><strong>' +
-          escapeHtml(u.role) +
-          '</strong></td><td>' +
+          '</td><td>' +
+          dmsModuleRoleBadgeHtml(u.role) +
+          '</td><td>' +
           escapeHtml(u.granted_at || '') +
           '</td><td><button type="button" class="adm-btn adm-btn-danger" data-del-user="' +
           u.user_id +
@@ -327,6 +439,9 @@
     el('tab-btn-tags').addEventListener('click', function () {
       showTab('tags');
     });
+    el('tab-btn-templates').addEventListener('click', function () {
+      showTab('templates');
+    });
     el('tab-btn-roles').addEventListener('click', function () {
       showTab('roles');
     });
@@ -373,6 +488,75 @@
       el('new-tag-name').value = '';
       await refreshTags();
     });
+
+    el('form-new-template').addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+      var sup = el('new-tpl-superseded').value.trim();
+      var body = {
+        code: el('new-tpl-code').value.trim(),
+        name: el('new-tpl-name').value.trim(),
+        version: el('new-tpl-version').value.trim() || '1.0',
+        status: el('new-tpl-status').value,
+        record_kind: el('new-tpl-record-kind').value,
+        description: el('new-tpl-desc').value,
+        retention_policy: el('new-tpl-retention').value,
+        medium_notes: el('new-tpl-medium').value,
+        owning_unit: el('new-tpl-owning').value,
+        effective_from: el('new-tpl-eff-from').value || null,
+        effective_until: el('new-tpl-eff-until').value || null,
+        blank_form_url: el('new-tpl-blank-url').value,
+        sort_order: Number(el('new-tpl-sort').value) || 0,
+        is_active: el('new-tpl-active').checked,
+      };
+      if (sup) {
+        var sid = Number(sup);
+        if (sid > 0) body.superseded_by_id = sid;
+      }
+      try {
+        await api('/templates', { method: 'POST', headers: authHeaders(true), body: JSON.stringify(body) });
+        el('form-new-template').reset();
+        el('new-tpl-version').value = '1.0';
+        el('new-tpl-sort').value = '0';
+        el('new-tpl-active').checked = true;
+        await refreshTemplates();
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+
+    el('form-edit-template').addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+      var id = Number(el('tpl-edit-id').value);
+      if (!id) return;
+      var sup = el('tpl-edit-superseded').value.trim();
+      var body = {
+        code: el('tpl-edit-code').value.trim(),
+        name: el('tpl-edit-name').value.trim(),
+        version: el('tpl-edit-version').value.trim() || '1.0',
+        status: el('tpl-edit-status').value,
+        record_kind: el('tpl-edit-record-kind').value,
+        description: el('tpl-edit-desc').value,
+        retention_policy: el('tpl-edit-retention').value,
+        medium_notes: el('tpl-edit-medium').value,
+        owning_unit: el('tpl-edit-owning').value,
+        effective_from: el('tpl-edit-eff-from').value || null,
+        effective_until: el('tpl-edit-eff-until').value || null,
+        blank_form_url: el('tpl-edit-blank-url').value,
+        sort_order: Number(el('tpl-edit-sort').value) || 0,
+        is_active: el('tpl-edit-active').checked,
+        superseded_by_id: sup ? Number(sup) : null,
+      };
+      try {
+        await api('/templates/' + id, { method: 'PATCH', headers: authHeaders(true), body: JSON.stringify(body) });
+        closeTplEdit();
+        await refreshTemplates();
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+
+    var tplCancel = el('tpl-edit-cancel');
+    if (tplCancel) tplCancel.addEventListener('click', closeTplEdit);
 
     el('access-user-search').addEventListener(
       'input',
@@ -532,6 +716,7 @@
     await refreshCategories();
     await refreshTypes();
     await refreshTags();
+    await refreshTemplates();
     await refreshModuleAccess();
     await refreshModuleUsers();
     showTab('cats');

@@ -32,6 +32,24 @@
     return document.getElementById(id);
   }
 
+  function syncVnDateHint(inputId, hintId) {
+    var inp = el(inputId);
+    var h = el(hintId);
+    if (!inp || !h) return;
+    var v = inp.value;
+    if (!v) {
+      h.textContent = '';
+      return;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      var p = v.split('-');
+      h.textContent =
+        'Trong danh sách tài liệu hiển thị dạng ngày/tháng/năm: ' + p[2] + '/' + p[1] + '/' + p[0] + '.';
+    } else {
+      h.textContent = '';
+    }
+  }
+
   function escapeHtml(s) {
     return String(s || '')
       .replace(/&/g, '&amp;')
@@ -44,7 +62,7 @@
     return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
   }
 
-  var state = { categories: [], types: [], tags: [], editId: null };
+  var state = { categories: [], types: [], templates: [], tags: [], editId: null };
 
   function showTab(name) {
     document.querySelectorAll('[data-add-tab]').forEach(function (p) {
@@ -82,6 +100,31 @@
           return '<option value="' + t.id + '">' + escapeHtml(t.name) + '</option>';
         })
         .join('');
+  }
+
+  function fillTemplateSelect(includeIdForEdit) {
+    var sel = el('f-template');
+    if (!sel) return;
+    var cur = sel.value;
+    var pid = includeIdForEdit != null ? Number(includeIdForEdit) : NaN;
+    var keepInactive = Number.isFinite(pid) && pid > 0;
+    sel.innerHTML =
+      '<option value="">— Không gắn mẫu —</option>' +
+      (state.templates || [])
+        .filter(function (t) {
+          return t.is_active || (keepInactive && t.id === pid);
+        })
+        .map(function (t) {
+          return (
+            '<option value="' +
+            t.id +
+            '">' +
+            escapeHtml(t.code + ' — v' + (t.version || '1.0') + ' — ' + (t.name || '')) +
+            '</option>'
+          );
+        })
+        .join('');
+    if (cur && sel.querySelector('option[value="' + cur + '"]')) sel.value = cur;
   }
 
   function fillImportSelects() {
@@ -133,9 +176,17 @@
             notes: el('f-notes').value,
             category_id: el('f-cat').value ? Number(el('f-cat').value) : null,
             document_type_id: el('f-type').value ? Number(el('f-type').value) : null,
+            template_id: el('f-template').value ? Number(el('f-template').value) : null,
             issuing_unit: el('f-dv').value,
             external_scan_link: el('f-scan').value,
             external_word_link: el('f-word').value,
+            physical_location: el('f-phys-loc').value,
+            physical_copy_type: el('f-phys-copy').value || null,
+            physical_sheet_count: el('f-phys-sheets').value,
+            physical_page_count: el('f-phys-pages').value,
+            retention_until: el('f-retention').value,
+            destruction_eligible_date: el('f-destruction').value,
+            parent_case_ref: el('f-parent-case').value,
             tag_ids: JSON.stringify(tagIds),
           }),
         });
@@ -153,8 +204,16 @@
       fd.append('issuing_unit', el('f-dv').value);
       fd.append('external_scan_link', el('f-scan').value);
       fd.append('external_word_link', el('f-word').value);
+      fd.append('physical_location', el('f-phys-loc').value);
+      fd.append('physical_copy_type', el('f-phys-copy').value);
+      fd.append('physical_sheet_count', el('f-phys-sheets').value);
+      fd.append('physical_page_count', el('f-phys-pages').value);
+      fd.append('retention_until', el('f-retention').value);
+      fd.append('destruction_eligible_date', el('f-destruction').value);
+      fd.append('parent_case_ref', el('f-parent-case').value);
       if (el('f-cat').value) fd.append('category_id', el('f-cat').value);
       if (el('f-type').value) fd.append('document_type_id', el('f-type').value);
+      if (el('f-template').value) fd.append('template_id', el('f-template').value);
       fd.append('tag_ids', JSON.stringify(tagIds));
       var f = el('f-file').files[0];
       if (f) fd.append('file', f);
@@ -310,11 +369,14 @@
     state.categories = cats.categories || [];
     var types = await api('/document-types');
     state.types = types.types || [];
+    var templates = await api('/templates');
+    state.templates = templates.templates || [];
     var tags = await api('/tags');
     state.tags = tags.tags || [];
 
     fillCategorySelect();
     fillTypeSelect();
+    fillTemplateSelect();
     fillImportSelects();
     fillTagChecks();
 
@@ -330,12 +392,27 @@
         el('f-status').value = d.status || 'draft';
         el('f-issue').value = d.issue_date ? String(d.issue_date).slice(0, 10) : '';
         el('f-valid').value = d.valid_until ? String(d.valid_until).slice(0, 10) : '';
+        syncVnDateHint('f-issue', 'f-issue-hint');
+        syncVnDateHint('f-valid', 'f-valid-hint');
         el('f-notes').value = d.notes || '';
         el('f-dv').value = d.issuing_unit || '';
         el('f-scan').value = d.external_scan_link || '';
         el('f-word').value = d.external_word_link || '';
         el('f-cat').value = d.category_id || '';
         el('f-type').value = d.document_type_id || '';
+        fillTemplateSelect(d.template_id);
+        el('f-template').value = d.template_id ? String(d.template_id) : '';
+        el('f-phys-loc').value = d.physical_location || '';
+        el('f-phys-copy').value = d.physical_copy_type || '';
+        el('f-parent-case').value = d.parent_case_ref || '';
+        el('f-phys-sheets').value =
+          d.physical_sheet_count != null && d.physical_sheet_count !== '' ? String(d.physical_sheet_count) : '';
+        el('f-phys-pages').value =
+          d.physical_page_count != null && d.physical_page_count !== '' ? String(d.physical_page_count) : '';
+        el('f-retention').value = d.retention_until ? String(d.retention_until).slice(0, 10) : '';
+        el('f-destruction').value = d.destruction_eligible_date
+          ? String(d.destruction_eligible_date).slice(0, 10)
+          : '';
         fillTagChecks(d.tags || []);
         el('f-file').removeAttribute('required');
         el('f-file-help').textContent =
@@ -356,6 +433,18 @@
       showTab('import');
     });
     el('form-manual').addEventListener('submit', submitManual);
+    el('f-issue').addEventListener('change', function () {
+      syncVnDateHint('f-issue', 'f-issue-hint');
+    });
+    el('f-issue').addEventListener('input', function () {
+      syncVnDateHint('f-issue', 'f-issue-hint');
+    });
+    el('f-valid').addEventListener('change', function () {
+      syncVnDateHint('f-valid', 'f-valid-hint');
+    });
+    el('f-valid').addEventListener('input', function () {
+      syncVnDateHint('f-valid', 'f-valid-hint');
+    });
     el('imp-preview').addEventListener('click', function () {
       runPreview().catch(function (e) {
         alert(e.message);
