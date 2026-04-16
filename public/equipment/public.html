@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#4f46e5" />
+  <title>Hồ sơ thiết bị (công khai)</title>
+  <link rel="stylesheet" href="/public/equipment/equip-layout.css" />
+</head>
+<body class="eq-body eq-body--public">
+  <div class="eq-app eq-app--public">
+    <aside class="eq-sidebar eq-sidebar--public">
+      <div class="eq-sidebar__brand">STIMS</div>
+      <nav class="eq-nav eq-nav--public">
+        <a href="/index.html">Trang chủ</a>
+        <a href="/dang-nhap.html" id="nav-login">Đăng nhập</a>
+      </nav>
+    </aside>
+    <main class="eq-main eq-main--public">
+      <div id="msg"></div>
+      <div id="content" class="eq-public-page" style="display:none;">
+        <header class="eq-public-hero eq-public-card">
+          <div id="status-wrap" class="eq-public-hero__badges"></div>
+          <h1 id="h-title" class="eq-public-hero__title"></h1>
+          <p id="h-meta" class="eq-public-hero__meta"></p>
+        </header>
+
+        <section class="eq-public-cta eq-public-card" aria-label="Báo cáo sự cố">
+          <div class="eq-public-cta__text">
+            <strong class="eq-public-cta__head">Cần hỗ trợ thiết bị?</strong>
+            <span class="eq-public-cta__sub" id="cta-sub">Đăng nhập hoặc gửi báo cáo nhanh từ trang QR.</span>
+          </div>
+          <div class="eq-public-cta__actions">
+            <button type="button" class="eq-btn eq-btn--public-primary eq-btn--block nav-hidden" id="btn-pub-incident">
+              Báo sự cố (không cần đăng nhập)
+            </button>
+            <a class="eq-btn eq-btn--public-secondary eq-btn--block" id="cta-report" href="#">Đăng nhập / mở quản trị</a>
+          </div>
+        </section>
+
+        <div class="eq-public-media-rail">
+          <section class="eq-public-card" aria-labelledby="pub-h-docs">
+            <h2 id="pub-h-docs" class="eq-public-section-title">Tài liệu PDF</h2>
+            <div id="docs-pub" class="eq-public-docs"></div>
+          </section>
+          <section class="eq-public-card" aria-labelledby="pub-h-vids">
+            <h2 id="pub-h-vids" class="eq-public-section-title">Video</h2>
+            <div id="vids-pub" class="eq-public-vids"></div>
+          </section>
+        </div>
+
+        <section class="eq-public-specs-card eq-public-card" aria-labelledby="pub-h-specs">
+          <h2 id="pub-h-specs" class="eq-public-section-title">Thông số kỹ thuật</h2>
+          <div class="eq-table-wrap eq-table-wrap--public">
+            <table class="eq-table eq-table--public-specs" id="specs-table">
+              <thead><tr><th>Thông số</th><th>Giá trị</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="eq-public-qr-card eq-public-card" aria-label="Mã QR hồ sơ">
+          <h2 class="eq-public-section-title eq-public-section-title--minor">Mã QR</h2>
+          <p class="eq-public-qr__lead">Quét mã này để mở nhanh hồ sơ thiết bị trên điện thoại hoặc máy tính khác.</p>
+          <div class="eq-public-qr__box">
+            <img id="qr-inline" class="eq-public-qr__img" alt="Mã QR hồ sơ thiết bị" width="200" height="200" />
+            <a id="qr-dl" class="eq-btn eq-btn--public-secondary eq-btn--block" href="#" download="equipment-qr.png">Tải QR PNG</a>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal-pub-incident" class="eq-modal" hidden>
+    <div class="eq-modal__box eq-modal__box--public">
+      <h3 style="margin-bottom:8px;">Báo cáo sự cố</h3>
+      <p style="font-size:0.88rem;color:var(--eq-muted);margin-bottom:14px;line-height:1.45;">
+        Mô tả hiện tượng và có thể đính kèm ảnh. Hệ thống giới hạn số lần gửi theo địa chỉ mạng để chống spam.
+      </p>
+      <form id="form-pub-incident">
+        <input type="text" name="website" tabindex="-1" autocomplete="off" class="eq-honeypot" aria-hidden="true" />
+        <div class="eq-form-row">
+          <label>Tên liên hệ (tuỳ chọn)</label>
+          <input name="reporter_name" type="text" maxlength="120" />
+        </div>
+        <div class="eq-form-row">
+          <label>Email (tuỳ chọn)</label>
+          <input name="reporter_email" type="email" maxlength="120" />
+        </div>
+        <div class="eq-form-row">
+          <label>Điện thoại (tuỳ chọn)</label>
+          <input name="reporter_phone" type="tel" maxlength="64" />
+        </div>
+        <div class="eq-form-row">
+          <label>Mô tả sự cố *</label>
+          <textarea name="description" required rows="4" maxlength="8000"></textarea>
+        </div>
+        <div class="eq-form-row">
+          <label>Mức độ *</label>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            <label><input type="radio" name="severity" value="low" /> Nhẹ</label>
+            <label><input type="radio" name="severity" value="medium" checked /> Trung bình</label>
+            <label><input type="radio" name="severity" value="high" /> Nghiêm trọng</label>
+            <label><input type="radio" name="severity" value="critical" /> Nguy hiểm</label>
+          </div>
+        </div>
+        <div class="eq-form-row">
+          <label>Ảnh (tối đa 5, JPG/PNG/WebP, mỗi ảnh ≤ 5MB)</label>
+          <input type="file" id="pub-inc-photos" name="photos" accept="image/jpeg,image/png,image/webp" multiple />
+        </div>
+        <div class="eq-form-row">
+          <label>Ghi chú thêm</label>
+          <textarea name="extra_note" rows="2" maxlength="2000"></textarea>
+        </div>
+        <div id="pub-inc-msg" style="min-height:1.25rem;font-size:0.88rem;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+          <button type="button" class="eq-btn eq-btn--ghost" id="btn-pub-incident-close">Đóng</button>
+          <button type="submit" class="eq-btn" id="btn-pub-incident-send">Gửi báo cáo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var id = params.get('id');
+  var msg = document.getElementById('msg');
+  if (localStorage.getItem('token')) {
+    var nl = document.getElementById('nav-login');
+    nl.textContent = 'Quản trị thiết bị';
+    nl.href = '/public/equipment/index.html';
+  }
+  function setCtaLinks(equipmentId, publicIncidentAllowed) {
+    var cta = document.getElementById('cta-report');
+    var btnPub = document.getElementById('btn-pub-incident');
+    var sub = document.getElementById('cta-sub');
+    if (!cta || !equipmentId) return;
+    var detailUrl = 'public/equipment/detail.html?id=' + encodeURIComponent(equipmentId) + '&tab=incident';
+    var tok = '';
+    try {
+      tok = localStorage.getItem('token');
+    } catch (e2) {}
+    if (btnPub) {
+      if (publicIncidentAllowed) {
+        btnPub.classList.remove('nav-hidden');
+      } else {
+        btnPub.classList.add('nav-hidden');
+      }
+    }
+    if (tok) {
+      cta.href = '/' + detailUrl;
+      cta.textContent = 'Mở Báo cáo sự cố';
+      if (sub) {
+        sub.textContent = publicIncidentAllowed
+          ? 'Bạn có thể gửi nhanh từ QR bên dưới, hoặc mở quản trị để theo dõi.'
+          : 'Bạn đã đăng nhập — mở tab Sự cố trên trang chi tiết để báo cáo.';
+      }
+    } else {
+      cta.href = '/dang-nhap.html?returnUrl=' + encodeURIComponent(detailUrl);
+      cta.textContent = 'Đăng nhập để mở quản trị';
+      if (sub) {
+        sub.textContent = publicIncidentAllowed
+          ? 'Gửi báo cáo nhanh không cần tài khoản, hoặc đăng nhập để theo dõi xử lý.'
+          : 'Đăng nhập để mô tả sự cố và gửi báo cáo cho quản trị.';
+      }
+    }
+  }
+  if (!id) {
+    msg.innerHTML = '<div class="eq-msg eq-msg--err">Thiếu id.</div>';
+    return;
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  }
+  function isLegacyApprovalSpecKey(k) {
+    if (k == null || typeof k !== 'string') return false;
+    var n = k.trim().toLowerCase();
+    return n === 'trạng thái duyệt' || n === 'lý do trả về';
+  }
+  function badge(st) {
+    var m = { active: ['eq-badge--active', 'Hoạt động'], maintenance: ['eq-badge--maintenance', 'Bảo trì'], broken: ['eq-badge--broken', 'Hỏng'], retired: ['eq-badge--retired', 'Thanh lý'] };
+    var x = m[st] || ['eq-badge--retired', st || ''];
+    return '<span class="eq-badge ' + x[0] + '">' + esc(x[1]) + '</span>';
+  }
+  var headers = {};
+  try {
+    var t = localStorage.getItem('token');
+    if (t) headers['Authorization'] = 'Bearer ' + t;
+  } catch (e) {}
+  fetch('/api/equipment/' + id + '/public', { headers: headers, credentials: 'same-origin' })
+    .then(function (r) {
+      return r.json().then(function (j) {
+        return { ok: r.ok, data: j };
+      });
+    })
+    .then(function (r) {
+      if (!r.ok) {
+        msg.innerHTML = '<div class="eq-msg eq-msg--err">' + esc((r.data && r.data.message) || 'Không có hồ sơ công khai') + '</div>';
+        return;
+      }
+      msg.innerHTML = '';
+      document.getElementById('content').style.display = '';
+      var pubOk = !!(r.data && r.data.public_incident_allowed);
+      setCtaLinks(id, pubOk);
+      var eq = r.data.equipment || {};
+      document.getElementById('h-title').textContent = (eq.name || '') + ' — ' + (eq.equipment_code || '');
+      document.getElementById('h-meta').textContent = [eq.model, eq.serial_number, eq.location].filter(Boolean).join(' · ');
+      document.getElementById('status-wrap').innerHTML = badge(eq.status);
+      fetch('/api/equipment/' + id + '/qr-data')
+        .then(function (x) {
+          return x.json();
+        })
+        .then(function (q) {
+          if (q && q.dataUrl) {
+            document.getElementById('qr-inline').src = q.dataUrl;
+            document.getElementById('qr-dl').href = q.dataUrl;
+          }
+        })
+        .catch(function () {});
+      var tok = '';
+      try {
+        tok = localStorage.getItem('token');
+      } catch (e) {}
+      var tqs = tok ? '?token=' + encodeURIComponent(tok) : '';
+      var docsHost = document.getElementById('docs-pub');
+      var byType = {};
+      (r.data.documents || []).forEach(function (d) {
+        var k = d.doc_type || 'khac';
+        if (!byType[k]) byType[k] = [];
+        byType[k].push(d);
+      });
+      var labels = { sop: 'SOP', technical: 'Kỹ thuật', safety: 'An toàn', warranty: 'Bảo hành', calibration: 'Kiểm định' };
+      docsHost.innerHTML = '';
+      Object.keys(byType).forEach(function (k) {
+        var sec = document.createElement('div');
+        sec.className = 'eq-doc-group';
+        sec.innerHTML = '<div class="eq-doc-group__head">' + esc(labels[k] || k) + ' <span class="eq-count-badge">' + byType[k].length + '</span></div>';
+        var ul = document.createElement('ul');
+        ul.className = 'eq-public-doc-list';
+        byType[k].forEach(function (d) {
+          var li = document.createElement('li');
+          li.className = 'eq-public-doc-item';
+          var href = '/api/equipment/' + id + '/documents/' + d.id + '/download' + tqs;
+          li.innerHTML =
+            '<strong class="eq-public-doc-item__title">' +
+            esc(d.title) +
+            '</strong><div class="eq-public-doc-item__meta">' +
+            esc(d.created_at || '') +
+            '</div><div class="eq-public-doc-item__actions"><a class="eq-link eq-tap" target="_blank" href="' +
+            esc(href) +
+            '">Xem PDF</a><a class="eq-link eq-tap" download href="' +
+            esc(href) +
+            '">Tải về</a></div>';
+          ul.appendChild(li);
+        });
+        sec.appendChild(ul);
+        docsHost.appendChild(sec);
+      });
+      if (!docsHost.children.length) {
+        docsHost.innerHTML = '<p class="eq-public-empty">Chưa có tài liệu PDF công khai.</p>';
+      }
+      var vh = document.getElementById('vids-pub');
+      vh.innerHTML = '';
+      (r.data.videos || []).forEach(function (v) {
+        var div = document.createElement('div');
+        div.className = 'eq-public-vid-card';
+        var thumb = v.thumbnail_url
+          ? '<div class="eq-public-vid-card__thumb-wrap"><img class="eq-public-vid-card__thumb" src="' +
+            esc(v.thumbnail_url) +
+            '" alt="" width="320" height="180" loading="lazy"/></div>'
+          : v.platform === 'drive'
+            ? '<div class="eq-public-vid-card__thumb-wrap eq-public-vid-card__thumb-wrap--icon" aria-hidden="true">📁</div>'
+            : '<div class="eq-public-vid-card__thumb-wrap eq-public-vid-card__thumb-wrap--icon" aria-hidden="true">▶</div>';
+        div.innerHTML =
+          thumb +
+          '<div class="eq-public-vid-card__body"><strong class="eq-public-vid-card__title">' +
+          esc(v.title) +
+          '</strong><div class="eq-public-vid-card__actions"><a class="eq-link eq-tap" target="_blank" rel="noopener noreferrer" href="' +
+          esc(v.video_url) +
+          '">Mở link</a></div></div>';
+        vh.appendChild(div);
+      });
+      if (!(r.data.videos || []).length) {
+        vh.innerHTML = '<p class="eq-public-empty">Chưa có video công khai.</p>';
+      }
+      var tb = document.querySelector('#specs-table tbody');
+      tb.innerHTML = '';
+      try {
+        var sj = eq.specs_json ? JSON.parse(eq.specs_json) : null;
+        if (sj && typeof sj === 'object' && !Array.isArray(sj)) {
+          Object.keys(sj).forEach(function (k) {
+            if (isLegacyApprovalSpecKey(k)) return;
+            var tr = document.createElement('tr');
+            tr.innerHTML = '<td>' + esc(k) + '</td><td>' + esc(sj[k]) + '</td>';
+            tb.appendChild(tr);
+          });
+        }
+      } catch (e) {}
+      if (!tb.children.length) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="2" style="color:var(--eq-muted);">Chưa có thông số.</td>';
+        tb.appendChild(tr);
+      }
+    });
+
+  var modalPubEl = document.getElementById('modal-pub-incident');
+  var formPub = document.getElementById('form-pub-incident');
+  var btnOpenPub = document.getElementById('btn-pub-incident');
+  var btnPubClose = document.getElementById('btn-pub-incident-close');
+  var pubMsg = document.getElementById('pub-inc-msg');
+  if (btnOpenPub && modalPubEl) {
+    btnOpenPub.addEventListener('click', function () {
+      modalPubEl.hidden = false;
+      pubMsg.textContent = '';
+    });
+  }
+  if (btnPubClose && modalPubEl) {
+    btnPubClose.addEventListener('click', function () {
+      modalPubEl.hidden = true;
+    });
+  }
+  if (formPub) {
+    formPub.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      if (!id) return;
+      pubMsg.textContent = '';
+      var fd = new FormData(formPub);
+      var files = document.getElementById('pub-inc-photos');
+      if (files && files.files) {
+        for (var i = 0; i < Math.min(5, files.files.length); i++) {
+          fd.append('photos', files.files[i]);
+        }
+      }
+      var sendBtn = document.getElementById('btn-pub-incident-send');
+      if (sendBtn) sendBtn.disabled = true;
+      fetch('/api/equipment/' + encodeURIComponent(id) + '/public-incidents', { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function (x) {
+          return x.json().then(function (j) {
+            return { ok: x.ok, status: x.status, data: j };
+          });
+        })
+        .then(function (res) {
+          if (sendBtn) sendBtn.disabled = false;
+          if (!res.ok) {
+            pubMsg.style.color = 'var(--eq-danger,#b91c1c)';
+            pubMsg.textContent = (res.data && res.data.message) || 'Không gửi được.';
+            return;
+          }
+          pubMsg.style.color = 'var(--eq-success,#047857)';
+          pubMsg.textContent = 'Đã gửi. Mã báo cáo #' + (res.data && res.data.id != null ? res.data.id : '') + '.';
+          formPub.reset();
+          setTimeout(function () {
+            if (modalPubEl) modalPubEl.hidden = true;
+          }, 1600);
+        })
+        .catch(function () {
+          if (sendBtn) sendBtn.disabled = false;
+          pubMsg.style.color = 'var(--eq-danger,#b91c1c)';
+          pubMsg.textContent = 'Lỗi mạng. Thử lại sau.';
+        });
+    });
+  }
+})();
+  </script>
+</body>
+</html>
+

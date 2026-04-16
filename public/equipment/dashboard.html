@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thiết bị — Dashboard</title>
+  <link rel="stylesheet" href="/public/equipment/equip-layout.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="eq-body">
+  <div class="eq-app">
+    <aside class="eq-sidebar">
+      <div class="eq-sidebar__brand">STIMS</div>
+      <nav class="eq-nav">
+        <a href="/public/equipment/index.html">Danh sách</a>
+        <a class="eq-nav--active" href="/public/equipment/dashboard.html">Dashboard</a>
+        <a href="/index.html">Trang chủ</a>
+        <a href="/public/equipment/permissions.html" id="nav-permissions" class="nav-hidden">Quản trị module</a>
+      </nav>
+      <div id="eq-equipment-notifications" class="eq-equipment-notifications"></div>
+    </aside>
+    <main class="eq-main">
+      <div class="eq-header">
+        <div class="eq-header__title">
+          <h1>Thống kê thiết bị</h1>
+        </div>
+        <div class="eq-header__tail">
+          <div id="eq-auth-bar" class="eq-auth-bar" aria-live="polite"></div>
+          <div class="eq-header__actions">
+            <button type="button" class="eq-btn" id="btn-xlsx">Xuất Excel</button>
+          </div>
+        </div>
+      </div>
+      <div id="msg"></div>
+      <div class="eq-skeleton-grid" id="sk" style="margin-bottom:20px;">
+        <div class="eq-skeleton-card"></div><div class="eq-skeleton-card"></div>
+        <div class="eq-skeleton-card"></div><div class="eq-skeleton-card"></div>
+      </div>
+      <div id="kpis" style="display:none;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:22px;"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:24px;">
+        <div class="eq-table-wrap" style="padding:16px;">
+          <h3 style="margin-bottom:12px;font-size:0.95rem;">Theo trạng thái</h3>
+          <canvas id="ch-status" height="220"></canvas>
+        </div>
+        <div class="eq-table-wrap" style="padding:16px;">
+          <h3 style="margin-bottom:12px;font-size:0.95rem;">Theo phòng / lab</h3>
+          <canvas id="ch-dept" height="220"></canvas>
+        </div>
+      </div>
+      <h2 style="font-size:1rem;margin:16px 0 10px;">Sắp đến hạn bảo trì (30 ngày)</h2>
+      <div class="eq-table-wrap">
+        <table class="eq-table">
+          <thead><tr><th>Mã</th><th>Tên</th><th>Hạn</th><th>Còn (ngày)</th></tr></thead>
+          <tbody id="tb-up"></tbody>
+        </table>
+      </div>
+      <h2 style="font-size:1rem;margin:22px 0 10px;">Sự cố đang mở</h2>
+      <div class="eq-table-wrap">
+        <table class="eq-table">
+          <thead><tr><th>ID</th><th>Thiết bị</th><th>Mức độ</th><th>Trạng thái</th></tr></thead>
+          <tbody id="tb-inc"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  <script src="/public/js/equipmentApi.js"></script>
+  <script src="/public/js/equipmentToast.js"></script>
+  <script src="/public/js/equipmentNav.js"></script>
+  <script src="/js/page-greeting.js"></script>
+  <script src="/public/js/equipmentAuthBar.js"></script>
+  <script src="/public/js/equipmentNotifications.js"></script>
+  <script>
+(function () {
+  var ch1, ch2;
+  function pickPayload(resp) {
+    if (!resp || typeof resp !== 'object') return {};
+    if (resp.data && typeof resp.data === 'object') {
+      return resp.data.data && typeof resp.data.data === 'object' ? resp.data.data : resp.data;
+    }
+    return {};
+  }
+
+  function pickRows(resp) {
+    if (!resp || typeof resp !== 'object') return [];
+    if (Array.isArray(resp.data)) return resp.data;
+    if (resp.data && Array.isArray(resp.data.data)) return resp.data.data;
+    return [];
+  }
+
+  function load() {
+    document.getElementById('sk').style.display = 'grid';
+    Promise.all([
+      window.equipmentApi.getJson('/stats/summary'),
+      window.equipmentApi.getJson('/stats/upcoming-maintenance?days=30'),
+      window.equipmentApi.getJson('/stats/open-incidents'),
+    ]).then(function (arr) {
+      document.getElementById('sk').style.display = 'none';
+      var s = arr[0],
+        u = arr[1],
+        i = arr[2];
+      if (s.status === 403 || s.status === 401) {
+        window.location.href = '/dang-nhap.html?returnUrl=' + encodeURIComponent('public/equipment/dashboard.html');
+        return;
+      }
+      if (!s.ok) {
+        window.stimsToast && window.stimsToast('Không tải được thống kê', false);
+        return;
+      }
+      var sum = pickPayload(s);
+      var upcomingRows = pickRows(u);
+      var incidentRows = pickRows(i);
+      document.getElementById('kpis').style.display = 'grid';
+      var by = Array.isArray(sum.byStatus) ? sum.byStatus : [];
+      var active = 0,
+        maint = 0,
+        br = 0;
+      by.forEach(function (x) {
+        if (x.status === 'active') active = x.c;
+        if (x.status === 'maintenance') maint = x.c;
+        if (x.status === 'broken') br = x.c;
+      });
+      var k = document.getElementById('kpis');
+      k.innerHTML =
+        '<div class="eq-table-wrap" style="padding:14px;text-align:center;"><div style="font-size:1.9rem;font-weight:800;color:#0f766e;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.6);">' +
+        (Number(sum.total) || 0) +
+        '</div><div style="font-size:0.82rem;color:var(--eq-muted);">Tổng thiết bị</div></div>' +
+        '<div class="eq-table-wrap" style="padding:14px;text-align:center;"><div style="font-size:1.9rem;font-weight:800;color:#047857;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.6);">' +
+        active +
+        '</div><div style="font-size:0.82rem;color:var(--eq-muted);">Đang hoạt động</div></div>' +
+        '<div class="eq-table-wrap" style="padding:14px;text-align:center;"><div style="font-size:1.9rem;font-weight:800;color:#b45309;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.55);">' +
+        (maint + br) +
+        '</div><div style="font-size:0.82rem;color:var(--eq-muted);">Bảo trì / Hỏng</div></div>' +
+        '<div class="eq-table-wrap" style="padding:14px;text-align:center;"><div style="font-size:1.9rem;font-weight:800;color:#b91c1c;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.55);">' +
+        upcomingRows.length +
+        '</div><div style="font-size:0.82rem;color:var(--eq-muted);">Sắp đến hạn (30 ngày)</div></div>';
+
+      var labels = by.map(function (x) {
+        return x.status;
+      });
+      var vals = by.map(function (x) {
+        return x.c;
+      });
+      if (ch1) ch1.destroy();
+      ch1 = new Chart(document.getElementById('ch-status'), {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{ data: vals, backgroundColor: ['#10b981', '#fbbf24', '#f87171', '#94a3b8'] }],
+        },
+        options: { plugins: { legend: { labels: { color: '#334155' } } } },
+      });
+      var bd = Array.isArray(sum.byDept) ? sum.byDept : [];
+      if (ch2) ch2.destroy();
+      ch2 = new Chart(document.getElementById('ch-dept'), {
+        type: 'bar',
+        data: {
+          labels: bd.map(function (x) {
+            return x.department_id;
+          }),
+          datasets: [
+            {
+              label: 'Số lượng',
+              data: bd.map(function (x) {
+                return x.c;
+              }),
+              backgroundColor: 'rgba(16,185,129,.6)',
+            },
+          ],
+        },
+        options: {
+          scales: {
+            x: { ticks: { color: '#475569' } },
+            y: { ticks: { color: '#475569' }, beginAtZero: true },
+          },
+          plugins: { legend: { display: false } },
+        },
+      });
+
+      var tu = document.getElementById('tb-up');
+      tu.innerHTML = '';
+      upcomingRows.forEach(function (r) {
+        var tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.onclick = function () {
+          location.href = '/public/equipment/detail.html?id=' + r.id;
+        };
+        tr.innerHTML =
+          '<td>' +
+          r.equipment_code +
+          '</td><td>' +
+          r.name +
+          '</td><td>' +
+          (r._due || '') +
+          '</td><td>' +
+          r._daysLeft +
+          '</td>';
+        tu.appendChild(tr);
+      });
+
+      var ti = document.getElementById('tb-inc');
+      ti.innerHTML = '';
+      incidentRows.forEach(function (r) {
+        var tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.onclick = function () {
+          location.href = '/public/equipment/detail.html?id=' + r.equipment_id;
+        };
+        tr.innerHTML =
+          '<td>' +
+          r.id +
+          '</td><td>' +
+          r.equipment_code +
+          ' — ' +
+          r.name +
+          '</td><td>' +
+          r.severity +
+          '</td><td>' +
+          r.status +
+          '</td>';
+        ti.appendChild(tr);
+      });
+    });
+  }
+  document.getElementById('btn-xlsx').onclick = function () {
+    var t = localStorage.getItem('token');
+    fetch('/api/equipment/stats/export', {
+      headers: t ? { Authorization: 'Bearer ' + t } : {},
+      credentials: 'same-origin',
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error();
+        return r.blob();
+      })
+      .then(function (b) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(b);
+        a.download = 'equipment-export.xlsx';
+        a.click();
+        window.stimsToast && window.stimsToast('Đã tải file', true);
+      })
+      .catch(function () {
+        window.stimsToast && window.stimsToast('Không xuất được (kiểm tra quyền)', false);
+      });
+  };
+  load();
+})();
+  </script>
+<script>if (window.equipmentNav && window.equipmentNav.sync) { window.equipmentNav.sync().catch(function () {}); }</script>
+</body>
+</html>
+
+
+
+

@@ -1185,6 +1185,27 @@ a.dms-btn {
   font-size: 0.8125rem;
 }
 
+.dms-public-cell {
+  vertical-align: middle;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.dms-public-cell .dms-public-select {
+  min-width: 5.5rem;
+  max-width: 7rem;
+  margin: 0 auto;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.dms-public-readonly {
+  display: inline-block;
+  font-weight: 650;
+  font-size: 0.8125rem;
+  color: var(--dms-text, #0f172a);
+}
+
 .dms-pagination-nav {
   display: flex;
   flex-wrap: wrap;

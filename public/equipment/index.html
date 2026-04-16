@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thiết bị — STIMS</title>
+  <link rel="stylesheet" href="/public/equipment/equip-layout.css" />
+</head>
+<body class="eq-body">
+  <div class="eq-app">
+    <aside class="eq-sidebar">
+      <div class="eq-sidebar__brand">
+        <span>STIMS</span>
+        <a href="/index.html" class="eq-nav-home">Trang chủ</a>
+      </div>
+      <nav class="eq-nav">
+        <a class="eq-nav--active" href="/public/equipment/index.html">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg>
+          Danh sách thiết bị
+        </a>
+        <a href="/public/equipment/form.html" id="nav-add">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 5v14M5 12h14"/></svg>
+          Thêm thiết bị
+        </a>
+        <a href="/public/equipment/pending.html" id="nav-pending" class="nav-hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+          Chờ duyệt
+        </a>
+        <a href="/public/equipment/dashboard.html" id="nav-dash" class="nav-hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 3v18h18"/><path d="M7 12v5"/><path d="M12 7v10"/><path d="M17 9v8"/></svg>
+          Dashboard
+        </a>
+        <a href="/public/equipment/permissions.html" id="nav-permissions" class="nav-hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M10 10h4"/></svg>
+          Quản trị module
+        </a>
+      </nav>
+      <div id="eq-equipment-notifications" class="eq-equipment-notifications"></div>
+    </aside>
+    <main class="eq-main">
+      <div class="eq-header">
+        <div class="eq-header__title">
+          <h1>Quản trị thiết bị - Viện Tế bào gốc</h1>
+        </div>
+        <div class="eq-header__tail">
+          <div id="eq-auth-bar" class="eq-auth-bar" aria-live="polite"></div>
+          <div class="eq-header__actions">
+            <a class="eq-btn" href="/public/equipment/form.html" id="btn-add-top">Thêm mới</a>
+            <a class="eq-btn eq-btn--ghost" href="/public/equipment/permissions.html" id="btn-permissions-top" style="background:var(--eq-gradient);color:white;border:none;">Quản trị module</a>
+          </div>
+        </div>
+      </div>
+      <div id="msg"></div>
+      <div class="eq-overview" id="eq-overview">
+        <article class="eq-overview-card">
+          <span class="eq-overview-card__label">Tổng thiết bị (kết quả lọc)</span>
+          <strong class="eq-overview-card__value" id="ov-total">0</strong>
+        </article>
+        <article class="eq-overview-card">
+          <span class="eq-overview-card__label">Đang hoạt động</span>
+          <strong class="eq-overview-card__value" id="ov-active">0</strong>
+        </article>
+        <article class="eq-overview-card">
+          <span class="eq-overview-card__label">Bảo trì / hỏng</span>
+          <strong class="eq-overview-card__value" id="ov-risk">0</strong>
+        </article>
+        <article class="eq-overview-card">
+          <span class="eq-overview-card__label">Hiển thị công khai</span>
+          <strong class="eq-overview-card__value" id="ov-public">0</strong>
+        </article>
+      </div>
+      <div id="eq-skeleton" class="eq-skeleton-grid skeleton-hidden">
+        <div class="eq-skeleton-card"></div><div class="eq-skeleton-card"></div>
+        <div class="eq-skeleton-card"></div><div class="eq-skeleton-card"></div>
+      </div>
+      <div class="eq-toolbar">
+        <label>Trạng thái
+          <select id="f-status">
+            <option value="">Tất cả</option>
+            <option value="active">Đang dùng</option>
+            <option value="maintenance">Bảo trì</option>
+            <option value="broken">Hỏng</option>
+            <option value="retired">Đã thanh lý</option>
+          </select>
+        </label>
+        <label>Đơn vị (mã)
+          <input type="text" id="f-dept" placeholder="VD: PTN-01" />
+        </label>
+        <label>Loại
+          <input type="text" id="f-type" placeholder="VD: Máy móc, thiết bị chuyên dùng" />
+        </label>
+        <label>Tìm nhanh
+          <input type="search" id="f-q" placeholder="Tên, mã, serial…" />
+        </label>
+        <button type="button" class="eq-btn eq-btn--ghost" id="btn-filter">Lọc / Tải lại</button>
+        <button type="button" class="eq-btn eq-btn--primary" id="btn-import-excel" style="display:none;">Import Excel</button>
+        <a href="/public/equipment/import-template.html" class="eq-btn eq-btn--ghost" id="btn-import-template" target="_blank" style="display:none;">File Mâu</a>
+        <button type="button" class="eq-btn eq-btn--ghost" id="btn-select-all-filtered" style="display:none;">Chọn tất cả kết quả lọc</button>
+        <button type="button" class="eq-btn" id="btn-export-selected" style="display:none;">Xuất Excel đã chọn</button>
+        <span id="selected-count" style="display:none;color:var(--eq-muted);font-size:.88rem;">Đã chọn: 0</span>
+        <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" style="display:none;">
+      </div>
+      <div class="eq-table-wrap">
+        <table class="eq-table">
+          <thead>
+            <tr>
+              <th id="th-select" class="nav-hidden"><input type="checkbox" id="chk-all-page" title="Chọn tất cả trong trang hiện tại" /></th>
+              <th>STT</th>
+              <th>Mã</th>
+              <th>Tên</th>
+              <th>Model</th>
+              <th>Trạng thái</th>
+              <th>Hiển thị / QR</th>
+              <th id="th-master-delete" class="nav-hidden">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="eq-pagination">
+        <button type="button" class="eq-btn eq-btn--ghost" id="btn-prev">Trước</button>
+        <span id="page-label"></span>
+        <button type="button" class="eq-btn eq-btn--ghost" id="btn-next">Sau</button>
+      </div>
+    </main>
+  </div>
+  <script src="/public/vendor/xlsx.full.min.js"></script>
+  <script src="/public/js/equipmentApi.js"></script>
+  <script src="/public/js/equipmentToast.js"></script>
+  <script src="/public/js/equipmentNav.js"></script>
+  <script src="/js/page-greeting.js"></script>
+  <script src="/public/js/equipmentAuthBar.js"></script>
+  <script src="/public/js/equipmentNotifications.js"></script>
+  <script>
+(function () {
+  var page = 1;
+  var isMasterAdmin = false;
+  var canEditEquipment = false;
+  var canImportExcel = false;
+  var canBulkExport = false;
+  var selectedIds = {};
+  var currentRows = [];
+  function badgeClass(st) {
+    var m = { active: 'eq-badge--active', maintenance: 'eq-badge--maintenance', broken: 'eq-badge--broken', retired: 'eq-badge--retired' };
+    return 'eq-badge ' + (m[st] || 'eq-badge--retired');
+  }
+  function goDetail(id) {
+    window.location.href = '/public/equipment/detail.html?id=' + id;
+  }
+  function showMsg(text, err) {
+    var el = document.getElementById('msg');
+    if (!text) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="eq-msg ' + (err ? 'eq-msg--err' : 'eq-msg--ok') + '">' + text + '</div>';
+  }
+  function syncMasterAdminFlag() {
+    if (!window.equipmentApi || !window.equipmentApi.getJson) return Promise.resolve();
+    return window.equipmentApi.getJson('/module/me').then(function (r) {
+      var th = document.getElementById('th-master-delete');
+      var importBtn = document.getElementById('btn-import-excel');
+      var tplBtn = document.getElementById('btn-import-template');
+      var expBtn = document.getElementById('btn-export-selected');
+      var selAllBtn = document.getElementById('btn-select-all-filtered');
+      var selCount = document.getElementById('selected-count');
+      var thSelect = document.getElementById('th-select');
+      if (!r.ok || !r.data || !r.data.data) {
+        isMasterAdmin = false;
+        canEditEquipment = false;
+        canImportExcel = false;
+        canBulkExport = false;
+        if (th) th.classList.add('nav-hidden');
+        if (importBtn) importBtn.style.display = 'none';
+        if (tplBtn) tplBtn.style.display = 'none';
+        if (expBtn) expBtn.style.display = 'none';
+        if (selAllBtn) selAllBtn.style.display = 'none';
+        if (selCount) selCount.style.display = 'none';
+        if (thSelect) thSelect.classList.add('nav-hidden');
+        return;
+      }
+      isMasterAdmin = !!(r.data.data && r.data.data.isMasterAdmin);
+      var moduleRole = String(
+        (r.data.data && r.data.data.assignment && r.data.data.assignment.module_role) || 'viewer'
+      ).toLowerCase();
+      var isModuleManager = moduleRole === 'manager' || moduleRole === 'editor' || moduleRole === 'admin';
+      canEditEquipment = isMasterAdmin || isModuleManager;
+      canImportExcel = isMasterAdmin || moduleRole === 'manager';
+      canBulkExport = canImportExcel;
+      if (th) {
+        if (isMasterAdmin || canEditEquipment) th.classList.remove('nav-hidden');
+        else th.classList.add('nav-hidden');
+      }
+      if (importBtn) importBtn.style.display = canImportExcel ? '' : 'none';
+      if (tplBtn) tplBtn.style.display = canImportExcel ? '' : 'none';
+      if (expBtn) expBtn.style.display = canBulkExport ? '' : 'none';
+      if (selAllBtn) selAllBtn.style.display = canBulkExport ? '' : 'none';
+      if (selCount) selCount.style.display = canBulkExport ? '' : 'none';
+      if (thSelect) {
+        if (canBulkExport) thSelect.classList.remove('nav-hidden');
+        else thSelect.classList.add('nav-hidden');
+      }
+      updateSelectionUi();
+    });
+  }
+
+  function selectedCount() {
+    return Object.keys(selectedIds).length;
+  }
+
+  function updateSelectionUi() {
+    var c = document.getElementById('selected-count');
+    if (c) c.textContent = 'Đã chọn: ' + selectedCount();
+    var chk = document.getElementById('chk-all-page');
+    if (!chk) return;
+    if (!canBulkExport || !currentRows.length) {
+      chk.checked = false;
+      return;
+    }
+    var allOn = true;
+    for (var i = 0; i < currentRows.length; i++) {
+      var rid = Number(currentRows[i].id);
+      if (!selectedIds[rid]) {
+        allOn = false;
+        break;
+      }
+    }
+    chk.checked = allOn;
+  }
+  function deleteEquipment(id, code) {
+    if (!isMasterAdmin) return;
+    if (!confirm('Xóa vĩnh viễn thiết bị ' + (code || ('#' + id)) + ' khỏi danh sách?')) return;
+    fetch('/api/equipment/' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: window.equipmentApi.authHeaders(false),
+      credentials: 'same-origin',
+    })
+      .then(function (x) {
+        return x.json().then(function (j) {
+          return { ok: x.ok, data: j };
+        });
+      })
+      .then(function (r) {
+        if (!r.ok) {
+          showMsg((r.data && r.data.message) || 'Không xóa được thiết bị', true);
+          if (window.stimsToast) window.stimsToast((r.data && r.data.message) || 'Không xóa được thiết bị', false);
+          return;
+        }
+        if (window.stimsToast) window.stimsToast('Đã xóa thiết bị', true);
+        load();
+      });
+  }
+  function goEdit(id) {
+    if (!canEditEquipment) return;
+    window.location.href = '/public/equipment/form.html?id=' + encodeURIComponent(id);
+  }
+  function loadOverview(st, dept, type, q) {
+    var parts = [];
+    if (st) parts.push('status=' + encodeURIComponent(st));
+    if (dept) parts.push('department_id=' + encodeURIComponent(dept));
+    if (type) parts.push('asset_group=' + encodeURIComponent(type));
+    if (q) parts.push('q=' + encodeURIComponent(q));
+    var url = '/stats/overview' + (parts.length ? '?' + parts.join('&') : '');
+    window.equipmentApi.getJson(url).then(function (r) {
+      if (!r.ok) return;
+      var d = (r.data && r.data.data) || {};
+      document.getElementById('ov-total').textContent = String(Number(d.total) || 0);
+      document.getElementById('ov-active').textContent = String(Number(d.activeCount) || 0);
+      document.getElementById('ov-risk').textContent = String(Number(d.riskCount) || 0);
+      document.getElementById('ov-public').textContent = String(Number(d.publicCount) || 0);
+    });
+  }
+  function load() {
+    var st = document.getElementById('f-status').value;
+    var dept = document.getElementById('f-dept').value.trim();
+    var type = document.getElementById('f-type').value.trim();
+    var q = document.getElementById('f-q').value.trim();
+    loadOverview(st, dept, type, q);
+    showMsg('');
+    var sk = document.getElementById('eq-skeleton');
+    if (sk) sk.classList.remove('skeleton-hidden');
+
+    if (q) {
+      var sQs = '/search?q=' + encodeURIComponent(q);
+      if (type) sQs += '&asset_group=' + encodeURIComponent(type);
+      window.equipmentApi.getJson(sQs).then(function (r) {
+        if (sk) sk.classList.add('skeleton-hidden');
+        if (r.status === 401) {
+          window.location.href = '/dang-nhap.html?returnUrl=' + encodeURIComponent('public/equipment/index.html');
+          return;
+        }
+        if (!r.ok) {
+          showMsg((r.data && r.data.message) || 'Lỗi tải dữ liệu', true);
+          return;
+        }
+        var rows = (r.data && r.data.data) || [];
+        renderList(rows, { total: rows.length, page: 1, totalPages: 1 });
+      });
+      return;
+    }
+
+    var qs = '?page=' + page;
+    if (st) qs += '&status=' + encodeURIComponent(st);
+    if (dept) qs += '&department_id=' + encodeURIComponent(dept);
+    if (type) qs += '&asset_group=' + encodeURIComponent(type);
+    window.equipmentApi.getJson(qs).then(function (r) {
+      if (sk) sk.classList.add('skeleton-hidden');
+      if (r.status === 401) {
+        window.location.href = '/dang-nhap.html?returnUrl=' + encodeURIComponent('public/equipment/index.html');
+        return;
+      }
+      if (!r.ok) {
+        showMsg((r.data && r.data.message) || 'Lỗi tải dữ liệu', true);
+        return;
+      }
+      renderList((r.data && r.data.data) || [], r.data || {});
+    });
+  }
+  function renderList(rows, meta) {
+    var tbody = document.getElementById('tbody');
+    tbody.innerHTML = '';
+    currentRows = rows || [];
+    var hasActionCol = isMasterAdmin || canEditEquipment;
+    var colSpan = (canBulkExport ? 1 : 0) + (hasActionCol ? 7 : 6);
+    var pageNum = Number((meta && meta.page) || 1);
+    var limitNum = Number((meta && meta.limit) || 20);
+    var baseIndex = (pageNum - 1) * limitNum;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="' + colSpan + '" style="text-align:center;color:var(--eq-muted);padding:28px;">Chưa có thiết bị phù hợp bộ lọc.</td></tr>';
+      document.getElementById('page-label').textContent =
+        'Trang ' + (meta.page || 1) + ' / ' + (meta.totalPages || 1) + ' — ' + (meta.total || 0) + ' thiết bị';
+      return;
+    }
+    rows.forEach(function (e, idx) {
+      var stt = baseIndex + idx + 1;
+      var rid = Number(e.id);
+      var checked = !!selectedIds[rid];
+      var qrUrl = '/api/equipment/' + encodeURIComponent(e.id) + '/qr';
+      var vis = String(e.profile_visibility || '').toLowerCase();
+      var visCls =
+        vis === 'public'
+          ? 'eq-row-visibility eq-row-visibility--public'
+          : vis === 'institute'
+            ? 'eq-row-visibility eq-row-visibility--institute'
+            : vis === 'internal'
+              ? 'eq-row-visibility eq-row-visibility--internal'
+              : 'eq-row-visibility eq-row-visibility--unknown';
+      var qrCell =
+        '<div class="eq-row-qr-wrap">' +
+          '<span class="' + visCls + '">' + (e.profile_visibility || '—') + '</span>' +
+          '<a class="eq-row-qr-link" href="' + qrUrl + '" target="_blank" onclick="event.stopPropagation()">' +
+            '<img class="eq-row-qr" src="' + qrUrl + '" alt="QR ' + (e.equipment_code || '') + '" loading="lazy"/>' +
+          '</a>' +
+        '</div>';
+      var tr = document.createElement('tr');
+      tr.style.cursor = 'pointer';
+      tr.onclick = function () { goDetail(e.id); };
+      tr.innerHTML =
+        (canBulkExport
+          ? '<td><input type="checkbox" class="eq-row-select" data-row-id="' + rid + '"' + (checked ? ' checked' : '') + ' onclick="event.stopPropagation()"/></td>'
+          : '') +
+        '<td>' + stt + '</td>' +
+        '<td>' + (e.equipment_code || '') + '</td>' +
+        '<td>' + (e.name || '') + '</td>' +
+        '<td>' + (e.model || '—') + '</td>' +
+        '<td><span class="' + badgeClass(e.status) + '">' + (e.status || '') + '</span></td>' +
+        '<td>' + qrCell + '</td>' +
+        (hasActionCol
+          ? '<td style="white-space:nowrap;">' +
+            (canEditEquipment
+              ? '<button type="button" class="eq-btn eq-btn--ghost eq-btn-sm" data-edit-id="' +
+                e.id +
+                '">Sửa</button> '
+              : '') +
+            (isMasterAdmin
+              ? '<button type="button" class="eq-btn eq-btn--danger eq-btn-sm" data-del-id="' +
+                e.id +
+                '" data-del-code="' +
+                (e.equipment_code || '') +
+                '">Xóa</button>'
+              : '') +
+            '</td>'
+          : '');
+      if (canEditEquipment) {
+        var btnEdit = tr.querySelector('[data-edit-id]');
+        if (btnEdit) {
+          btnEdit.onclick = function (ev) {
+            ev.stopPropagation();
+            goEdit(btnEdit.getAttribute('data-edit-id'));
+          };
+        }
+      }
+      if (isMasterAdmin) {
+        var btnDel = tr.querySelector('[data-del-id]');
+        if (btnDel) {
+          btnDel.onclick = function (ev) {
+            ev.stopPropagation();
+            deleteEquipment(btnDel.getAttribute('data-del-id'), btnDel.getAttribute('data-del-code'));
+          };
+        }
+      }
+      if (canBulkExport) {
+        var chk = tr.querySelector('.eq-row-select');
+        if (chk) {
+          chk.addEventListener('change', function (ev) {
+            var idv = Number(chk.getAttribute('data-row-id'));
+            if (ev.target.checked) selectedIds[idv] = true;
+            else delete selectedIds[idv];
+            updateSelectionUi();
+          });
+        }
+      }
+      tbody.appendChild(tr);
+    });
+    document.getElementById('page-label').textContent =
+      'Trang ' + (meta.page || 1) + ' / ' + (meta.totalPages || 1) + ' — ' + (meta.total || rows.length) + ' thiết bị';
+    updateSelectionUi();
+  }
+
+  document.getElementById('btn-filter').onclick = function () { page = 1; load(); };
+  document.getElementById('btn-prev').onclick = function () {
+    if (document.getElementById('f-q').value.trim()) return;
+    if (page > 1) { page--; load(); }
+  };
+  document.getElementById('btn-next').onclick = function () {
+    if (document.getElementById('f-q').value.trim()) return;
+    page++;
+    load();
+  };
+
+  var chkAllPage = document.getElementById('chk-all-page');
+  if (chkAllPage) {
+    chkAllPage.addEventListener('change', function () {
+      var on = !!chkAllPage.checked;
+      (currentRows || []).forEach(function (r) {
+        var idv = Number(r.id);
+        if (!Number.isFinite(idv) || idv <= 0) return;
+        if (on) selectedIds[idv] = true;
+        else delete selectedIds[idv];
+      });
+      document.querySelectorAll('.eq-row-select').forEach(function (n) {
+        n.checked = on;
+      });
+      updateSelectionUi();
+    });
+  }
+
+  var btnSelectAllFiltered = document.getElementById('btn-select-all-filtered');
+  if (btnSelectAllFiltered) {
+    btnSelectAllFiltered.addEventListener('click', function () {
+      if (!canBulkExport) return;
+      var q = document.getElementById('f-q').value.trim();
+      var type = document.getElementById('f-type').value.trim();
+      if (q) {
+        var sQs = '/search?q=' + encodeURIComponent(q);
+        if (type) sQs += '&asset_group=' + encodeURIComponent(type);
+        window.equipmentApi.getJson(sQs).then(function (r) {
+          if (!r.ok) {
+            showMsg((r.data && r.data.message) || 'Không lấy được danh sách để chọn.', true);
+            return;
+          }
+          ((r.data && r.data.data) || []).forEach(function (x) {
+            var idv = Number(x && x.id);
+            if (Number.isFinite(idv) && idv > 0) selectedIds[idv] = true;
+          });
+          updateSelectionUi();
+          showMsg('Đã chọn toàn bộ kết quả tìm nhanh hiện có.', false);
+          load();
+        });
+        return;
+      }
+      var st = document.getElementById('f-status').value;
+      var dept = document.getElementById('f-dept').value.trim();
+      var qs = '/export/ids?';
+      var parts = [];
+      if (st) parts.push('status=' + encodeURIComponent(st));
+      if (dept) parts.push('department_id=' + encodeURIComponent(dept));
+      if (type) parts.push('asset_group=' + encodeURIComponent(type));
+      qs += parts.join('&');
+      window.equipmentApi.getJson(qs).then(function (r) {
+        if (!r.ok) {
+          showMsg((r.data && r.data.message) || 'Không lấy được danh sách để chọn.', true);
+          return;
+        }
+        ((r.data && r.data.ids) || []).forEach(function (idv) {
+          var n = Number(idv);
+          if (Number.isFinite(n) && n > 0) selectedIds[n] = true;
+        });
+        updateSelectionUi();
+        showMsg('Đã chọn toàn bộ kết quả lọc.', false);
+        load();
+      });
+    });
+  }
+
+  var btnExportSelected = document.getElementById('btn-export-selected');
+  if (btnExportSelected) {
+    btnExportSelected.addEventListener('click', function () {
+      if (!canBulkExport) return;
+      var ids = Object.keys(selectedIds).map(function (k) { return Number(k); }).filter(function (n) { return Number.isFinite(n) && n > 0; });
+      if (!ids.length) {
+        showMsg('Chưa chọn thiết bị nào để xuất.', true);
+        return;
+      }
+      btnExportSelected.disabled = true;
+      fetch('/api/equipment/export/selected', {
+        method: 'POST',
+        headers: window.equipmentApi.authHeaders(true),
+        credentials: 'same-origin',
+        body: JSON.stringify({ ids: ids }),
+      })
+        .then(function (resp) {
+          if (!resp.ok) {
+            return resp.json().then(function (j) { throw new Error((j && j.message) || 'Không xuất được file'); });
+          }
+          return resp.blob();
+        })
+        .then(function (blob) {
+          var link = document.createElement('a');
+          var url = URL.createObjectURL(blob);
+          link.href = url;
+          link.download = 'equipment-selected.xlsx';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          showMsg('Đã xuất Excel cho ' + ids.length + ' thiết bị đã chọn.', false);
+        })
+        .catch(function (e) {
+          showMsg(e && e.message ? e.message : 'Không xuất được file Excel.', true);
+        })
+        .finally(function () {
+          btnExportSelected.disabled = false;
+        });
+    });
+  }
+
+  if (window.equipmentNav && window.equipmentNav.sync) {
+    window.equipmentNav.sync().catch(function () {});
+  }
+
+  // Excel Import Functions
+  function initExcelImport() {
+    if (!canImportExcel) return;
+    var importBtn = document.getElementById('btn-import-excel');
+    var fileInput = document.getElementById('excel-file');
+    
+    if (importBtn && fileInput) {
+      importBtn.addEventListener('click', function() {
+        fileInput.click();
+      });
+      
+      fileInput.addEventListener('change', handleFileSelect);
+    }
+  }
+  
+  function handleFileSelect(e) {
+    if (!canImportExcel) {
+      showMsg('Chỉ Module Manager trở lên mới được import Excel.', true);
+      return;
+    }
+    var file = e.target.files[0];
+    if (!file) return;
+    
+    var fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls') && !fileName.endsWith('.csv')) {
+      showMsg('Vui lòng chon file Excel (.xlsx, .xls) hoac CSV (.csv)', true);
+      return;
+    }
+    var isExcelBinary = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+    if (isExcelBinary && (typeof XLSX === 'undefined' || !XLSX || !XLSX.utils)) {
+      showMsg('Trình đọc Excel chưa sẵn sàng. Vui lòng tải lại trang, hoặc dùng file CSV.', true);
+      return;
+    }
+    
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var data = new Uint8Array(e.target.result);
+        var workbook = XLSX.read(data, {type: 'array'});
+        
+        // Get first worksheet
+        var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        var jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+        
+        if (jsonData.length === 0) {
+          showMsg('File trông, không có dâ liêu', true);
+          return;
+        }
+        
+        // Process and validate data
+        processExcelData(jsonData);
+        
+      } catch (error) {
+        console.error('Excel read error:', error);
+        showMsg('Lôc dôc file Excel: ' + error.message, true);
+      }
+    };
+    
+    reader.readAsArrayBuffer(file);
+  }
+  
+  function processExcelData(jsonData) {
+    if (jsonData.length < 2) {
+      showMsg('File phai có tiêuêu và ít nhât 1 dòng dâ liêu', true);
+      return;
+    }
+    
+    function normalizeHeaderText(v) {
+      return String(v == null ? '' : v)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .replace(/_+/g, '_');
+    }
+
+    function scoreHeaderRow(row) {
+      if (!Array.isArray(row) || !row.length) return 0;
+      var keys = row.map(normalizeHeaderText).filter(Boolean);
+      if (!keys.length) return 0;
+      var score = 0;
+      ['ten_tai_san', 'ma_loai_tai_san', 'don_vi_tinh', 'theo_so_ke_toan', 'theo_thuc_te_kiem_ke', 'nguyen_gia'].forEach(function (token) {
+        for (var i = 0; i < keys.length; i++) {
+          if (keys[i].indexOf(token) >= 0) {
+            score += 1;
+            break;
+          }
+        }
+      });
+      return score;
+    }
+
+    // Auto detect header row (supports title rows / merged multi-row headers)
+    var headerRowIndex = 0;
+    var bestScore = -1;
+    for (var hr = 0; hr < Math.min(12, jsonData.length); hr++) {
+      var sc = scoreHeaderRow(jsonData[hr]);
+      if (sc > bestScore) {
+        bestScore = sc;
+        headerRowIndex = hr;
+      }
+    }
+    var headers = jsonData[headerRowIndex] || [];
+    var equipmentData = [];
+    var errors = [];
+    
+    // Excel columns (Vietnamese header -> system field)
+    var columnAliases = {
+      asset_group: ['loại', 'loai', 'nhóm_tài_sản', 'nhom_tai_san', 'asset_group'],
+      equipment_code: ['equipment_code', 'mã_thiết_bị', 'ma_thiet_bi', 'mã_tb'],
+      asset_type_code: ['mã_loại_tài_sản', 'ma_loai_tai_san', 'asset_type_code'],
+      name: ['tên_tài_sản', 'ten_tai_san', 'name'],
+      year_in_use: ['năm_đưa_vào_sử_dụng', 'nam_dua_vao_su_dung', 'year_in_use'],
+      unit_name: ['đơn_vị_tính', 'don_vi_tinh', 'unit_name'],
+      quantity_book: ['theo_sổ_kế_toán', 'theo_so_ke_toan', 'quantity_book'],
+      quantity_actual: ['theo_thực_tế_kiểm_kê', 'theo_thuc_te_kiem_ke', 'quantity_actual'],
+      quantity_diff: ['chênh_lệch', 'chenh_lech', 'quantity_diff'],
+      purchase_value: ['nguyên_giá', 'nguyen_gia', 'purchase_value'],
+      remaining_value: ['gtcl_(đồng)', 'gtcl_(dong)', 'gtcl', 'remaining_value'],
+      utilization_note: ['tình_hình_khai_thác_sử_dụng', 'tinh_hinh_khai_thac_su_dung', 'utilization_note'],
+      condition_note: ['tình_trạng_của_tài_sản', 'tinh_trang_cua_tai_san', 'condition_note'],
+      disaster_impact_note: [
+        'ảnh_hưởng_bởi_thiên_tai_(bão,lũ)_từ_2023_đến_hết_2025_(chi_tính_với_nhà,_công_trình_xây_dựng)',
+        'anh_huong_boi_thien_tai_(bao,lu)_tu_2023_den_het_2025_(chi_tinh_voi_nha,_cong_trinh_xay_dung)',
+        'disaster_impact_note'
+      ],
+      construction_asset_note: ['tài_sản_công_trình_xây_dựng', 'tai_san_cong_trinh_xay_dung', 'construction_asset_note'],
+      usage_count_note: ['số_lần_(nếu_có)', 'so_lan_(neu_co)', 'usage_count_note'],
+      land_attached_note: ['tài_sản_gắn_liền_với_đất', 'tai_san_gan_lien_voi_dat', 'land_attached_note'],
+      asset_note: ['ghi_chú', 'ghi_chu', 'asset_note'],
+      model: ['model'],
+      status: ['status', 'trạng_thái', 'trang_thai'],
+      department_id: ['department_id', 'phòng_lab', 'phong_lab'],
+      serial_number: ['serial_number', 'số_serial', 'so_serial'],
+      manufacturer: ['manufacturer', 'nhà_sản_xuất', 'nha_san_xuat'],
+      location: ['location', 'vị_trí', 'vi_tri'],
+      profile_visibility: ['profile_visibility', 'hiển_thị_hồ_sơ', 'hien_thi_ho_so']
+    };
+    
+    // Create column mapping (merge up to 3 header rows to handle merged/grouped headers)
+    function buildMergedHeaderCell(colIdx) {
+      var parts = [];
+      for (var rr = headerRowIndex; rr < Math.min(headerRowIndex + 3, jsonData.length); rr++) {
+        var row = jsonData[rr] || [];
+        var t = normalizeHeaderText(row[colIdx]);
+        if (!t) continue;
+        if (parts.indexOf(t) === -1) parts.push(t);
+      }
+      return parts.join('_');
+    }
+
+    var columnMap = {};
+    for (var ci = 0; ci < headers.length; ci++) {
+      var merged = buildMergedHeaderCell(ci);
+      if (!merged) continue;
+      columnMap[merged] = ci;
+    }
+    
+    function findColumnIndex(field) {
+      var aliases = columnAliases[field] || [field];
+      for (var i = 0; i < aliases.length; i++) {
+        var a = normalizeHeaderText(aliases[i]);
+        for (var key in columnMap) {
+          if (key === a || key.indexOf(a) >= 0 || a.indexOf(key) >= 0) {
+            return columnMap[key];
+          }
+        }
+      }
+      return -1;
+    }
+
+    // Required on import file: name only (other fields will default)
+    var requiredColumns = ['name'];
+    var missingColumns = [];
+    
+    requiredColumns.forEach(function(col) {
+      var found = findColumnIndex(col) >= 0;
+      if (!found) {
+        missingColumns.push(col);
+      }
+    });
+    
+    // Fallback: try find "name/ten_tai_san" in first header block even if merged scoring failed.
+    if (missingColumns.indexOf('name') >= 0) {
+      var fallbackIdx = -1;
+      for (var r2 = 0; r2 < Math.min(12, jsonData.length); r2++) {
+        var row2 = jsonData[r2] || [];
+        for (var c2 = 0; c2 < row2.length; c2++) {
+          var cell2 = normalizeHeaderText(row2[c2]);
+          if (!cell2) continue;
+          if (cell2 === 'name' || cell2 === 'ten_tai_san' || cell2.indexOf('_name') >= 0 || cell2.indexOf('ten_tai_san') >= 0) {
+            fallbackIdx = c2;
+            break;
+          }
+        }
+        if (fallbackIdx >= 0) break;
+      }
+      if (fallbackIdx >= 0) {
+        columnMap.name = fallbackIdx;
+        missingColumns = missingColumns.filter(function (x) { return x !== 'name'; });
+      }
+    }
+
+    if (missingColumns.length > 0) {
+      showMsg('Thiêu các côt bât buôc: ' + missingColumns.join(', '), true);
+      return;
+    }
+    
+    function toNum(v) {
+      if (v == null || v === '') return null;
+      if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+      var s = String(v).replace(/\./g, '').replace(/,/g, '.').trim();
+      var n = Number(s);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function normalizeCodeValue(v) {
+      if (v == null || v === '') return null;
+      var s = String(v).trim();
+      var m = s.match(/^([0-3])(?:\s*[:\-].*)?$/);
+      if (m) return m[1];
+      var mapText = {
+        'chua ghi so ke toan': '0',
+        'da ghi so ke toan': '1',
+        'khong phai ghi so ke toan': '2',
+        'khong co nhu cau su dung': '3',
+        'con su dung duoc dang su dung dung muc dich': '0',
+        'con su dung duoc dang su dung khong dung muc dich': '1',
+        'con su dung duoc khong co nhu cau su dung': '2',
+        'hong khong su dung duoc': '3'
+      };
+      var key = s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+      return mapText[key] || null;
+    }
+
+    // Process data rows
+    for (var i = headerRowIndex + 1; i < jsonData.length; i++) {
+      var row = jsonData[i];
+      if (!row || row.length === 0) continue;
+      
+      var equipment = {};
+      var hasData = false;
+      
+      Object.keys(columnAliases).forEach(function(col) {
+        var colIndex = findColumnIndex(col);
+        if (colIndex >= 0 && row[colIndex] != null && row[colIndex] !== '') {
+          equipment[col] = String(row[colIndex]).trim();
+          hasData = true;
+        }
+      });
+      
+      if (hasData) {
+        // Validate required fields
+        if (!equipment.name) {
+          errors.push('Dòng ' + (i + 1) + ': Thiêu thông tin bât buôc');
+          continue;
+        }
+        
+        // Defaults and normalize
+        var validStatuses = ['active', 'maintenance', 'broken', 'retired'];
+        if (!equipment.status || validStatuses.indexOf(String(equipment.status).toLowerCase()) === -1) {
+          equipment.status = 'active';
+        }
+        equipment.model = equipment.model || equipment.name || 'N/A';
+        equipment.department_id = equipment.department_id || 'SCI';
+        
+        var yearInUseNum = toNum(equipment.year_in_use);
+        equipment.year_in_use = yearInUseNum != null ? parseInt(yearInUseNum, 10) : null;
+        if (!equipment.purchase_year && equipment.year_in_use != null) equipment.purchase_year = equipment.year_in_use;
+        equipment.purchase_value = toNum(equipment.purchase_value);
+        equipment.remaining_value = toNum(equipment.remaining_value);
+        equipment.quantity_book = toNum(equipment.quantity_book);
+        equipment.quantity_actual = toNum(equipment.quantity_actual);
+        equipment.quantity_diff = toNum(equipment.quantity_diff);
+        equipment.utilization_note = normalizeCodeValue(equipment.utilization_note);
+        equipment.condition_note = normalizeCodeValue(equipment.condition_note);
+        
+        // Set default visibility
+        if (!equipment.profile_visibility) {
+          equipment.profile_visibility = 'public';
+        }
+        
+        equipmentData.push({
+          asset_group: equipment.asset_group || null,
+          equipment_code: equipment.equipment_code || null,
+          name: equipment.name || null,
+          model: equipment.model || null,
+          status: equipment.status || 'active',
+          department_id: equipment.department_id || 'SCI',
+          serial_number: equipment.serial_number || null,
+          manufacturer: equipment.manufacturer || null,
+          purchase_year: equipment.purchase_year || null,
+          purchase_value: equipment.purchase_value,
+          location: equipment.location || null,
+          profile_visibility: equipment.profile_visibility || 'public',
+          asset_type_code: equipment.asset_type_code || null,
+          year_in_use: equipment.year_in_use,
+          unit_name: equipment.unit_name || null,
+          quantity_book: equipment.quantity_book,
+          quantity_actual: equipment.quantity_actual,
+          quantity_diff: equipment.quantity_diff,
+          remaining_value: equipment.remaining_value,
+          utilization_note: equipment.utilization_note || null,
+          condition_note: equipment.condition_note || null,
+          disaster_impact_note: equipment.disaster_impact_note || null,
+          construction_asset_note: equipment.construction_asset_note || null,
+          usage_count_note: equipment.usage_count_note || null,
+          land_attached_note: equipment.land_attached_note || null,
+          asset_note: equipment.asset_note || null
+        });
+      }
+    }
+    
+    if (errors.length > 0) {
+      showMsg('Có ' + errors.length + ' lôi: ' + errors.slice(0, 3).join('; '), true);
+    }
+    
+    if (equipmentData.length > 0) {
+      try {
+        var groupCounts = {};
+        equipmentData.forEach(function (x) {
+          var g = (x.asset_group || 'Chưa phân loại').trim();
+          groupCounts[g] = (groupCounts[g] || 0) + 1;
+        });
+        var groupPairs = Object.keys(groupCounts).sort().map(function (k) { return k + ': ' + groupCounts[k]; });
+        if (groupPairs.length) {
+          showMsg('Kiểm đếm theo Loại: ' + groupPairs.join(' | '), false);
+        }
+      } catch (_) {}
+      importEquipmentData(equipmentData);
+    } else {
+      showMsg('Không có dâ liêu hôn lê de import', true);
+    }
+  }
+  
+  function convertExcelDate(dateValue) {
+    if (!dateValue) return null;
+    
+    // Handle Excel serial dates
+    if (typeof dateValue === 'number') {
+      var date = new Date((dateValue - 25569) * 86400 * 1000);
+      return date.toISOString().split('T')[0];
+    }
+    
+    // Handle string dates
+    var date = new Date(dateValue);
+    if (isNaN(date.getTime())) return null;
+    
+    return date.toISOString().split('T')[0];
+  }
+  
+  function importEquipmentData(equipmentData) {
+    showMsg('Dang import ' + equipmentData.length + ' thiêt bi...', false);
+    
+    // Import in batches
+    var batchSize = 10;
+    var currentBatch = 0;
+    var totalImported = 0;
+    var totalErrors = 0;
+    
+    function importBatch() {
+      var start = currentBatch * batchSize;
+      var end = Math.min(start + batchSize, equipmentData.length);
+      var batch = equipmentData.slice(start, end);
+      
+      if (batch.length === 0) {
+        showMsg('Hoàn thành import: ' + totalImported + ' thành công, ' + totalErrors + ' lôi', totalErrors === 0);
+        load(); // Refresh the list
+        return;
+      }
+      
+      // Send batch to API
+      var promises = batch.map(function(equipment) {
+        return window.equipmentApi.sendJson('POST', '/', equipment)
+          .then(function(response) {
+            if (response.ok) {
+              totalImported++;
+              return { success: true, equipment: equipment };
+            } else {
+              totalErrors++;
+              return { success: false, equipment: equipment, error: response.data?.message || 'Lôi không xác dinh' };
+            }
+          })
+          .catch(function(error) {
+            totalErrors++;
+            return { success: false, equipment: equipment, error: error.message };
+          });
+      });
+      
+      Promise.all(promises).then(function() {
+        currentBatch++;
+        
+        // Update progress
+        var progress = Math.round((currentBatch * batchSize) / equipmentData.length * 100);
+        showMsg('Importing... ' + progress + '% (' + totalImported + ' thành công, ' + totalErrors + ' lôi)', false);
+        
+        // Continue with next batch
+        setTimeout(importBatch, 500);
+      });
+    }
+    
+    importBatch();
+  }
+  
+  syncMasterAdminFlag().finally(function () {
+    initExcelImport();
+    load();
+  });
+})();
+  </script>
+</body>
+</html>
+

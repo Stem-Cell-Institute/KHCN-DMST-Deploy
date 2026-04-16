@@ -154,6 +154,14 @@
       .join('');
   }
 
+  function resetManualFormForNextEntry() {
+    el('form-manual').reset();
+    fillTagChecks();
+    fillTemplateSelect();
+    syncVnDateHint('f-issue', 'f-issue-hint');
+    syncVnDateHint('f-valid', 'f-valid-hint');
+  }
+
   async function submitManual(ev) {
     ev.preventDefault();
     var editId = state.editId;
@@ -190,7 +198,7 @@
             tag_ids: JSON.stringify(tagIds),
           }),
         });
-        window.location.href = 'tai-lieu-hanh-chinh.html';
+        alert('Đã lưu cập nhật tài liệu. Bạn có thể tiếp tục thao tác ngay tại trang này.');
         return;
       }
 
@@ -226,7 +234,8 @@
       var r = await fetch(apiBase + '/api/dms/documents', { method: 'POST', headers: authHeaders(), body: fd });
       var j = await r.json();
       if (!r.ok) throw new Error(j.message || 'Lỗi');
-      window.location.href = 'tai-lieu-hanh-chinh.html';
+      resetManualFormForNextEntry();
+      alert('Đã lưu tài liệu. Biểu mẫu đã được làm mới để bạn tiếp tục nhập.');
     } catch (e) {
       alert(e.message || String(e));
     }

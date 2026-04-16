@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Template Import Thiết bị</title>
+  <link rel="stylesheet" href="/public/equipment/equip-layout.css" />
+  <script src="/public/vendor/xlsx.full.min.js"></script>
+</head>
+<body class="eq-body">
+  <div class="eq-app">
+    <aside class="eq-sidebar">
+      <div class="eq-sidebar__brand">
+        <span>STIMS</span>
+        <a href="/index.html" class="eq-nav-home">Trang chủ</a>
+      </div>
+      <nav class="eq-nav">
+        <a href="/public/equipment/index.html">Danh sách thiết bị</a>
+      </nav>
+    </aside>
+    <main class="eq-main">
+      <div class="eq-header">
+        <div class="eq-header__title">
+          <h1>Template import kiểm kê tài sản</h1>
+        </div>
+        <div class="eq-header__tail">
+          <div id="eq-auth-bar" class="eq-auth-bar" aria-live="polite"></div>
+          <div class="eq-header__actions">
+            <a href="/public/equipment/index.html" class="eq-btn">Quay lại</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="eq-form">
+        <h2 style="font-size:1.05rem;color:var(--eq-primary-light);margin:0 0 14px;">Các cột theo mẫu Excel kiểm kê</h2>
+        <p style="color:var(--eq-muted);margin:0 0 16px;">
+          Dòng đầu tiên phải giữ nguyên tên cột. Bạn có thể thêm các cột nội bộ khác (như <code>model</code>, <code>department_id</code>) nếu cần.
+        </p>
+
+        <table class="eq-table" style="margin-bottom:16px;">
+          <thead>
+            <tr>
+              <th>Tên cột trong file</th>
+              <th>Ý nghĩa</th>
+              <th>Bắt buộc</th>
+            </tr>
+          </thead>
+          <tbody id="tpl-col-body"></tbody>
+        </table>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="button" class="eq-btn" onclick="downloadTemplateXlsx()">Tải template .xlsx</button>
+          <button type="button" class="eq-btn eq-btn--ghost" onclick="downloadTemplateCsv()">Tải template .csv</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/page-greeting.js"></script>
+  <script src="/public/js/equipmentAuthBar.js"></script>
+  <script>
+    (function () {
+      var columns = [
+        { h: 'Loại', m: 'Nhóm tài sản cấp cao (ví dụ: Máy móc, thiết bị chuyên dùng)', r: 'N' },
+        { h: 'Mã loại tài sản', m: 'Mã phân loại theo sổ kiểm kê', r: 'N' },
+        { h: 'Tên tài sản', m: 'Tên tài sản/thiết bị', r: 'Y' },
+        { h: 'Năm đưa vào sử dụng', m: 'Năm bắt đầu sử dụng', r: 'N' },
+        { h: 'Đơn vị tính', m: 'Ví dụ: Cái, Bộ, Chiếc', r: 'N' },
+        { h: 'Theo sổ kế toán', m: 'Số lượng theo sổ', r: 'N' },
+        { h: 'Theo thực tế kiểm kê', m: 'Số lượng kiểm kê thực tế', r: 'N' },
+        { h: 'Chênh lệch', m: 'Số lượng chênh lệch', r: 'N' },
+        { h: 'Nguyên giá', m: 'Giá trị nguyên giá', r: 'N' },
+        { h: 'GTCL (đồng)', m: 'Giá trị còn lại', r: 'N' },
+        { h: 'Tình hình khai thác sử dụng', m: 'Thông tin sử dụng hiện tại', r: 'N' },
+        { h: 'Tình trạng của tài sản', m: 'Mô tả hiện trạng', r: 'N' },
+        { h: 'Ảnh hưởng bởi thiên tai (bão,lũ) từ 2023 đến hết 2025 (chỉ tính với nhà, công trình xây dựng)', m: 'Mức độ ảnh hưởng bởi thiên tai', r: 'N' },
+        { h: 'Tài sản công trình xây dựng', m: 'Thông tin nhà/công trình', r: 'N' },
+        { h: 'Số lần (nếu có)', m: 'Số lần tương ứng cột trước', r: 'N' },
+        { h: 'Tài sản gắn liền với đất', m: 'Thông tin tài sản gắn với đất', r: 'N' },
+        { h: 'Ghi chú', m: 'Ghi chú bổ sung', r: 'N' }
+      ];
+
+      var sampleRows = [
+        [
+          'Máy móc, thiết bị chuyên dùng',
+          '01403',
+          'Kính hiển vi đồng tiêu LSM900',
+          2025,
+          'Cái',
+          1,
+          1,
+          0,
+          7945000000,
+          0,
+          '0: Chưa ghi sổ kế toán',
+          '3: Hỏng - không sử dụng được',
+          '0: Không',
+          'Không',
+          '',
+          '',
+          'Thiết bị hiện chưa vận hành'
+        ],
+        [
+          'Máy móc, thiết bị chuyên dùng',
+          '01403',
+          'Máy phục vụ nhận diện và phân tách tế bào người và tự động model BD FACSAria',
+          2025,
+          'Cái',
+          1,
+          1,
+          0,
+          9102000000,
+          3640800000,
+          '1: Đã ghi sổ kế toán',
+          '0: Còn sử dụng được - đang sử dụng đúng mục đích',
+          '0: Không',
+          'Không',
+          '',
+          '',
+          ''
+        ]
+      ];
+
+      var body = document.getElementById('tpl-col-body');
+      columns.forEach(function (c) {
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td><code>' + c.h + '</code></td>' +
+          '<td>' + c.m + '</td>' +
+          '<td>' + (c.r === 'Y' ? '<span style="color:#ef4444;font-weight:700;">Có</span>' : 'Không') + '</td>';
+        body.appendChild(tr);
+      });
+
+      function buildAoA() {
+        var headers = columns.map(function (x) { return x.h; });
+        var aoa = [headers];
+        sampleRows.forEach(function (r) { aoa.push(r); });
+        return aoa;
+      }
+
+      function ensureXlsxReady() {
+        if (typeof XLSX !== 'undefined' && XLSX && XLSX.utils) return Promise.resolve(true);
+        return new Promise(function (resolve) {
+          var s = document.createElement('script');
+          s.src = '/public/vendor/xlsx.full.min.js';
+          s.onload = function () { resolve(typeof XLSX !== 'undefined' && XLSX && XLSX.utils); };
+          s.onerror = function () { resolve(false); };
+          document.head.appendChild(s);
+        });
+      }
+
+      window.downloadTemplateXlsx = function () {
+        ensureXlsxReady().then(function (ok) {
+          if (!ok) {
+            alert('Không tải được trình tạo file Excel. Vui lòng thử lại hoặc dùng nút tải .csv.');
+            return;
+          }
+          var aoa = buildAoA();
+          var ws = XLSX.utils.aoa_to_sheet(aoa);
+          ws['!cols'] = columns.map(function () { return { wch: 26 }; });
+          var wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Mau_kiem_ke_thiet_bi');
+          XLSX.writeFile(wb, 'STIMS_Equipment_Import_Template.xlsx');
+        });
+      };
+
+      window.downloadTemplateCsv = function () {
+        var aoa = buildAoA();
+        var csv = aoa.map(function (row) {
+          return row.map(function (cell) {
+            var s = String(cell == null ? '' : cell);
+            return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+          }).join(',');
+        }).join('\n');
+        var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'STIMS_Equipment_Import_Template.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+    })();
+  </script>
+</body>
+</html>

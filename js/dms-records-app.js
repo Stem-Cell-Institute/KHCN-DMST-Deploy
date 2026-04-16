@@ -411,6 +411,37 @@
     return '';
   }
 
+  function docIsPublic(d) {
+    return Number(d.is_public) === 1 || d.is_public === true;
+  }
+
+  function renderPublicCell(d) {
+    var pub = docIsPublic(d);
+    if (state.me && state.me.canManageAllDocs) {
+      var cur = pub ? '1' : '0';
+      return (
+        '<td class="dms-public-cell">' +
+        '<select class="dms-select dms-select--compact dms-public-select" data-doc-public="' +
+        d.id +
+        '" data-prev="' +
+        cur +
+        '" aria-label="Công khai tài liệu">' +
+        '<option value="1"' +
+        (pub ? ' selected' : '') +
+        '>Có</option>' +
+        '<option value="0"' +
+        (!pub ? ' selected' : '') +
+        '>Không</option>' +
+        '</select></td>'
+      );
+    }
+    return (
+      '<td class="dms-public-cell"><span class="dms-public-readonly">' +
+      (pub ? 'Có' : 'Không') +
+      '</span></td>'
+    );
+  }
+
   function docExternalLinksHtml(d) {
     var s = d.external_scan_link && String(d.external_scan_link).trim();
     var w = d.external_word_link && String(d.external_word_link).trim();
@@ -600,7 +631,7 @@
     if (!tb) return;
     if (!state.documents.length) {
       tb.innerHTML =
-        '<tr><td colspan="8" class="dms-empty">Không có tài liệu phù hợp. Thử đổi bộ lọc hoặc thêm tài liệu mới.</td></tr>';
+        '<tr><td colspan="9" class="dms-empty">Không có tài liệu phù hợp. Thử đổi bộ lọc hoặc thêm tài liệu mới.</td></tr>';
       syncSelectAllHeader();
       renderPagination();
       return;
@@ -668,6 +699,7 @@
           loanB +
           destructionBadgeHtml(d) +
           '</div></td>' +
+          renderPublicCell(d) +
           '<td><span class="' +
           statusClass(d.status) +
           '">' +
@@ -705,6 +737,33 @@
           if (act === 'phys') openPhysModal(id);
         });
       });
+      var pubSel = row.querySelector('.dms-public-select');
+      if (pubSel) {
+        pubSel.addEventListener('change', function () {
+          var docId = Number(pubSel.getAttribute('data-doc-public'));
+          var want = pubSel.value === '1';
+          var rollback = pubSel.getAttribute('data-prev') || '0';
+          pubSel.disabled = true;
+          api('/documents/' + docId + '/public', {
+            method: 'PATCH',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+            body: JSON.stringify({ is_public: want }),
+          })
+            .then(function () {
+              pubSel.setAttribute('data-prev', want ? '1' : '0');
+              state.documents.forEach(function (x) {
+                if (Number(x.id) === docId) x.is_public = want ? 1 : 0;
+              });
+            })
+            .catch(function (err) {
+              pubSel.value = rollback;
+              alert(err.message || 'Không cập nhật được');
+            })
+            .finally(function () {
+              pubSel.disabled = false;
+            });
+        });
+      }
     });
     syncSelectAllHeader();
     renderPagination();

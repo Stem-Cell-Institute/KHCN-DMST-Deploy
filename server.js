@@ -3,7 +3,7 @@
  * - Đăng ký (@sci.edu.vn) + đăng ký chỉ module CRD (mọi email khác, role crd_user)
  * - Nộp hồ sơ (upload), gửi email thông báo Hội đồng
  * - Hội đồng xem/tải hồ sơ
- * - Master Admin = ADMIN_EMAIL trong file (mặc định ntsinh0409@gmail.com): cấp/gỡ vai trò Admin. Admin phụ: quyền admin API nhưng không cấp/gỡ Admin.
+ * - Master Admin = tài khoản đăng nhập có email trùng ADMIN_EMAIL (hằng số trong file). Cấp/gỡ vai trò Admin; Admin phụ: quyền admin API nhưng không cấp/gỡ Admin.
  * 
  * Database: Hỗ trợ SQLite (local) và Turso (Cloudflare)
  * - Local: Sử dụng better-sqlite3
@@ -91,11 +91,34 @@ process.on('unhandledRejection', (reason) => {
 (function mountApiRateLimitEarly() {
   const windowMs = Math.max(1000, parseInt(process.env.API_RATE_LIMIT_WINDOW_MS || '900000', 10) || 900000);
   const max = Math.max(1, parseInt(process.env.API_RATE_LIMIT_MAX || '400', 10) || 400);
+  function getRateLimitKey(req) {
+    // Ưu tiên tách theo user đăng nhập để tránh dồn toàn bộ request theo 1 IP/proxy.
+    const auth = String(req.headers.authorization || '').trim();
+    if (auth.toLowerCase().startsWith('bearer ')) {
+      const token = auth.slice(7).trim();
+      if (token) {
+        try {
+          const payload = jwt.decode(token) || {};
+          const userKey = payload.uid || payload.userId || payload.id || payload.email || payload.sub;
+          if (userKey != null && String(userKey).trim() !== '') {
+            return `user:${String(userKey).trim().toLowerCase()}`;
+          }
+        } catch (_) {}
+      }
+    }
+
+    // Fallback cho khách chưa đăng nhập: dùng IP (ưu tiên IP client từ proxy nếu có).
+    const xff = String(req.headers['x-forwarded-for'] || '').trim();
+    const firstForwardedIp = xff ? xff.split(',')[0].trim() : '';
+    const ip = firstForwardedIp || req.ip || req.socket?.remoteAddress || 'unknown';
+    return `ip:${String(ip).trim().toLowerCase()}`;
+  }
   const apiRateLimiter = rateLimit({
     windowMs,
     max,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: getRateLimitKey,
     message: { message: 'Quá nhiều yêu cầu tới API, vui lòng thử lại sau.' },
   });
   app.use('/api', apiRateLimiter);
@@ -2780,6 +2803,7 @@ const HOMEPAGE_MODULES_DEFAULT = [
   { code: 'finance', label: 'Quản lý Tài chính KHCN', enabled: 0 },
   { code: 'publications', label: 'Quản lý Công bố Khoa học', enabled: 0 },
   { code: 'cooperation', label: 'Quản lý Hợp tác', enabled: 1 },
+  { code: 'equipment_stims', label: 'Quản trị thiết bị', enabled: 1 },
   { code: 'tech_transfer', label: 'Quản lý Chuyển giao Công nghệ', enabled: 0 },
   { code: 'facilities', label: 'CRD Lab Booking', enabled: 1 },
   { code: 'ethics_integrity', label: 'Đạo đức và Liêm chính khoa học', enabled: 0 },
@@ -3001,6 +3025,11 @@ try {
 }
 try {
   db.prepare('ALTER TABLE dms_documents ADD COLUMN template_id INTEGER').run();
+} catch (e) {
+  /* đã có */
+}
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0').run();
 } catch (e) {
   /* đã có */
 }
@@ -4763,9 +4792,13 @@ function userEmailIsMasterAdmin(email) {
   return (email || '').trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
 }
 
-/** Đang đăng nhập là Admin và trùng ADMIN_EMAIL (Master). */
+/**
+ * Master Admin = email trùng ADMIN_EMAIL (hằng số / cấu hình triển khai).
+ * Không bắt buộc role === 'admin' trong JWT/DB: tránh mất toàn bộ quyền Master
+ * (module Thiết bị, cấp Admin, …) khi tài khoản đổi vai trò hoặc dữ liệu role lệch.
+ */
 function reqIsMasterAdmin(req) {
-  if ((req.user.role || '').toLowerCase() !== 'admin') return false;
+  if (!req || !req.user) return false;
   return userEmailIsMasterAdmin(req.user.email);
 }
 
@@ -4875,6 +4908,24 @@ function canUserAccessMissionHoSoNgoai(req, missionRow) {
   if (!missionRow) return false;
   if (!req.user) return false;
   if ((req.user.role || '').toLowerCase() === 'admin') return true;
+  return missionPrincipalMatchesUser(missionRow.principal, req.user);
+}
+
+/** Quyền xem chi tiết đề tài: nhóm xử lý nghiệp vụ + admin; user thường chỉ xem đề tài mình phụ trách. */
+function canUserAccessMissionDetail(req, missionRow) {
+  if (!missionRow || !req || !req.user) return false;
+  const role = (req.user.role || '').toLowerCase();
+  if (
+    role === 'admin' ||
+    role === 'phong_khcn' ||
+    role === 'thu_ky' ||
+    role === 'chu_tich' ||
+    role === 'thanh_vien' ||
+    role === 'totruong_tham_dinh_tc' ||
+    role === 'thanh_vien_tham_dinh_tc'
+  ) {
+    return true;
+  }
   return missionPrincipalMatchesUser(missionRow.principal, req.user);
 }
 
@@ -8760,14 +8811,14 @@ app.get('/api/homepage-stats', (req, res) => {
     machines: crdMachines,
     activeUsers: crdActivePersons,
   };
-  /** Thẻ module «Hợp tác» — đếm đối tác theo loại (cùng logic /api/cooperation/doi-tac) */
-  let cooperationMini = { quoc_te: 0, doanh_nghiep: 0, dia_phuong: 0 };
+  /** Thẻ module «Hợp tác» — lấy số liệu trực tiếp từ dữ liệu module đối tác */
+  let cooperationMini = { doi_tac: 0, trong_nuoc: 0, quoc_te: 0 };
   try {
-    const { stats } = cooperationComputePartnerStats();
+    const { stats, total } = cooperationComputePartnerStats();
     cooperationMini = {
+      doi_tac: total || 0,
+      trong_nuoc: stats.trong_nuoc || 0,
       quoc_te: stats.quoc_te || 0,
-      doanh_nghiep: stats.doanh_nghiep || 0,
-      dia_phuong: stats.dia_phuong || 0,
     };
   } catch (e) {
     /* bảng hợp tác chưa có hoặc lỗi */
@@ -8795,6 +8846,44 @@ app.get('/api/homepage-stats', (req, res) => {
   } catch (e) {
     /* bảng DMS chưa có */
   }
+  let equipmentMini = { profiles: 0, documents: 0, notifications: 0 };
+  try {
+    equipmentMini.profiles = db.prepare(`SELECT COUNT(*) AS c FROM equipments`).get().c;
+    equipmentMini.documents = db
+      .prepare(
+        `SELECT COUNT(*) AS c
+         FROM equipment_documents
+         WHERE COALESCE(is_disabled, 0) = 0
+           AND (is_current IS NULL OR is_current = 1)`
+      )
+      .get().c;
+    let notifUserId = null;
+    try {
+      const tok = getTokenFromReq(req);
+      if (tok) {
+        const p = jwt.verify(tok, JWT_SECRET);
+        if (p && p.id != null && !userIdIsBanned(p.id)) notifUserId = Number(p.id);
+      }
+    } catch (_) {
+      notifUserId = null;
+    }
+    if (notifUserId != null) {
+      equipmentMini.notifications = db
+        .prepare(
+          `SELECT COUNT(*) AS c
+           FROM app_notifications
+           WHERE user_id = ?
+             AND module = 'equipment'
+             AND event_type = 'equip_incident'
+             AND read_at IS NULL`
+        )
+        .get(notifUserId).c;
+    } else {
+      equipmentMini.notifications = 0;
+    }
+  } catch (e) {
+    /* bảng Equipment chưa có */
+  }
   return res.json({
     missions,
     missionMini,
@@ -8806,13 +8895,14 @@ app.get('/api/homepage-stats', (req, res) => {
     cooperationMini,
     facilities,
     dmsMini,
+    equipmentMini,
   });
 });
 
 // ========== Nhiệm vụ KHCN (Dashboard): trích xuất thống kê + danh sách tìm kiếm ==========
 syncMissionsFromCapVien();
 
-app.get('/api/missions/stats', (req, res) => {
+app.get('/api/missions/stats', authMiddleware, (req, res) => {
   syncMissionsFromCapVien();
   const all = db.prepare('SELECT id, level, status, end_date, budget, start_date FROM missions').all();
   const now = new Date().toISOString().slice(0, 10);
@@ -8975,7 +9065,7 @@ function missionSearchQueryMatchesRow(r, queryRaw) {
   return tokens.every((t) => hay.includes(t));
 }
 
-app.get('/api/missions', (req, res) => {
+app.get('/api/missions', authMiddleware, (req, res) => {
   syncMissionsFromCapVien();
   const qRaw = (req.query.q || req.query.search || '').trim();
   const level = (req.query.level || '').trim().toLowerCase();
@@ -9146,7 +9236,7 @@ function sendMissionProposalToCouncil(mission, submitterEmail) {
 }
 
 // Danh sách file đăng ký (Thuyết minh, Văn bản xin phép)
-app.get('/api/missions/:id/files', (req, res) => {
+app.get('/api/missions/:id/files', authMiddleware, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) return res.status(400).json({ message: 'ID không hợp lệ' });
   const mission = db.prepare('SELECT id FROM missions WHERE id = ?').get(id);
@@ -9197,13 +9287,19 @@ app.get('/api/missions/:id/files/:fileId/download', authMiddleware, (req, res) =
   const id = parseInt(req.params.id, 10);
   const fileId = parseInt(req.params.fileId, 10);
   if (!id || !fileId) return res.status(400).json({ message: 'ID không hợp lệ' });
+  const mission = db.prepare('SELECT id, principal FROM missions WHERE id = ?').get(id);
+  if (!mission) return res.status(404).json({ message: 'Không tìm thấy đề tài' });
+  if (!canUserAccessMissionHoSoNgoai(req, mission)) {
+    return res.status(403).json({ message: 'Bạn không có quyền tải hồ sơ đề tài này.' });
+  }
   const row = db.prepare('SELECT id, mission_id, original_name, path FROM missions_files WHERE id = ? AND mission_id = ?').get(fileId, id);
   if (!row) return res.status(404).json({ message: 'Không tìm thấy file' });
-  const fullPath = path.join(uploadDir, row.path);
-  if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File không tồn tại' });
+  const checked = normalizeAndCheckDownloadPath(row.path);
+  if (checked.err === 403) return res.status(403).json({ message: 'Truy cập bị từ chối' });
+  if (checked.err) return res.status(404).json({ message: 'File không tồn tại' });
   const safeName = (row.original_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
   res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '"');
-  return res.sendFile(fullPath);
+  return res.sendFile(checked.norm);
 });
 
 // Xem file inline (PDF viewer) — cần token trong URL hoặc cookie
@@ -9211,16 +9307,22 @@ app.get('/api/missions/:id/files/:fileId/view', authMiddleware, (req, res) => {
   const id = parseInt(req.params.id, 10);
   const fileId = parseInt(req.params.fileId, 10);
   if (!id || !fileId) return res.status(400).json({ message: 'ID không hợp lệ' });
+  const mission = db.prepare('SELECT id, principal FROM missions WHERE id = ?').get(id);
+  if (!mission) return res.status(404).json({ message: 'Không tìm thấy đề tài' });
+  if (!canUserAccessMissionHoSoNgoai(req, mission)) {
+    return res.status(403).json({ message: 'Bạn không có quyền xem hồ sơ đề tài này.' });
+  }
   const row = db.prepare('SELECT id, mission_id, original_name, path FROM missions_files WHERE id = ? AND mission_id = ?').get(fileId, id);
   if (!row) return res.status(404).json({ message: 'Không tìm thấy file' });
-  const fullPath = path.join(uploadDir, row.path);
-  if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File không tồn tại' });
+  const checked = normalizeAndCheckDownloadPath(row.path);
+  if (checked.err === 403) return res.status(403).json({ message: 'Truy cập bị từ chối' });
+  if (checked.err) return res.status(404).json({ message: 'File không tồn tại' });
   const ext = (row.original_name || '').split('.').pop().toLowerCase();
   if (ext === 'pdf') {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline; filename="' + (row.original_name || 'view.pdf').replace(/[^a-zA-Z0-9._-]/g, '_') + '"');
   }
-  return res.sendFile(fullPath);
+  return res.sendFile(checked.norm);
 });
 
 // Bước 2 — Thư ký/Admin: Hồ sơ hợp lệ → chuyển sang Bước 3 (Chờ CT HĐ KHCN xét duyệt)
@@ -10041,7 +10143,7 @@ app.get('/api/missions/by-code/:code', (req, res) => {
   return res.json(row);
 });
 
-app.get('/api/missions/:id', (req, res) => {
+app.get('/api/missions/:id', authMiddleware, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) return res.status(400).json({ message: 'ID không hợp lệ' });
   syncMissionsFromCapVien();
@@ -10057,6 +10159,9 @@ app.get('/api/missions/:id', (req, res) => {
     if (row) row.principal_hoc_vi = row.principal_don_vi = row.principal_orcid = null;
   }
   if (!row) return res.status(404).json({ message: 'Không tìm thấy đề tài' });
+  if (!canUserAccessMissionDetail(req, row)) {
+    return res.status(403).json({ message: 'Bạn không có quyền xem chi tiết đề tài này.' });
+  }
   try {
     const lichSu = db.prepare('SELECT id, lan_xet, nguoi_xet_id, ngay_xet, ket_qua, nhan_xet_json, dieu_kien, ly_do_tu_choi FROM lich_su_buoc3 WHERE mission_id = ? ORDER BY lan_xet ASC').all(id);
     row.lich_su_buoc3 = lichSu.map(ls => {
@@ -10201,11 +10306,12 @@ app.get('/api/missions/:id/ho-so-ngoai/:fileId/download', authMiddleware, (req, 
   }
   const row = db.prepare('SELECT id, mission_id, original_name, path FROM missions_ho_so_ngoai WHERE id = ? AND mission_id = ?').get(fileId, id);
   if (!row) return res.status(404).json({ message: 'Không tìm thấy file' });
-  const fullPath = path.join(uploadDir, row.path);
-  if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File không tồn tại' });
+  const checked = normalizeAndCheckDownloadPath(row.path);
+  if (checked.err === 403) return res.status(403).json({ message: 'Truy cập bị từ chối' });
+  if (checked.err) return res.status(404).json({ message: 'File không tồn tại' });
   const safeName = (row.original_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
   res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '"');
-  return res.sendFile(fullPath);
+  return res.sendFile(checked.norm);
 });
 
 // Mẫu hồ sơ đăng ký đề tài ngoài Viện — Admin upload, User download
@@ -10217,12 +10323,16 @@ app.get('/api/missions-templates', (req, res) => {
   return res.json({ templates: rows });
 });
 
-app.get('/api/missions-templates/:type/download', (req, res) => {
+app.get('/api/missions-templates/:type/download', authMiddleware, (req, res) => {
   const type = (req.params.type || '').trim();
   if (!TEMPLATE_TYPES.includes(type)) return res.status(400).json({ message: 'Loại mẫu không hợp lệ' });
   const row = db.prepare('SELECT template_type, original_name, path FROM missions_templates WHERE template_type = ?').get(type);
   if (!row) return res.status(404).json({ message: 'Chưa có mẫu này' });
-  const fullPath = path.join(uploadDir, 'templates', row.path);
+  const templatesRoot = path.resolve(uploadDir, 'templates');
+  const fullPath = path.resolve(templatesRoot, String(row.path || '').trim());
+  if (!pathIsStrictlyInsideResolvedRoot(templatesRoot, fullPath)) {
+    return res.status(403).json({ message: 'Đường dẫn file mẫu không hợp lệ' });
+  }
   if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File không tồn tại' });
   const safeName = (row.original_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
   res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '"');
@@ -11825,7 +11935,7 @@ app.post('/api/cooperation/doan-vao/submit', authMiddleware, (req, res) => {
 });
 
 // Danh sách đề xuất Đoàn ra (dữ liệu thật, quá trình xử lý)
-app.get('/api/cooperation/doan-ra', (req, res) => {
+app.get('/api/cooperation/doan-ra', authMiddleware, (req, res) => {
   try {
     const rows = db.prepare(
       `SELECT id, ma_de_xuat, submitted_by_email, submitted_by_name, muc_dich, quoc_gia, ngay_di, ngay_ve, thanh_vien, nguon_kinh_phi, du_toan, status, created_at FROM cooperation_doan_ra ORDER BY created_at DESC`
@@ -11837,7 +11947,7 @@ app.get('/api/cooperation/doan-ra', (req, res) => {
 });
 
 // Danh sách đề xuất Đoàn vào (đồng bộ với bảng "đã gửi" trên giao diện — giống Đoàn ra)
-app.get('/api/cooperation/doan-vao', (req, res) => {
+app.get('/api/cooperation/doan-vao', authMiddleware, (req, res) => {
   try {
     const rows = db.prepare(
       `SELECT id, ma_de_xuat, submitted_by_email, submitted_by_name, muc_dich, don_vi_de_xuat, ngay_den, ngay_roi_di, thanh_phan_doan, status, created_at FROM cooperation_doan_vao ORDER BY created_at DESC`
@@ -11849,7 +11959,7 @@ app.get('/api/cooperation/doan-vao', (req, res) => {
 });
 
 // Danh sách đề xuất Thỏa thuận / MOU (giống Đoàn ra — bảng «đã gửi» trên module)
-app.get('/api/cooperation/mou', (req, res) => {
+app.get('/api/cooperation/mou', authMiddleware, (req, res) => {
   try {
     const rows = db.prepare(
       `SELECT id, ma_de_xuat, submitted_by_email, submitted_by_name, loai_thoa_thuan, ten_doi_tac, quoc_gia, thoi_han_nam, gia_tri_tai_chinh, don_vi_de_xuat, status, created_at FROM cooperation_mou_de_xuat ORDER BY created_at DESC`
@@ -13533,6 +13643,181 @@ try {
   console.log('[CRD] Đã mount /api/equipment-analytics (admin)');
 } catch (e) {
   console.warn('[CRD] Không mount equipment-analytics:', e.message);
+}
+
+/** Quản trị thiết bị (hồ sơ, PDF, video, QR) — db/equipment_schema.sql */
+try {
+  const equipmentSchemaPath = path.join(__dirname, 'db', 'equipment_schema.sql');
+  if (fs.existsSync(equipmentSchemaPath)) {
+    db.exec(fs.readFileSync(equipmentSchemaPath, 'utf8'));
+  }
+} catch (e) {
+  console.warn('[db/equipment_schema]', e.message);
+}
+try {
+  db.prepare('ALTER TABLE users ADD COLUMN department_id TEXT').run();
+} catch (e) {
+  /* đã có cột */
+}
+
+try {
+  const equipmentP2 = path.join(__dirname, 'db', 'equipment_prompt2.sql');
+  if (fs.existsSync(equipmentP2)) {
+    db.exec(fs.readFileSync(equipmentP2, 'utf8'));
+  }
+} catch (e) {
+  console.warn('[db/equipment_prompt2]', e.message);
+}
+(function equipmentPrompt2Alters() {
+  const alters = [
+    'ALTER TABLE equipments ADD COLUMN review_status TEXT',
+    'ALTER TABLE equipments ADD COLUMN asset_group TEXT',
+    'ALTER TABLE equipments ADD COLUMN published_at TEXT',
+    'ALTER TABLE equipments ADD COLUMN review_rejection_note TEXT',
+    'ALTER TABLE equipments ADD COLUMN created_by INTEGER REFERENCES users(id)',
+    'ALTER TABLE equipments ADD COLUMN last_maintenance_date TEXT',
+    'ALTER TABLE equipments ADD COLUMN next_maintenance_date TEXT',
+    'ALTER TABLE equipments ADD COLUMN calibration_due_date TEXT',
+    'ALTER TABLE equipments ADD COLUMN asset_type_code TEXT',
+    'ALTER TABLE equipments ADD COLUMN year_in_use INTEGER',
+    'ALTER TABLE equipments ADD COLUMN unit_name TEXT',
+    'ALTER TABLE equipments ADD COLUMN quantity_book REAL',
+    'ALTER TABLE equipments ADD COLUMN quantity_actual REAL',
+    'ALTER TABLE equipments ADD COLUMN quantity_diff REAL',
+    'ALTER TABLE equipments ADD COLUMN remaining_value REAL',
+    'ALTER TABLE equipments ADD COLUMN utilization_note TEXT',
+    'ALTER TABLE equipments ADD COLUMN condition_note TEXT',
+    'ALTER TABLE equipments ADD COLUMN disaster_impact_note TEXT',
+    'ALTER TABLE equipments ADD COLUMN construction_asset_note TEXT',
+    'ALTER TABLE equipments ADD COLUMN usage_count_note TEXT',
+    'ALTER TABLE equipments ADD COLUMN land_attached_note TEXT',
+    'ALTER TABLE equipments ADD COLUMN asset_note TEXT',
+    'ALTER TABLE equipment_documents ADD COLUMN is_current INTEGER NOT NULL DEFAULT 1',
+    'ALTER TABLE equipment_documents ADD COLUMN supersedes_id INTEGER REFERENCES equipment_documents(id)',
+    "ALTER TABLE equipment_videos ADD COLUMN thumbnail_url TEXT",
+  ];
+  for (const sql of alters) {
+    try {
+      db.prepare(sql).run();
+    } catch (e) {
+      /* đã có cột */
+    }
+  }
+})();
+
+(function migrateEquipmentUsageAndConditionCodes() {
+  function stripVietnamese(s) {
+    return String(s || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  }
+  function normalizeCode(v) {
+    if (v == null) return null;
+    const raw = String(v).trim();
+    if (!raw) return null;
+    const m = raw.match(/^([0-3])(?:\s*[:\-].*)?$/);
+    if (m) return m[1];
+    const key = stripVietnamese(raw).replace(/[^a-z0-9]+/g, ' ').trim();
+    const map = {
+      'chua ghi so ke toan': '0',
+      'da ghi so ke toan': '1',
+      'khong phai ghi so ke toan': '2',
+      'khong co nhu cau su dung': '3',
+      'con su dung duoc dang su dung dung muc dich': '0',
+      'con su dung duoc dang su dung khong dung muc dich': '1',
+      'con su dung duoc khong co nhu cau su dung': '2',
+      'hong khong su dung duoc': '3',
+    };
+    if (map[key] != null) return map[key];
+    if (key.includes('chua ghi so ke toan')) return '0';
+    if (key.includes('da ghi so ke toan')) return '1';
+    if (key.includes('khong phai ghi so ke toan')) return '2';
+    if (key.includes('khong co nhu cau su dung')) return '3';
+    if (key.includes('hong') && key.includes('khong su dung duoc')) return '3';
+    if (key.includes('khong dung muc dich')) return '1';
+    if (key.includes('dung muc dich')) return '0';
+    return null;
+  }
+  try {
+    const rows = db
+      .prepare(
+        `SELECT id, utilization_note, condition_note
+         FROM equipments
+         WHERE utilization_note IS NOT NULL OR condition_note IS NOT NULL`
+      )
+      .all();
+    if (!rows || !rows.length) return;
+    const upd = db.prepare(
+      `UPDATE equipments
+       SET utilization_note = ?, condition_note = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    );
+    let changed = 0;
+    db.exec('BEGIN IMMEDIATE');
+    for (const r of rows) {
+      const u0 = r.utilization_note == null ? null : String(r.utilization_note);
+      const c0 = r.condition_note == null ? null : String(r.condition_note);
+      const u1 = normalizeCode(u0);
+      const c1 = normalizeCode(c0);
+      if (u1 !== u0 || c1 !== c0) {
+        upd.run(u1, c1, r.id);
+        changed += 1;
+      }
+    }
+    db.exec('COMMIT');
+    if (changed > 0) console.log('[EQUIP] normalized utilization/condition codes:', changed);
+  } catch (e) {
+    try {
+      db.exec('ROLLBACK');
+    } catch (_) {}
+    console.warn('[EQUIP] migrate codes:', e.message);
+  }
+})();
+
+try {
+  const createEquipmentRouter = require('./routes/equipment');
+  const equipmentUploadsDir = appPaths.equipmentUploadsDir();
+  fs.mkdirSync(equipmentUploadsDir, { recursive: true });
+  function equipmentMailSend(opts) {
+    if (!transporter || !opts) return Promise.resolve({ ok: false, reason: 'mail_not_configured' });
+    const toList = Array.isArray(opts.to) ? opts.to.filter(Boolean) : opts.to ? [opts.to] : [];
+    if (!toList.length) return Promise.resolve({ ok: false, reason: 'no_recipients' });
+    const to = toList.join(', ');
+    return transporter
+      .sendMail({
+        from: getSmtpFrom(),
+        to,
+        subject: opts.subject || 'Thông báo thiết bị',
+        text: opts.text || '',
+        html: opts.html || opts.text || '',
+      })
+      .then(() => ({ ok: true }))
+      .catch((e) => {
+        console.warn('[EQUIP mail]', e.message);
+        return { ok: false, reason: 'smtp_error', error: e.message || 'smtp_error' };
+      });
+  }
+
+  app.use(
+    '/api/equipment',
+    createEquipmentRouter({
+      db,
+      authMiddleware,
+      adminOnly,
+      getTokenFromReq,
+      jwt,
+      JWT_SECRET,
+      userIdIsBanned,
+      isMasterAdmin: reqIsMasterAdmin,
+      uploadsEquipmentRoot: equipmentUploadsDir,
+      uploadsRoot: appPaths.uploadsRoot(),
+      equipmentMailSend,
+    })
+  );
+  console.log('[EQUIP] Đã mount /api/equipment');
+} catch (e) {
+  console.warn('[EQUIP] Không mount equipment:', e.message);
 }
 
 /** Bảng dashboard_permissions (migrations/004_dashboard_permissions.sql) */
@@ -17015,6 +17300,7 @@ const PUBLIC_HTML_AUTH = new Set([
 function isPublicHtmlPath(reqPath) {
   const p = (reqPath || '').replace(/\\/g, '/');
   if (p === '/' || p === '' || p === '/index.html') return true;
+  if (/\/public\/equipment\/public\.html$/i.test(p)) return true;
   const base = path.basename(p);
   return PUBLIC_HTML_AUTH.has(base);
 }
@@ -17067,7 +17353,9 @@ app.use((req, res, next) => {
           'quen-mat-khau.html',
           'dat-lai-mat-khau.html',
         ]);
-        if (!htmlOkForCrd.has(base0)) {
+        const pathNormCrd = (reqPath || '').replace(/\\/g, '/');
+        const crdPublicEquipment = pathNormCrd.includes('/public/equipment/public.html');
+        if (!htmlOkForCrd.has(base0) && !crdPublicEquipment) {
           return res.redirect(302, '/crd-booking-v2.html');
         }
       }
@@ -17121,14 +17409,35 @@ app.use((req, res, next) => {
     /^\/migrations\//,
     /^\/scripts\//,
     /^\/database\//,
+    /^\/db\//,
     /^\/sci-khcn-publications\//,
     /^\/data\//,
+    /^\/uploads\//,
+    /^\/uploads\/equipment\//,
     /^\/\.git/,
     /^\/crd-lab-booking\/main\.jsx$/,
     /^\/(fix-crd-created-at|test-insert-created-at)\.js$/,
   ];
   if (blocked.some((r) => r.test(p))) return res.status(403).end();
   return next();
+});
+
+// Local fallback for equipment Excel importer when CDN is blocked.
+app.get('/public/vendor/xlsx.full.min.js', (req, res) => {
+  try {
+    return res.sendFile(path.join(__dirname, 'node_modules', 'xlsx', 'dist', 'xlsx.full.min.js'));
+  } catch (e) {
+    return res.status(404).send('xlsx bundle not found');
+  }
+});
+
+// Local fallback for SortableJS used by homepage drag-and-drop.
+app.get('/public/vendor/Sortable.min.js', (req, res) => {
+  try {
+    return res.sendFile(path.join(__dirname, 'node_modules', 'sortablejs', 'Sortable.min.js'));
+  } catch (e) {
+    return res.status(404).send('sortable bundle not found');
+  }
 });
 
 app.use(
@@ -17454,7 +17763,7 @@ async function mountSciKhcnPublicationsRouters() {
     }
   });
 
-  app.delete('/api/publications/admin/clear-all', authMiddleware, adminOnly, (req, res) => {
+  app.delete('/api/publications/admin/clear-all', authMiddleware, masterAdminOnly, (req, res) => {
     try {
       const { confirm } = req.body && typeof req.body === 'object' ? req.body : {};
       if (confirm !== 'XOA-TOAN-BO') {
@@ -17470,6 +17779,18 @@ async function mountSciKhcnPublicationsRouters() {
           console.warn('[publications/admin/clear-all] publication_queue:', e.message);
         }
       }
+      insertUserActivityLog(req, {
+        userId: req.user && req.user.id,
+        email: req.user && req.user.email,
+        action: 'publications_clear_all',
+        module: 'publications',
+        path: req.originalUrl || req.path || '/api/publications/admin/clear-all',
+        detail: JSON.stringify({
+          at: new Date().toISOString(),
+          publicationsDeleted: Number(rPub.changes || 0),
+          queueDeleted: queueChanges
+        })
+      });
       return res.json({
         ok: true,
         publicationsDeleted: Number(rPub.changes || 0),
@@ -17478,6 +17799,17 @@ async function mountSciKhcnPublicationsRouters() {
           'Đã xóa toàn bộ công bố trên CSDL và làm sạch hàng chờ ORCID (để quét lại không bị trùng DOI).',
       });
     } catch (e) {
+      insertUserActivityLog(req, {
+        userId: req.user && req.user.id,
+        email: req.user && req.user.email,
+        action: 'publications_clear_all_failed',
+        module: 'publications',
+        path: req.originalUrl || req.path || '/api/publications/admin/clear-all',
+        detail: JSON.stringify({
+          at: new Date().toISOString(),
+          error: e && e.message ? e.message : String(e)
+        })
+      });
       console.error('[publications/admin/clear-all]', e);
       return res.status(500).json({ message: e.message || 'Không xóa được CSDL' });
     }

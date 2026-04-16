@@ -154,6 +154,11 @@
         .module-card[data-module="ethics_integrity"] .module-icon-bg svg { stroke: #4f46e5 !important; }
         .module-card[data-module="reward"] .module-icon-bg svg { stroke: #ca8a04 !important; }
         .module-card[data-module="dms"] .module-icon-bg svg { stroke: #4338ca !important; }
+        .module-card[data-module="equipment_stims"] .module-icon-bg {
+            background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 100%);
+            border-color: rgba(13, 148, 136, 0.45);
+        }
+        .module-card[data-module="equipment_stims"] .module-icon-bg svg { stroke: #0f766e !important; stroke-width: 2 !important; }
 
         .module-card--disabled .module-icon-bg {
             background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%);
@@ -632,17 +637,17 @@
                     Quản lý hợp tác trong nước, quốc tế, doanh nghiệp, địa phương. Theo dõi MOU, hợp đồng, dự án hợp tác.
                 </div>
                 <div class="module-stats">
+                    <div class="mini-stat" data-stat="cooperationMini" data-facility-key="doi_tac">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Đối tác</div>
+                    </div>
+                    <div class="mini-stat" data-stat="cooperationMini" data-facility-key="trong_nuoc">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Trong nước</div>
+                    </div>
                     <div class="mini-stat" data-stat="cooperationMini" data-facility-key="quoc_te">
                         <div class="mini-stat-number">—</div>
                         <div class="mini-stat-label">Quốc tế</div>
-                    </div>
-                    <div class="mini-stat" data-stat="cooperationMini" data-facility-key="doanh_nghiep">
-                        <div class="mini-stat-number">—</div>
-                        <div class="mini-stat-label">Doanh nghiệp</div>
-                    </div>
-                    <div class="mini-stat" data-stat="cooperationMini" data-facility-key="dia_phuong">
-                        <div class="mini-stat-number">—</div>
-                        <div class="mini-stat-label">Địa phương</div>
                     </div>
                 </div>
                 <button type="button" class="btn-access" onclick="window.location.href='module-hoatac-quocte.html'">Truy cập →</button>
@@ -670,6 +675,30 @@
                     </div>
                 </div>
                 <button type="button" class="btn-access" onclick="window.location.href='tai-lieu-hanh-chinh.html'">Truy cập →</button>
+            </div>
+
+            <!-- 7c. Quản trị thiết bị (hồ sơ, PDF, QR) -->
+            <div class="module-card" data-module="equipment_stims">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg></span></div>
+                <div class="module-title">Quản trị thiết bị</div>
+                <div class="module-description">
+                    Hồ sơ thiết bị phòng thí nghiệm: thông tin kỹ thuật, tài liệu PDF (SOP, hiệu chuẩn…), video hướng dẫn, QR truy cập nhanh và phân quyền theo mức nội bộ / viện / công khai.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat" data-stat="equipmentMini" data-facility-key="profiles">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Hồ sơ thiết bị</div>
+                    </div>
+                    <div class="mini-stat" data-stat="equipmentMini" data-facility-key="documents">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Tài liệu đính kèm</div>
+                    </div>
+                    <div class="mini-stat" data-stat="equipmentMini" data-facility-key="notifications">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Thông báo thiết bị</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-access" onclick="window.location.href='public/equipment/index.html'">Truy cập →</button>
             </div>
 
             <!-- 8. Quản lý Chuyển giao Công nghệ -->
@@ -770,7 +799,7 @@
             </div>
         </div>
     </div>
-    <script src="/node_modules/sortablejs/Sortable.min.js"></script>
+    <script src="/public/vendor/Sortable.min.js"></script>
     <script src="js/page-greeting.js"></script>
     <script src="js/auth-status.js"></script>
     <script>
@@ -807,7 +836,7 @@
                 isAdmin = (u.role || '').toLowerCase() === 'admin';
             } catch (e) {}
             var LS_ORDER_KEY = 'homepage_module_order';
-            var HOMEPAGE_CODES = ['missions','ethics_ace','personnel','ip','finance','publications','cooperation','dms','tech_transfer','facilities','ethics_integrity','reward'];
+            var HOMEPAGE_CODES = ['missions','ethics_ace','personnel','ip','finance','publications','cooperation','dms','equipment_stims','tech_transfer','facilities','ethics_integrity','reward'];
             function distinctSortOrderCount(modules) {
                 var seen = {};
                 var n = 0;
@@ -884,7 +913,9 @@
                 }
             }
             function loadHomepageStats() {
-                fetch(apiBase + '/api/homepage-stats')
+                var token = localStorage.getItem('token');
+                var headers = token ? { Authorization: 'Bearer ' + token } : {};
+                fetch(apiBase + '/api/homepage-stats', { headers: headers })
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         if (!data) return;

@@ -1399,6 +1399,31 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
     }
   });
 
+  router.patch('/documents/:id/public', needManageDocs, express.json(), (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        return res.status(400).json({ ok: false, message: 'ID tài liệu không hợp lệ' });
+      }
+      const doc = db.prepare('SELECT id FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const raw = req.body && req.body.is_public;
+      const isPublic =
+        raw === true ||
+        raw === 1 ||
+        String(raw).toLowerCase() === 'true' ||
+        String(raw) === '1'
+          ? 1
+          : 0;
+      db.prepare(
+        `UPDATE dms_documents SET is_public = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+      ).run(isPublic, id);
+      res.json({ ok: true, id, is_public: isPublic });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
   router.get('/documents/:id', needView, (req, res) => {
     try {
       const id = Number(req.params.id);

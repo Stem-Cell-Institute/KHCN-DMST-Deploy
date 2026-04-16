@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản trị module Thiết bị - STIMS</title>
+  <link rel="stylesheet" href="/public/equipment/equip-layout.css" />
+</head>
+<body class="eq-body">
+  <div class="eq-app">
+    <aside class="eq-sidebar">
+      <div class="eq-sidebar__brand">
+        <span>STIMS</span>
+        <a href="/index.html" class="eq-nav-home">Trang chủ</a>
+      </div>
+      <nav class="eq-nav">
+        <a href="/public/equipment/index.html">Danh sách thiết bị</a>
+        <a href="/public/equipment/form.html">Thêm thiết bị</a>
+        <a href="/public/equipment/dashboard.html">Dashboard</a>
+        <a class="eq-nav--active" href="/public/equipment/permissions.html">Quản trị module</a>
+      </nav>
+      <div id="eq-equipment-notifications" class="eq-equipment-notifications"></div>
+    </aside>
+
+    <main class="eq-main">
+      <div class="eq-header">
+        <div class="eq-header__title">
+          <h1 id="perm-page-title">Quản trị module Thiết bị</h1>
+      </div>
+        <div class="eq-header__tail">
+          <div id="eq-auth-bar" class="eq-auth-bar" aria-live="polite"></div>
+          <div class="eq-header__actions">
+            <a class="eq-btn eq-btn--ghost" href="/public/equipment/index.html">← Quay lại danh sách</a>
+              </div>
+              </div>
+              </div>
+      <div id="msg"></div>
+
+      <div id="section-no-delegated-tools" class="nav-hidden" style="margin-bottom:14px;padding:12px 14px;border-radius:12px;border:1px solid var(--eq-border);background:var(--eq-surface,#f8fafc);color:var(--eq-muted);font-size:0.9rem;">
+        Bạn đã đăng nhập nhưng chưa được giao quyền quản lý phòng/lab hay mục nội dung trên trang này. Liên hệ Admin nếu cần thêm quyền.
+      </div>
+
+      <section id="section-module-policy" class="eq-form nav-hidden" style="max-width:none;">
+        <h2 style="font-size:1.06rem;margin:0 0 12px;">1) Chính sách truy cập module</h2>
+        <p style="margin:0 0 12px;color:var(--eq-muted);font-size:0.9rem;">
+          Master Admin quyết định module mở cho mọi tài khoản STIMS, chỉ nội viện (@sci.edu.vn), hoặc chỉ allowlist.
+        </p>
+          <div class="eq-form-grid">
+            <div class="eq-form-row">
+            <label for="policy-mode">Chế độ truy cập module</label>
+            <select id="policy-mode">
+              <option value="public">Public trong STIMS</option>
+              <option value="sci_only">Chỉ tài khoản nội viện (@sci.edu.vn)</option>
+              <option value="allowlist">Chỉ user được thêm vào danh sách</option>
+            </select>
+            </div>
+            </div>
+            <div class="eq-form-row">
+          <label class="eq-checkbox-label"><input id="policy-public-incidents" type="checkbox" /> <span>Cho phép báo sự cố từ trang hồ sơ QR (không đăng nhập)</span></label>
+            </div>
+            <div class="eq-form-row">
+          <label for="policy-emails-new">Email nhận thông báo khi có sự cố mới (mỗi dòng hoặc dấu phẩy)</label>
+          <textarea id="policy-emails-new" rows="3" placeholder="vd: admin@viennn.vn"></textarea>
+            </div>
+            <div class="eq-form-row">
+          <label for="policy-emails-resolved">Email nhận thông báo khi sự cố đã xử lý</label>
+          <textarea id="policy-emails-resolved" rows="3" placeholder="vd: vientruong@viennn.vn"></textarea>
+            </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="button" class="eq-btn" id="btn-save-policy">Lưu chính sách module</button>
+            </div>
+      </section>
+
+      <div id="section-module-user-assign" class="nav-hidden">
+      <section class="eq-form" style="max-width:none;margin-top:18px;">
+        <h2 style="font-size:1.06rem;margin:0 0 12px;">2) Gán user vào module (Master Admin)</h2>
+          <div class="eq-form-grid">
+            <div class="eq-form-row">
+            <label for="user-search">Chọn user trong STIMS</label>
+            <input id="user-search" type="text" list="user-suggestions" placeholder="Gõ tên hoặc email để tìm user..." autocomplete="off" />
+            <datalist id="user-suggestions"></datalist>
+            <input id="user-select" type="hidden" value="" />
+            </div>
+            <div class="eq-form-row">
+            <label for="module-role">Vai trò trong module</label>
+            <select id="module-role">
+              <option value="viewer">Viewer</option>
+              <option value="manager">Module Manager</option>
+            </select>
+            </div>
+            <div class="eq-form-row">
+            <label for="view-scope">Giới hạn xem của user</label>
+            <select id="view-scope">
+              <option value="inherit">Theo chính sách module</option>
+              <option value="public">Chỉ dữ liệu public</option>
+              <option value="institute">Trong viện</option>
+              <option value="allowlist">Chỉ theo allowlist</option>
+            </select>
+            </div>
+            <div class="eq-form-row">
+            <label for="user-note">Ghi chú quản trị</label>
+            <input id="user-note" type="text" placeholder="Ví dụ: phụ trách lab trọng điểm" />
+            </div>
+          </div>
+          <div class="eq-form-grid">
+          <label class="eq-checkbox-label"><input id="cap-departments" type="checkbox" /> <span>Module Manager được thêm/sửa/xoá phòng thí nghiệm</span></label>
+          <label class="eq-checkbox-label"><input id="cap-public-content" type="checkbox" /> <span>Module Manager được điều chỉnh nội dung công khai hồ sơ</span></label>
+            </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+          <button type="button" class="eq-btn" id="btn-save-user-access">Lưu quyền user</button>
+          <button type="button" class="eq-btn eq-btn--ghost" id="btn-clear-form">Đặt lại form</button>
+            </div>
+      </section>
+
+      <section class="eq-form" style="max-width:none;margin-top:18px;">
+        <h2 style="font-size:1.06rem;margin:0 0 12px;">Danh sách user đã được cấp quyền vào module</h2>
+        <div class="eq-table-wrap">
+          <table class="eq-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Vai trò module</th>
+                <th>Giới hạn xem</th>
+                <th>Công cụ quản trị</th>
+                <th>Cập nhật</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="tb-access"></tbody>
+          </table>
+            </div>
+      </section>
+        </div>
+
+      <section id="section-module-departments" class="eq-form nav-hidden" style="max-width:none;margin-top:18px;">
+        <h2 style="font-size:1.06rem;margin:0 0 12px;">3) Quản trị phòng thí nghiệm / đơn vị</h2>
+            <div class="eq-form-grid">
+              <div class="eq-form-row">
+            <label for="dept-code">Mã phòng/lab</label>
+            <input id="dept-code" type="text" placeholder="VD: LAB-HEMATO" />
+              </div>
+              <div class="eq-form-row">
+            <label for="dept-name">Tên phòng/lab</label>
+            <input id="dept-name" type="text" placeholder="VD: Phòng Huyết học" />
+              </div>
+              <div class="eq-form-row">
+            <label for="dept-sort">Thứ tự hiển thị</label>
+            <input id="dept-sort" type="number" value="0" />
+              </div>
+              </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+          <button type="button" class="eq-btn" id="btn-add-dept">Thêm phòng/lab</button>
+            </div>
+        <div class="eq-table-wrap" style="margin-top:14px;">
+          <table class="eq-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Mã</th>
+                <th>Tên</th>
+                <th>Thứ tự</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="tb-dept"></tbody>
+          </table>
+          </div>
+      </section>
+
+      <section id="section-viewer-fields" class="eq-form nav-hidden" style="max-width:none;margin-top:18px;">
+        <h2 style="font-size:1.06rem;margin:0 0 12px;">5) Trường thông tin thiết bị Viewer được phép xem</h2>
+        <p style="margin:0 0 12px;color:var(--eq-muted);font-size:0.9rem;">
+          Module Manager có thể bật/tắt từng trường để giới hạn thông tin hiển thị cho user cấp Viewer.
+        </p>
+        <div class="eq-table-wrap">
+          <table class="eq-table">
+            <thead>
+              <tr>
+                <th>Trường dữ liệu</th>
+                <th>Tên hiển thị</th>
+                <th>Viewer được xem</th>
+              </tr>
+            </thead>
+            <tbody id="tb-viewer-fields"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+          <button type="button" class="eq-btn" id="btn-save-viewer-fields">Lưu quyền xem Viewer</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/public/js/equipmentApi.js"></script>
+  <script src="/public/js/equipmentToast.js"></script>
+  <script src="/public/js/equipmentNav.js"></script>
+  <script src="/js/page-greeting.js"></script>
+  <script src="/public/js/equipmentAuthBar.js"></script>
+  <script src="/public/js/equipmentNotifications.js"></script>
+  <script>
+(function () {
+  var state = {
+    users: [],
+    assignments: [],
+    departments: [],
+    policy: {
+      accessMode: 'public',
+      publicFields: [],
+      incidentEmailsNew: [],
+      incidentEmailsResolved: [],
+      publicIncidentReports: true,
+    },
+    isMasterAdmin: false,
+    capabilities: {},
+    viewerFieldPolicy: {
+      defs: [],
+      visibleFields: [],
+    },
+  };
+  var viewerFieldDefsFallback = [
+    { key: 'equipment_code', label: 'Mã thiết bị' },
+    { key: 'name', label: 'Tên thiết bị' },
+    { key: 'asset_group', label: 'Loại tài sản' },
+    { key: 'model', label: 'Model' },
+    { key: 'serial_number', label: 'Serial' },
+    { key: 'manufacturer', label: 'Nhà sản xuất' },
+    { key: 'purchase_year', label: 'Năm mua' },
+    { key: 'purchase_value', label: 'Giá trị mua' },
+    { key: 'asset_type_code', label: 'Mã loại tài sản' },
+    { key: 'year_in_use', label: 'Năm đưa vào sử dụng' },
+    { key: 'unit_name', label: 'Đơn vị tính' },
+    { key: 'quantity_book', label: 'Theo sổ kế toán' },
+    { key: 'quantity_actual', label: 'Theo thực tế kiểm kê' },
+    { key: 'quantity_diff', label: 'Chênh lệch' },
+    { key: 'remaining_value', label: 'GTCL' },
+    { key: 'utilization_note', label: 'Tình hình khai thác' },
+    { key: 'condition_note', label: 'Tình trạng tài sản' },
+    { key: 'disaster_impact_note', label: 'Ảnh hưởng thiên tai' },
+    { key: 'construction_asset_note', label: 'Tài sản công trình' },
+    { key: 'usage_count_note', label: 'Số lần (nếu có)' },
+    { key: 'land_attached_note', label: 'Tài sản gắn liền với đất' },
+    { key: 'asset_note', label: 'Ghi chú tài sản' },
+    { key: 'department_id', label: 'Phòng/Lab' },
+    { key: 'manager_id', label: 'Cán bộ phụ trách' },
+    { key: 'location', label: 'Vị trí' },
+    { key: 'status', label: 'Trạng thái' },
+    { key: 'profile_visibility', label: 'Hiển thị hồ sơ' },
+    { key: 'created_at', label: 'Ngày tạo' },
+    { key: 'updated_at', label: 'Ngày cập nhật' },
+    { key: 'published_at', label: 'Ngày xuất bản' },
+    { key: 'last_maintenance_date', label: 'Lần bảo trì gần nhất' },
+    { key: 'next_maintenance_date', label: 'Hạn bảo trì tiếp theo' },
+    { key: 'calibration_due_date', label: 'Hạn kiểm định' },
+    { key: 'specs_json', label: 'Thông số kỹ thuật' }
+  ];
+
+  function msg(t, isErr) {
+    var box = document.getElementById('msg');
+    box.innerHTML = t ? '<div class="eq-msg ' + (isErr ? 'eq-msg--err' : 'eq-msg--ok') + '">' + t + '</div>' : '';
+  }
+
+  function toastOk(text) {
+    if (window.stimsToast) window.stimsToast(text, true);
+  }
+
+  function toastErr(text) {
+    if (window.stimsToast) window.stimsToast(text, false);
+  }
+
+  function setBtnBusy(btn, busy, busyText) {
+    if (!btn) return;
+    if (busy) {
+      if (!btn.dataset.eqDefaultLabel) btn.dataset.eqDefaultLabel = btn.textContent;
+      btn.disabled = true;
+      btn.classList.add('eq-btn--busy');
+      btn.textContent = busyText || 'Đang lưu...';
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('eq-btn--busy');
+      if (btn.dataset.eqDefaultLabel) btn.textContent = btn.dataset.eqDefaultLabel;
+    }
+  }
+
+  function setSectionVisible(id, on) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (on) el.classList.remove('nav-hidden');
+    else el.classList.add('nav-hidden');
+  }
+
+  function applyPermissionsSectionsVisibility() {
+    var master = state.isMasterAdmin === true;
+    var caps = state.capabilities || {};
+    var showDept = master || !!caps.canManageDepartments;
+    var showViewerFields = master || !!caps.canConfigureViewerFields;
+    setSectionVisible('section-module-policy', master);
+    setSectionVisible('section-module-user-assign', master);
+    setSectionVisible('section-module-departments', showDept);
+    setSectionVisible('section-viewer-fields', showViewerFields);
+    setSectionVisible('section-no-delegated-tools', !master && !showDept && !showViewerFields);
+    var t = document.getElementById('perm-page-title');
+    if (t) {
+      t.textContent = master ? 'Công cụ Master Admin - Module Thiết bị' : 'Quản trị module Thiết bị';
+    }
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  }
+
+  function userLabel(u) {
+    var role = u.role ? ' · ' + u.role : '';
+    return (u.fullname || '(chưa tên)') + ' - ' + (u.email || '') + role;
+  }
+
+  function buildPublicFields() {
+    var host = document.getElementById('public-fields');
+    if (!host) return;
+    host.innerHTML = '';
+  }
+
+  function readPublicFields() {
+    if (!document.getElementById('public-fields')) return [];
+    var out = [];
+    document.querySelectorAll('[data-pf]').forEach(function (n) {
+      if (n.checked) out.push(n.getAttribute('data-pf'));
+    });
+    return out;
+  }
+
+  function applyPolicyToUi() {
+    var mode = String((state.policy && state.policy.accessMode) || 'public').toLowerCase();
+    if (['public', 'sci_only', 'allowlist'].indexOf(mode) < 0) mode = 'public';
+    document.getElementById('policy-mode').value = mode;
+    var en = document.getElementById('policy-emails-new');
+    var er = document.getElementById('policy-emails-resolved');
+    var pi = document.getElementById('policy-public-incidents');
+    if (en) en.value = (state.policy.incidentEmailsNew || []).join('\n');
+    if (er) er.value = (state.policy.incidentEmailsResolved || []).join('\n');
+    if (pi) pi.checked = state.policy.publicIncidentReports !== false;
+  }
+
+  function moduleRoleLabel(role) {
+    var r = String(role || 'viewer').toLowerCase();
+    if (r === 'manager') return 'Module Manager';
+    if (r === 'editor' || r === 'admin') return 'Module Manager';
+    return 'Viewer';
+  }
+
+  function normalizeModuleRole(role) {
+    var r = String(role || 'viewer').toLowerCase();
+    if (r === 'editor' || r === 'admin') return 'manager';
+    if (r === 'manager') return 'manager';
+    return 'viewer';
+  }
+
+  function findUserById(uid) {
+    return state.users.find(function (u) {
+      return String(u.id) === String(uid);
+    }) || null;
+  }
+
+  function findUserByTypedLabel(text) {
+    var q = String(text || '').trim().toLowerCase();
+    if (!q) return null;
+    return state.users.find(function (u) {
+      return userLabel(u).toLowerCase() === q || (u.email && String(u.email).toLowerCase() === q);
+    }) || null;
+  }
+
+  function setSelectedUser(userOrNull) {
+    var hidden = document.getElementById('user-select');
+    var search = document.getElementById('user-search');
+    if (!hidden || !search) return;
+    if (userOrNull && userOrNull.id != null) {
+      hidden.value = String(userOrNull.id);
+      search.value = userLabel(userOrNull);
+      return;
+    }
+    hidden.value = '';
+    search.value = '';
+  }
+
+  function renderUserOptions() {
+    var dl = document.getElementById('user-suggestions');
+    if (!dl) return;
+    dl.innerHTML =
+      state.users.map(function (u) {
+        return '<option value="' + esc(userLabel(u)) + '" data-id="' + esc(u.id) + '"></option>';
+      }).join('');
+  }
+
+  function renderAssignments() {
+    var tb = document.getElementById('tb-access');
+    if (!state.assignments.length) {
+      tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--eq-muted);">Chưa có user nào được cấp quyền module.</td></tr>';
+      return;
+    }
+    tb.innerHTML = state.assignments
+      .map(function (a) {
+        var caps = [];
+        if (Number(a.can_manage_categories) === 1) caps.push('Mục nội dung');
+        if (Number(a.can_manage_departments) === 1) caps.push('Phòng/Lab');
+        if (Number(a.can_manage_public_content) === 1) caps.push('Nội dung công khai');
+        if (!caps.length) caps.push('Không');
+        return (
+          '<tr>' +
+          '<td><strong>' + esc(a.fullname || '') + '</strong><div style="font-size:.82rem;color:var(--eq-muted);">' + esc(a.email || '') + '</div></td>' +
+          '<td>' + esc(moduleRoleLabel(a.module_role)) + '</td>' +
+          '<td>' + esc(a.view_scope || 'inherit') + '</td>' +
+          '<td>' + esc(caps.join(', ')) + '</td>' +
+          '<td>' + esc(a.updated_at || '') + '</td>' +
+          '<td>' +
+          '<button type="button" class="eq-btn eq-btn--ghost" data-act="edit-assignment" data-id="' + a.user_id + '">Sửa</button> ' +
+          '<button type="button" class="eq-btn eq-btn--danger" data-act="remove-assignment" data-id="' + a.user_id + '">Xoá</button>' +
+          '</td>' +
+          '</tr>'
+        );
+      })
+      .join('');
+  }
+
+  function renderDepartments() {
+    var tb = document.getElementById('tb-dept');
+    if (!state.departments.length) {
+      tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--eq-muted);">Chưa có phòng/lab.</td></tr>';
+      return;
+    }
+    tb.innerHTML = state.departments.map(function (d) {
+      return (
+        '<tr>' +
+        '<td>' + d.id + '</td>' +
+        '<td>' + esc(d.code) + '</td>' +
+        '<td>' + esc(d.name) + '</td>' +
+        '<td>' + esc(d.sort_order) + '</td>' +
+        '<td>' +
+        '<button type="button" class="eq-btn eq-btn--ghost" data-act="edit-dept" data-id="' + d.id + '">Sửa</button> ' +
+        '<button type="button" class="eq-btn eq-btn--danger" data-act="remove-dept" data-id="' + d.id + '">Xoá</button>' +
+        '</td>' +
+        '</tr>'
+      );
+    }).join('');
+  }
+
+
+  function renderViewerFields() {
+    var tb = document.getElementById('tb-viewer-fields');
+    if (!tb) return;
+    var defs = (state.viewerFieldPolicy && state.viewerFieldPolicy.defs) || [];
+    if (!defs.length) defs = viewerFieldDefsFallback.slice();
+    var visible = {};
+    var visArr = (state.viewerFieldPolicy && state.viewerFieldPolicy.visibleFields) || [];
+    if (!visArr.length) visArr = defs.map(function (d) { return d.key; });
+    visArr.forEach(function (k) {
+      visible[String(k)] = true;
+    });
+    if (!defs.length) {
+      tb.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--eq-muted);">Chưa có dữ liệu trường thông tin.</td></tr>';
+      return;
+    }
+    tb.innerHTML = defs
+      .map(function (d) {
+        var key = String(d.key || '');
+        return (
+          '<tr>' +
+          '<td><code>' + esc(key) + '</code></td>' +
+          '<td>' + esc(d.label || key) + '</td>' +
+          '<td><label class="eq-checkbox-label"><input type="checkbox" data-vf="' +
+          esc(key) +
+          '"' +
+          (visible[key] ? ' checked' : '') +
+          '/><span>' +
+          (visible[key] ? 'Có' : 'Không') +
+          '</span></label></td>' +
+          '</tr>'
+        );
+      })
+      .join('');
+  }
+
+  function readViewerVisibleFields() {
+    var out = [];
+    document.querySelectorAll('[data-vf]').forEach(function (n) {
+      if (n.checked) out.push(String(n.getAttribute('data-vf') || ''));
+    });
+    return out;
+  }
+
+  function resetUserForm() {
+    setSelectedUser(null);
+    document.getElementById('module-role').value = 'viewer';
+    document.getElementById('view-scope').value = 'inherit';
+    document.getElementById('user-note').value = '';
+    document.getElementById('cap-departments').checked = false;
+    document.getElementById('cap-public-content').checked = false;
+  }
+
+  function fillUserForm(a) {
+    setSelectedUser(findUserById(a.user_id));
+    document.getElementById('module-role').value = normalizeModuleRole(a.module_role);
+    document.getElementById('view-scope').value = a.view_scope || 'inherit';
+    document.getElementById('user-note').value = a.note || '';
+    document.getElementById('cap-departments').checked = Number(a.can_manage_departments) === 1;
+    document.getElementById('cap-public-content').checked = Number(a.can_manage_public_content) === 1;
+  }
+
+  function loadBootstrap(opts) {
+    opts = opts || {};
+    if (!opts.keepMessage) msg('');
+    return window.equipmentApi.getJson('/module/admin/bootstrap').then(function (r) {
+      if (r.status === 401) {
+        window.location.href = '/dang-nhap.html?returnUrl=' + encodeURIComponent('public/equipment/permissions.html');
+        return;
+      }
+      if (!r.ok) {
+        state.isMasterAdmin = false;
+        state.capabilities = {};
+        applyPermissionsSectionsVisibility();
+        msg((r.data && r.data.message) || 'Bạn không có quyền truy cập công cụ này.', true);
+        return;
+      }
+      var d = r.data && r.data.data ? r.data.data : {};
+      state.isMasterAdmin = d.isMasterAdmin === true;
+      state.capabilities = d.capabilities || {};
+      if (state.isMasterAdmin) {
+        state.policy = d.policy || {
+          accessMode: 'public',
+          publicFields: [],
+          incidentEmailsNew: [],
+          incidentEmailsResolved: [],
+          publicIncidentReports: true,
+        };
+        state.users = d.users || [];
+        state.assignments = d.assignments || [];
+        buildPublicFields();
+        applyPolicyToUi();
+        renderUserOptions();
+        renderAssignments();
+      } else {
+        state.policy = {
+          accessMode: 'public',
+          publicFields: [],
+          incidentEmailsNew: [],
+          incidentEmailsResolved: [],
+          publicIncidentReports: true,
+        };
+        state.users = [];
+        state.assignments = [];
+        var tbAcc = document.getElementById('tb-access');
+        if (tbAcc) tbAcc.innerHTML = '';
+        setSelectedUser(null);
+        var uSug = document.getElementById('user-suggestions');
+        if (uSug) uSug.innerHTML = '';
+      }
+      state.viewerFieldPolicy = d.viewerFieldPolicy || { defs: viewerFieldDefsFallback.slice(), visibleFields: viewerFieldDefsFallback.map(function (x) { return x.key; }) };
+      state.departments = d.departments || [];
+      renderDepartments();
+      renderViewerFields();
+      applyPermissionsSectionsVisibility();
+    });
+  }
+
+  document.getElementById('btn-save-policy').addEventListener('click', function () {
+    var btn = document.getElementById('btn-save-policy');
+    var body = {
+      accessMode: document.getElementById('policy-mode').value,
+      incidentEmailsNewText: document.getElementById('policy-emails-new').value,
+      incidentEmailsResolvedText: document.getElementById('policy-emails-resolved').value,
+      publicIncidentReports: document.getElementById('policy-public-incidents').checked,
+    };
+    setBtnBusy(btn, true, 'Đang lưu...');
+    window.equipmentApi.sendJson('PUT', '/module/admin/policy', body).then(function (r) {
+      setBtnBusy(btn, false);
+      if (!r.ok) {
+        var err = (r.data && r.data.message) || 'Không lưu được chính sách';
+        msg(err, true);
+        toastErr(err);
+        return;
+      }
+      loadBootstrap({ keepMessage: true }).then(function () {
+        msg('Đã lưu chính sách truy cập module.', false);
+        toastOk('Đã lưu chính sách module.');
+      });
+    }).catch(function () {
+      setBtnBusy(btn, false);
+      var err = 'Không kết nối được máy chủ. Thử lại sau.';
+      msg(err, true);
+      toastErr(err);
+      });
+    });
+
+  document.getElementById('btn-save-viewer-fields').addEventListener('click', function () {
+    var btn = document.getElementById('btn-save-viewer-fields');
+    var body = {
+      visibleFields: readViewerVisibleFields(),
+    };
+    setBtnBusy(btn, true, 'Đang lưu...');
+    window.equipmentApi.sendJson('PUT', '/module/admin/viewer-fields', body).then(function (r) {
+      setBtnBusy(btn, false);
+      if (!r.ok) {
+        var err = (r.data && r.data.message) || 'Không lưu được quyền xem Viewer.';
+        msg(err, true);
+        toastErr(err);
+        return;
+      }
+      loadBootstrap({ keepMessage: true }).then(function () {
+        msg('Đã lưu quyền xem trường thông tin cho Viewer.', false);
+        toastOk('Đã lưu quyền xem Viewer.');
+      });
+    }).catch(function () {
+      setBtnBusy(btn, false);
+      var err = 'Không kết nối được máy chủ. Thử lại sau.';
+      msg(err, true);
+      toastErr(err);
+    });
+  });
+
+  document.getElementById('btn-save-user-access').addEventListener('click', function () {
+    var btn = document.getElementById('btn-save-user-access');
+    var uid = document.getElementById('user-select').value;
+    if (!uid) {
+      msg('Vui lòng chọn user.', true);
+      toastErr('Vui lòng chọn user.');
+      return;
+    }
+    var body = {
+      moduleRole: document.getElementById('module-role').value,
+      viewScope: document.getElementById('view-scope').value,
+      note: document.getElementById('user-note').value.trim(),
+      canManageDepartments: document.getElementById('cap-departments').checked,
+      canManagePublicContent: document.getElementById('cap-public-content').checked
+    };
+    setBtnBusy(btn, true, 'Đang lưu...');
+    window.equipmentApi.sendJson('PUT', '/module/admin/user/' + encodeURIComponent(uid), body).then(function (r) {
+      setBtnBusy(btn, false);
+      if (!r.ok) {
+        var err = (r.data && r.data.message) || 'Không lưu được quyền user.';
+        msg(err, true);
+        toastErr(err);
+        return;
+      }
+      loadBootstrap({ keepMessage: true }).then(function () {
+        msg('Đã cập nhật quyền truy cập module cho user.', false);
+        toastOk('Đã lưu quyền user.');
+      });
+    }).catch(function () {
+      setBtnBusy(btn, false);
+      var err = 'Không kết nối được máy chủ. Thử lại sau.';
+      msg(err, true);
+      toastErr(err);
+    });
+  });
+
+  document.getElementById('btn-clear-form').addEventListener('click', resetUserForm);
+  document.getElementById('user-search').addEventListener('input', function () {
+    var picked = findUserByTypedLabel(this.value);
+    document.getElementById('user-select').value = picked ? String(picked.id) : '';
+  });
+  document.getElementById('user-search').addEventListener('change', function () {
+    var picked = findUserByTypedLabel(this.value);
+    if (picked) setSelectedUser(picked);
+    else this.value = '';
+  });
+
+  document.getElementById('tb-access').addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-act]');
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    var id = btn.getAttribute('data-id');
+    if (!id) return;
+    if (act === 'edit-assignment') {
+      var row = state.assignments.find(function (x) { return String(x.user_id) === String(id); });
+      if (row) fillUserForm(row);
+      return;
+    }
+    if (act === 'remove-assignment') {
+      if (!confirm('Xoá user khỏi danh sách truy cập module?')) return;
+      window.equipmentApi.sendJson('DELETE', '/module/admin/user/' + encodeURIComponent(id), null).then(function (r) {
+        if (!r.ok) {
+          var err = (r.data && r.data.message) || 'Không xoá được user khỏi module.';
+          msg(err, true);
+          toastErr(err);
+      return;
+    }
+        loadBootstrap({ keepMessage: true }).then(function () {
+          msg('Đã xoá user khỏi danh sách module.', false);
+          toastOk('Đã xoá user khỏi module.');
+        });
+      });
+    }
+  });
+
+  document.getElementById('btn-add-dept').addEventListener('click', function () {
+    var body = {
+      code: document.getElementById('dept-code').value.trim(),
+      name: document.getElementById('dept-name').value.trim(),
+      sortOrder: Number(document.getElementById('dept-sort').value || 0)
+    };
+    window.equipmentApi.sendJson('POST', '/module/admin/departments', body).then(function (r) {
+      if (!r.ok) {
+        var err = (r.data && r.data.message) || 'Không thêm được phòng/lab.';
+        msg(err, true);
+        toastErr(err);
+        return;
+      }
+      document.getElementById('dept-code').value = '';
+      document.getElementById('dept-name').value = '';
+      document.getElementById('dept-sort').value = '0';
+      loadBootstrap({ keepMessage: true }).then(function () {
+        msg('Đã thêm phòng/lab.', false);
+        toastOk('Đã thêm phòng/lab.');
+      });
+    });
+  });
+
+  document.getElementById('tb-dept').addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-act]');
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    var id = btn.getAttribute('data-id');
+    if (!id) return;
+    if (act === 'edit-dept') {
+      var row = state.departments.find(function (x) { return String(x.id) === String(id); });
+      if (!row) return;
+      var code = prompt('Mã phòng/lab', row.code);
+      if (code == null) return;
+      var name = prompt('Tên phòng/lab', row.name);
+      if (name == null) return;
+      var sort = prompt('Thứ tự', String(row.sort_order || 0));
+      if (sort == null) return;
+      window.equipmentApi.sendJson('PATCH', '/module/admin/departments/' + encodeURIComponent(id), {
+        code: String(code || '').trim(),
+        name: String(name || '').trim(),
+        sortOrder: Number(sort || 0)
+      }).then(function (r) {
+        if (!r.ok) {
+          var err = (r.data && r.data.message) || 'Không sửa được phòng/lab.';
+          msg(err, true);
+          toastErr(err);
+          return;
+        }
+        loadBootstrap({ keepMessage: true }).then(function () {
+          msg('Đã cập nhật phòng/lab.', false);
+          toastOk('Đã cập nhật phòng/lab.');
+        });
+      });
+      return;
+    }
+    if (act === 'remove-dept') {
+      if (!confirm('Xoá phòng/lab này?')) return;
+      window.equipmentApi.sendJson('DELETE', '/module/admin/departments/' + encodeURIComponent(id), null).then(function (r) {
+        if (!r.ok) {
+          var err = (r.data && r.data.message) || 'Không xoá được phòng/lab.';
+          msg(err, true);
+          toastErr(err);
+          return;
+        }
+        loadBootstrap({ keepMessage: true }).then(function () {
+          msg('Đã xoá phòng/lab.', false);
+          toastOk('Đã xoá phòng/lab.');
+        });
+      });
+    }
+  });
+
+
+  if (window.equipmentNav && window.equipmentNav.sync) {
+    window.equipmentNav
+      .sync({ requirePermissionsPage: true })
+      .then(function () {
+        return loadBootstrap();
+      })
+      .catch(function (e) {
+        if (e && e.code === 'NAV_REDIRECT') return;
+        loadBootstrap();
+      });
+  } else {
+    loadBootstrap();
+  }
+})();
+  </script>
+</body>
+</html>
+

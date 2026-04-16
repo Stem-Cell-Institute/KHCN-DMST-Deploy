@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thiết bị — Nhập hồ sơ</title>
+  <link rel="stylesheet" href="/public/equipment/equip-layout.css" />
+</head>
+<body class="eq-body">
+  <div class="eq-app">
+    <aside class="eq-sidebar">
+      <div class="eq-sidebar__brand">
+        <span>STIMS</span>
+        <a href="/index.html" class="eq-nav-home">Trang chủ</a>
+      </div>
+      <nav class="eq-nav">
+        <a href="/public/equipment/index.html">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+          Danh sách thiết bị
+        </a>
+        <a class="eq-nav--active" href="/public/equipment/form.html" id="nav-form">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 5v14M5 12h14"/></svg>
+          Hồ sơ mới
+        </a>
+        <a href="/public/equipment/permissions.html" id="nav-permissions" class="nav-hidden">Quản trị module</a>
+      </nav>
+      <div id="eq-equipment-notifications" class="eq-equipment-notifications"></div>
+    </aside>
+    <main class="eq-main">
+      <div class="eq-header">
+        <div class="eq-header__title">
+          <h1 id="title">Thêm hồ sơ thiết bị - Viện Tế bào gốc</h1>
+        </div>
+        <div class="eq-header__tail">
+          <div id="eq-auth-bar" class="eq-auth-bar" aria-live="polite"></div>
+          <div class="eq-header__actions">
+            <a class="eq-btn eq-btn--ghost" href="/public/equipment/index.html">← Danh sách</a>
+          </div>
+        </div>
+      </div>
+      <div id="msg"></div>
+
+      <div id="success-panel" class="eq-form" style="display:none;max-width:720px;">
+        <h2 style="margin-top:0;font-size:1.1rem;color:#6ee7b7;">Đã tạo hồ sơ</h2>
+        <p style="font-size:1rem;">Mã thiết bị: <strong id="succ-code"></strong></p>
+        <div style="text-align:center;margin:16px 0;">
+          <img id="succ-qr" alt="QR" style="max-width:220px;border-radius:12px;background:#fff;padding:8px;" />
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+          <a class="eq-btn" id="succ-qr-dl" href="#" download="equipment-qr.png">Tải QR PNG</a>
+          <a class="eq-btn eq-btn--ghost" id="succ-docs" href="#">Thêm tài liệu ngay</a>
+        </div>
+      </div>
+
+      <form class="eq-form" id="f">
+        <div class="eq-wizard-steps" id="wiz-head">
+          <span class="eq-wizard-step eq-wizard-step--on" id="st1">1 · Thông tin chung</span>
+          <span class="eq-wizard-step" id="st2">2 · Thông tin mua hàng</span>
+          <span class="eq-wizard-step" id="st3">3 · Quản lý &amp; Vị trí</span>
+          <span class="eq-wizard-step" id="st4">4 · Thông số &amp; Mã</span>
+        </div>
+
+        <fieldset id="g1" class="eq-step-group" style="border:none;padding:0;margin:0;">
+          <h2 style="font-size:0.95rem;color:var(--eq-muted);margin:0 0 14px;">Thông tin chung</h2>
+          <div class="eq-form-grid">
+            <div class="eq-form-row" id="row-name">
+              <label for="inp-name">Tên thiết bị *</label>
+              <input id="inp-name" name="name" required autocomplete="off" />
+            </div>
+            <div class="eq-form-row" id="row-model">
+              <label for="inp-model">Model *</label>
+              <input id="inp-model" name="model" required autocomplete="off" />
+            </div>
+            <div class="eq-form-row">
+              <label>Số serial</label>
+              <input name="serial_number" autocomplete="off" />
+            </div>
+            <div class="eq-form-row">
+              <label>Nhà sản xuất</label>
+              <input name="manufacturer" autocomplete="off" />
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset id="g2" class="eq-step-group" hidden style="border:none;padding:0;margin:0;">
+          <h2 style="font-size:0.95rem;color:var(--eq-muted);margin:0 0 14px;">Thông tin mua hàng</h2>
+          <div class="eq-form-grid">
+            <div class="eq-form-row">
+              <label>Năm mua</label>
+              <input name="purchase_year" type="number" min="1970" max="2100" />
+            </div>
+            <div class="eq-form-row">
+              <label>Giá trị mua (VNĐ)</label>
+              <input name="purchase_value" type="number" step="0.01" min="0" />
+            </div>
+            <div class="eq-form-row">
+              <label>Loại tài sản (nhóm)</label>
+              <input name="asset_group" autocomplete="off" />
+            </div>
+            <div class="eq-form-row">
+              <label>Mã loại tài sản (Excel)</label>
+              <input name="asset_type_code" autocomplete="off" />
+            </div>
+            <div class="eq-form-row">
+              <label>Năm đưa vào sử dụng</label>
+              <input name="year_in_use" type="number" min="1900" max="2100" />
+            </div>
+            <div class="eq-form-row">
+              <label>Đơn vị tính</label>
+              <input name="unit_name" autocomplete="off" />
+            </div>
+            <div class="eq-form-row">
+              <label>Theo sổ kế toán</label>
+              <input name="quantity_book" type="number" step="0.001" />
+            </div>
+            <div class="eq-form-row">
+              <label>Theo thực tế kiểm kê</label>
+              <input name="quantity_actual" type="number" step="0.001" />
+            </div>
+            <div class="eq-form-row">
+              <label>Chênh lệch</label>
+              <input name="quantity_diff" type="number" step="0.001" />
+            </div>
+            <div class="eq-form-row">
+              <label>GTCL (đồng)</label>
+              <input name="remaining_value" type="number" step="0.01" min="0" />
+            </div>
+            <div class="eq-form-row" style="grid-column:1 / -1;">
+              <label>Tình hình khai thác sử dụng</label>
+              <select name="utilization_note">
+                <option value="">— Chọn —</option>
+                <option value="0">0 - Chưa ghi sổ kế toán</option>
+                <option value="1">1 - Đã ghi sổ kế toán</option>
+                <option value="2">2 - Không phải ghi sổ kế toán</option>
+                <option value="3">3 - Không có nhu cầu sử dụng</option>
+              </select>
+            </div>
+            <div class="eq-form-row" style="grid-column:1 / -1;">
+              <label>Tình trạng của tài sản</label>
+              <select name="condition_note">
+                <option value="">— Chọn —</option>
+                <option value="0">0 - Còn sử dụng được, đang sử dụng đúng mục đích</option>
+                <option value="1">1 - Còn sử dụng được, đang sử dụng không đúng mục đích</option>
+                <option value="2">2 - Còn sử dụng được, không có nhu cầu sử dụng</option>
+                <option value="3">3 - Hỏng, không sử dụng được</option>
+              </select>
+            </div>
+            <div class="eq-form-row" style="grid-column:1 / -1;">
+              <label>Ảnh hưởng bởi thiên tai 2023-2025</label>
+              <textarea name="disaster_impact_note"></textarea>
+            </div>
+            <div class="eq-form-row">
+              <label>Tài sản công trình xây dựng</label>
+              <input name="construction_asset_note" autocomplete="off" />
+            </div>
+            <div class="eq-form-row">
+              <label>Số lần (nếu có)</label>
+              <input name="usage_count_note" autocomplete="off" />
+            </div>
+            <div class="eq-form-row">
+              <label>Tài sản gắn liền với đất</label>
+              <input name="land_attached_note" autocomplete="off" />
+            </div>
+            <div class="eq-form-row" style="grid-column:1 / -1;">
+              <label>Ghi chú tài sản</label>
+              <textarea name="asset_note"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset id="g3" class="eq-step-group" hidden style="border:none;padding:0;margin:0;">
+          <h2 style="font-size:0.95rem;color:var(--eq-muted);margin:0 0 14px;">Quản lý &amp; Vị trí</h2>
+          <div class="eq-form-grid">
+            <div class="eq-form-row" id="row-dept">
+              <label for="sel-dept">Phòng / Lab quản lý *</label>
+              <select id="sel-dept" name="department_id">
+                <option value="">— Chọn —</option>
+              </select>
+            </div>
+            <div class="eq-form-row">
+              <label for="sel-mgr">Cán bộ phụ trách</label>
+              <select id="sel-mgr" name="manager_id">
+                <option value="">— Chọn —</option>
+              </select>
+            </div>
+            <div class="eq-form-row">
+              <label>Vị trí đặt máy</label>
+              <input name="location" autocomplete="off" />
+            </div>
+            <div class="eq-form-row">
+              <label>Trạng thái ban đầu</label>
+              <select name="status">
+                <option value="active" selected>Hoạt động (active)</option>
+                <option value="maintenance">Bảo trì</option>
+                <option value="broken">Hỏng</option>
+                <option value="retired">Thanh lý</option>
+              </select>
+            </div>
+            <div class="eq-form-row">
+              <label>Hiển thị hồ sơ</label>
+              <select name="profile_visibility">
+                <option value="institute">Nội bộ viện</option>
+                <option value="public">Công khai</option>
+                <option value="internal">Theo đơn vị</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset id="g4" class="eq-step-group" hidden style="border:none;padding:0;margin:0;">
+          <h2 style="font-size:0.95rem;color:var(--eq-muted);margin:0 0 14px;">Thông số kỹ thuật</h2>
+          <p style="font-size:0.82rem;color:var(--eq-muted);margin-bottom:10px;">Thêm từng cặp tên / giá trị (xuất ra JSON khi lưu).</p>
+          <div id="specs-kv"></div>
+          <button type="button" class="eq-btn eq-btn--ghost" id="btn-add-spec" style="margin-bottom:16px;">+ Thêm thông số</button>
+          <div class="eq-form-row">
+            <label>Mã dự kiến (tự sinh khi lưu)</label>
+            <div id="code-preview" style="padding:12px;border-radius:8px;background:var(--eq-navy);font-weight:600;color:#6ee7b7;">—</div>
+          </div>
+          <input type="hidden" name="equipment_code" value="" />
+        </fieldset>
+
+        <div class="eq-wiz-nav" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">
+          <button type="button" class="eq-btn eq-btn--ghost" id="btn-prev" style="display:none;">← Quay lại</button>
+          <button type="button" class="eq-btn" id="btn-next">Tiếp theo →</button>
+          <button type="button" class="eq-btn eq-btn--ghost" id="btn-submit-all" style="display:none;">📋 Nhập thiết bị</button>
+          <button type="submit" class="eq-btn" id="btn-submit" style="display:none;">Lưu hồ sơ</button>
+        </div>
+      </form>
+    </main>
+  </div>
+  <script src="/public/js/equipmentApi.js"></script>
+  <script src="/public/js/equipmentToast.js"></script>
+  <script src="/public/js/equipmentNav.js"></script>
+  <script src="/js/page-greeting.js"></script>
+  <script src="/public/js/equipmentAuthBar.js"></script>
+  <script src="/public/js/equipmentNotifications.js"></script>
+  <script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var editId = params.get('id');
+  var msg = document.getElementById('msg');
+  var step = 1;
+  var f = document.getElementById('f');
+
+  function showMessage(t, err) {
+    msg.innerHTML = t ? '<div class="eq-msg ' + (err ? 'eq-msg--err' : 'eq-msg--ok') + '">' + t + '</div>' : '';
+  }
+
+  function clearErrors() {
+    f.querySelectorAll('.eq-form-row--invalid').forEach(function (el) {
+      el.classList.remove('eq-form-row--invalid');
+    });
+    f.querySelectorAll('.eq-field-err').forEach(function (el) {
+      el.remove();
+    });
+  }
+  function setErr(rowId, text) {
+    var row = document.getElementById(rowId);
+    if (!row) return;
+    row.classList.add('eq-form-row--invalid');
+    var e = document.createElement('div');
+    e.className = 'eq-field-err';
+    e.textContent = text;
+    row.appendChild(e);
+  }
+
+  function isLegacyApprovalSpecKey(k) {
+    if (k == null || typeof k !== 'string') return false;
+    var n = k.trim().toLowerCase();
+    return n === 'trạng thái duyệt' || n === 'lý do trả về';
+  }
+
+  function normalizeCodeValue(v) {
+    if (v == null) return '';
+    var s = String(v).trim();
+    var m = s.match(/^([0-3])(?:\s*[:\-].*)?$/);
+    if (m) return m[1];
+    return s;
+  }
+
+  function ensureSelectValue(selectEl, rawValue, fallbackLabelPrefix) {
+    if (!selectEl) return;
+    var norm = normalizeCodeValue(rawValue);
+    if (!norm) {
+      selectEl.value = '';
+      return;
+    }
+    var has = false;
+    for (var i = 0; i < selectEl.options.length; i++) {
+      if (selectEl.options[i].value === norm) {
+        has = true;
+        break;
+      }
+    }
+    if (has) {
+      selectEl.value = norm;
+      return;
+    }
+    var opt = document.createElement('option');
+    opt.value = String(rawValue);
+    opt.textContent = (fallbackLabelPrefix || 'Giá trị cũ') + ': ' + String(rawValue);
+    selectEl.appendChild(opt);
+    selectEl.value = String(rawValue);
+  }
+
+  function addSpecRow(k, v) {
+    var host = document.getElementById('specs-kv');
+    var wrap = document.createElement('div');
+    wrap.className = 'eq-spec-row';
+    wrap.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;';
+    wrap.innerHTML =
+      '<input data-k type="text" placeholder="Tên thông số" value="' +
+      (k || '').replace(/"/g, '&quot;') +
+      '" style="flex:1;min-width:120px;padding:8px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:var(--eq-navy);color:var(--eq-text);"/>' +
+      '<input data-v type="text" placeholder="Giá trị" value="' +
+      (v || '').replace(/"/g, '&quot;') +
+      '" style="flex:2;min-width:160px;padding:8px;border-radius:8px;border:1px solid rgba(148,163,184,.3);background:var(--eq-navy);color:var(--eq-text);"/>' +
+      '<button type="button" class="eq-btn eq-btn--ghost eq-spec-rm">Xóa</button>';
+    wrap.querySelector('.eq-spec-rm').onclick = function () {
+      wrap.remove();
+    };
+    host.appendChild(wrap);
+  }
+
+  function specsToJson() {
+    var obj = {};
+    f.querySelectorAll('#specs-kv .eq-spec-row').forEach(function (row) {
+      var k = (row.querySelector('[data-k]') && row.querySelector('[data-k]').value.trim()) || '';
+      var v = (row.querySelector('[data-v]') && row.querySelector('[data-v]').value.trim()) || '';
+      if (k) obj[k] = v;
+    });
+    return Object.keys(obj).length ? JSON.stringify(obj) : null;
+  }
+
+  function fillSpecsFromJson(str) {
+    document.getElementById('specs-kv').innerHTML = '';
+    if (!str) {
+      addSpecRow('', '');
+      return;
+    }
+    try {
+      var o = JSON.parse(str);
+      if (o && typeof o === 'object' && !Array.isArray(o)) {
+        var ks = Object.keys(o);
+        if (!ks.length) addSpecRow('', '');
+        else {
+          ks.forEach(function (k) {
+            if (isLegacyApprovalSpecKey(k)) return;
+            addSpecRow(k, o[k]);
+          });
+          if (!document.getElementById('specs-kv').children.length) addSpecRow('', '');
+        }
+        return;
+      }
+    } catch (e) {}
+    addSpecRow('', '');
+  }
+
+  function deptCode() {
+    var sel = document.getElementById('sel-dept');
+    return sel && sel.value ? String(sel.value).trim() : '';
+  }
+
+  function refreshPreviewCode() {
+    var el = document.getElementById('code-preview');
+    var dc = deptCode();
+    var y = parseInt(f.purchase_year.value, 10);
+    if (!Number.isFinite(y)) y = new Date().getFullYear();
+    if (!dc) {
+      el.textContent = '—';
+      return;
+    }
+    window.equipmentApi
+      .getJson('/next-code?department_code=' + encodeURIComponent(dc) + '&year=' + y)
+      .then(function (r) {
+        if (r.ok && r.data && r.data.equipment_code) el.textContent = r.data.equipment_code;
+        else el.textContent = '—';
+      });
+  }
+
+  function showStep(n) {
+    step = n;
+    for (var i = 1; i <= 4; i++) {
+      var g = document.getElementById('g' + i);
+      if (g) g.hidden = i !== n;
+      var st = document.getElementById('st' + i);
+      if (st) {
+        st.className = 'eq-wizard-step' + (i === n ? ' eq-wizard-step--on' : i < n ? ' eq-wizard-step--done' : '');
+      }
+    }
+    document.getElementById('btn-prev').style.display = n === 1 ? 'none' : '';
+    document.getElementById('btn-next').style.display = n === 4 ? 'none' : '';
+    document.getElementById('btn-submit').style.display = n === 4 ? '' : 'none';
+    document.getElementById('btn-submit-all').style.display = n === 4 ? '' : 'none';
+    
+    // Check if all required fields are filled for "Nhập thiết bị" button
+    updateSubmitAllButton();
+    
+    if (n === 4) refreshPreviewCode();
+  }
+
+  function updateSubmitAllButton() {
+    var btnSubmitAll = document.getElementById('btn-submit-all');
+    var canSubmit = validateAllRequiredFields();
+    
+    if (canSubmit) {
+      btnSubmitAll.classList.remove('btn-disabled');
+    } else {
+      btnSubmitAll.classList.add('btn-disabled');
+    }
+  }
+
+  function validateAllRequiredFields() {
+    // Check all required fields with asterisk
+    var name = f.name.value.trim();
+    var model = f.model.value.trim();
+    var dept = deptCode();
+    
+    return name && model && dept;
+  }
+
+  function validateStep(n) {
+    clearErrors();
+    if (n === 1) {
+      if (!f.name.value.trim()) {
+        setErr('row-name', 'Bắt buộc nhập tên thiết bị');
+        return false;
+      }
+      if (!f.model.value.trim()) {
+        setErr('row-model', 'Bắt buộc nhập model');
+        return false;
+      }
+    }
+    if (n === 2) {
+      // Step 2 is purchase info - no required fields
+    }
+    if (n === 3) {
+      if (!deptCode()) {
+        setErr('row-dept', 'Chọn phòng / lab');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  document.getElementById('btn-next').onclick = function () {
+    if (!validateStep(step)) {
+      window.stimsToast && window.stimsToast('Vui lòng kiểm tra các trường', false);
+      return;
+    }
+    if (step < 4) showStep(step + 1);
+  };
+  document.getElementById('btn-prev').onclick = function () {
+    if (step > 1) showStep(step - 1);
+  };
+
+  // Handle "Nhập thiết bị" button click
+  document.getElementById('btn-submit-all').onclick = function () {
+    if (!validateAllRequiredFields()) {
+      window.stimsToast && window.stimsToast('Vui lòng điền đủ các trường có dấu *', false);
+      return;
+    }
+    
+    // Navigate through all steps to fill all data
+    showStep(1);
+    setTimeout(function() { showStep(2); }, 100);
+    setTimeout(function() { showStep(3); }, 200);
+    setTimeout(function() { showStep(4); }, 300);
+    
+    window.stimsToast && window.stimsToast('Đã điền thông tin từ tất cả các bước', true);
+  };
+
+  // Add click handlers for wizard step buttons
+  document.getElementById('st1').addEventListener('click', function() { showStep(1); });
+  document.getElementById('st2').addEventListener('click', function() { showStep(2); });
+  document.getElementById('st3').addEventListener('click', function() { showStep(3); });
+  document.getElementById('st4').addEventListener('click', function() { showStep(4); });
+
+  // Add real-time validation for required fields
+  f.name.addEventListener('input', updateSubmitAllButton);
+  f.model.addEventListener('input', updateSubmitAllButton);
+  document.getElementById('sel-dept').addEventListener('change', function() {
+    updateSubmitAllButton();
+    refreshPreviewCode();
+  });
+
+  document.getElementById('btn-add-spec').onclick = function () {
+    addSpecRow('', '');
+  };
+
+  f.purchase_year.addEventListener('change', refreshPreviewCode);
+  f.purchase_year.addEventListener('input', refreshPreviewCode);
+
+  if (editId) {
+    document.getElementById('title').textContent = 'Sửa hồ sơ #' + editId;
+    document.getElementById('wiz-head').style.display = 'none';
+    var nav = document.querySelector('.eq-wiz-nav');
+    if (nav) nav.style.display = 'flex';
+    for (var j = 1; j <= 4; j++) {
+      document.getElementById('g' + j).hidden = false;
+    }
+    document.getElementById('btn-prev').style.display = 'none';
+    document.getElementById('btn-next').style.display = 'none';
+    document.getElementById('btn-submit-all').style.display = 'none';
+    document.getElementById('btn-submit').style.display = '';
+    document.getElementById('btn-submit').textContent = 'Cập nhật';
+  } else {
+    document.getElementById('sel-dept').setAttribute('required', 'required');
+    addSpecRow('', '');
+    showStep(1);
+  }
+
+  function loadEquipmentIntoForm(e) {
+    f.equipment_code.value = e.equipment_code || '';
+    document.getElementById('code-preview').textContent = e.equipment_code || '—';
+    f.name.value = e.name || '';
+    f.model.value = e.model || '';
+    f.serial_number.value = e.serial_number || '';
+    f.manufacturer.value = e.manufacturer || '';
+    f.purchase_year.value = e.purchase_year != null ? e.purchase_year : '';
+    f.purchase_value.value = e.purchase_value != null ? e.purchase_value : '';
+    f.asset_group.value = e.asset_group || '';
+    f.asset_type_code.value = e.asset_type_code || '';
+    f.year_in_use.value = e.year_in_use != null ? e.year_in_use : '';
+    f.unit_name.value = e.unit_name || '';
+    f.quantity_book.value = e.quantity_book != null ? e.quantity_book : '';
+    f.quantity_actual.value = e.quantity_actual != null ? e.quantity_actual : '';
+    f.quantity_diff.value = e.quantity_diff != null ? e.quantity_diff : '';
+    f.remaining_value.value = e.remaining_value != null ? e.remaining_value : '';
+    ensureSelectValue(f.utilization_note, e.utilization_note || '', 'Khai thác');
+    ensureSelectValue(f.condition_note, e.condition_note || '', 'Tình trạng');
+    f.disaster_impact_note.value = e.disaster_impact_note || '';
+    f.construction_asset_note.value = e.construction_asset_note || '';
+    f.usage_count_note.value = e.usage_count_note || '';
+    f.land_attached_note.value = e.land_attached_note || '';
+    f.asset_note.value = e.asset_note || '';
+    f.department_id.value = e.department_id || '';
+    f.manager_id.value = e.manager_id != null ? e.manager_id : '';
+    f.location.value = e.location || '';
+    f.status.value = e.status || 'active';
+    f.profile_visibility.value = e.profile_visibility || 'institute';
+    fillSpecsFromJson(e.specs_json || '');
+  }
+
+  Promise.all([window.equipmentApi.getJson('/departments'), window.equipmentApi.getJson('/users-options')]).then(function (arr) {
+    var rd = arr[0],
+      ru = arr[1];
+    if (rd.ok) {
+      var sel = document.getElementById('sel-dept');
+      (rd.data.data || []).forEach(function (d) {
+        var o = document.createElement('option');
+        o.value = d.code;
+        o.textContent = d.name + ' (' + d.code + ')';
+        sel.appendChild(o);
+      });
+    }
+    if (ru.ok) {
+      var selM = document.getElementById('sel-mgr');
+      (ru.data.data || []).forEach(function (u) {
+        var o = document.createElement('option');
+        o.value = u.id;
+        o.textContent = (u.fullname || u.email || '') + ' · ' + (u.role || '');
+        selM.appendChild(o);
+      });
+    }
+    if (editId) {
+      window.equipmentApi.getJson('/' + editId).then(function (r) {
+        if (r.status === 401) {
+          window.location.href = '/dang-nhap.html?returnUrl=' + encodeURIComponent(location.pathname + location.search);
+          return;
+        }
+        if (!r.ok || !r.data.equipment) {
+          showMessage((r.data && r.data.message) || 'Không tải được', true);
+          return;
+        }
+        loadEquipmentIntoForm(r.data.equipment);
+      });
+    }
+  });
+
+  f.onsubmit = function (ev) {
+    ev.preventDefault();
+    clearErrors();
+    if (!f.name.value.trim()) {
+      setErr('row-name', 'Bắt buộc nhập tên thiết bị');
+      window.stimsToast && window.stimsToast('Thiếu tên thiết bị', false);
+      return;
+    }
+    if (!f.model.value.trim()) {
+      setErr('row-model', 'Bắt buộc nhập model');
+      window.stimsToast && window.stimsToast('Thiếu model', false);
+      return;
+    }
+    if (!editId && !deptCode()) {
+      setErr('row-dept', 'Chọn phòng / lab');
+      window.stimsToast && window.stimsToast('Chọn phòng / lab', false);
+      return;
+    }
+
+    var body = {
+      equipment_code: editId ? f.equipment_code.value.trim() : '',
+      name: f.name.value.trim(),
+      model: f.model.value.trim(),
+      serial_number: f.serial_number.value.trim() || null,
+      manufacturer: f.manufacturer.value.trim() || null,
+      purchase_year: f.purchase_year.value ? parseInt(f.purchase_year.value, 10) : null,
+      purchase_value: f.purchase_value.value ? Number(f.purchase_value.value) : null,
+      asset_group: f.asset_group.value.trim() || null,
+      asset_type_code: f.asset_type_code.value.trim() || null,
+      year_in_use: f.year_in_use.value ? parseInt(f.year_in_use.value, 10) : null,
+      unit_name: f.unit_name.value.trim() || null,
+      quantity_book: f.quantity_book.value ? Number(f.quantity_book.value) : null,
+      quantity_actual: f.quantity_actual.value ? Number(f.quantity_actual.value) : null,
+      quantity_diff: f.quantity_diff.value ? Number(f.quantity_diff.value) : null,
+      remaining_value: f.remaining_value.value ? Number(f.remaining_value.value) : null,
+      utilization_note: normalizeCodeValue(f.utilization_note.value) || null,
+      condition_note: normalizeCodeValue(f.condition_note.value) || null,
+      disaster_impact_note: f.disaster_impact_note.value.trim() || null,
+      construction_asset_note: f.construction_asset_note.value.trim() || null,
+      usage_count_note: f.usage_count_note.value.trim() || null,
+      land_attached_note: f.land_attached_note.value.trim() || null,
+      asset_note: f.asset_note.value.trim() || null,
+      department_id: deptCode() || null,
+      manager_id: f.manager_id.value ? parseInt(f.manager_id.value, 10) : null,
+      location: f.location.value.trim() || null,
+      status: f.status.value,
+      profile_visibility: f.profile_visibility.value,
+      specs_json: specsToJson(),
+    };
+
+    var p = editId
+      ? window.equipmentApi.sendJson('PUT', '/' + editId, body)
+      : window.equipmentApi.sendJson('POST', '/', body);
+    p.then(function (r) {
+      if (r.status === 401) {
+        window.location.href = '/dang-nhap.html?returnUrl=' + encodeURIComponent(location.pathname);
+        return;
+      }
+      if (!r.ok) {
+        var m = (r.data && r.data.message) || 'Lỗi lưu';
+        showMessage(m, true);
+        window.stimsToast && window.stimsToast(m, false);
+        return;
+      }
+      window.stimsToast && window.stimsToast(editId ? 'Đã cập nhật' : 'Đã tạo hồ sơ', true);
+      if (editId) {
+        window.location.href = '/public/equipment/detail.html?id=' + editId;
+        return;
+      }
+      var nid = r.data.equipment && r.data.equipment.id;
+      var code = (r.data.equipment && r.data.equipment.equipment_code) || '';
+      f.style.display = 'none';
+      document.getElementById('success-panel').style.display = 'block';
+      document.getElementById('succ-code').textContent = code;
+      document.getElementById('succ-docs').href = '/public/equipment/detail.html?id=' + nid + '&tab=docs';
+      fetch('/api/equipment/' + nid + '/qr-data')
+        .then(function (x) {
+          return x.json();
+        })
+        .then(function (q) {
+          if (q && q.dataUrl) {
+            document.getElementById('succ-qr').src = q.dataUrl;
+            document.getElementById('succ-qr-dl').href = q.dataUrl;
+          }
+        })
+        .catch(function () {
+          document.getElementById('succ-qr-dl').href = '/api/equipment/' + nid + '/qr';
+        });
+    });
+  };
+})();
+  </script>
+<script>if (window.equipmentNav && window.equipmentNav.sync) { window.equipmentNav.sync().catch(function () {}); }</script>
+</body>
+</html>
+
+
+
+

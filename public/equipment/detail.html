@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chi tiết thiết bị</title>
+  <link rel="stylesheet" href="/public/equipment/equip-layout.css" />
+</head>
+<body class="eq-body">
+  <div class="eq-app">
+    <aside class="eq-sidebar">
+      <div class="eq-sidebar__brand">STIMS</div>
+      <nav class="eq-nav">
+        <a href="/public/equipment/index.html">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+          Danh sách thiết bị
+        </a>
+        <a href="/public/equipment/form.html" id="nav-edit" style="display:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          Sửa hồ sơ
+        </a>
+        <a href="/public/equipment/dashboard.html" id="nav-dash" style="display:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 3v18h18"/><path d="M7 12v5"/><path d="M12 7v10"/><path d="M17 9v8"/></svg>
+          Dashboard
+        </a>
+        <a href="/index.html">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          Trang chủ
+        </a>
+        <a href="/public/equipment/permissions.html" id="nav-permissions" class="nav-hidden">Quản trị module</a>
+      </nav>
+      <div id="eq-equipment-notifications" class="eq-equipment-notifications"></div>
+    </aside>
+    <main class="eq-main">
+      <div class="eq-header">
+        <div class="eq-header__title">
+          <h1 id="h-name">Chi tiết thiết bị</h1>
+        </div>
+        <div class="eq-header__tail">
+          <div id="eq-auth-bar" class="eq-auth-bar" aria-live="polite"></div>
+          <div class="eq-header__actions">
+            <a class="eq-btn eq-btn--ghost" href="/public/equipment/index.html">← Danh sách</a>
+            <a class="eq-btn eq-btn--ghost" id="link-public" target="_blank" href="#">Hồ sơ công khai</a>
+            <img id="qr-thumb" alt="QR" style="height:48px;border-radius:8px;display:none;background:#fff;padding:4px;" />
+          </div>
+        </div>
+      </div>
+      <div id="msg"></div>
+
+      <div class="eq-tabs">
+        <button type="button" class="eq-tab eq-tab--on" data-tab="info">Thông tin</button>
+        <button type="button" class="eq-tab" data-tab="docs">Tài liệu PDF</button>
+        <button type="button" class="eq-tab" data-tab="videos">Video</button>
+        <button type="button" class="eq-tab" data-tab="maint">Bảo trì</button>
+        <button type="button" class="eq-tab" data-tab="incident">Sự cố</button>
+        <button type="button" class="eq-tab" data-tab="logs">Lịch sử</button>
+      </div>
+
+      <div id="panel-info" class="eq-panel">
+        <div class="eq-table-wrap" style="padding:16px;">
+          <div id="info-pre"></div>
+        </div>
+        <div id="manage-bar" style="margin-top:16px;display:none;flex-wrap:wrap;gap:10px;" class="eq-toolbar">
+          <label>Đổi trạng thái
+            <select id="st-new">
+              <option value="active">Hoạt động</option>
+              <option value="maintenance">Bảo trì</option>
+              <option value="broken">Hỏng</option>
+              <option value="retired">Thanh lý</option>
+            </select>
+          </label>
+          <input type="text" id="st-note" placeholder="Ghi chú (tuỳ chọn)" style="min-width:200px;" />
+          <button type="button" class="eq-btn" id="btn-status">Cập nhật trạng thái</button>
+          <button type="button" class="eq-btn eq-btn--danger" id="btn-softdel">Thanh lý (soft-delete)</button>
+        </div>
+      </div>
+
+      <div id="panel-docs" class="eq-panel" hidden>
+        <form id="up-pdf" style="margin-bottom:20px;" class="eq-form">
+          <h3 style="margin-bottom:12px;font-size:1rem;">Upload PDF (chỉ .pdf, tối đa 20MB)</h3>
+          <div class="eq-form-row">
+            <label>File PDF *</label>
+            <input type="file" name="file" accept="application/pdf" required />
+          </div>
+          <div class="eq-form-row">
+            <label>Loại tài liệu</label>
+            <select name="doc_type">
+              <option value="sop">SOP</option>
+              <option value="technical">Kỹ thuật</option>
+              <option value="safety">An toàn</option>
+              <option value="warranty">Bảo hành</option>
+              <option value="calibration">Kiểm định</option>
+            </select>
+          </div>
+          <div class="eq-form-row">
+            <label>Tiêu đề *</label>
+            <input name="title" required />
+          </div>
+          <div class="eq-form-row">
+            <label>Phiên bản</label>
+            <input name="version" />
+          </div>
+          <div class="eq-form-row">
+            <label>Phân quyền xem</label>
+            <select name="access_level">
+              <option value="internal">Nội bộ đơn vị</option>
+              <option value="institute">Trong viện</option>
+              <option value="public">Công khai</option>
+            </select>
+          </div>
+          <div class="eq-form-row">
+            <label>Ghi chú</label>
+            <textarea name="notes"></textarea>
+          </div>
+          <button type="submit" class="eq-btn">Tải lên</button>
+        </form>
+        <div id="docs-groups"></div>
+      </div>
+
+      <div id="panel-videos" class="eq-panel" hidden>
+        <form id="form-vid" class="eq-form" style="margin-bottom:20px;">
+          <h3 style="margin-bottom:12px;font-size:1rem;">Thêm video</h3>
+          <div class="eq-form-row"><label>Tiêu đề *</label><input name="title" required /></div>
+          <div class="eq-form-row"><label>URL video *</label><input name="video_url" required placeholder="https://www.youtube.com/watch?v=..." /></div>
+          <div class="eq-form-row"><label>Platform (tự nhận nếu để mặc định)</label>
+            <select name="platform">
+              <option value="">— Tự detect —</option>
+              <option value="youtube">YouTube</option>
+              <option value="drive">Google Drive</option>
+              <option value="internal">Nội bộ</option>
+            </select>
+          </div>
+          <div id="vid-thumb-preview"></div>
+          <div class="eq-form-row"><label>Mô tả</label><textarea name="description"></textarea></div>
+          <div class="eq-form-row"><label>Phân quyền xem</label>
+            <select name="access_level">
+              <option value="internal">Nội bộ</option>
+              <option value="institute">Viện</option>
+              <option value="public">Công khai</option>
+            </select>
+          </div>
+          <button type="submit" class="eq-btn">Thêm</button>
+        </form>
+        <div class="eq-table-wrap">
+          <table class="eq-table">
+            <thead>
+              <tr><th>Tiêu đề / Ảnh</th><th>Platform</th><th>Link</th><th>Xóa</th></tr>
+            </thead>
+            <tbody id="tbody-videos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="panel-maint" class="eq-panel" hidden>
+        <div id="maint-manage" style="display:none;">
+          <form id="form-maint-sched" class="eq-form" style="margin-bottom:18px;">
+            <h3 style="font-size:1rem;margin-bottom:10px;">Lên lịch bảo trì / kiểm định</h3>
+            <div class="eq-form-row">
+              <label>Loại</label>
+              <select name="maintenance_type" required>
+                <option value="periodic">Định kỳ</option>
+                <option value="calibration">Kiểm định</option>
+                <option value="repair">Sửa chữa</option>
+              </select>
+            </div>
+            <div class="eq-form-row"><label>Ngày dự kiến</label><input type="date" name="scheduled_date" required /></div>
+            <div class="eq-form-row"><label>Ghi chú</label><textarea name="maint_note"></textarea></div>
+            <button type="submit" class="eq-btn">Lưu lịch</button>
+          </form>
+          <form id="form-maint-done" class="eq-form">
+            <h3 style="font-size:1rem;margin-bottom:10px;">Ghi nhận hoàn thành</h3>
+            <div class="eq-form-row"><label>ID bản ghi bảo trì *</label><input name="maint_id" required placeholder="Xem bảng dưới, cột ẩn — nhập id" /></div>
+            <div class="eq-form-row"><label>Ngày hoàn thành</label><input type="date" name="completed_date" required /></div>
+            <div class="eq-form-row"><label>Kết quả *</label><textarea name="result_note" required></textarea></div>
+            <div class="eq-form-row"><label>Chi phí</label><input type="number" step="0.01" name="cost" /></div>
+            <div class="eq-form-row"><label>Lần tới (hạn)</label><input type="date" name="next_due_date" /></div>
+            <button type="submit" class="eq-btn">Cập nhật</button>
+          </form>
+        </div>
+        <h3 style="margin:20px 0 10px;font-size:0.95rem;">Lịch sử bảo trì</h3>
+        <div class="eq-table-wrap">
+          <table class="eq-table">
+            <thead>
+              <tr><th>ID</th><th>Ngày</th><th>Loại</th><th>Người TH</th><th>Chi phí</th><th>Kết quả</th><th>Lần tới</th></tr>
+            </thead>
+            <tbody id="tbody-maint"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="panel-incident" class="eq-panel" hidden>
+        <button type="button" class="eq-btn" id="btn-open-incident" style="margin-bottom:14px;">Báo cáo sự cố</button>
+        <div id="incident-admin" style="display:none;margin-bottom:16px;padding:14px;background:var(--eq-card);border-radius:12px;">
+          <h4 style="margin-bottom:10px;font-size:0.92rem;">Quản trị — xử lý sự cố</h4>
+          <div class="eq-form-row">
+            <label>ID sự cố</label>
+            <input type="text" id="inc-resolve-id" placeholder="ID từ danh sách" />
+          </div>
+          <div class="eq-form-row" style="margin-top:12px;">
+            <label>Kết quả xử lý</label>
+            <textarea id="inc-resolution"></textarea>
+          </div>
+          <div class="eq-form-row">
+            <label>Chi phí</label>
+            <input type="number" step="0.01" id="inc-cost" />
+          </div>
+          <div class="eq-form-row">
+            <label>Loại sửa</label>
+            <select id="inc-repair-type">
+              <option value="">—</option>
+              <option value="internal">Nội bộ</option>
+              <option value="external">Thuê ngoài / công ty</option>
+            </select>
+          </div>
+          <div class="eq-form-row">
+            <label>Ghi chú nhà thầu / công ty bảo trì</label>
+            <textarea id="inc-vendor-note" rows="2" placeholder="Tên đơn vị, liên hệ…"></textarea>
+          </div>
+          <div class="eq-form-row">
+            <label>Tham chiếu hoá đơn / chứng từ</label>
+            <input type="text" id="inc-invoice-ref" placeholder="Số HĐ, link, mã tham chiếu…" />
+          </div>
+          <div class="eq-form-row">
+            <label>File hoá đơn / bản scan chứng từ (PDF/ảnh, tối đa 5 file)</label>
+            <input type="file" id="inc-invoice-files" multiple accept="image/jpeg,image/png,image/webp,application/pdf" />
+          </div>
+          <div class="eq-form-row">
+            <label>Tờ trình / đề xuất</label>
+            <input type="text" id="inc-proposal-ref" placeholder="Số tờ trình, link…" />
+          </div>
+          <div class="eq-form-row">
+            <label>File tờ trình / đề xuất (PDF/ảnh, tối đa 5 file)</label>
+            <input type="file" id="inc-proposal-files" multiple accept="image/jpeg,image/png,image/webp,application/pdf" />
+          </div>
+          <div class="eq-form-row">
+            <label>Đính kèm xử lý (PDF/ảnh, tối đa 10, mỗi file ≤ 12MB)</label>
+            <input type="file" id="inc-resolution-files" multiple accept="image/jpeg,image/png,image/webp,application/pdf" />
+          </div>
+          <button type="button" class="eq-btn" id="btn-inc-resolve">Đánh dấu đã xử lý</button>
+        </div>
+        <h3 style="margin-bottom:10px;font-size:0.95rem;">Timeline sự cố</h3>
+        <div class="eq-timeline" id="incident-timeline"></div>
+      </div>
+
+      <div id="panel-logs" class="eq-panel" hidden>
+        <h3 style="margin:0 0 10px;font-size:0.95rem;color:var(--eq-muted);">Trạng thái thiết bị</h3>
+        <div class="eq-table-wrap" style="margin-bottom:20px;">
+          <table class="eq-table"><tbody id="tbody-slog"></tbody></table>
+        </div>
+        <h3 style="margin:0 0 10px;font-size:0.95rem;color:var(--eq-muted);">Tài liệu</h3>
+        <div class="eq-table-wrap">
+          <table class="eq-table"><tbody id="tbody-dlog"></tbody></table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal-incident" class="eq-modal" hidden>
+    <div class="eq-modal__box">
+      <h3 style="margin-bottom:12px;">Báo cáo sự cố</h3>
+      <form id="form-incident">
+        <div class="eq-form-row">
+          <label>Mô tả *</label>
+          <textarea name="description" required rows="4"></textarea>
+        </div>
+        <div class="eq-form-row">
+          <label>Mức độ *</label>
+          <label><input type="radio" name="severity" value="low" /> Nhẹ</label>
+          <label><input type="radio" name="severity" value="medium" checked /> Trung bình</label>
+          <label><input type="radio" name="severity" value="high" /> Nghiêm trọng</label>
+          <label><input type="radio" name="severity" value="critical" /> Nguy hiểm</label>
+        </div>
+        <div class="eq-form-row">
+          <label>Ảnh đính kèm (tối đa 5, JPG/PNG, mỗi ảnh ≤ 5MB)</label>
+          <input type="file" id="inc-photos" accept="image/jpeg,image/png,image/webp" multiple />
+          <div id="inc-photo-preview" style="display:flex;flex-wrap:wrap;margin-top:8px;"></div>
+        </div>
+        <div class="eq-form-row"><label>Ghi chú thêm</label><textarea name="extra_note"></textarea></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+          <button type="button" class="eq-btn eq-btn--ghost" id="btn-close-incident">Huỷ</button>
+          <button type="submit" class="eq-btn">Gửi báo cáo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/public/js/equipmentApi.js"></script>
+  <script src="/public/js/equipmentToast.js"></script>
+  <script src="/public/js/equipmentNav.js"></script>
+  <script src="/js/page-greeting.js"></script>
+  <script src="/public/js/equipmentAuthBar.js"></script>
+  <script src="/public/js/equipmentNotifications.js"></script>
+  <script src="/public/js/equipmentDetail.js"></script>
+<script>if (window.equipmentNav && window.equipmentNav.sync) { window.equipmentNav.sync().catch(function () {}); }</script>
+</body>
+</html>
+
+
+
+
