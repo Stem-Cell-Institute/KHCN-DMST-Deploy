@@ -1046,29 +1046,32 @@ module.exports = function createEquipmentRouter(deps) {
       const role = String(req.user.role || '').toLowerCase();
       const manage = canManageEquipment(req);
       const uid = req.user.id;
+      const accessMode = moduleAccessMode();
       if (!manage) {
         where.push("e.status != 'retired'");
-        if (role === 'researcher') {
-          where.push(
-            `(e.created_by = ? OR (
-              (e.review_status IS NULL OR e.review_status = 'approved') AND e.profile_visibility = 'public'
-            ))`
-          );
-          params.push(uid);
-        } else {
-          where.push(
-            `(e.created_by = ? OR (
-              (e.review_status IS NULL OR e.review_status = 'approved') AND (
-                e.profile_visibility IN ('public','institute')
-                OR (
-                  e.profile_visibility = 'internal'
-                  AND e.department_id IS NOT NULL
-                  AND e.department_id = (SELECT department_id FROM users WHERE id = ?)
+        if (accessMode !== 'public') {
+          if (role === 'researcher') {
+            where.push(
+              `(e.created_by = ? OR (
+                (e.review_status IS NULL OR e.review_status = 'approved') AND e.profile_visibility = 'public'
+              ))`
+            );
+            params.push(uid);
+          } else {
+            where.push(
+              `(e.created_by = ? OR (
+                (e.review_status IS NULL OR e.review_status = 'approved') AND (
+                  e.profile_visibility IN ('public','institute')
+                  OR (
+                    e.profile_visibility = 'internal'
+                    AND e.department_id IS NOT NULL
+                    AND e.department_id = (SELECT department_id FROM users WHERE id = ?)
+                  )
                 )
-              )
-            ))`
-          );
-          params.push(uid, uid);
+              ))`
+            );
+            params.push(uid, uid);
+          }
         }
       }
 
@@ -1157,29 +1160,32 @@ module.exports = function createEquipmentRouter(deps) {
       const role = String(req.user.role || '').toLowerCase();
       const manage = canManageEquipment(req);
       const uid = req.user.id;
+      const accessMode = moduleAccessMode();
       if (!manage) {
         where.push("e.status != 'retired'");
-        if (role === 'researcher') {
-          where.push(
-            `(e.created_by = ? OR (
-              (e.review_status IS NULL OR e.review_status = 'approved') AND e.profile_visibility = 'public'
-            ))`
-          );
-          params.push(uid);
-        } else {
-          where.push(
-            `(e.created_by = ? OR (
-              (e.review_status IS NULL OR e.review_status = 'approved') AND (
-                e.profile_visibility IN ('public','institute')
-                OR (
-                  e.profile_visibility = 'internal'
-                  AND e.department_id IS NOT NULL
-                  AND e.department_id = (SELECT department_id FROM users WHERE id = ?)
+        if (accessMode !== 'public') {
+          if (role === 'researcher') {
+            where.push(
+              `(e.created_by = ? OR (
+                (e.review_status IS NULL OR e.review_status = 'approved') AND e.profile_visibility = 'public'
+              ))`
+            );
+            params.push(uid);
+          } else {
+            where.push(
+              `(e.created_by = ? OR (
+                (e.review_status IS NULL OR e.review_status = 'approved') AND (
+                  e.profile_visibility IN ('public','institute')
+                  OR (
+                    e.profile_visibility = 'internal'
+                    AND e.department_id IS NOT NULL
+                    AND e.department_id = (SELECT department_id FROM users WHERE id = ?)
+                  )
                 )
-              )
-            ))`
-          );
-          params.push(uid, uid);
+              ))`
+            );
+            params.push(uid, uid);
+          }
         }
       }
 
@@ -1226,16 +1232,19 @@ module.exports = function createEquipmentRouter(deps) {
       let extra = '';
       const uid = req.user.id;
       const searchTail = [];
+      const accessMode = moduleAccessMode();
       if (!manage) {
         extra = " AND e.status != 'retired' ";
-        if (role === 'researcher') {
-          extra +=
-            " AND (e.created_by = ? OR ((e.review_status IS NULL OR e.review_status = 'approved') AND e.profile_visibility = 'public')) ";
-          searchTail.push(uid);
-        } else {
-          extra +=
-            " AND (e.created_by = ? OR ((e.review_status IS NULL OR e.review_status = 'approved') AND ( e.profile_visibility IN ('public','institute') OR (e.profile_visibility = 'internal' AND e.department_id IS NOT NULL AND e.department_id = (SELECT department_id FROM users WHERE id = ?)) ))) ";
-          searchTail.push(uid, uid);
+        if (accessMode !== 'public') {
+          if (role === 'researcher') {
+            extra +=
+              " AND (e.created_by = ? OR ((e.review_status IS NULL OR e.review_status = 'approved') AND e.profile_visibility = 'public')) ";
+            searchTail.push(uid);
+          } else {
+            extra +=
+              " AND (e.created_by = ? OR ((e.review_status IS NULL OR e.review_status = 'approved') AND ( e.profile_visibility IN ('public','institute') OR (e.profile_visibility = 'internal' AND e.department_id IS NOT NULL AND e.department_id = (SELECT department_id FROM users WHERE id = ?)) ))) ";
+            searchTail.push(uid, uid);
+          }
         }
       }
       if (asset_group) {
