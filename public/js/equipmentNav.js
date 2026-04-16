@@ -28,8 +28,13 @@
       return;
     }
 
-    show('nav-add');
-    show('btn-add-top');
+    if (isMaster || role === 'manager') {
+      show('nav-add');
+      show('btn-add-top');
+    } else {
+      hide('nav-add');
+      hide('btn-add-top');
+    }
 
     if (isMaster || role === 'manager') show('nav-dash');
     else hide('nav-dash');

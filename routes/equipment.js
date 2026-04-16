@@ -148,14 +148,15 @@ function createOptionalAuth(deps) {
   };
 }
 
-function canViewEquipmentDetail(req, row, db) {
+function canViewEquipmentDetail(req, row, db, accessMode) {
   if (!row) return { ok: false, status: 404 };
   if (canManageEquipment(req)) return { ok: true };
+  if (row.status === 'retired') return { ok: false, status: 404 };
+  if (String(accessMode || '').toLowerCase() === 'public') return { ok: true };
   const rs = reviewStatus(row);
   if (['draft', 'pending_review'].includes(rs) && Number(row.created_by) !== Number(req.user && req.user.id)) {
     return { ok: false, status: 404 };
   }
-  if (row.status === 'retired') return { ok: false, status: 404 };
   if (isResearcher(req)) {
     if (row.profile_visibility !== 'public') return { ok: false, status: 403 };
     return { ok: true };
@@ -1527,36 +1528,19 @@ module.exports = function createEquipmentRouter(deps) {
       const vidsForAnon = (vidsAll || []).filter((v) => String(v.access_level || '').toLowerCase() === 'public');
       const docsVisible = filterDocumentsForRequest(req, docsAll, eq, db);
       const vidsVisible = filterVideosForRequest(req, vidsAll, eq, db);
-
-      const rs = reviewStatus(eq);
       const publicIncidentAllowed = computePublicIncidentAllowed(eq, id);
-      if (!req.user) {
-        const vis = String(eq.profile_visibility || '').toLowerCase();
-        if (rs !== 'approved' || vis !== 'public') {
-          return res.status(404).json({ message: 'Hồ sơ không công khai' });
-        }
-        return res.json({
-          ok: true,
-          equipment: eq,
-          documents: docsForAnon,
-          videos: vidsForAnon,
-          qr_data_url: null,
-          public_incident_allowed: publicIncidentAllowed,
-        });
-      }
-
-      if (req.user) {
-        const detailCheck = canViewEquipmentDetail(req, eq, db);
-        if (!detailCheck.ok) {
-          return res.status(detailCheck.status).json({ message: 'Không có quyền xem' });
-        }
+      const vis = String(eq.profile_visibility || '').trim().toLowerCase();
+      const accessMode = moduleAccessMode();
+      if (vis !== 'public' && String(accessMode || '').toLowerCase() !== 'public' && !(req.user && canManageEquipment(req))) {
+        return res.status(404).json({ message: 'Hồ sơ không công khai' });
       }
 
       res.json({
         ok: true,
         equipment: eq,
-        documents: docsVisible,
-        videos: vidsVisible,
+        documents: req.user && canManageEquipment(req) ? docsVisible : docsForAnon,
+        videos: req.user && canManageEquipment(req) ? vidsVisible : vidsForAnon,
+        qr_data_url: null,
         public_incident_allowed: publicIncidentAllowed,
       });
     } catch (e) {
@@ -1571,7 +1555,7 @@ module.exports = function createEquipmentRouter(deps) {
       const id = parseEquipmentId(req.params.id);
       if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
       const eq = db.prepare('SELECT * FROM equipments WHERE id = ?').get(id);
-      const check = canViewEquipmentDetail(req, eq, db);
+      const check = canViewEquipmentDetail(req, eq, db, moduleAccessMode());
       if (!check.ok) {
         return res.status(check.status).json({ message: check.message || 'Không có quyền xem' });
       }
@@ -1663,7 +1647,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.post('/', authMiddleware, requireModuleViewer, express.json(), (req, res) => {
+  router.post('/', authMiddleware, requireModuleViewer, requireManage, express.json(), (req, res) => {
     try {
       const b = req.body || {};
       const name = String(b.name || '').trim();
@@ -1747,7 +1731,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.put('/:id', authMiddleware, requireModuleViewer, express.json(), (req, res) => {
+  router.put('/:id', authMiddleware, requireModuleViewer, requireManage, express.json(), (req, res) => {
     try {
       const id = parseEquipmentId(req.params.id);
       if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
@@ -2040,7 +2024,7 @@ module.exports = function createEquipmentRouter(deps) {
           return res.status(401).json({ message: 'Vui lòng đăng nhập để tải tài liệu' });
         }
       } else {
-        const view = canViewEquipmentDetail(req, eq, db);
+        const view = canViewEquipmentDetail(req, eq, db, moduleAccessMode());
         if (!view.ok) return res.status(view.status).json({ message: 'Không có quyền' });
       }
       const acc = checkEquipmentDocAccess(req, doc, eq, db);
