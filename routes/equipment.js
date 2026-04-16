@@ -1520,10 +1520,10 @@ module.exports = function createEquipmentRouter(deps) {
       const vidsVisible = filterVideosForRequest(req, vidsAll, eq, db);
 
       const rs = reviewStatus(eq);
-      const hasPublicDoc = docsForAnon.length > 0;
       const publicIncidentAllowed = computePublicIncidentAllowed(eq, id);
       if (!req.user) {
-        if (rs !== 'approved' || !hasPublicDoc) {
+        const vis = String(eq.profile_visibility || '').toLowerCase();
+        if (rs !== 'approved' || vis !== 'public') {
           return res.status(404).json({ message: 'Hồ sơ không công khai' });
         }
         return res.json({
