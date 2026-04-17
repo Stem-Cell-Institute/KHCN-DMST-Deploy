@@ -344,7 +344,7 @@
 
         function renderReadonlyReview(m) {
             var kq = m.buoc3_ket_qua || '';
-            var kqLabel = kq === 'dong_y' ? 'Đồng ý cho phát hành hồ sơ' : kq === 'dong_y_co_dieu_kien' ? 'Đồng ý có điều kiện' : kq === 'khong_dong_y' ? 'Không đồng ý' : kq;
+            var kqLabel = kq === 'dong_y' ? 'Đồng ý cho ban hành hồ sơ' : kq === 'dong_y_co_dieu_kien' ? 'Đồng ý có điều kiện' : kq === 'khong_dong_y' ? 'Không đồng ý' : kq;
             var html = '<div class="readonly-review"><div class="label">Kết luận</div><div class="value">' + kqLabel + '</div></div>';
             html += '<div class="readonly-review"><div class="label">Đánh giá tính khoa học & tính mới</div><div class="value">' + (m.buoc3_nhan_xet_khoa_hoc || '—') + '</div></div>';
             html += '<div class="readonly-review"><div class="label">Đánh giá tính khả thi</div><div class="value">' + (m.buoc3_nhan_xet_kha_thi || '—') + '</div></div>';
@@ -362,7 +362,7 @@
             html += '<div class="form-group"><label>Phù hợp định hướng KH&amp;CN của Viện <span style="color:#c00;">*</span></label><textarea id="nhan_xet_dinh_huong" required placeholder="Mức độ phù hợp với chiến lược phát triển KH&amp;CN..."></textarea></div>';
             html += '<div class="form-group"><label>Năng lực chủ nhiệm <span style="color:#c00;">*</span></label><textarea id="nhan_xet_nang_luc" required placeholder="Nhận xét về năng lực chuyên môn, không xung đột nhiệm vụ..."></textarea></div>';
             html += '<div class="form-group"><label>Kết luận <span style="color:#c00;">*</span></label>';
-            html += '<div class="radio-option"><input type="radio" name="ket_qua" value="dong_y" id="kq_dong_y"><label for="kq_dong_y">Đồng ý cho phát hành hồ sơ</label></div>';
+            html += '<div class="radio-option"><input type="radio" name="ket_qua" value="dong_y" id="kq_dong_y"><label for="kq_dong_y">Đồng ý cho ban hành hồ sơ</label></div>';
             html += '<div class="radio-option"><input type="radio" name="ket_qua" value="dong_y_co_dieu_kien" id="kq_dong_y_dk"><label for="kq_dong_y_dk">Đồng ý có điều kiện</label><div class="conditional-field" id="cf_dieu_kien" style="display:none;"><textarea id="dieu_kien" placeholder="Điều kiện cụ thể (bắt buộc)" rows="3"></textarea></div></div>';
             html += '<div class="radio-option"><input type="radio" name="ket_qua" value="khong_dong_y" id="kq_khong"><label for="kq_khong">Không đồng ý</label><div class="conditional-field" id="cf_ly_do" style="display:none;"><textarea id="ly_do_tu_choi" placeholder="Lý do (bắt buộc)" rows="3"></textarea></div></div>';
             html += '</div>';

@@ -111,7 +111,6 @@
       ['Hiển thị hồ sơ', eq.profile_visibility],
       ['Ngày tạo', eq.created_at],
       ['Ngày cập nhật', eq.updated_at],
-      ['Ngày xuất bản', eq.published_at || '—'],
       ['Lần bảo trì gần nhất', eq.last_maintenance_date || '—'],
       ['Hạn bảo trì tiếp theo', eq.next_maintenance_date || '—'],
       ['Hạn kiểm định', eq.calibration_due_date || '—'],

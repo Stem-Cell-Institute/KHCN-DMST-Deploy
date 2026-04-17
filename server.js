@@ -13670,10 +13670,7 @@ try {
 }
 (function equipmentPrompt2Alters() {
   const alters = [
-    'ALTER TABLE equipments ADD COLUMN review_status TEXT',
     'ALTER TABLE equipments ADD COLUMN asset_group TEXT',
-    'ALTER TABLE equipments ADD COLUMN published_at TEXT',
-    'ALTER TABLE equipments ADD COLUMN review_rejection_note TEXT',
     'ALTER TABLE equipments ADD COLUMN created_by INTEGER REFERENCES users(id)',
     'ALTER TABLE equipments ADD COLUMN last_maintenance_date TEXT',
     'ALTER TABLE equipments ADD COLUMN next_maintenance_date TEXT',
@@ -13702,6 +13699,108 @@ try {
     } catch (e) {
       /* đã có cột */
     }
+  }
+})();
+
+(function dropLegacyEquipmentReviewColumns() {
+  try {
+    const cols = db.prepare(`PRAGMA table_info(equipments)`).all();
+    if (!cols || !cols.length) return;
+    const names = new Set(cols.map((c) => String(c.name || '')));
+    const legacyCols = ['review_status', 'published_at', 'review_rejection_note'];
+    const hasLegacy = legacyCols.some((c) => names.has(c));
+    if (!hasLegacy) return;
+
+    const keepCols = [
+      'id',
+      'equipment_code',
+      'name',
+      'asset_group',
+      'model',
+      'serial_number',
+      'manufacturer',
+      'purchase_year',
+      'purchase_value',
+      'department_id',
+      'manager_id',
+      'location',
+      'specs_json',
+      'status',
+      'profile_visibility',
+      'created_by',
+      'last_maintenance_date',
+      'next_maintenance_date',
+      'calibration_due_date',
+      'asset_type_code',
+      'year_in_use',
+      'unit_name',
+      'quantity_book',
+      'quantity_actual',
+      'quantity_diff',
+      'remaining_value',
+      'utilization_note',
+      'condition_note',
+      'disaster_impact_note',
+      'construction_asset_note',
+      'usage_count_note',
+      'land_attached_note',
+      'asset_note',
+      'created_at',
+      'updated_at',
+    ].filter((c) => names.has(c));
+    if (!keepCols.length) return;
+    const keepSql = keepCols.join(', ');
+
+    db.exec('BEGIN IMMEDIATE');
+    db.exec(`
+      CREATE TABLE __equipments_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        equipment_code TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        asset_group TEXT,
+        model TEXT,
+        serial_number TEXT,
+        manufacturer TEXT,
+        purchase_year INTEGER,
+        purchase_value REAL,
+        department_id TEXT,
+        manager_id INTEGER REFERENCES users(id),
+        location TEXT,
+        specs_json TEXT,
+        status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','maintenance','broken','retired')),
+        profile_visibility TEXT NOT NULL DEFAULT 'institute' CHECK(profile_visibility IN ('public','institute','internal')),
+        created_by INTEGER REFERENCES users(id),
+        last_maintenance_date TEXT,
+        next_maintenance_date TEXT,
+        calibration_due_date TEXT,
+        asset_type_code TEXT,
+        year_in_use INTEGER,
+        unit_name TEXT,
+        quantity_book REAL,
+        quantity_actual REAL,
+        quantity_diff REAL,
+        remaining_value REAL,
+        utilization_note TEXT,
+        condition_note TEXT,
+        disaster_impact_note TEXT,
+        construction_asset_note TEXT,
+        usage_count_note TEXT,
+        land_attached_note TEXT,
+        asset_note TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      )
+    `);
+    db.exec(`INSERT INTO __equipments_new (${keepSql}) SELECT ${keepSql} FROM equipments`);
+    db.exec(`DROP TABLE equipments`);
+    db.exec(`ALTER TABLE __equipments_new RENAME TO equipments`);
+    db.exec('COMMIT');
+    console.log('[EQUIP] dropped legacy review columns from equipments');
+  } catch (e) {
+    try {
+      db.exec('ROLLBACK');
+    } catch (_) {}
+    console.warn('[EQUIP] drop legacy review columns:', e.message);
   }
 })();
 
@@ -13818,6 +13917,40 @@ try {
   console.log('[EQUIP] Đã mount /api/equipment');
 } catch (e) {
   console.warn('[EQUIP] Không mount equipment:', e.message);
+}
+
+/** Quy trình ban hành văn bản hành chính nội bộ (9 bước) */
+try {
+  const createInternalDocumentsWorkflowRouter = require('./routes/internalDocumentsWorkflow');
+  function documentWorkflowMailSend(opts) {
+    if (!transporter || !opts) return Promise.resolve({ ok: false, reason: 'mail_not_configured' });
+    const toList = Array.isArray(opts.to) ? opts.to.filter(Boolean) : opts.to ? [opts.to] : [];
+    if (!toList.length) return Promise.resolve({ ok: false, reason: 'no_recipients' });
+    return transporter
+      .sendMail({
+        from: getSmtpFrom(),
+        to: toList.join(', '),
+        subject: opts.subject || 'Thông báo quy trình văn bản',
+        text: opts.text || '',
+        html: opts.html || opts.text || '',
+      })
+      .then(() => ({ ok: true }))
+      .catch((e) => {
+        console.warn('[DOCFLOW mail]', e.message);
+        return { ok: false, reason: 'smtp_error', error: e.message || 'smtp_error' };
+      });
+  }
+  const internalWorkflowRouter = createInternalDocumentsWorkflowRouter({
+    db,
+    authMiddleware,
+    uploadsRoot: appPaths.uploadsRoot(),
+    mailSend: documentWorkflowMailSend,
+    baseUrl: process.env.BASE_URL || '',
+  });
+  app.use('/api', internalWorkflowRouter);
+  console.log('[DOCFLOW] Đã mount /api/documents, /api/attachments, /api/units, /api/dashboard/stats');
+} catch (e) {
+  console.warn('[DOCFLOW] Không mount internal documents workflow:', e.message);
 }
 
 /** Bảng dashboard_permissions (migrations/004_dashboard_permissions.sql) */
@@ -17439,6 +17572,43 @@ app.get('/public/vendor/Sortable.min.js', (req, res) => {
     return res.status(404).send('sortable bundle not found');
   }
 });
+
+// Admin UI (React Vite) bridge:
+// - If built bundle exists, serve it at /admin
+// - Otherwise redirect to Vite dev server (default :5178)
+const adminUiDistDir = path.join(__dirname, 'frontend', 'document-workflow-ui', 'dist');
+const adminUiIndexFile = path.join(adminUiDistDir, 'index.html');
+const adminUiDevUrl = String(process.env.ADMIN_UI_DEV_URL || 'http://localhost:5178').replace(/\/$/, '');
+
+if (fs.existsSync(adminUiIndexFile)) {
+  // Vite build currently emits absolute /assets/* URLs by default.
+  // Serve both /assets and /admin/assets to avoid 404 in admin SPA.
+  app.use(
+    '/assets',
+    express.static(path.join(adminUiDistDir, 'assets'), {
+      etag: false,
+      lastModified: false,
+      maxAge: 0,
+    })
+  );
+  app.use(
+    '/admin/assets',
+    express.static(path.join(adminUiDistDir, 'assets'), {
+      etag: false,
+      lastModified: false,
+      maxAge: 0,
+    })
+  );
+  app.get(['/admin', '/admin/*'], (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    return res.sendFile(adminUiIndexFile);
+  });
+} else {
+  app.get(['/admin', '/admin/*'], (req, res) => {
+    const tail = String(req.originalUrl || '').replace(/^\/admin/, '');
+    return res.redirect(302, `${adminUiDevUrl}/admin${tail}`);
+  });
+}
 
 app.use(
   express.static(__dirname, {

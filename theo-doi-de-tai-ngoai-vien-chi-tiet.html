@@ -1461,7 +1461,7 @@
                 return;
             }
             var kq = m.buoc3_ket_qua || '';
-            var kqLabel = kq === 'dong_y' ? 'Đồng ý cho phát hành hồ sơ' : kq === 'dong_y_co_dieu_kien' ? 'Đồng ý có điều kiện' : kq === 'khong_dong_y' ? 'Không đồng ý' : kq;
+            var kqLabel = kq === 'dong_y' ? 'Đồng ý cho ban hành hồ sơ' : kq === 'dong_y_co_dieu_kien' ? 'Đồng ý có điều kiện' : kq === 'khong_dong_y' ? 'Không đồng ý' : kq;
             var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Phiếu nhận xét - ' + (m.title || '').replace(/</g,'&lt;') + '</title><style>body{font-family:Segoe UI,sans-serif;padding:24px;max-width:700px;margin:0 auto;} h1{font-size:18px;border-bottom:2px solid #333;padding-bottom:8px;} .row{margin:12px 0;} .label{font-weight:600;font-size:12px;color:#555;margin-bottom:4px;} .value{font-size:14px;}</style></head><body>';
             html += '<h1>PHIẾU NHẬN XÉT CỦA CT HĐ KHCN</h1>';
             html += '<div class="row"><div class="label">Đề tài</div><div class="value">' + (m.title || '—').replace(/</g,'&lt;') + '</div></div>';
