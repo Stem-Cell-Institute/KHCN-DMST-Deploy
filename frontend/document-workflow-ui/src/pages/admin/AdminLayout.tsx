@@ -20,13 +20,12 @@ export function AdminLayout() {
   }, []);
 
   const roles = useMemo(() => parseRoles(me?.roles || []), [me]);
-  const isMaster = roles.includes("master_admin") || roles.includes("admin");
+  const isMaster = roles.includes("master_admin");
   const isManager = isMaster || roles.includes("module_manager");
 
   const menu = [
-    { to: "/admin/dashboard", label: "Dashboard", show: isMaster },
-    { to: "/admin/users", label: "Quản lý người dùng", show: isMaster },
-    { to: "/admin/module-permissions", label: "Phân quyền module", show: isMaster },
+    { to: "/admin/dashboard", label: "Dashboard (dev)", show: isMaster },
+    { to: "/admin/users", label: "master admin (dev)", show: isMaster },
     { to: "/admin/units", label: "Danh mục đơn vị", show: isManager },
     { to: "/admin/module-settings", label: "Cấu hình module", show: isManager },
     { to: "/admin/audit-logs", label: "Nhật ký hệ thống", show: isMaster },

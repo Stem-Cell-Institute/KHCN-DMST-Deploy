@@ -97,6 +97,7 @@
       document_published: "Ban hành",
       document_archived: "Lưu trữ hồ sơ",
       document_deleted: "Xóa hồ sơ",
+      document_aborted: "Dừng quy trình",
       document_general_updated: "Cập nhật hồ sơ",
       attachment_uploaded: "Upload tệp đính kèm",
     };
@@ -227,13 +228,23 @@
   function renderStats(stats) {
     const byStepMap = {};
     (stats.byStep || []).forEach((x) => { byStepMap[String(x.current_step)] = x.count; });
+    const fallbackInProgress = Object.keys(byStepMap)
+      .map((k) => Number(k))
+      .filter((k) => Number.isFinite(k) && k >= 1 && k <= 8)
+      .reduce((sum, k) => sum + Number(byStepMap[String(k)] || 0), 0);
+    const fallbackCompleted = Number(byStepMap["9"] || 0);
+    const fallbackTotal = Object.values(byStepMap).reduce((sum, c) => sum + Number(c || 0), 0);
+    const inProgressCount = Number(stats.inProgressCount != null ? stats.inProgressCount : fallbackInProgress);
+    const completedCount = Number(stats.completedCount != null ? stats.completedCount : fallbackCompleted);
+    const totalCount = Number(stats.totalCount != null ? stats.totalCount : fallbackTotal);
+    const createdTodayCount = Number(stats.createdTodayCount || 0);
+    const overdueCount = Number(stats.overdueCount || 0);
     const html = [];
-    for (let i = 1; i <= 9; i++) {
-      html.push(
-        `<div class="wf-stat"><span class="num">${byStepMap[String(i)] || 0}</span><span class="lbl">Bước ${i}</span><span class="sub">${escapeHtml(STEP_STAT_NAMES[i] || STEP_NAMES[i] || "")}</span></div>`
-      );
-    }
-    html.push(`<div class="wf-stat"><span class="num">${stats.overdueCount || 0}</span><span class="lbl">Trễ hạn</span><span class="sub">Quá deadline</span></div>`);
+    html.push(`<div class="wf-stat"><span class="num">${totalCount}</span><span class="lbl">Tổng hồ sơ</span><span class="sub">Toàn bộ hồ sơ hiện có</span></div>`);
+    html.push(`<div class="wf-stat"><span class="num">${inProgressCount}</span><span class="lbl">Đang trong quy trình</span><span class="sub">Hồ sơ bước 1-8</span></div>`);
+    html.push(`<div class="wf-stat"><span class="num">${completedCount}</span><span class="lbl">Đã hoàn thành</span><span class="sub">Đã lưu trữ (bước 9)</span></div>`);
+    html.push(`<div class="wf-stat"><span class="num">${overdueCount}</span><span class="lbl">Trễ hạn</span><span class="sub">Quá deadline xử lý</span></div>`);
+    html.push(`<div class="wf-stat"><span class="num">${createdTodayCount}</span><span class="lbl">Tạo hôm nay</span><span class="sub">Hồ sơ mới trong ngày</span></div>`);
     el.stats.innerHTML = html.join("");
   }
 
@@ -242,9 +253,13 @@
       el.docList.innerHTML = '<p class="wf-muted">Không có hồ sơ phù hợp.</p>';
       return;
     }
+    const canDelete = hasRole("master_admin", "admin");
     el.docList.innerHTML = state.docs.map((d) => `
       <article class="wf-doc-item ${Number(d.id) === Number(state.selectedId) ? "active" : ""}" data-id="${d.id}">
-        <p class="title">${escapeHtml(d.title || "(Không tiêu đề)")}</p>
+        <div class="wf-doc-item-head">
+          <p class="title">${escapeHtml(d.title || "(Không tiêu đề)")}</p>
+          ${canDelete ? `<button class="wf-btn wf-btn-small wf-btn-danger wf-doc-delete" type="button" data-id="${d.id}" title="Xóa mềm hồ sơ">Xóa</button>` : ""}
+        </div>
         <p class="meta">#${d.id} | Bước ${d.current_step} - ${STEP_NAMES[d.current_step] || ""}</p>
         <p class="meta">Trạng thái: ${escapeHtml(d.status || "")}</p>
       </article>
@@ -254,6 +269,26 @@
         state.selectedId = Number(item.getAttribute("data-id"));
         renderList();
         await loadDetail();
+      });
+    });
+    el.docList.querySelectorAll(".wf-doc-delete").forEach((btn) => {
+      btn.addEventListener("click", async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const id = Number(btn.getAttribute("data-id"));
+        if (!id) return;
+        const ok = window.confirm(`Bạn chắc chắn muốn xóa hồ sơ #${id}? Thao tác này là xóa mềm (có thể tra cứu lịch sử).`);
+        if (!ok) return;
+        try {
+          await api(`/api/documents/${id}`, { method: "DELETE" });
+          if (Number(state.selectedId) === id) state.selectedId = null;
+          showToast(`Đã xóa hồ sơ #${id}.`, "success");
+          await loadDocuments();
+          await loadStats();
+          await loadDetail();
+        } catch (e) {
+          showToast("Xóa hồ sơ thất bại: " + e.message, "error");
+        }
       });
     });
   }
@@ -279,9 +314,14 @@
   function detailTemplate(doc) {
     const attachments = doc.attachments || [];
     const history = doc.history || [];
-    const isArchived = String(doc.status || "").toLowerCase() === "archived" || Number(doc.current_step || 0) >= 9;
+    const docStatus = String(doc.status || "").toLowerCase();
+    const isArchived = docStatus === "archived" || Number(doc.current_step || 0) >= 9;
+    const isAborted = docStatus === "aborted";
     const archivedText = isArchived
       ? `<p class="wf-final-status">Trang thái cuối: Đã lưu trữ hoàn tất${doc.archived_at ? ` (${escapeHtml(formatDateTime(doc.archived_at))})` : ""}.</p>`
+      : "";
+    const abortedText = isAborted
+      ? `<p class="wf-final-status" style="border-color:#e7b7b7;background:#fff4f4;color:#9b2f2f;">Trạng thái cuối: Đã dừng quy trình tại bước ${Number(doc.current_step || 1)}.</p>`
       : "";
     const categoryOptions = ATTACHMENT_CATEGORY_OPTIONS
       .map((o) => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`)
@@ -310,12 +350,26 @@
       <section class="wf-block">
         <h3>Thông tin hồ sơ</h3>
         ${archivedText}
+        ${abortedText}
         <div class="wf-row">
           <div><b>Loại văn bản:</b> ${escapeHtml(doc.doc_type || "")}</div>
           <div><b>Trạng thái:</b> ${escapeHtml(doc.status || "")}</div>
           <div><b>Đơn vị chủ trì:</b> ${escapeHtml(doc.assigned_unit_id || "")}</div>
           <div><b>Người soạn thảo:</b> ${escapeHtml(doc.assigned_to_id || "")}</div>
         </div>
+      </section>
+
+      <section class="wf-block">
+        <h3>Điều khiển quy trình</h3>
+        <form id="wf-form-abort" class="wf-inline-form">
+          <h4>Dừng quy trình (Abort)</h4>
+          <div class="wf-row wf-row-1">
+            <label>Lý do dừng (không bắt buộc)
+              <textarea name="reason" rows="2" placeholder="Ví dụ: Hồ sơ test sai, dừng quy trình để tránh thao tác tiếp."></textarea>
+            </label>
+          </div>
+          <button class="wf-btn wf-btn-small wf-btn-danger" type="submit" ${isAborted || isArchived ? "disabled" : ""}>Huỷ quy trình</button>
+        </form>
       </section>
 
       <section class="wf-block">
@@ -505,6 +559,23 @@
     const isDrafter = hasRole("drafter");
     const isAssigned = uid != null && Number(doc.assigned_to_id) === uid;
     const canDraft = isAdmin || isLeader || (isDrafter && isAssigned);
+    const status = String(doc.status || "").toLowerCase();
+    const isClosed = status === "aborted" || status === "archived";
+    const canAbort = hasRole("module_manager", "master_admin", "admin") && !isClosed;
+    if (isClosed) {
+      return {
+        assign: false,
+        draft: false,
+        review: false,
+        feedback: false,
+        finalize: false,
+        submit: false,
+        publish: false,
+        archive: false,
+        upload: false,
+        abort: false,
+      };
+    }
     return {
       assign: (isAdmin || isLeader) && step <= 2,
       draft: canDraft && step === 3,
@@ -515,12 +586,14 @@
       publish: isAdmin && step === 8,
       archive: isAdmin && step >= 8,
       upload: isAdmin || isLeader || isReviewer || isDrafter,
+      abort: canAbort,
     };
   }
 
   function applyFormVisibility(doc) {
     const caps = computeCaps(doc);
     const map = [
+      ["#wf-form-abort", "abort", "Chỉ Module Manager trở lên được dừng quy trình."],
       ["#wf-form-assign", "assign", "Bước 2 chỉ dành cho Leader/Admin khi hồ sơ ở bước 1-2."],
       ["#wf-form-draft", "draft", "Bước 3 chỉ cho người soạn thảo được phân công (hoặc Leader/Admin)."],
       ["#wf-form-review", "review", "Bước 4 chỉ dành cho Reviewer/Admin khi hồ sơ đang ở bước 4."],
@@ -717,6 +790,13 @@
       });
     });
 
+    bindForm("#wf-form-abort", async (fd) => {
+      const reason = String(fd.get("reason") || "").trim();
+      const ok = window.confirm(`Bạn chắc chắn muốn dừng quy trình hồ sơ #${doc.id}?`);
+      if (!ok) return;
+      await doJson("PUT", `/api/documents/${doc.id}/abort`, { reason });
+    });
+
     const uploadForm = el.detail.querySelector("#wf-upload-form");
     if (uploadForm) {
       uploadForm.addEventListener("submit", async (ev) => {
@@ -773,13 +853,16 @@
     });
     const res = await api(`/api/documents?${params.toString()}`);
     state.docs = res.data || [];
-    if (!state.selectedId && state.docs.length) state.selectedId = Number(state.docs[0].id);
+    const selectedExists = state.docs.some((d) => Number(d.id) === Number(state.selectedId));
+    if (!selectedExists) {
+      state.selectedId = state.docs.length ? Number(state.docs[0].id) : null;
+    }
     renderList();
   }
 
   async function loadStats() {
     const res = await api("/api/dashboard/stats");
-    renderStats(res.data || { byStep: [], overdueCount: 0 });
+    renderStats(res.data || { byStep: [], totalCount: 0, inProgressCount: 0, completedCount: 0, createdTodayCount: 0, overdueCount: 0 });
   }
 
   async function init() {

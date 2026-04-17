@@ -43,6 +43,7 @@ function createDocumentWorkflowRoutes(deps) {
   router.get('/documents/:id', controller.getDocumentDetail);
   router.put('/documents/:id', jsonBody, controller.updateDocumentGeneral);
   router.delete('/documents/:id', controller.deleteDocument);
+  router.put('/documents/:id/abort', permission.requireModuleAdmin, jsonBody, controller.abortDocument);
   router.put('/documents/:id/assign', permission.requireRoles(['leader']), jsonBody, controller.assignDocument);
   router.post('/documents/:id/draft', permission.requireRoles(['drafter']), upload.array('files', 10), controller.saveDraft);
   router.post('/documents/:id/review', permission.requireRoles(['reviewer']), jsonBody, controller.reviewDocument);

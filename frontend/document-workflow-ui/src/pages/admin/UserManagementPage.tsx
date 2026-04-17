@@ -2,18 +2,29 @@ import { useEffect, useMemo, useState } from "react";
 import {
   deleteAdminUser,
   fetchAdminMe,
+  fetchModuleSettings,
   fetchAdminUsers,
   fetchUnits,
   resetAdminUserPassword,
+  saveModuleSettings,
   saveAdminUser,
   setAdminUserActive,
 } from "@/lib/api";
 import { Button, Input, Select } from "@/components/ui";
 import type { Unit } from "@/lib/types";
-import { AdminSectionCard, ConfirmDialog, DataTable, FormDialog, Pagination, useToast } from "@/components/admin/AdminPrimitives";
+import { AdminSectionCard, ConfirmDialog, DataTable, Pagination, useToast } from "@/components/admin/AdminPrimitives";
 
 const ROLE_OPTIONS = ["master_admin", "module_manager", "proposer", "leader", "reviewer", "drafter", "user"];
 const PAGE_SIZE = 10;
+const ROLE_GUIDE: Record<string, string> = {
+  master_admin: "Toan quyen he thong va toan bo thao tac trong module Workflow (xem/sua/xoa ho so, thao tac moi buoc).",
+  module_manager: "Quan tri module Workflow: xem tat ca ho so, sua/xoa ho so va thao tac duoc tat ca cac buoc 1-9.",
+  proposer: "Duoc tao ho so moi va thuc hien Buoc 1 (nop ho so).",
+  leader: "Xu ly Buoc 2 (phan cong) va co the tham gia Buoc 5 (gop y).",
+  reviewer: "Xu ly Buoc 4 (tham dinh) va Buoc 5 (gop y).",
+  drafter: "Khi duoc phan cong se xu ly Buoc 3, Buoc 6, Buoc 7; co the tham gia Buoc 5.",
+  user: "Tai khoan co ban, chi dang nhap/xem theo quyen duoc cap; khong co quyen thao tac quy trinh neu khong gan role chuc nang.",
+};
 
 type UserRow = {
   id: number;
@@ -41,14 +52,18 @@ export function UserManagementPage() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [editing, setEditing] = useState<UserRow | null>(null);
   const [page, setPage] = useState(1);
+  const [internalDomainEnabled, setInternalDomainEnabled] = useState(false);
+  const [internalDomainSuffix, setInternalDomainSuffix] = useState("@sci.edu.vn");
   const [confirm, setConfirm] = useState<{ kind: "delete" | "master"; user: UserRow; nextRoles?: string } | null>(null);
   const [meId, setMeId] = useState<number>(0);
   const toast = useToast();
 
   async function reload() {
-    const [u, unit] = await Promise.all([fetchAdminUsers(), fetchUnits()]);
+    const [u, unit, settings] = await Promise.all([fetchAdminUsers(), fetchUnits(), fetchModuleSettings()]);
     setUsers(Array.isArray(u) ? (u as UserRow[]) : []);
     setUnits(Array.isArray(unit) ? unit : []);
+    setInternalDomainEnabled(String(settings.settings?.internal_domain_access_enabled || "0") === "1");
+    setInternalDomainSuffix(String(settings.settings?.internal_domain_email_suffix || "@sci.edu.vn"));
   }
 
   useEffect(() => {
@@ -70,6 +85,36 @@ export function UserManagementPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-800">Quản lý người dùng</h2>
           <Button onClick={() => setEditing({ id: 0, email: "", role: "user", is_banned: 0 })}>Thêm người dùng</Button>
+        </div>
+      </AdminSectionCard>
+
+      <AdminSectionCard className="p-4">
+        <h3 className="text-base font-semibold text-slate-800">Tùy chọn hàng loạt: User Nội viện</h3>
+        <p className="mt-1 text-sm text-slate-600">
+          Khi bật, tài khoản có email đuôi <code>{internalDomainSuffix}</code> sẽ được truy cập xem nội dung module Workflow theo chế độ chỉ xem.
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          Mặc định nhóm này là role <code>user</code>: xem danh sách hồ sơ, xem chi tiết và tiến trình; không được thao tác các bước quy trình.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant={internalDomainEnabled ? "danger" : "default"}
+            onClick={async () => {
+              const next = !internalDomainEnabled;
+              await saveModuleSettings({
+                internal_domain_access_enabled: next,
+                internal_domain_email_suffix: internalDomainSuffix || "@sci.edu.vn",
+              });
+              setInternalDomainEnabled(next);
+              toast.push("success", next ? "Đã bật quyền xem cho User Nội viện." : "Đã tắt quyền xem cho User Nội viện.");
+            }}
+          >
+            {internalDomainEnabled ? "Tắt tùy chọn User Nội viện" : "Bật tùy chọn User Nội viện"}
+          </Button>
+          <span className={`text-xs ${internalDomainEnabled ? "text-emerald-600" : "text-slate-500"}`}>
+            Trạng thái: {internalDomainEnabled ? "Đang bật" : "Đang tắt"}
+          </span>
         </div>
       </AdminSectionCard>
 
@@ -114,13 +159,17 @@ export function UserManagementPage() {
         <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </AdminSectionCard>
 
-      <FormDialog
-        open={!!editing}
-        title={editing?.id ? "Sửa người dùng" : "Thêm người dùng"}
-        description="Dùng dialog để tạo hoặc cập nhật thông tin tài khoản."
-        onClose={() => setEditing(null)}
-      >
-        {editing ? (
+      {editing ? (
+        <AdminSectionCard className="p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800">{editing.id ? "Sửa người dùng" : "Thêm người dùng"}</h3>
+              <p className="text-sm text-slate-500">Biểu mẫu chỉnh sửa trực tiếp trên trang, không dùng pop-up.</p>
+            </div>
+            <Button type="button" variant="outline" onClick={() => setEditing(null)}>
+              Đóng form
+            </Button>
+          </div>
           <form
             className="grid gap-3 md:grid-cols-2"
             onSubmit={async (e) => {
@@ -150,8 +199,10 @@ export function UserManagementPage() {
                 is_banned: (f.elements.namedItem("is_banned") as HTMLInputElement).checked,
                 is_active: !(f.elements.namedItem("is_banned") as HTMLInputElement).checked,
               };
-              const password = (f.elements.namedItem("password") as HTMLInputElement).value;
-              if (password) payload.password = password;
+              if (!editing.id && !existedUser) {
+                toast.push("error", "Email này chưa có tài khoản đăng ký. Vui lòng dùng email đã có sẵn trong hệ thống.");
+                return;
+              }
               await saveAdminUser(payload);
               setEditing(null);
               toast.push("success", "Lưu người dùng thành công.");
@@ -171,17 +222,17 @@ export function UserManagementPage() {
                 {units.map((u) => <option key={u.id} value={u.code || u.name}>{u.name}</option>)}
               </Select>
             </label>
-            <label className="text-sm">Mật khẩu (chỉ nhập khi tạo mới / đổi)
-              <Input name="password" type="password" />
-            </label>
             <fieldset className="md:col-span-2 rounded border border-slate-200 p-3">
               <legend className="px-1 text-sm font-medium text-slate-700">Vai trò người dùng</legend>
               <div className="mt-1 grid gap-2 md:grid-cols-3">
                 {ROLE_OPTIONS.map((r) => (
-                  <label key={r} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="roles" value={r} defaultChecked={parseRoleList(editing.role).includes(r)} />
-                    {r}
-                  </label>
+                  <div key={r} className="rounded border border-slate-200 bg-slate-50 p-2">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                      <input type="checkbox" name="roles" value={r} defaultChecked={parseRoleList(editing.role).includes(r)} />
+                      {r}
+                    </label>
+                    <p className="mt-1 text-xs text-slate-600">{ROLE_GUIDE[r]}</p>
+                  </div>
                 ))}
               </div>
               <p className="mt-2 text-xs text-slate-500">
@@ -197,8 +248,8 @@ export function UserManagementPage() {
               <Button type="button" variant="outline" onClick={() => setEditing(null)}>Hủy</Button>
             </div>
           </form>
-        ) : null}
-      </FormDialog>
+        </AdminSectionCard>
+      ) : null}
 
       <ConfirmDialog
         open={!!confirm}

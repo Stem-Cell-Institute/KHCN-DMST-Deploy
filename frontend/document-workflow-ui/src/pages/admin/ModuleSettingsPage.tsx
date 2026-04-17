@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchModuleSettings, saveDocumentType, saveModuleSettings } from "@/lib/api";
-import { Button, Card, Input, Textarea } from "@/components/ui";
+import { Button, Card, Input } from "@/components/ui";
 
 export function ModuleSettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
@@ -33,8 +33,6 @@ export function ModuleSettingsPage() {
               default_assignment_days: Number((f.elements.namedItem("default_assignment_days") as HTMLInputElement).value),
               default_review_remind_days: Number((f.elements.namedItem("default_review_remind_days") as HTMLInputElement).value),
               email_enabled: (f.elements.namedItem("email_enabled") as HTMLInputElement).checked,
-              email_templates: JSON.parse((f.elements.namedItem("email_templates") as HTMLTextAreaElement).value || "{}"),
-              email_recipients: JSON.parse((f.elements.namedItem("email_recipients") as HTMLTextAreaElement).value || "{}"),
             };
             await saveModuleSettings(payload);
             setMsg("Đã lưu cấu hình module.");
@@ -51,33 +49,9 @@ export function ModuleSettingsPage() {
             <input name="email_enabled" type="checkbox" defaultChecked={settings.email_enabled === "1"} />
             Bật gửi email thông báo
           </label>
-          <label className="text-sm md:col-span-2">Mẫu email (JSON)
-            <Textarea
-              name="email_templates"
-              rows={5}
-              defaultValue={(() => {
-                try {
-                  return JSON.stringify(JSON.parse(settings.email_templates || "{}"), null, 2);
-                } catch {
-                  return "{}";
-                }
-              })()}
-            />
-          </label>
-          <label className="text-sm md:col-span-2">Người nhận email theo sự kiện (JSON)
-            <Textarea
-              name="email_recipients"
-              rows={5}
-              placeholder='{"assign":["a@domain.com"],"review_reject":["b@domain.com"],"step5_approved":["c@domain.com"],"publish":["all@domain.com"]}'
-              defaultValue={(() => {
-                try {
-                  return JSON.stringify(JSON.parse(settings.email_recipients || "{}"), null, 2);
-                } catch {
-                  return "{}";
-                }
-              })()}
-            />
-          </label>
+          <p className="text-xs text-slate-500 md:col-span-2">
+            Hệ thống đang dùng mẫu nội dung và danh sách người nhận tự động theo logic nghiệp vụ từng bước.
+          </p>
           <div className="md:col-span-2">
             <Button type="submit">Lưu cấu hình</Button>
           </div>

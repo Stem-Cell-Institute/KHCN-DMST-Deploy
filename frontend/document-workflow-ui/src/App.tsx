@@ -18,8 +18,22 @@ export default function App() {
       <Route path="/documents/:id" element={<DocumentDetailPage />} />
       <Route path="/admin" element={<AdminGuard><AdminLayout /></AdminGuard>}>
         <Route index element={<Navigate to="/admin/module-settings" replace />} />
-        <Route path="dashboard" element={<AdminDashboardPage />} />
-        <Route path="users" element={<UserManagementPage />} />
+        <Route
+          path="dashboard"
+          element={
+            <AdminGuard requiredRoles={["master_admin"]}>
+              <AdminDashboardPage />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="users"
+          element={
+            <AdminGuard requiredRoles={["master_admin"]}>
+              <UserManagementPage />
+            </AdminGuard>
+          }
+        />
         <Route path="module-permissions" element={<ModulePermissionsPage />} />
         <Route path="units" element={<UnitsManagementPage />} />
         <Route path="module-settings" element={<ModuleSettingsPage />} />

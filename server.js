@@ -8884,6 +8884,39 @@ app.get('/api/homepage-stats', (req, res) => {
   } catch (e) {
     /* bảng Equipment chưa có */
   }
+  let documentWorkflowMini = { inProgress: 0, completed: 0, overdue: 0 };
+  try {
+    documentWorkflowMini.inProgress = db
+      .prepare(
+        `SELECT COUNT(*) AS c
+         FROM documents
+         WHERE deleted_at IS NULL
+           AND status IN ('pending','in_progress')
+           AND current_step BETWEEN 1 AND 8`
+      )
+      .get().c;
+    documentWorkflowMini.completed = db
+      .prepare(
+        `SELECT COUNT(*) AS c
+         FROM documents
+         WHERE deleted_at IS NULL
+           AND (status = 'archived' OR current_step >= 9)`
+      )
+      .get().c;
+    documentWorkflowMini.overdue = db
+      .prepare(
+        `SELECT COUNT(*) AS c
+         FROM documents
+         WHERE deleted_at IS NULL
+           AND assignment_deadline IS NOT NULL
+           AND assignment_deadline < date('now')
+           AND current_step BETWEEN 2 AND 7
+           AND status IN ('pending', 'in_progress')`
+      )
+      .get().c;
+  } catch (e) {
+    /* bảng document workflow chưa có */
+  }
   return res.json({
     missions,
     missionMini,
@@ -8896,6 +8929,7 @@ app.get('/api/homepage-stats', (req, res) => {
     facilities,
     dmsMini,
     equipmentMini,
+    documentWorkflowMini,
   });
 });
 

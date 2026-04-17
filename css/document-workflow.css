@@ -39,6 +39,10 @@ body {
 .wf-doc-item.active { border-color: #5a66de; background: #eef1ff; }
 .wf-doc-item .title { margin: 0 0 6px; font-weight: 600; }
 .wf-doc-item .meta { margin: 0; font-size: 12px; color: #5f6b86; }
+.wf-doc-item-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.wf-doc-item-head .title { margin-bottom: 0; flex: 1; min-width: 0; }
+.wf-btn-danger { background: #d64545; }
+.wf-btn-danger:hover { background: #bf3737; }
 .wf-detail-panel { padding: 16px; }
 .wf-muted { color: #5f6b86; }
 .wf-stepper { display: grid; grid-template-columns: repeat(9, minmax(0,1fr)); gap: 6px; margin: 10px 0 16px; }

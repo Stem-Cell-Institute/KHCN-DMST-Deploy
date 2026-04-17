@@ -304,9 +304,18 @@ function computeUserBehavior(db, range, equipmentId) {
 }
 
 function maintenanceStatusList(db) {
+  const cycleHoursStmt = db.prepare(
+    `SELECT COALESCE(SUM(end_h - start_h), 0) AS hours
+     FROM crd_bookings
+     WHERE machine_id = ?
+       AND LOWER(COALESCE(status,'')) != 'cancelled'
+       AND (? IS NULL OR date > ?)`
+  );
   const rows = db.prepare('SELECT * FROM crd_machines ORDER BY sort_order ASC, name ASC').all();
   return rows.map((m) => {
-    const acc = Number(m.accumulated_hours) || 0;
+    const lastMaint = m.last_maintenance_date ? String(m.last_maintenance_date).slice(0, 10) : null;
+    const cyc = cycleHoursStmt.get(m.id, lastMaint, lastMaint);
+    const acc = Math.round((Number((cyc && cyc.hours) || 0) || 0) * 100) / 100;
     const thr = Number(m.maintenance_threshold_hours);
     const threshold = Number.isFinite(thr) && thr > 0 ? thr : 500;
     const until = Math.max(0, threshold - acc);
@@ -324,11 +333,11 @@ function maintenanceStatusList(db) {
     return {
       id: m.id,
       name: m.name,
-      accumulated_hours: Math.round(acc * 100) / 100,
+      accumulated_hours: acc,
       maintenance_threshold_hours: threshold,
       hours_until_maintenance: Math.round(until * 100) / 100,
       maintenance_urgency,
-      last_maintenance_date: m.last_maintenance_date || null,
+      last_maintenance_date: lastMaint,
       next_suggested_date,
     };
   });
@@ -526,10 +535,20 @@ module.exports = function createEquipmentAnalyticsRouter({ db }) {
       if (type && !['preventive', 'corrective', 'calibration'].includes(type)) {
         return res.status(400).json({ message: 'type phải là preventive | corrective | calibration' });
       }
-      const m = db.prepare('SELECT id, accumulated_hours FROM crd_machines WHERE id = ?').get(equipment_id);
+      const m = db.prepare('SELECT id, last_maintenance_date FROM crd_machines WHERE id = ?').get(equipment_id);
       if (!m) return res.status(404).json({ message: 'Không tìm thấy thiết bị' });
-      /** Giờ tích lũy trong chu kỳ (trước reset) — ghi vào lịch sử = “lịch sử sử dụng” chu kỳ */
-      const hoursAt = Math.round((Number(m.accumulated_hours) || 0) * 100) / 100;
+      const lastMaint = m.last_maintenance_date ? String(m.last_maintenance_date).slice(0, 10) : null;
+      /** Giờ tích lũy chu kỳ = tổng giờ đặt lịch của máy từ lần bảo trì gần nhất. */
+      const cyc = db
+        .prepare(
+          `SELECT COALESCE(SUM(end_h - start_h), 0) AS hours
+           FROM crd_bookings
+           WHERE machine_id = ?
+             AND LOWER(COALESCE(status,'')) != 'cancelled'
+             AND (? IS NULL OR date > ?)`
+        )
+        .get(equipment_id, lastMaint, lastMaint);
+      const hoursAt = Math.round((Number((cyc && cyc.hours) || 0) || 0) * 100) / 100;
 
       const tx = db.transaction(() => {
         db.prepare(

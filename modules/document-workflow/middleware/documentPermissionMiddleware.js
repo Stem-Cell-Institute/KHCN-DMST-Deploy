@@ -117,6 +117,30 @@ function createDocumentPermissionMiddleware(db) {
     return roles.has('module_manager') || isMasterAdmin(req);
   }
 
+  function getModuleSetting(key, fallback) {
+    try {
+      if (!tableExists('module_settings')) return fallback;
+      const row = db.prepare(`SELECT setting_value FROM module_settings WHERE setting_key = ?`).get(key);
+      return row && row.setting_value != null ? row.setting_value : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function isInternalDomainViewer(req) {
+    const enabled = String(getModuleSetting('internal_domain_access_enabled', '0')) === '1';
+    if (!enabled) return false;
+    const email = String((req.user && req.user.email) || '')
+      .trim()
+      .toLowerCase();
+    if (!email) return false;
+    const suffix = String(getModuleSetting('internal_domain_email_suffix', '@sci.edu.vn') || '@sci.edu.vn')
+      .trim()
+      .toLowerCase();
+    if (!suffix) return false;
+    return email.endsWith(suffix.startsWith('@') ? suffix : `@${suffix}`);
+  }
+
   function hasAnyRole(req, requiredRoles) {
     if (isAdmin(req)) return true;
     const roles = getUserRoles(req);
@@ -126,6 +150,7 @@ function createDocumentPermissionMiddleware(db) {
   function canAccessDocument(req, document, options = {}) {
     if (!document || !req || !req.user) return false;
     if (isAdmin(req) || isModuleManager(req)) return true;
+    if (isInternalDomainViewer(req)) return true;
     const roles = getUserRoles(req);
     const requireReviewerForStep4 = options.requireReviewerForStep4 === true;
     if (requireReviewerForStep4 && Number(document.current_step) === 4) {

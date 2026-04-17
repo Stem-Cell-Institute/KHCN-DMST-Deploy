@@ -242,6 +242,17 @@ function createDocumentWorkflowAdminController(deps) {
       if (b.email_enabled != null) {
         documentModel.setModuleSetting('email_enabled', b.email_enabled ? '1' : '0', req.user.id);
       }
+      if (b.internal_domain_access_enabled != null) {
+        documentModel.setModuleSetting(
+          'internal_domain_access_enabled',
+          b.internal_domain_access_enabled ? '1' : '0',
+          req.user.id
+        );
+      }
+      if (b.internal_domain_email_suffix != null) {
+        const suffix = String(b.internal_domain_email_suffix || '').trim() || '@sci.edu.vn';
+        documentModel.setModuleSetting('internal_domain_email_suffix', suffix, req.user.id);
+      }
       if (b.email_templates != null) {
         documentModel.setModuleSetting('email_templates', JSON.stringify(b.email_templates || {}), req.user.id);
       }

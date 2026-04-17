@@ -26,6 +26,10 @@ function createDocumentWorkflowController(deps) {
     return hasAnyRole(req, ['module_manager', 'master_admin', 'admin']);
   }
 
+  function canDeleteDocument(req) {
+    return hasAnyRole(req, ['master_admin', 'admin']);
+  }
+
   function history(documentId, step, action, note, req) {
     documentModel.addHistory(documentId, {
       step,
@@ -36,39 +40,38 @@ function createDocumentWorkflowController(deps) {
     });
   }
 
+  function ensureWorkflowActive(record, res) {
+    const status = String((record && record.status) || '').trim().toLowerCase();
+    if (status === 'aborted') {
+      res.status(400).json({ message: 'Hồ sơ đã dừng quy trình (aborted), không thể thao tác thêm.' });
+      return false;
+    }
+    return true;
+  }
+
   function safeSendMail(payload) {
     if (typeof mailSend !== 'function') return;
     Promise.resolve(mailSend(payload)).catch(() => {});
   }
 
-  function getEmailRecipientConfig() {
-    try {
-      const settings = documentModel.getModuleSettings ? documentModel.getModuleSettings() : {};
-      const raw = settings && settings.email_recipients ? settings.email_recipients : '{}';
-      const parsed = JSON.parse(String(raw || '{}'));
-      return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch (_) {
-      return {};
-    }
-  }
-
-  function normalizeRecipientList(value) {
-    if (Array.isArray(value)) return Array.from(new Set(value.map((x) => String(x || '').trim()).filter(Boolean)));
-    const text = String(value || '').trim();
-    if (!text) return [];
-    return Array.from(new Set(text.split(/[,\s;|]+/).map((x) => String(x || '').trim()).filter(Boolean)));
-  }
-
   function resolveRecipients(eventKey, fallbackRecipients) {
-    const cfg = getEmailRecipientConfig();
-    const custom = normalizeRecipientList(cfg[eventKey]);
-    if (custom.length) return custom;
+    // Luôn dùng danh sách người nhận tự động theo logic nghiệp vụ.
+    // Không nhận override thủ công từ module_settings.email_recipients.
     return Array.from(new Set((fallbackRecipients || []).filter(Boolean)));
   }
 
   function documentLink(documentId) {
     const base = String(baseUrl || process.env.BASE_URL || '').replace(/\/$/, '');
     return base ? `${base}/tai-lieu-hanh-chinh.html?documentId=${documentId}` : `/tai-lieu-hanh-chinh.html?documentId=${documentId}`;
+  }
+
+  function composeFormalEmail(lines) {
+    return (
+      `Kính gửi Thầy/Cô,\n\n` +
+      `${(lines || []).filter(Boolean).join('\n')}\n\n` +
+      `Trân trọng,\n` +
+      `Hệ thống quản lý quy trình ban hành văn bản nội bộ`
+    );
   }
 
   function getUserEmailById(userId) {
@@ -96,6 +99,31 @@ function createDocumentWorkflowController(deps) {
     try {
       const rows = db.prepare(`SELECT email FROM users WHERE trim(COALESCE(email,'')) <> ''`).all();
       return Array.from(new Set((rows || []).map((r) => String(r.email || '').trim()).filter(Boolean)));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function getModuleManagerEmails() {
+    try {
+      const rows = db
+        .prepare(`SELECT email, role FROM users WHERE trim(COALESCE(email,'')) <> ''`)
+        .all();
+      return Array.from(
+        new Set(
+          (rows || [])
+            .filter((r) =>
+              String(r.role || "")
+                .toLowerCase()
+                .split(/[,\s;|]+/)
+                .map((x) => x.trim())
+                .filter(Boolean)
+                .includes("module_manager")
+            )
+            .map((r) => String(r.email || "").trim())
+            .filter(Boolean)
+        )
+      );
     } catch (_) {
       return [];
     }
@@ -177,6 +205,15 @@ function createDocumentWorkflowController(deps) {
             : null,
       });
       history(record.id, 1, 'proposal_created', 'Khởi tạo đề xuất văn bản', req);
+      safeSendMail({
+        to: getModuleManagerEmails(),
+        subject: `[DOCFLOW] Hồ sơ mới được tạo: #${record.id}`,
+        text: composeFormalEmail([
+          `Hồ sơ "${record.title || ''}" vừa được tạo ở bước 1.`,
+          `Loại văn bản: ${record.doc_type || 'N/A'}`,
+          `Xem chi tiết: ${documentLink(record.id)}`,
+        ]),
+      });
       return res.status(201).json({ ok: true, data: record });
     } catch (e) {
       return res.status(500).json({ message: e.message || 'Không tạo được hồ sơ.' });
@@ -233,6 +270,7 @@ function createDocumentWorkflowController(deps) {
       if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      if (!ensureWorkflowActive(record, res)) return;
       if (!canManageDocument(req)) {
         return res.status(403).json({ message: 'Chỉ Module Manager hoặc Master Admin được sửa hồ sơ trực tiếp.' });
       }
@@ -262,8 +300,8 @@ function createDocumentWorkflowController(deps) {
       if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
-      if (!canManageDocument(req)) {
-        return res.status(403).json({ message: 'Chỉ Module Manager hoặc Master Admin được xóa hồ sơ.' });
+      if (!canDeleteDocument(req)) {
+        return res.status(403).json({ message: 'Chỉ Master Admin hoặc Admin được xóa hồ sơ.' });
       }
       documentModel.softDeleteDocument(documentId);
       history(documentId, Number(record.current_step || 1), 'document_deleted', 'Xóa mềm hồ sơ (deleted_at)', req);
@@ -273,12 +311,47 @@ function createDocumentWorkflowController(deps) {
     }
   }
 
+  function abortDocument(req, res) {
+    try {
+      const documentId = parseId(req.params.id);
+      if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
+      const record = documentModel.findById(documentId);
+      if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      if (!canManageDocument(req)) {
+        return res.status(403).json({ message: 'Chỉ Module Manager hoặc Master Admin được hủy quy trình.' });
+      }
+      const status = String(record.status || '').trim().toLowerCase();
+      if (status === 'archived') {
+        return res.status(400).json({ message: 'Hồ sơ đã lưu trữ, không thể hủy quy trình.' });
+      }
+      if (status === 'aborted') {
+        return res.status(400).json({ message: 'Hồ sơ đã ở trạng thái dừng quy trình.' });
+      }
+      const reasonRaw = req.body && req.body.reason != null ? String(req.body.reason).trim() : '';
+      const reason = reasonRaw ? reasonRaw.slice(0, 1000) : null;
+      const updated = documentModel.update(documentId, {
+        status: 'aborted',
+      });
+      history(
+        documentId,
+        Number(record.current_step || 1),
+        'document_aborted',
+        reason || `Dừng quy trình tại bước ${Number(record.current_step || 1)}.`,
+        req
+      );
+      return res.json({ ok: true, data: updated });
+    } catch (e) {
+      return res.status(500).json({ message: e.message || 'Không hủy được quy trình hồ sơ.' });
+    }
+  }
+
   function assignDocument(req, res) {
     try {
       const documentId = parseId(req.params.id);
       if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      if (!ensureWorkflowActive(record, res)) return;
       const unitId = parseId(req.body && req.body.unitId);
       let assignedToId = parseId(req.body && req.body.assignedToId);
       if (!assignedToId && req.body && req.body.assignedToName != null) {
@@ -314,13 +387,17 @@ function createDocumentWorkflowController(deps) {
       });
       history(documentId, 2, 'draft_assigned', `Phân công soạn thảo user #${assignedToId}`, req);
       const to = getUserEmailById(assignedToId);
+      const toList = resolveRecipients('assign', to ? [to] : []);
+      const ccList = getModuleManagerEmails().filter((x) => !toList.includes(x));
       safeSendMail({
-        to: resolveRecipients('assign', to ? [to] : []),
+        to: toList,
+        cc: ccList,
         subject: `[DOCFLOW] Phân công soạn thảo hồ sơ #${documentId}`,
-        text:
-          `Bạn được phân công soạn thảo hồ sơ: ${updated.title || ''}\n` +
-          `Hạn hoàn thành: ${updated.assignment_deadline || 'chưa đặt'}\n` +
+        text: composeFormalEmail([
+          `Quý Thầy/Cô được phân công soạn thảo hồ sơ: ${updated.title || ''}`,
+          `Hạn hoàn thành: ${updated.assignment_deadline || 'chưa đặt'}`,
           `Xem chi tiết: ${documentLink(documentId)}`,
+        ]),
       });
       return res.json({ ok: true, data: updated });
     } catch (e) {
@@ -334,6 +411,7 @@ function createDocumentWorkflowController(deps) {
       if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      if (!ensureWorkflowActive(record, res)) return;
       if (Number(record.assigned_to_id) !== Number(req.user.id) && !hasAnyRole(req, ['admin', 'leader', 'module_manager', 'master_admin'])) {
         return res.status(403).json({ message: 'Chỉ người được phân công soạn thảo mới được thao tác.' });
       }
@@ -351,6 +429,15 @@ function createDocumentWorkflowController(deps) {
       });
       const attachmentIds = saveFiles(documentId, 3, req.files || [], 'draft_v1', req.user.id);
       history(documentId, 3, 'upload_draft', `Tải dự thảo lần 1 (${attachmentIds.length} file)`, req);
+      safeSendMail({
+        to: getModuleManagerEmails(),
+        subject: `[DOCFLOW] Hồ sơ #${documentId} hoàn tất bước 3`,
+        text: composeFormalEmail([
+          `Hồ sơ "${updated.title || record.title || ''}" đã upload dự thảo và chuyển sang bước 4.`,
+          `Số file dự thảo: ${attachmentIds.length}`,
+          `Xem chi tiết: ${documentLink(documentId)}`,
+        ]),
+      });
       return res.json({ ok: true, data: updated, attachmentIds });
     } catch (e) {
       return res.status(500).json({ message: e.message || 'Không lưu được dự thảo.' });
@@ -363,6 +450,7 @@ function createDocumentWorkflowController(deps) {
       if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      if (!ensureWorkflowActive(record, res)) return;
       const action = String((req.body && req.body.action) || '')
         .trim()
         .toLowerCase();
@@ -389,10 +477,11 @@ function createDocumentWorkflowController(deps) {
         safeSendMail({
           to: resolveRecipients('review_reject', to ? [to] : []),
           subject: `[DOCFLOW] Hồ sơ #${documentId} bị từ chối thẩm định`,
-          text:
-            `Hồ sơ "${record.title || ''}" đã bị từ chối ở bước thẩm định và quay về bước 3.\n` +
-            `Lý do: ${comment || 'Không có'}\n` +
+          text: composeFormalEmail([
+            `Hồ sơ "${record.title || ''}" đã bị từ chối ở bước thẩm định và quay về bước 3.`,
+            `Lý do: ${comment || 'Không có'}`,
             `Xem chi tiết: ${documentLink(documentId)}`,
+          ]),
         });
       } else {
         const recipients = Array.from(
@@ -406,10 +495,11 @@ function createDocumentWorkflowController(deps) {
         safeSendMail({
           to: resolveRecipients('step5_approved', recipients),
           subject: `[DOCFLOW] Hồ sơ #${documentId} đã chuyển sang bước 5`,
-          text:
-            `Hồ sơ "${record.title || ''}" đã được duyệt thẩm định và chuyển sang bước 5 (lấy ý kiến góp ý).\n` +
-            `Vui lòng phối hợp phản hồi góp ý.\n` +
+          text: composeFormalEmail([
+            `Hồ sơ "${record.title || ''}" đã được duyệt thẩm định và chuyển sang bước 5 (lấy ý kiến góp ý).`,
+            `Kính đề nghị Quý Thầy/Cô phối hợp phản hồi góp ý theo quy trình.`,
             `Xem chi tiết: ${documentLink(documentId)}`,
+          ]),
         });
       }
       return res.json({ ok: true, data: updated });
@@ -424,6 +514,7 @@ function createDocumentWorkflowController(deps) {
       if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      if (!ensureWorkflowActive(record, res)) return;
       const content = String((req.body && req.body.content) || '').trim();
       if (!content) return res.status(400).json({ message: 'Nội dung góp ý không được để trống.' });
       const id = documentModel.addFeedback(documentId, {
@@ -434,6 +525,15 @@ function createDocumentWorkflowController(deps) {
         documentModel.update(documentId, { currentStep: 6 });
       }
       history(documentId, 5, 'feedback_added', content.slice(0, 200), req);
+      safeSendMail({
+        to: getModuleManagerEmails(),
+        subject: `[DOCFLOW] Hồ sơ #${documentId} có góp ý mới (bước 5)`,
+        text: composeFormalEmail([
+          `Hồ sơ "${record.title || ''}" đã có góp ý và chuyển sang bước 6.`,
+          `Nội dung góp ý (rút gọn): ${content.slice(0, 180)}`,
+          `Xem chi tiết: ${documentLink(documentId)}`,
+        ]),
+      });
       return res.status(201).json({ ok: true, data: { id } });
     } catch (e) {
       return res.status(500).json({ message: e.message || 'Không thêm được góp ý.' });
@@ -446,6 +546,7 @@ function createDocumentWorkflowController(deps) {
       if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      if (!ensureWorkflowActive(record, res)) return;
       if (Number(record.assigned_to_id) !== Number(req.user.id) && !hasAnyRole(req, ['admin', 'leader', 'module_manager', 'master_admin'])) {
         return res.status(403).json({ message: 'Chỉ người được phân công soạn thảo mới được thao tác.' });
       }
@@ -460,6 +561,14 @@ function createDocumentWorkflowController(deps) {
       });
       const attachmentIds = saveFiles(documentId, 6, req.files || [], 'final_draft', req.user.id);
       history(documentId, 6, 'draft_finalized', `Hoàn thiện dự thảo (${attachmentIds.length} file)`, req);
+      safeSendMail({
+        to: getModuleManagerEmails(),
+        subject: `[DOCFLOW] Hồ sơ #${documentId} hoàn tất bước 6`,
+        text: composeFormalEmail([
+          `Hồ sơ "${updated.title || record.title || ''}" đã hoàn thiện dự thảo và chuyển sang bước 7.`,
+          `Xem chi tiết: ${documentLink(documentId)}`,
+        ]),
+      });
       return res.json({ ok: true, data: updated, attachmentIds });
     } catch (e) {
       return res.status(500).json({ message: e.message || 'Không hoàn thiện được dự thảo.' });
@@ -472,6 +581,7 @@ function createDocumentWorkflowController(deps) {
       if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      if (!ensureWorkflowActive(record, res)) return;
       if (Number(record.assigned_to_id) !== Number(req.user.id) && !hasAnyRole(req, ['admin', 'leader', 'module_manager', 'master_admin'])) {
         return res.status(403).json({ message: 'Chỉ người được phân công soạn thảo mới được thao tác.' });
       }
@@ -482,6 +592,14 @@ function createDocumentWorkflowController(deps) {
       });
       const attachmentIds = saveFiles(documentId, 7, req.files || [], 'submission_package', req.user.id);
       history(documentId, 7, 'submitted_for_sign', note || 'Trình ký ban hành', req);
+      safeSendMail({
+        to: getModuleManagerEmails(),
+        subject: `[DOCFLOW] Hồ sơ #${documentId} hoàn tất bước 7`,
+        text: composeFormalEmail([
+          `Hồ sơ "${updated.title || record.title || ''}" đã trình ký và chuyển sang bước 8.`,
+          `Xem chi tiết: ${documentLink(documentId)}`,
+        ]),
+      });
       return res.json({ ok: true, data: updated, attachmentIds });
     } catch (e) {
       return res.status(500).json({ message: e.message || 'Không trình ký được hồ sơ.' });
@@ -494,6 +612,7 @@ function createDocumentWorkflowController(deps) {
       if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      if (!ensureWorkflowActive(record, res)) return;
       const body = req.body || {};
       const updated = documentModel.update(documentId, {
         signedConfirmed: !!body.signedConfirmed,
@@ -506,11 +625,12 @@ function createDocumentWorkflowController(deps) {
       safeSendMail({
         to: resolveRecipients('publish', getAllUnitEmails()),
         subject: `[DOCFLOW] Văn bản mới được ban hành: ${updated.document_number || `#${documentId}`}`,
-        text:
-          `Văn bản "${updated.title || ''}" đã được ban hành.\n` +
-          `Số hiệu: ${updated.document_number || 'N/A'}\n` +
-          `Ngày ban hành: ${updated.publish_date || 'N/A'}\n` +
+        text: composeFormalEmail([
+          `Văn bản "${updated.title || ''}" đã được ban hành.`,
+          `Số hiệu: ${updated.document_number || 'N/A'}`,
+          `Ngày ban hành: ${updated.publish_date || 'N/A'}`,
           `Xem chi tiết: ${documentLink(documentId)}`,
+        ]),
       });
       return res.json({ ok: true, data: updated, attachmentIds });
     } catch (e) {
@@ -524,6 +644,7 @@ function createDocumentWorkflowController(deps) {
       if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      if (!ensureWorkflowActive(record, res)) return;
       const body = req.body || {};
       const updated = documentModel.update(documentId, {
         archivedAt: new Date().toISOString(),
@@ -536,6 +657,14 @@ function createDocumentWorkflowController(deps) {
         status: 'archived',
       });
       history(documentId, 9, 'document_archived', 'Lưu trữ và hậu kiểm hồ sơ', req);
+      safeSendMail({
+        to: getModuleManagerEmails(),
+        subject: `[DOCFLOW] Hồ sơ #${documentId} hoàn tất bước 9`,
+        text: composeFormalEmail([
+          `Hồ sơ "${updated.title || record.title || ''}" đã lưu trữ/hậu kiểm.`,
+          `Xem chi tiết: ${documentLink(documentId)}`,
+        ]),
+      });
       return res.json({ ok: true, data: updated });
     } catch (e) {
       return res.status(500).json({ message: e.message || 'Không lưu trữ được hồ sơ.' });
@@ -548,6 +677,7 @@ function createDocumentWorkflowController(deps) {
       if (!documentId) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ.' });
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      if (!ensureWorkflowActive(record, res)) return;
       if (!canAccessDocument(req, record)) {
         return res.status(403).json({ message: 'Bạn không có quyền thao tác hồ sơ này.' });
       }
@@ -607,6 +737,7 @@ function createDocumentWorkflowController(deps) {
     getDocumentDetail,
     updateDocumentGeneral,
     deleteDocument,
+    abortDocument,
     assignDocument,
     saveDraft,
     reviewDocument,

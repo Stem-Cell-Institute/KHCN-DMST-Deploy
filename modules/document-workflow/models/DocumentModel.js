@@ -200,6 +200,12 @@ class DocumentModel {
     this.db
       .prepare(`INSERT OR IGNORE INTO module_settings(setting_key, setting_value) VALUES ('email_recipients', '{}')`)
       .run();
+    this.db
+      .prepare(`INSERT OR IGNORE INTO module_settings(setting_key, setting_value) VALUES ('internal_domain_access_enabled', '0')`)
+      .run();
+    this.db
+      .prepare(`INSERT OR IGNORE INTO module_settings(setting_key, setting_value) VALUES ('internal_domain_email_suffix', '@sci.edu.vn')`)
+      .run();
 
     const defaultTypes = [
       ['quy_che', 'Quy chế', 1],
@@ -443,6 +449,17 @@ class DocumentModel {
     const byStep = this.db
       .prepare(`SELECT current_step, COUNT(*) AS count FROM documents WHERE deleted_at IS NULL GROUP BY current_step ORDER BY current_step`)
       .all();
+    const totals = this.db
+      .prepare(
+        `SELECT
+           COUNT(*) AS total_count,
+           SUM(CASE WHEN status = 'archived' OR current_step >= 9 THEN 1 ELSE 0 END) AS completed_count,
+           SUM(CASE WHEN status IN ('pending', 'in_progress') AND current_step BETWEEN 1 AND 8 THEN 1 ELSE 0 END) AS in_progress_count,
+           SUM(CASE WHEN date(created_at) = date('now','localtime') THEN 1 ELSE 0 END) AS created_today_count
+         FROM documents
+         WHERE deleted_at IS NULL`
+      )
+      .get();
     const overdue = this.db
       .prepare(
         `SELECT COUNT(*) AS count
@@ -456,6 +473,10 @@ class DocumentModel {
       .get();
     return {
       byStep,
+      totalCount: Number((totals && totals.total_count) || 0),
+      inProgressCount: Number((totals && totals.in_progress_count) || 0),
+      completedCount: Number((totals && totals.completed_count) || 0),
+      createdTodayCount: Number((totals && totals.created_today_count) || 0),
       overdueCount: Number((overdue && overdue.count) || 0),
     };
   }
