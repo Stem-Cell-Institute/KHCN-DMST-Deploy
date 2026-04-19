@@ -2049,6 +2049,9 @@
     <span id="headerNavPubAnalyticsWrap" style="display:none;margin-left:8px;">
       <a href="publication-dashboard.html" class="header-home-btn">Phân tích công bố</a>
     </span>
+    <span id="headerNavPubDevWrap" style="display:none;margin-left:8px;" title="Chỉ Admin">
+      <a href="publication-dashboard.html?tab=dev" class="header-home-btn">Công cụ dev</a>
+    </span>
     <h1>Quản lý Công bố Khoa học</h1>
     <div class="subtitle">Hệ thống RIMS/CRIS — Viện Tế bào gốc - Trường Đại học khoa học tự nhiên - ĐHQG HCM</div>
   </div>
@@ -2175,6 +2178,10 @@
       <a href="publication-dashboard.html" class="sidebar-item" id="sidebarNavPubAnalyticsLink" style="text-decoration:none;color:inherit;">
         <span class="si-icon">📈</span> Phân tích công bố
         <span class="si-count" id="sidebarNavPubAnalyticsCount" title="Tổng công bố (CSDL, không gồm retracted)">—</span>
+      </a>
+      <a href="publication-dashboard.html?tab=dev" class="sidebar-item" id="sidebarNavPubDevLink" style="display:none;text-decoration:none;color:inherit;" title="Chính sách truy cập dashboard phân tích — chỉ Admin">
+        <span class="si-icon">🛠</span> Công cụ dev
+        <span class="si-count" style="opacity:0.7">cfg</span>
       </a>
     </div>
 
@@ -4111,16 +4118,45 @@ async function initPubAnalyticsNavUi() {
   var countEl = document.getElementById('sidebarNavPubAnalyticsCount');
   var headerWrap = document.getElementById('headerNavPubAnalyticsWrap');
   if (!wrap || !countEl) return;
-  if (!localStorage.getItem('token')) {
-    wrap.style.display = 'none';
-    wrap.setAttribute('aria-hidden', 'true');
-    if (headerWrap) headerWrap.style.display = 'none';
+  var tok = localStorage.getItem('token');
+  var checkHeaders = { Accept: 'application/json' };
+  if (tok) checkHeaders.Authorization = 'Bearer ' + tok;
+  if (!tok) {
+    try {
+      var res0 = await fetch(API_BASE + '/dashboard-perms/pub_analytics/check', {
+        credentials: 'include',
+        headers: { Accept: 'application/json' }
+      });
+      var j0 = await res0.json().catch(function () { return {}; });
+      if (res0.ok && j0.allowed && j0.mode === 'public') {
+        wrap.style.display = '';
+        wrap.removeAttribute('aria-hidden');
+        if (headerWrap) headerWrap.style.display = 'inline-block';
+        var st0 = await apiFetch('/publications/stats');
+        var total0 = '—';
+        if (st0 && st0.data) {
+          if (st0.data.header && st0.data.header.total != null) total0 = String(st0.data.header.total);
+          else if (st0.data.sidebar && st0.data.sidebar.types && st0.data.sidebar.types.total != null) {
+            total0 = String(st0.data.sidebar.types.total);
+          }
+        }
+        countEl.textContent = total0;
+      } else {
+        wrap.style.display = 'none';
+        wrap.setAttribute('aria-hidden', 'true');
+        if (headerWrap) headerWrap.style.display = 'none';
+      }
+    } catch (e) {
+      wrap.style.display = 'none';
+      wrap.setAttribute('aria-hidden', 'true');
+      if (headerWrap) headerWrap.style.display = 'none';
+    }
     return;
   }
   try {
     var res = await fetch(API_BASE + '/dashboard-perms/pub_analytics/check', {
       credentials: 'include',
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('token'), Accept: 'application/json' }
+      headers: checkHeaders
     });
     var j = await res.json().catch(function () { return {}; });
     if (!res.ok || !j.allowed) {
@@ -4145,6 +4181,32 @@ async function initPubAnalyticsNavUi() {
     wrap.style.display = 'none';
     wrap.setAttribute('aria-hidden', 'true');
     if (headerWrap) headerWrap.style.display = 'none';
+  }
+}
+
+/** Link “Công cụ dev” (Admin hoặc Master Admin) → publication-dashboard.html?tab=dev */
+async function initPubDevNavUi() {
+  var headerDev = document.getElementById('headerNavPubDevWrap');
+  var sideDev = document.getElementById('sidebarNavPubDevLink');
+  if (!headerDev && !sideDev) return;
+  if (!localStorage.getItem('token')) {
+    if (headerDev) headerDev.style.display = 'none';
+    if (sideDev) sideDev.style.display = 'none';
+    return;
+  }
+  try {
+    var res = await fetch(API_BASE + '/me', {
+      credentials: 'include',
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token'), Accept: 'application/json' }
+    });
+    var j = await res.json().catch(function () { return {}; });
+    var isAdm = String(j.role || '').toLowerCase() === 'admin';
+    var show = res.ok && (j.isMasterAdmin === true || isAdm);
+    if (headerDev) headerDev.style.display = show ? 'inline-block' : 'none';
+    if (sideDev) sideDev.style.display = show ? '' : 'none';
+  } catch (e) {
+    if (headerDev) headerDev.style.display = 'none';
+    if (sideDev) sideDev.style.display = 'none';
   }
 }
 
@@ -5699,6 +5761,7 @@ if (PUB_INSTITUTE_OK) {
     }
     applyPubAdminChrome();
     initPubAnalyticsNavUi().catch(function () {});
+    initPubDevNavUi().catch(function () {});
     renderPubTable();
     filterTable();
     setupInteractiveBoost();

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Giám sát nhật ký hệ thống — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; }
+    /* Multi-select chiều cao cố định */
+    select[multiple] { min-height: 7rem; }
+    .chart-box { position: relative; height: 220px; }
+    @media (min-width: 1024px) {
+      .chart-tall { height: 260px; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen">
+  <!-- ========== Header ========== -->
+  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm">
+    <div class="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div class="flex items-center gap-3">
+        <a href="#" class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white" title="Về dashboard (demo)">
+          <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div>
+          <h1 class="text-lg font-semibold text-slate-900">Giám sát nhật ký hệ thống</h1>
+          <p class="text-xs text-slate-500">Theo dõi sự kiện, phiên và cảnh báo bảo mật (dữ liệu mẫu)</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span id="live-badge" class="hidden items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200">
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+          </span>
+          Đang cập nhật trực tiếp
+        </span>
+        <button type="button" id="btn-export" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+          <i class="fa-solid fa-file-export text-emerald-600"></i> Xuất Excel/CSV
+        </button>
+        <button type="button" id="btn-refresh" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+          <i class="fa-solid fa-rotate"></i> Làm mới
+        </button>
+        <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm">
+          <input type="checkbox" id="toggle-auto" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+          <span class="text-slate-700">Tự động (30s)</span>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-[1600px] px-4 py-6">
+    <div class="grid gap-6 lg:grid-cols-12">
+
+      <!-- ===== Cột trái: Lọc + Biểu đồ ===== -->
+      <div class="space-y-6 lg:col-span-7 xl:col-span-8">
+
+        <!-- Bộ lọc nâng cao -->
+        <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-labelledby="filter-heading">
+          <h2 id="filter-heading" class="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <i class="fa-solid fa-filter text-indigo-600"></i> Bộ lọc nâng cao
+          </h2>
+          <form id="form-filter" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <label class="block sm:col-span-2 xl:col-span-1">
+              <span class="text-xs font-medium text-slate-600">Từ (ngày giờ)</span>
+              <input type="datetime-local" name="from" id="f-from" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+            </label>
+            <label class="block sm:col-span-2 xl:col-span-1">
+              <span class="text-xs font-medium text-slate-600">Đến (ngày giờ)</span>
+              <input type="datetime-local" name="to" id="f-to" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+            </label>
+            <label class="block">
+              <span class="text-xs font-medium text-slate-600">Email người dùng</span>
+              <input type="text" name="email" id="f-email" list="user-emails" placeholder="Gõ hoặc chọn..." class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" autocomplete="off" />
+              <datalist id="user-emails"></datalist>
+            </label>
+            <label class="block">
+              <span class="text-xs font-medium text-slate-600">Lọc theo IP</span>
+              <input type="text" name="ip" id="f-ip" placeholder="vd: 192.168.1." class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono text-xs" />
+            </label>
+            <label class="block">
+              <span class="text-xs font-medium text-slate-600">Mã phiên (Session ID)</span>
+              <input type="text" name="session" id="f-session" placeholder="sess_..." class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono text-xs" />
+            </label>
+            <div class="block sm:col-span-2 xl:col-span-3">
+              <span class="text-xs font-medium text-slate-600">Hành động</span>
+              <div id="action-checkboxes" class="mt-2 flex flex-wrap gap-3 text-sm"></div>
+            </div>
+            <div class="block sm:col-span-2 xl:col-span-1">
+              <span class="text-xs font-medium text-slate-600">Module (Ctrl/Cmd + click để chọn nhiều)</span>
+              <select name="modules" id="f-modules" multiple class="mt-1 w-full rounded-lg border border-slate-200 px-2 py-2 text-sm"></select>
+            </div>
+            <div class="flex flex-wrap items-end gap-2 sm:col-span-2 xl:col-span-2">
+              <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                <i class="fa-solid fa-magnifying-glass mr-1"></i> Tìm kiếm
+              </button>
+              <button type="button" id="btn-reset" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Đặt lại
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Biểu đồ -->
+        <section class="grid gap-4 md:grid-cols-2">
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Sự kiện theo giờ (trong ngày)</h3>
+            <div class="chart-box chart-tall">
+              <canvas id="chart-hourly" aria-label="Biểu đồ cột số sự kiện theo giờ"></canvas>
+            </div>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Tỷ lệ loại hành động</h3>
+            <div class="chart-box chart-tall flex items-center justify-center">
+              <canvas id="chart-pie" aria-label="Biểu đồ tròn"></canvas>
+            </div>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:col-span-2">
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Top 3 người dùng hoạt động nhiều nhất</h3>
+            <div class="chart-box" style="height: 180px;">
+              <canvas id="chart-top-users" aria-label="Top người dùng"></canvas>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ===== Cột phải: Cảnh báo + Phiên hoạt động ===== -->
+      <div class="space-y-6 lg:col-span-5 xl:col-span-4">
+
+        <section class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+          <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-950">
+            <i class="fa-solid fa-triangle-exclamation"></i> Cảnh báo &amp; kiểm soát
+          </h2>
+          <div class="space-y-3 text-sm text-amber-900">
+            <p>
+              <strong>Đăng nhập thất bại (15 phút qua):</strong>
+              <span id="stat-failed-login" class="ml-1 font-mono font-bold text-red-700">—</span>
+            </p>
+            <div>
+              <strong class="block text-xs uppercase text-amber-800/80">IP đáng ngờ (nhiều lần thất bại)</strong>
+              <ul id="list-suspicious-ip" class="mt-1 list-inside list-disc font-mono text-xs"></ul>
+            </div>
+            <button type="button" id="btn-block-ip" class="mt-2 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100">
+              <i class="fa-solid fa-ban mr-1"></i> Chặn IP tạm thời
+            </button>
+          </div>
+        </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <i class="fa-solid fa-user-clock text-indigo-600"></i> Phiên đang hoạt động
+          </h2>
+          <div class="overflow-x-auto rounded-lg border border-slate-100">
+            <table class="w-full text-xs">
+              <thead class="bg-slate-50 text-left text-slate-600">
+                <tr>
+                  <th class="px-2 py-2">Session</th>
+                  <th class="px-2 py-2">Email</th>
+                  <th class="px-2 py-2">Đăng nhập</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-sessions"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ===== Bảng nhật ký ===== -->
+    <section class="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+        <h2 class="text-sm font-semibold text-slate-900">Danh sách sự kiện</h2>
+        <p id="table-meta" class="text-xs text-slate-500"></p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[960px] text-left text-sm">
+          <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
+            <tr>
+              <th class="whitespace-nowrap px-3 py-3">Thời gian</th>
+              <th class="px-3 py-3">Người dùng</th>
+              <th class="px-3 py-3">Hành động</th>
+              <th class="whitespace-nowrap px-3 py-3">IP</th>
+              <th class="px-3 py-3">Trình duyệt / Thiết bị</th>
+              <th class="whitespace-nowrap px-3 py-3">Session</th>
+              <th class="whitespace-nowrap px-3 py-3">Module</th>
+              <th class="px-3 py-3 text-center">Chi tiết</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-logs" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+        <button type="button" id="btn-prev" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40" disabled>← Trước</button>
+        <span id="page-info" class="text-sm text-slate-600"></span>
+        <button type="button" id="btn-next" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40">Sau →</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal chi tiết -->
+  <div id="modal-detail" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
+    <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-xl">
+      <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+        <h3 class="font-semibold text-slate-900">Chi tiết sự kiện</h3>
+        <button type="button" id="modal-detail-close" class="rounded p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Đóng">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div id="modal-detail-body" class="space-y-3 p-4 text-sm"></div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * ========== Dữ liệu mẫu: mockLogs ==========
+     * Mỗi phần tử: timestamp ISO, user, action code, hiển thị, IP, UA, session, module, details
+     */
+    var mockLogs = [
+      { timestamp: '2026-04-19T08:12:01.000Z', userEmail: 'admin@sci.edu.vn', userName: 'Quản trị viên', action: 'login_success', actionDisplay: 'Đăng nhập thành công', ip: '192.168.1.10', userAgent: 'Chrome 124 / Windows 11', sessionId: 'sess_a1b2c3d4', module: 'Admin', details: { method: 'POST /api/auth/login', reason: '2FA skipped (demo)' } },
+      { timestamp: '2026-04-19T08:11:55.000Z', userEmail: 'unknown', userName: '—', action: 'login_failed', actionDisplay: 'Đăng nhập thất bại (Sai mật khẩu)', ip: '14.224.88.90', userAgent: 'Firefox 121 / macOS', sessionId: 'sess_failed_01', module: 'Admin', details: { reason: 'Sai mật khẩu', attempts: 3 } },
+      { timestamp: '2026-04-19T08:10:22.000Z', userEmail: 'sinhnguyen@sci.edu.vn', userName: 'Nguyễn Trường Sinh', action: 'view_page', actionDisplay: 'Xem trang: Danh sách đề tài', ip: '192.168.2.44', userAgent: 'Chrome 124 / Windows 11', sessionId: 'sess_e5f6g7h8', module: 'Đề tài cấp Viện', details: { path: '/projects', query: 'status=active' } },
+      { timestamp: '2026-04-19T08:05:00.000Z', userEmail: 'hacker@test.com', userName: '—', action: 'unauthorized_access', actionDisplay: 'Truy cập trái phép (403)', ip: '10.0.0.99', userAgent: 'curl/8.4', sessionId: 'sess_none', module: 'Admin', details: { endpoint: '/api/admin/users', blocked: true } },
+      { timestamp: '2026-04-19T07:58:33.000Z', userEmail: 'chaudo@sci.edu.vn', userName: 'Đỗ Phương Khánh Châu', action: 'delete_topic', actionDisplay: 'Xóa đề tài DTK-001', ip: '192.168.1.50', userAgent: 'Edge 124 / Windows 11', sessionId: 'sess_i9j0k1l2', module: 'Đề tài cấp Viện', details: { topicId: 'DTK-001', softDelete: false } },
+      { timestamp: '2026-04-19T07:45:11.000Z', userEmail: 'phucpham@sci.edu.vn', userName: 'Phạm Văn Phúc', action: 'assign_role', actionDisplay: 'Cấp quyền: Thành viên HĐKHCN', ip: '192.168.1.20', userAgent: 'Chrome 124 / Windows 11', sessionId: 'sess_m3n4o5p6', module: 'Hội đồng KHCN', details: { targetEmail: 'sinhnguyen@sci.edu.vn', role: 'member' } },
+      { timestamp: '2026-04-19T07:30:00.000Z', userEmail: 'guest@external.org', userName: 'Khách', action: 'login_failed', actionDisplay: 'Đăng nhập thất bại (Tài khoản bị khóa)', ip: '14.224.88.90', userAgent: 'Safari / iOS 17', sessionId: 'sess_failed_02', module: 'Admin', details: { reason: 'Tài khoản bị khóa' } },
+      { timestamp: '2026-04-19T07:15:44.000Z', userEmail: 'finance@sci.edu.vn', userName: 'Kế toán KHCN', action: 'export_data', actionDisplay: 'Xuất báo cáo tài chính (Excel)', ip: '192.168.5.2', userAgent: 'Chrome 123 / Windows 10', sessionId: 'sess_q7r8s9t0', module: 'Tài chính', details: { format: 'xlsx', rows: 1204 } },
+      { timestamp: '2026-04-19T07:00:00.000Z', userEmail: 'admin@sci.edu.vn', userName: 'Quản trị viên', action: 'edit_topic', actionDisplay: 'Sửa đề tài DTK-2-L08-2024', ip: '192.168.1.10', userAgent: 'Chrome 124 / Windows 11', sessionId: 'sess_a1b2c3d4', module: 'Đề tài cấp Viện', details: { topicId: 'DTK-2-L08-2024', fields: ['title', 'budget'] } },
+      { timestamp: '2026-04-18T22:10:00.000Z', userEmail: 'sinhnguyen@sci.edu.vn', userName: 'Nguyễn Trường Sinh', action: 'download_file', actionDisplay: 'Tải file đính kèm (PDF)', ip: '192.168.2.44', userAgent: 'Chrome 124 / Windows 11', sessionId: 'sess_e5f6g7h8', module: 'Đề tài cấp Viện', details: { fileId: 'att_8821', size: '2.1MB' } },
+      { timestamp: '2026-04-18T21:33:21.000Z', userEmail: 'config@sci.edu.vn', userName: 'Cấu hình hệ thống', action: 'config_change', actionDisplay: 'Thay đổi cấu hình ticker', ip: '192.168.1.1', userAgent: 'Firefox 121 / Linux', sessionId: 'sess_u1v2w3x4', module: 'Cấu hình', details: { key: 'ticker.speed', old: 30, new: 45 } },
+      { timestamp: '2026-04-18T20:00:15.000Z', userEmail: 'unknown', userName: '—', action: 'login_failed', actionDisplay: 'Đăng nhập thất bại (Sai mật khẩu)', ip: '14.224.88.90', userAgent: 'Chrome / Android', sessionId: 'sess_failed_03', module: 'Admin', details: { reason: 'Sai mật khẩu' } },
+      { timestamp: '2026-04-18T18:45:00.000Z', userEmail: 'chaudo@sci.edu.vn', userName: 'Đỗ Phương Khánh Châu', action: 'view_page', actionDisplay: 'Xem trang: Hội đồng', ip: '192.168.1.50', userAgent: 'Edge 124 / Windows 11', sessionId: 'sess_i9j0k1l2', module: 'Hội đồng KHCN', details: { path: '/council/meetings' } },
+      { timestamp: '2026-04-18T16:20:00.000Z', userEmail: 'admin@sci.edu.vn', userName: 'Quản trị viên', action: 'add_topic', actionDisplay: 'Thêm đề tài mới (nháp)', ip: '192.168.1.10', userAgent: 'Chrome 124 / Windows 11', sessionId: 'sess_a1b2c3d4', module: 'Đề tài cấp Viện', details: { topicId: 'DTK-NEW-001', status: 'draft' } },
+      { timestamp: '2026-04-18T14:00:00.000Z', userEmail: 'reviewer@sci.edu.vn', userName: 'Thẩm định viên', action: 'view_page', actionDisplay: 'Xem phiếu thẩm định', ip: '192.168.3.7', userAgent: 'Safari / macOS', sessionId: 'sess_y5z6a7b8', module: 'Tài chính', details: { appraisalId: 'TA-2026-04' } },
+      { timestamp: '2026-04-18T12:11:33.000Z', userEmail: 'sinhnguyen@sci.edu.vn', userName: 'Nguyễn Trường Sinh', action: 'logout', actionDisplay: 'Đăng xuất', ip: '192.168.2.44', userAgent: 'Chrome 124 / Windows 11', sessionId: 'sess_e5f6g7h8', module: 'Admin', details: { duration_min: 240 } },
+      { timestamp: '2026-04-18T10:05:00.000Z', userEmail: 'admin@sci.edu.vn', userName: 'Quản trị viên', action: 'assign_role', actionDisplay: 'Thu hồi quyền Admin phụ', ip: '192.168.1.10', userAgent: 'Chrome 124 / Windows 11', sessionId: 'sess_a1b2c3d4', module: 'Admin', details: { target: 'user@x.com', action: 'demote' } },
+      { timestamp: '2026-04-17T09:30:00.000Z', userEmail: 'auditor@sci.edu.vn', userName: 'Kiểm toán nội bộ', action: 'export_data', actionDisplay: 'Xuất nhật ký (CSV)', ip: '192.168.8.1', userAgent: 'Edge / Windows 11', sessionId: 'sess_c9d0e1f2', module: 'Admin', details: { rows: 5000, filter: '7d' } },
+      { timestamp: '2026-04-17T08:00:00.000Z', userEmail: 'sinhnguyen@sci.edu.vn', userName: 'Nguyễn Trường Sinh', action: 'login_success', actionDisplay: 'Đăng nhập thành công', ip: '192.168.2.44', userAgent: 'Chrome 124 / Windows 11', sessionId: 'sess_e5f6g7h8', module: 'Admin', details: {} },
+      { timestamp: '2026-04-16T15:22:10.000Z', userEmail: 'phucpham@sci.edu.vn', userName: 'Phạm Văn Phúc', action: 'view_page', actionDisplay: 'Xem trang: Biểu quyết', ip: '192.168.1.20', userAgent: 'Chrome 124 / Windows 11', sessionId: 'sess_m3n4o5p6', module: 'Hội đồng KHCN', details: { meetingId: 'HD-2026-01' } },
+      { timestamp: '2026-04-16T11:00:00.000Z', userEmail: 'finance@sci.edu.vn', userName: 'Kế toán KHCN', action: 'edit_topic', actionDisplay: 'Cập nhật dự toán', ip: '192.168.5.2', userAgent: 'Chrome 123 / Windows 10', sessionId: 'sess_q7r8s9t0', module: 'Tài chính', details: { topicId: 'DTK-88', field: 'budget' } },
+      { timestamp: '2026-04-15T19:40:00.000Z', userEmail: 'chaudo@sci.edu.vn', userName: 'Đỗ Phương Khánh Châu', action: 'download_file', actionDisplay: 'Tải hợp đồng (PDF)', ip: '192.168.1.50', userAgent: 'Edge 124 / Windows 11', sessionId: 'sess_i9j0k1l2', module: 'Đề tài cấp Viện', details: { contractId: 'HD-2025-09' } },
+      { timestamp: '2026-04-15T08:00:00.000Z', userEmail: 'unknown', userName: '—', action: 'login_failed', actionDisplay: 'Đăng nhập thất bại (Sai mật khẩu)', ip: '203.113.45.12', userAgent: 'Chrome / Windows', sessionId: 'sess_failed_04', module: 'Admin', details: { reason: 'Sai mật khẩu' } },
+      { timestamp: '2026-04-14T14:30:00.000Z', userEmail: 'admin@sci.edu.vn', userName: 'Quản trị viên', action: 'config_change', actionDisplay: 'Bật module Publications', ip: '192.168.1.10', userAgent: 'Chrome 124 / Windows 11', sessionId: 'sess_a1b2c3d4', module: 'Cấu hình', details: { module: 'publications', enabled: true } },
+    ];
+
+    /** Cấu hình nhóm hành động cho checkbox & biểu đồ tròn */
+    var ACTION_GROUPS = [
+      { code: 'login_success', label: 'Đăng nhập thành công' },
+      { code: 'login_failed', label: 'Đăng nhập thất bại' },
+      { code: 'logout', label: 'Đăng xuất' },
+      { code: 'view_page', label: 'Xem trang' },
+      { code: 'add_topic', label: 'Thêm đề tài' },
+      { code: 'edit_topic', label: 'Sửa đề tài' },
+      { code: 'delete_topic', label: 'Xóa đề tài' },
+      { code: 'assign_role', label: 'Cấp / thu hồi quyền' },
+      { code: 'export_data', label: 'Xuất dữ liệu' },
+      { code: 'download_file', label: 'Tải file' },
+      { code: 'config_change', label: 'Thay đổi cấu hình' },
+      { code: 'unauthorized_access', label: 'Truy cập trái phép' },
+    ];
+
+    var MODULE_OPTIONS = ['Đề tài cấp Viện', 'Hội đồng KHCN', 'Tài chính', 'Admin', 'Cấu hình'];
+
+    var PAGE_SIZE = 10;
+    var filteredLogs = [];
+    var currentPage = 1;
+    var charts = { hourly: null, pie: null, topUsers: null };
+    var autoTimer = null;
+
+    /* ---------- Tiện ích thời gian ---------- */
+    function formatVN(iso) {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return '—';
+      var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+      return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }
+
+    function isoLocalInput(d) {
+      var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    /* ---------- Lọc ---------- */
+    function getSelectedActions() {
+      var boxes = document.querySelectorAll('#action-checkboxes input[type=checkbox]:checked');
+      var codes = [];
+      boxes.forEach(function (b) { codes.push(b.value); });
+      return codes;
+    }
+
+    function getSelectedModules() {
+      var sel = document.getElementById('f-modules');
+      var out = [];
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].selected) out.push(sel.options[i].value);
+      }
+      return out;
+    }
+
+    function applyFilters(logs) {
+      var fromEl = document.getElementById('f-from');
+      var toEl = document.getElementById('f-to');
+      var email = (document.getElementById('f-email').value || '').trim().toLowerCase();
+      var ip = (document.getElementById('f-ip').value || '').trim();
+      var sess = (document.getElementById('f-session').value || '').trim().toLowerCase();
+      var actions = getSelectedActions();
+      var modules = getSelectedModules();
+
+      var fromT = fromEl.value ? new Date(fromEl.value).getTime() : null;
+      var toT = toEl.value ? new Date(toEl.value).getTime() : null;
+
+      return logs.filter(function (row) {
+        var t = new Date(row.timestamp).getTime();
+        if (fromT !== null && !isNaN(fromT) && t < fromT) return false;
+        if (toT !== null && !isNaN(toT) && t > toT) return false;
+        if (email && row.userEmail.toLowerCase().indexOf(email) === -1) return false;
+        if (ip && row.ip.indexOf(ip) === -1) return false;
+        if (sess && row.sessionId.toLowerCase().indexOf(sess) === -1) return false;
+        if (actions.length && actions.indexOf(row.action) === -1) return false;
+        if (modules.length && modules.indexOf(row.module) === -1) return false;
+        return true;
+      });
+    }
+
+    function randomizeChartNoise() {
+      return 0.85 + Math.random() * 0.3;
+    }
+
+    /* ---------- Thống kê từ mảng log ---------- */
+    function buildHourlyBuckets(logs, jitter) {
+      var h = new Array(24).fill(0);
+      logs.forEach(function (row) {
+        var hour = new Date(row.timestamp).getHours();
+        h[hour] += 1;
+      });
+      if (jitter) {
+        return h.map(function (x) {
+          return Math.max(0, Math.round(x * randomizeChartNoise()));
+        });
+      }
+      return h;
+    }
+
+    function aggregateActionCategories(logs) {
+      var map = { 'Đăng nhập': 0, 'Thao tác dữ liệu': 0, 'Xem trang': 0, 'Khác': 0 };
+      logs.forEach(function (row) {
+        var a = row.action;
+        if (a === 'login_success' || a === 'login_failed' || a === 'logout') map['Đăng nhập']++;
+        else if (a === 'view_page') map['Xem trang']++;
+        else if (a === 'add_topic' || a === 'edit_topic' || a === 'delete_topic' || a === 'export_data' || a === 'download_file' || a === 'assign_role' || a === 'config_change') map['Thao tác dữ liệu']++;
+        else map['Khác']++;
+      });
+      return { labels: Object.keys(map), data: Object.values(map) };
+    }
+
+    function topThreeUsers(logs) {
+      var count = {};
+      logs.forEach(function (row) {
+        if (row.userEmail === 'unknown' || row.userName === '—') return;
+        count[row.userEmail] = (count[row.userEmail] || 0) + 1;
+      });
+      var arr = Object.keys(count).map(function (k) { return { email: k, n: count[k] }; });
+      arr.sort(function (a, b) { return b.n - a.n; });
+      return arr.slice(0, 3);
+    }
+
+    /* ---------- Chart.js ---------- */
+    var chartColors = {
+      indigo: 'rgba(79, 70, 229, 0.7)',
+      indigoBorder: 'rgb(79, 70, 229)',
+      pie: ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b'],
+    };
+
+    function destroyChart(ch) {
+      if (ch) ch.destroy();
+    }
+
+    function renderCharts(logs, jitter) {
+      var hourly = buildHourlyBuckets(logs, jitter);
+      var agg = aggregateActionCategories(logs);
+      var top = topThreeUsers(logs);
+      var labelsTop = top.map(function (x) { return x.email.length > 22 ? x.email.slice(0, 20) + '…' : x.email; });
+      var dataTop = top.map(function (x) { return x.n; });
+
+      destroyChart(charts.hourly);
+      charts.hourly = new Chart(document.getElementById('chart-hourly'), {
+        type: 'bar',
+        data: {
+          labels: Array.from({ length: 24 }, function (_, i) { return i + 'h'; }),
+          datasets: [{
+            label: 'Số sự kiện',
+            data: hourly,
+            backgroundColor: chartColors.indigo,
+            borderColor: chartColors.indigoBorder,
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 } },
+            x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+          },
+        },
+      });
+
+      destroyChart(charts.pie);
+      charts.pie = new Chart(document.getElementById('chart-pie'), {
+        type: 'doughnut',
+        data: {
+          labels: agg.labels,
+          datasets: [{
+            data: agg.data,
+            backgroundColor: chartColors.pie,
+            borderWidth: 0,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+        },
+      });
+
+      destroyChart(charts.topUsers);
+      charts.topUsers = new Chart(document.getElementById('chart-top-users'), {
+        type: 'bar',
+        data: {
+          labels: labelsTop.length ? labelsTop : ['(không có dữ liệu)'],
+          datasets: [{
+            label: 'Số sự kiện',
+            data: labelsTop.length ? dataTop : [0],
+            backgroundColor: '#6366f1',
+            borderRadius: 4,
+          }],
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+        },
+      });
+    }
+
+    /* ---------- Cảnh báo: đăng nhập thất bại 15 phút + IP đáng ngờ ---------- */
+    function updateSecurityCard(logs) {
+      /* Cửa sổ 15 phút tính từ mốc thời gian mới nhất trong tập log (demo ổn định, không phụ thuộc đồng hồ máy) */
+      var windowMs = 15 * 60 * 1000;
+      var maxT = 0;
+      logs.forEach(function (row) {
+        var t = new Date(row.timestamp).getTime();
+        if (!isNaN(t) && t > maxT) maxT = t;
+      });
+      var windowStart = maxT - windowMs;
+      var failCount = 0;
+      var ipFail = {};
+      logs.forEach(function (row) {
+        if (row.action !== 'login_failed') return;
+        var t = new Date(row.timestamp).getTime();
+        if (t >= windowStart && t <= maxT) {
+          failCount++;
+          ipFail[row.ip] = (ipFail[row.ip] || 0) + 1;
+        }
+      });
+      document.getElementById('stat-failed-login').textContent = String(failCount);
+
+      var ul = document.getElementById('list-suspicious-ip');
+      ul.innerHTML = '';
+      var suspicious = Object.keys(ipFail).filter(function (ip) { return ipFail[ip] >= 2; });
+      if (!suspicious.length) {
+        var li = document.createElement('li');
+        li.textContent = '(Không có — demo theo bộ lọc hiện tại)';
+        ul.appendChild(li);
+      } else {
+        suspicious.forEach(function (ip) {
+          var li = document.createElement('li');
+          li.textContent = ip + ' — ' + ipFail[ip] + ' lần';
+          ul.appendChild(li);
+        });
+      }
+    }
+
+    /* ---------- Phiên hoạt động (mẫu từ log login_success gần đây) ---------- */
+    function renderActiveSessions(logs) {
+      var seen = {};
+      var rows = [];
+      logs
+        .filter(function (r) { return r.action === 'login_success'; })
+        .sort(function (a, b) { return new Date(b.timestamp) - new Date(a.timestamp); })
+        .forEach(function (r) {
+          if (!seen[r.sessionId]) {
+            seen[r.sessionId] = true;
+            rows.push(r);
+          }
+        });
+      rows = rows.slice(0, 6);
+      var tb = document.getElementById('tbody-sessions');
+      tb.innerHTML = '';
+      rows.forEach(function (r) {
+        var tr = document.createElement('tr');
+        tr.className = 'border-b border-slate-50';
+        tr.innerHTML =
+          '<td class="px-2 py-2 font-mono text-[10px] text-slate-700">' + r.sessionId + '</td>' +
+          '<td class="px-2 py-2 text-indigo-700">' + r.userEmail + '</td>' +
+          '<td class="px-2 py-2 whitespace-nowrap">' + formatVN(r.timestamp) + '</td>';
+        tb.appendChild(tr);
+      });
+      if (!rows.length) {
+        tb.innerHTML = '<tr><td colspan="3" class="px-2 py-3 text-slate-500">Không có phiên (mẫu).</td></tr>';
+      }
+    }
+
+    /* ---------- Bảng + phân trang ---------- */
+    function renderTable() {
+      var total = filteredLogs.length;
+      var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if (currentPage > pages) currentPage = pages;
+      var start = (currentPage - 1) * PAGE_SIZE;
+      var slice = filteredLogs.slice(start, start + PAGE_SIZE);
+
+      var tb = document.getElementById('tbody-logs');
+      tb.innerHTML = '';
+      slice.forEach(function (row, idx) {
+        var globalIdx = start + idx;
+        var tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50';
+        tr.innerHTML =
+          '<td class="whitespace-nowrap px-3 py-2 font-mono text-xs text-slate-700">' + formatVN(row.timestamp) + '</td>' +
+          '<td class="px-3 py-2"><div class="font-medium text-slate-900">' + escapeHtml(row.userName) + '</div>' +
+          '<div class="text-xs text-indigo-600">' + escapeHtml(row.userEmail) + '</div></td>' +
+          '<td class="max-w-xs px-3 py-2 text-slate-800">' + escapeHtml(row.actionDisplay) + '</td>' +
+          '<td class="whitespace-nowrap px-3 py-2 font-mono text-xs">' + escapeHtml(row.ip) + '</td>' +
+          '<td class="max-w-[180px] truncate px-3 py-2 text-xs text-slate-600" title="' + escapeAttr(row.userAgent) + '">' + escapeHtml(row.userAgent) + '</td>' +
+          '<td class="whitespace-nowrap px-3 py-2 font-mono text-[10px] text-slate-600">' + escapeHtml(row.sessionId) + '</td>' +
+          '<td class="whitespace-nowrap px-3 py-2"><span class="rounded bg-slate-100 px-2 py-0.5 text-xs">' + escapeHtml(row.module) + '</span></td>' +
+          '<td class="px-3 py-2 text-center"><button type="button" class="btn-detail rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100" data-idx="' + globalIdx + '">Chi tiết</button></td>';
+        tb.appendChild(tr);
+      });
+
+      document.getElementById('table-meta').textContent = total + ' sự kiện — Trang ' + currentPage + '/' + pages;
+      document.getElementById('page-info').textContent = 'Hiển thị ' + (total ? start + 1 : 0) + '–' + Math.min(start + PAGE_SIZE, total) + ' / ' + total;
+      document.getElementById('btn-prev').disabled = currentPage <= 1;
+      document.getElementById('btn-next').disabled = currentPage >= pages || total === 0;
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/"/g, '&quot;');
+    }
+    function escapeAttr(s) {
+      return escapeHtml(s).replace(/\n/g, ' ');
+    }
+
+    /* ---------- Modal chi tiết ---------- */
+    function openDetail(index) {
+      var row = filteredLogs[index];
+      if (!row) return;
+      var body = document.getElementById('modal-detail-body');
+      var details = row.details || {};
+      var pre = JSON.stringify(details, null, 2);
+      body.innerHTML =
+        '<dl class="grid grid-cols-1 gap-2 text-sm">' +
+        '<div><dt class="text-xs text-slate-500">Thời gian</dt><dd class="font-mono">' + escapeHtml(formatVN(row.timestamp)) + '</dd></div>' +
+        '<div><dt class="text-xs text-slate-500">Người dùng</dt><dd>' + escapeHtml(row.userEmail) + ' — ' + escapeHtml(row.userName) + '</dd></div>' +
+        '<div><dt class="text-xs text-slate-500">Hành động</dt><dd>' + escapeHtml(row.actionDisplay) + '</dd></div>' +
+        '<div><dt class="text-xs text-slate-500">IP / Session</dt><dd class="font-mono text-xs">' + escapeHtml(row.ip) + ' / ' + escapeHtml(row.sessionId) + '</dd></div>' +
+        '</dl>' +
+        '<div class="mt-2"><p class="text-xs font-semibold text-slate-600">Tham số &amp; metadata (JSON)</p>' +
+        '<pre class="mt-1 max-h-48 overflow-auto rounded-lg bg-slate-900 p-3 font-mono text-xs text-emerald-300">' + escapeHtml(pre) + '</pre></div>' +
+        '<p class="text-xs text-slate-500">Header giả lập: <code>Authorization: Bearer ***</code>, <code>X-Request-Id: req_' + String(index).padStart(4, '0') + '</code></p>';
+      var m = document.getElementById('modal-detail');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+    function closeDetail() {
+      var m = document.getElementById('modal-detail');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    /* ---------- Khởi tạo form ---------- */
+    function initFilters() {
+      var now = new Date();
+      var weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      document.getElementById('f-from').value = isoLocalInput(weekAgo);
+      document.getElementById('f-to').value = isoLocalInput(now);
+
+      var emails = {};
+      mockLogs.forEach(function (r) { if (r.userEmail && r.userEmail !== 'unknown') emails[r.userEmail] = true; });
+      var dl = document.getElementById('user-emails');
+      Object.keys(emails).sort().forEach(function (e) {
+        var o = document.createElement('option');
+        o.value = e;
+        dl.appendChild(o);
+      });
+
+      var ac = document.getElementById('action-checkboxes');
+      ACTION_GROUPS.forEach(function (ag) {
+        var id = 'ac-' + ag.code;
+        var lab = document.createElement('label');
+        lab.className = 'inline-flex items-center gap-1.5';
+        lab.innerHTML =
+          '<input type="checkbox" id="' + id + '" value="' + ag.code + '" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />' +
+          '<span>' + ag.label + '</span>';
+        ac.appendChild(lab);
+      });
+
+      var ms = document.getElementById('f-modules');
+      MODULE_OPTIONS.forEach(function (m) {
+        var o = document.createElement('option');
+        o.value = m;
+        o.textContent = m;
+        o.selected = true;
+        ms.appendChild(o);
+      });
+    }
+
+    function runSearch(jitterCharts) {
+      filteredLogs = applyFilters(mockLogs.slice());
+      filteredLogs.sort(function (a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+      currentPage = 1;
+      renderCharts(filteredLogs, !!jitterCharts);
+      updateSecurityCard(filteredLogs);
+      renderActiveSessions(mockLogs);
+      renderTable();
+    }
+
+    function refreshManual() {
+      runSearch(true);
+    }
+
+    /* ---------- Tự động: thêm log + cập nhật ---------- */
+    function simulateLiveEvent() {
+      var users = [
+        { email: 'sinhnguyen@sci.edu.vn', name: 'Nguyễn Trường Sinh' },
+        { email: 'chaudo@sci.edu.vn', name: 'Đỗ Phương Khánh Châu' },
+        { email: 'admin@sci.edu.vn', name: 'Quản trị viên' },
+      ];
+      var pages = ['/projects', '/publications', '/council', '/finance/reports'];
+      var u = users[Math.floor(Math.random() * users.length)];
+      var p = pages[Math.floor(Math.random() * pages.length)];
+      var sid = 'sess_' + Math.random().toString(36).slice(2, 10);
+      var entry = {
+        timestamp: new Date().toISOString(),
+        userEmail: u.email,
+        userName: u.name,
+        action: 'view_page',
+        actionDisplay: 'Người dùng đã truy cập trang ' + p,
+        ip: '192.168.' + Math.floor(Math.random() * 200) + '.' + Math.floor(Math.random() * 200),
+        userAgent: 'Chrome 124 / Windows 11',
+        sessionId: sid,
+        module: 'Đề tài cấp Viện',
+        details: { path: p, simulated: true },
+      };
+      mockLogs.unshift(entry);
+      runSearch(true);
+    }
+
+    function setAutoRefresh(on) {
+      if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+      }
+      var badge = document.getElementById('live-badge');
+      if (on) {
+        autoTimer = setInterval(simulateLiveEvent, 30000);
+        badge.classList.remove('hidden');
+        badge.classList.add('inline-flex');
+      } else {
+        badge.classList.add('hidden');
+        badge.classList.remove('inline-flex');
+      }
+    }
+
+    /* ---------- Demo alerts ---------- */
+    function alertDemo() {
+      alert('Chức năng demo');
+    }
+
+    /* ---------- Sự kiện DOM ---------- */
+    document.getElementById('form-filter').addEventListener('submit', function (e) {
+      e.preventDefault();
+      runSearch(true);
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', function () {
+      initFilters();
+      document.querySelectorAll('#action-checkboxes input').forEach(function (cb) { cb.checked = false; });
+      var ms = document.getElementById('f-modules');
+      for (var i = 0; i < ms.options.length; i++) ms.options[i].selected = true;
+      document.getElementById('f-email').value = '';
+      document.getElementById('f-ip').value = '';
+      document.getElementById('f-session').value = '';
+      runSearch(false);
+    });
+
+    document.getElementById('btn-refresh').addEventListener('click', refreshManual);
+
+    document.getElementById('btn-export').addEventListener('click', alertDemo);
+    document.getElementById('btn-block-ip').addEventListener('click', alertDemo);
+
+    document.getElementById('toggle-auto').addEventListener('change', function () {
+      setAutoRefresh(this.checked);
+    });
+
+    document.getElementById('btn-prev').addEventListener('click', function () {
+      if (currentPage > 1) {
+        currentPage--;
+        renderTable();
+      }
+    });
+    document.getElementById('btn-next').addEventListener('click', function () {
+      var pages = Math.ceil(filteredLogs.length / PAGE_SIZE);
+      if (currentPage < pages) {
+        currentPage++;
+        renderTable();
+      }
+    });
+
+    document.getElementById('tbody-logs').addEventListener('click', function (e) {
+      var btn = e.target.closest('.btn-detail');
+      if (!btn) return;
+      var idx = parseInt(btn.getAttribute('data-idx'), 10);
+      openDetail(idx);
+    });
+
+    document.getElementById('modal-detail-close').addEventListener('click', closeDetail);
+    document.getElementById('modal-detail').addEventListener('click', function (e) {
+      if (e.target.id === 'modal-detail') closeDetail();
+    });
+
+    /* ---------- Init ---------- */
+    initFilters();
+    runSearch(false);
+  </script>
+</body>
+</html>

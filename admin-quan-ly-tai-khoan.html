@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý tài khoản — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" />
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; }
+    /* Toast animation */
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    .toast-item { animation: toastIn 0.25s ease-out; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800 antialiased">
+
+  <!-- ========== Toast container ========== -->
+  <div id="toast-root" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- ========== Header ========== -->
+  <header class="border-b border-slate-200 bg-white shadow-sm">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+      <div>
+        <h1 class="flex items-center gap-2 text-xl font-bold text-slate-900 sm:text-2xl">
+          <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow">
+            <i class="fa-solid fa-users-gear"></i>
+          </span>
+          Quản lý tài khoản
+        </h1>
+        <p class="mt-1 max-w-2xl text-sm text-slate-600">
+          Tạo và cập nhật người dùng, theo dõi kích hoạt, khóa tài khoản, phân quyền.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="admin-greeting" class="text-sm text-slate-700"><i class="fa-solid fa-user-shield mr-1 text-indigo-600"></i>Xin chào <strong>Admin</strong></span>
+        <button type="button" id="btn-logout" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+          <i class="fa-solid fa-right-from-bracket mr-1"></i>Đăng xuất
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+
+    <!-- ========== Thống kê nhanh ========== -->
+    <section class="mb-6 grid gap-4 sm:grid-cols-3" aria-label="Thống kê tài khoản">
+      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Tổng số tài khoản</p>
+        <p id="stat-total" class="mt-1 text-2xl font-bold text-slate-900">0</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p class="text-xs font-medium uppercase tracking-wide text-amber-600">Chưa kích hoạt</p>
+        <p id="stat-inactive" class="mt-1 text-2xl font-bold text-amber-700">0</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p class="text-xs font-medium uppercase tracking-wide text-red-600">Bị khóa</p>
+        <p id="stat-locked" class="mt-1 text-2xl font-bold text-red-700">0</p>
+      </div>
+    </section>
+
+    <!-- ========== Form: Thêm tài khoản ========== -->
+    <section class="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900">
+        <i class="fa-solid fa-user-plus text-indigo-600"></i> Thêm tài khoản
+      </h2>
+      <form id="form-add-account" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" novalidate>
+        <div class="sm:col-span-2 lg:col-span-1">
+          <label class="block text-xs font-medium text-slate-700" for="add-name">Họ và tên <span class="text-red-500">*</span></label>
+          <input id="add-name" name="fullName" type="text" required maxlength="120"
+            class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            placeholder="Nguyễn Văn A" autocomplete="name" />
+        </div>
+        <div class="sm:col-span-2 lg:col-span-1">
+          <label class="block text-xs font-medium text-slate-700" for="add-email">Email <span class="text-red-500">*</span></label>
+          <input id="add-email" name="email" type="email" required
+            class="mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="user@psci.edu.vn" autocomplete="email" />
+          <p id="err-email-dup" class="mt-1 hidden text-xs text-red-600">Email này đã tồn tại trong hệ thống.</p>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700" for="add-role">Người dùng / Vai trò <span class="text-red-500">*</span></label>
+          <select id="add-role" name="role" required class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <option value="">— Chọn —</option>
+            <option>Nghiên cứu viên</option>
+            <option>Admin</option>
+            <option>Trưởng phòng</option>
+            <option>Phòng KHCN</option>
+            <option>Thư ký HĐKHCN</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700" for="add-degree">Học hàm / học vị</label>
+          <select id="add-degree" name="degree" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <option>PGS.TS</option>
+            <option>TS</option>
+            <option>ThS</option>
+            <option>Khác</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2 lg:col-span-1">
+          <label class="block text-xs font-medium text-slate-700" for="add-password">Mật khẩu</label>
+          <input id="add-password" name="password" type="password" autocomplete="new-password"
+            class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            placeholder="Để trống nếu chưa kích hoạt" />
+          <p class="mt-1 text-xs text-slate-500">Để trống = tài khoản <strong>chưa kích hoạt</strong> (đặt mật khẩu sau qua Đăng ký).</p>
+        </div>
+        <div class="flex flex-col justify-end sm:col-span-2 lg:col-span-1">
+          <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-indigo-100 bg-indigo-50/50 px-3 py-2 text-sm text-slate-800">
+            <input id="add-create-pw" type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <span>Tạo mật khẩu ngay (bắt buộc nhập mật khẩu để kích hoạt)</span>
+          </label>
+        </div>
+        <div class="flex items-end sm:col-span-2 lg:col-span-3">
+          <button type="submit" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+            <i class="fa-solid fa-plus mr-2"></i>Thêm tài khoản
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ========== Bộ lọc ========== -->
+    <section class="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex flex-wrap items-end gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-600" for="f-scope">Phạm vi email</label>
+          <select id="f-scope" class="mt-1 min-w-[160px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+            <option value="all">Tất cả</option>
+            <option value="internal">Nội viện (@psci.edu.vn)</option>
+            <option value="external">Ngoại viện</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600" for="f-year">Năm tạo</label>
+          <select id="f-year" class="mt-1 min-w-[120px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600" for="f-activation">Trạng thái kích hoạt</label>
+          <select id="f-activation" class="mt-1 min-w-[160px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+            <option value="all">Tất cả</option>
+            <option value="active">Đã kích hoạt</option>
+            <option value="inactive">Chưa kích hoạt</option>
+          </select>
+        </div>
+        <div class="min-w-[200px] flex-1">
+          <label class="block text-xs font-medium text-slate-600" for="f-search">Tìm kiếm</label>
+          <input id="f-search" type="search" placeholder="Email, họ tên..."
+            class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+        </div>
+        <button type="button" id="btn-search" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Tìm</button>
+        <button type="button" id="btn-filter-reset" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Đặt lại bộ lọc</button>
+        <button type="button" id="btn-export" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100">
+          <i class="fa-solid fa-file-excel mr-1"></i>Xuất Excel
+        </button>
+      </div>
+      <div class="mt-4 flex flex-wrap items-center gap-4 border-t border-slate-100 pt-4">
+        <span class="text-xs font-semibold uppercase text-slate-500">Lọc nâng cao</span>
+        <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+          <input id="f-new7" type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+          Tài khoản mới trong 7 ngày
+        </label>
+        <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+          <input id="f-soon" type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+          Tài khoản sắp bị vô hiệu hóa <span class="text-xs text-slate-400">(demo)</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- ========== Bảng ========== -->
+    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[1000px] text-left text-sm">
+          <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
+            <tr>
+              <th class="whitespace-nowrap px-3 py-3">ID</th>
+              <th class="px-3 py-3">Email</th>
+              <th class="px-3 py-3">Họ tên</th>
+              <th class="whitespace-nowrap px-3 py-3">Phạm vi</th>
+              <th class="whitespace-nowrap px-3 py-3">Kích hoạt</th>
+              <th class="whitespace-nowrap px-3 py-3">Học hàm/HV</th>
+              <th class="whitespace-nowrap px-3 py-3">Vai trò</th>
+              <th class="whitespace-nowrap px-3 py-3">Ngày tạo</th>
+              <th class="whitespace-nowrap px-3 py-3">Trạng thái</th>
+              <th class="whitespace-nowrap px-3 py-3 text-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-accounts" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
+        <p id="table-range" class="text-sm text-slate-600">Hiển thị 0 / 0 tài khoản</p>
+        <div id="pagination" class="flex flex-wrap items-center gap-1"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ========== Modal: Đặt lại mật khẩu ========== -->
+  <div id="modal-reset" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/45 p-4">
+    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+      <h3 class="text-lg font-semibold text-slate-900"><i class="fa-solid fa-key mr-2 text-indigo-600"></i>Đặt lại mật khẩu</h3>
+      <p id="modal-reset-text" class="mt-2 text-sm text-slate-600"></p>
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" class="modal-reset-cancel rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Hủy</button>
+        <button type="button" id="modal-reset-ok" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Xác nhận gửi email</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Modal: Xóa ========== -->
+  <div id="modal-delete" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/45 p-4">
+    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+      <h3 class="text-lg font-semibold text-red-700"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Xóa tài khoản</h3>
+      <p id="modal-delete-text" class="mt-2 text-sm text-slate-600"></p>
+      <p class="mt-2 text-xs font-medium text-red-600">Hành động này không thể hoàn tác.</p>
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" class="modal-delete-cancel rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Hủy</button>
+        <button type="button" id="modal-delete-ok" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Xóa vĩnh viễn</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Modal: Khóa / Mở khóa ========== -->
+  <div id="modal-lock" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/45 p-4">
+    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+      <h3 id="modal-lock-title" class="text-lg font-semibold text-slate-900"></h3>
+      <p id="modal-lock-text" class="mt-2 text-sm text-slate-600"></p>
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" class="modal-lock-cancel rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Hủy</button>
+        <button type="button" id="modal-lock-ok" class="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * ========== Cấu hình & dữ liệu mẫu ==========
+     * isActive: đã kích hoạt (đã có mật khẩu) / chưa kích hoạt
+     * isLocked: bị khóa đăng nhập
+     * soonDisable: cờ demo cho bộ lọc "sắp vô hiệu hóa"
+     */
+    var INTERNAL_DOMAIN = 'psci.edu.vn';
+
+    var accounts = [
+      { id: 11, email: 'chaudo@psci.edu.vn', fullName: 'Đỗ Phương Khánh Châu', role: 'Nghiên cứu viên', degree: 'TS', isActive: true, isLocked: false, createdAt: '2026-04-01', soonDisable: false },
+      { id: 9, email: 'phucpham@psci.edu.vn', fullName: 'Phạm Văn Phúc', role: 'Nghiên cứu viên', degree: 'PGS.TS', isActive: true, isLocked: false, createdAt: '2026-03-29', soonDisable: false },
+      { id: 6, email: 'admin@gmail.com', fullName: 'Admin', role: 'Admin', degree: 'Khác', isActive: true, isLocked: false, createdAt: '2026-02-23', soonDisable: false },
+      { id: 12, email: 'nguyenvana@psci.edu.vn', fullName: 'Nguyễn Văn A', role: 'Nghiên cứu viên', degree: 'ThS', isActive: false, isLocked: false, createdAt: '2026-04-10', soonDisable: false },
+      { id: 13, email: 'tranthib@example.com', fullName: 'Trần Thị B', role: 'Nghiên cứu viên', degree: 'TS', isActive: true, isLocked: true, createdAt: '2025-12-01', soonDisable: true },
+      { id: 14, email: 'levanc@psci.edu.vn', fullName: 'Lê Văn C', role: 'Trưởng phòng', degree: 'PGS.TS', isActive: true, isLocked: false, createdAt: '2026-01-15', soonDisable: false },
+      { id: 15, email: 'reviewer@outlook.com', fullName: 'Phản biện ngoài', role: 'Nghiên cứu viên', degree: 'TS', isActive: false, isLocked: false, createdAt: '2026-04-18', soonDisable: false },
+      { id: 16, email: 'ketoan@psci.edu.vn', fullName: 'Hoàng Thị D', role: 'Phòng KHCN', degree: 'ThS', isActive: true, isLocked: false, createdAt: '2025-08-20', soonDisable: true },
+      { id: 17, email: 'thuky@psci.edu.vn', fullName: 'Mai Văn E', role: 'Thư ký HĐKHCN', degree: 'TS', isActive: true, isLocked: false, createdAt: '2024-11-05', soonDisable: false },
+      { id: 18, email: 'guest@yahoo.com', fullName: 'Khách mời F', role: 'Nghiên cứu viên', degree: 'Khác', isActive: true, isLocked: true, createdAt: '2025-03-10', soonDisable: false },
+      { id: 19, email: 'sinhnguyen@psci.edu.vn', fullName: 'Nguyễn Trường Sinh', role: 'Nghiên cứu viên', degree: 'TS', isActive: true, isLocked: false, createdAt: '2026-04-19', soonDisable: false },
+      { id: 20, email: 'olduser@psci.edu.vn', fullName: 'Người dùng cũ', role: 'Nghiên cứu viên', degree: 'ThS', isActive: false, isLocked: false, createdAt: '2023-06-01', soonDisable: false },
+    ];
+
+    var nextId = 21;
+    var PAGE_SIZE = 5;
+    var currentPage = 1;
+    var pendingId = null;
+
+    /* ---------- Tiện ích ---------- */
+    function isInternalEmail(email) {
+      return (email || '').toLowerCase().endsWith('@' + INTERNAL_DOMAIN);
+    }
+
+    function parseDate(s) {
+      var d = new Date(s + 'T12:00:00');
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function daysBetween(a, b) {
+      return Math.floor((a - b) / (24 * 60 * 60 * 1000));
+    }
+
+    function showToast(message, type) {
+      type = type || 'success';
+      var root = document.getElementById('toast-root');
+      var el = document.createElement('div');
+      el.className = 'toast-item pointer-events-auto flex items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg ';
+      if (type === 'error') {
+        el.className += 'border-red-200 bg-red-50 text-red-900';
+        el.innerHTML = '<i class="fa-solid fa-circle-xmark mt-0.5 text-red-600"></i><span>' + escapeHtml(message) + '</span>';
+      } else {
+        el.className += 'border-emerald-200 bg-emerald-50 text-emerald-900';
+        el.innerHTML = '<i class="fa-solid fa-circle-check mt-0.5 text-emerald-600"></i><span>' + escapeHtml(message) + '</span>';
+      }
+      root.appendChild(el);
+      setTimeout(function () {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.3s';
+        setTimeout(function () { el.remove(); }, 300);
+      }, 3000);
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function emailValid(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    function emailExists(email, excludeId) {
+      var lower = email.trim().toLowerCase();
+      return accounts.some(function (a) {
+        return a.id !== excludeId && a.email.toLowerCase() === lower;
+      });
+    }
+
+    /* ---------- Thống kê (toàn bộ mảng) ---------- */
+    function refreshStats() {
+      document.getElementById('stat-total').textContent = String(accounts.length);
+      document.getElementById('stat-inactive').textContent = String(accounts.filter(function (a) { return !a.isActive; }).length);
+      document.getElementById('stat-locked').textContent = String(accounts.filter(function (a) { return a.isLocked; }).length);
+    }
+
+    /* ---------- Năm từ dữ liệu ---------- */
+    function populateYearDropdown() {
+      var sel = document.getElementById('f-year');
+      var years = {};
+      accounts.forEach(function (a) {
+        var y = (a.createdAt || '').slice(0, 4);
+        if (y) years[y] = true;
+      });
+      var list = Object.keys(years).sort().reverse();
+      sel.innerHTML = '<option value="all">Tất cả</option>';
+      list.forEach(function (y) {
+        var o = document.createElement('option');
+        o.value = y;
+        o.textContent = y;
+        sel.appendChild(o);
+      });
+    }
+
+    /* ---------- Lọc ---------- */
+    function getFiltered() {
+      var scope = document.getElementById('f-scope').value;
+      var year = document.getElementById('f-year').value;
+      var act = document.getElementById('f-activation').value;
+      var q = (document.getElementById('f-search').value || '').trim().toLowerCase();
+      var new7 = document.getElementById('f-new7').checked;
+      var soon = document.getElementById('f-soon').checked;
+      var today = new Date();
+      today.setHours(12, 0, 0, 0);
+
+      return accounts.filter(function (a) {
+        if (scope === 'internal' && !isInternalEmail(a.email)) return false;
+        if (scope === 'external' && isInternalEmail(a.email)) return false;
+        if (year !== 'all' && (a.createdAt || '').slice(0, 4) !== year) return false;
+        if (act === 'active' && !a.isActive) return false;
+        if (act === 'inactive' && a.isActive) return false;
+        if (q) {
+          var hit = a.email.toLowerCase().indexOf(q) !== -1 || (a.fullName || '').toLowerCase().indexOf(q) !== -1;
+          if (!hit) return false;
+        }
+        if (new7) {
+          var c = parseDate(a.createdAt);
+          if (!c || daysBetween(today, c) > 7) return false;
+        }
+        if (soon && !a.soonDisable) return false;
+        return true;
+      });
+    }
+
+    /* ---------- Bảng + phân trang ---------- */
+    function renderTable() {
+      var filtered = getFiltered();
+      var total = filtered.length;
+      var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if (currentPage > pages) currentPage = pages;
+      var start = (currentPage - 1) * PAGE_SIZE;
+      var slice = filtered.slice(start, start + PAGE_SIZE);
+
+      var tb = document.getElementById('tbody-accounts');
+      tb.innerHTML = '';
+
+      slice.forEach(function (a) {
+        var scopeLabel = isInternalEmail(a.email)
+          ? '<span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">Nội viện</span>'
+          : '<span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">Ngoại viện</span>';
+        var actBadge = a.isActive
+          ? '<span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Đã kích hoạt</span>'
+          : '<span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Chưa kích hoạt</span>';
+        var lockBadge = a.isLocked
+          ? '<span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Bị khóa</span>'
+          : '<span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">Hoạt động</span>';
+
+        var tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/90';
+        tr.innerHTML =
+          '<td class="whitespace-nowrap px-3 py-2.5 font-mono text-xs text-slate-600">' + a.id + '</td>' +
+          '<td class="px-3 py-2.5 text-indigo-700">' + escapeHtml(a.email) + '</td>' +
+          '<td class="px-3 py-2.5 font-medium text-slate-900">' + escapeHtml(a.fullName) + '</td>' +
+          '<td class="px-3 py-2.5">' + scopeLabel + '</td>' +
+          '<td class="px-3 py-2.5">' + actBadge + '</td>' +
+          '<td class="whitespace-nowrap px-3 py-2.5 text-slate-700">' + escapeHtml(a.degree) + '</td>' +
+          '<td class="whitespace-nowrap px-3 py-2.5 text-slate-700">' + escapeHtml(a.role) + '</td>' +
+          '<td class="whitespace-nowrap px-3 py-2.5 font-mono text-xs">' + escapeHtml(a.createdAt) + '</td>' +
+          '<td class="px-3 py-2.5">' + lockBadge + '</td>' +
+          '<td class="px-3 py-2.5">' +
+          '<div class="flex flex-wrap justify-center gap-1">' +
+          '<button type="button" class="btn-reset inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-indigo-600 hover:bg-indigo-50" data-id="' + a.id + '" title="Đặt lại mật khẩu"><i class="fa-solid fa-key text-xs"></i></button>' +
+          '<button type="button" class="btn-lock inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100" data-id="' + a.id + '" title="' + (a.isLocked ? 'Mở khóa' : 'Khóa') + '"><i class="fa-solid ' + (a.isLocked ? 'fa-unlock' : 'fa-lock') + ' text-xs"></i></button>' +
+          '<button type="button" class="btn-del inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 bg-white text-red-600 hover:bg-red-50" data-id="' + a.id + '" title="Xóa"><i class="fa-solid fa-trash text-xs"></i></button>' +
+          '</div></td>';
+        tb.appendChild(tr);
+      });
+
+      var end = Math.min(start + PAGE_SIZE, total);
+      document.getElementById('table-range').textContent =
+        total === 0 ? 'Hiển thị 0 / 0 tài khoản' : 'Hiển thị ' + (start + 1) + '–' + end + ' / ' + total + ' tài khoản';
+
+      renderPagination(pages);
+    }
+
+    function renderPagination(pages) {
+      var el = document.getElementById('pagination');
+      el.innerHTML = '';
+      if (pages <= 1) return;
+
+      function btn(label, disabled, onClick, extra) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.className = 'min-w-[2rem] rounded-lg border px-2 py-1.5 text-sm ' + (extra || 'border-slate-200 bg-white hover:bg-slate-50');
+        if (disabled) b.disabled = true;
+        else b.addEventListener('click', onClick);
+        return b;
+      }
+
+      el.appendChild(btn('« Trước', currentPage <= 1, function () { currentPage--; renderTable(); }));
+
+      var maxBtns = 5;
+      var startP = Math.max(1, currentPage - 2);
+      var endP = Math.min(pages, startP + maxBtns - 1);
+      if (endP - startP < maxBtns - 1) startP = Math.max(1, endP - maxBtns + 1);
+
+      for (var p = startP; p <= endP; p++) {
+        (function (pageNum) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = String(pageNum);
+          b.className = 'min-w-[2rem] rounded-lg border px-2 py-1.5 text-sm ' +
+            (pageNum === currentPage ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white hover:bg-slate-50');
+          b.addEventListener('click', function () { currentPage = pageNum; renderTable(); });
+          el.appendChild(b);
+        })(p);
+      }
+
+      el.appendChild(btn('Sau »', currentPage >= pages, function () { currentPage++; renderTable(); }));
+    }
+
+    /* ---------- Form: validation email trùng (realtime) ---------- */
+    var addEmail = document.getElementById('add-email');
+    var errDup = document.getElementById('err-email-dup');
+
+    function validateAddEmail() {
+      var v = addEmail.value.trim();
+      errDup.classList.add('hidden');
+      addEmail.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+      if (!v) return;
+      if (!emailValid(v)) {
+        addEmail.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+        return;
+      }
+      if (emailExists(v, null)) {
+        errDup.classList.remove('hidden');
+        addEmail.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+      }
+    }
+
+    addEmail.addEventListener('input', validateAddEmail);
+    addEmail.addEventListener('blur', validateAddEmail);
+
+    document.getElementById('add-create-pw').addEventListener('change', function () {
+      var pw = document.getElementById('add-password');
+      if (this.checked) {
+        pw.placeholder = 'Nhập mật khẩu để kích hoạt ngay';
+      } else {
+        pw.placeholder = 'Để trống nếu chưa kích hoạt';
+      }
+    });
+
+    /* ---------- Form submit: Thêm tài khoản ---------- */
+    document.getElementById('form-add-account').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = document.getElementById('add-name').value.trim();
+      var email = document.getElementById('add-email').value.trim();
+      var role = document.getElementById('add-role').value;
+      var degree = document.getElementById('add-degree').value;
+      var password = document.getElementById('add-password').value;
+      var createPw = document.getElementById('add-create-pw').checked;
+
+      if (!name || !email || !role) {
+        showToast('Vui lòng điền đầy đủ các trường bắt buộc.', 'error');
+        return;
+      }
+      if (!emailValid(email)) {
+        showToast('Email không đúng định dạng.', 'error');
+        return;
+      }
+      if (emailExists(email, null)) {
+        showToast('Email đã tồn tại.', 'error');
+        validateAddEmail();
+        return;
+      }
+      if (createPw && (!password || password.length < 6)) {
+        showToast('Khi bật "Tạo mật khẩu ngay", vui lòng nhập mật khẩu tối thiểu 6 ký tự.', 'error');
+        return;
+      }
+      if (!createPw && password.length > 0) {
+        /* Có nhập mật khẩu nhưng không tick — coi như kích hoạt ngay theo mật khẩu */
+        if (password.length < 6) {
+          showToast('Mật khẩu tối thiểu 6 ký tự hoặc để trống.', 'error');
+          return;
+        }
+      }
+
+      var isActive;
+      if (createPw) {
+        isActive = true;
+      } else if (password.length > 0) {
+        isActive = true;
+      } else {
+        isActive = false;
+      }
+
+      var now = new Date();
+      var createdAt = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+
+      accounts.push({
+        id: nextId++,
+        email: email,
+        fullName: name,
+        role: role,
+        degree: degree,
+        isActive: isActive,
+        isLocked: false,
+        createdAt: createdAt,
+        soonDisable: false,
+      });
+
+      populateYearDropdown();
+      refreshStats();
+      currentPage = 1;
+      renderTable();
+      showToast('Đã thêm tài khoản thành công.' + (isActive ? ' Tài khoản đã được kích hoạt.' : ' Trạng thái: chưa kích hoạt.'));
+
+      this.reset();
+      document.getElementById('err-email-dup').classList.add('hidden');
+      document.getElementById('add-email').classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+    });
+
+    /* ---------- Modals ---------- */
+    function openModal(id) {
+      var m = document.getElementById(id);
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+    function closeModal(id) {
+      var m = document.getElementById(id);
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    document.getElementById('tbody-accounts').addEventListener('click', function (e) {
+      var resetBtn = e.target.closest('.btn-reset');
+      var lockBtn = e.target.closest('.btn-lock');
+      var delBtn = e.target.closest('.btn-del');
+      var id = resetBtn && parseInt(resetBtn.getAttribute('data-id'), 10);
+      if (resetBtn) {
+        pendingId = id;
+        var acc = accounts.find(function (x) { return x.id === id; });
+        document.getElementById('modal-reset-text').textContent =
+          'Gửi email đặt lại mật khẩu tới ' + (acc ? acc.email : '') + '?';
+        openModal('modal-reset');
+      } else if (lockBtn) {
+        pendingId = parseInt(lockBtn.getAttribute('data-id'), 10);
+        var a = accounts.find(function (x) { return x.id === pendingId; });
+        if (!a) return;
+        document.getElementById('modal-lock-title').innerHTML =
+          '<i class="fa-solid ' + (a.isLocked ? 'fa-unlock' : 'fa-lock') + ' mr-2 text-indigo-600"></i>' +
+          (a.isLocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản');
+        document.getElementById('modal-lock-text').textContent =
+          (a.isLocked ? 'Cho phép ' : 'Chặn đăng nhập cho ') + a.email + ' (' + a.fullName + ')?';
+        openModal('modal-lock');
+      } else if (delBtn) {
+        pendingId = parseInt(delBtn.getAttribute('data-id'), 10);
+        var d = accounts.find(function (x) { return x.id === pendingId; });
+        document.getElementById('modal-delete-text').textContent =
+          'Xóa ' + (d ? d.email + ' — ' + d.fullName : '') + '?';
+        openModal('modal-delete');
+      }
+    });
+
+    document.getElementById('modal-reset-ok').addEventListener('click', function () {
+      closeModal('modal-reset');
+      showToast('Đã gửi email đặt lại mật khẩu.');
+      pendingId = null;
+    });
+    document.querySelectorAll('.modal-reset-cancel').forEach(function (b) {
+      b.addEventListener('click', function () { closeModal('modal-reset'); pendingId = null; });
+    });
+    document.getElementById('modal-reset').addEventListener('click', function (e) {
+      if (e.target.id === 'modal-reset') { closeModal('modal-reset'); pendingId = null; }
+    });
+
+    document.getElementById('modal-delete-ok').addEventListener('click', function () {
+      if (pendingId == null) return;
+      accounts = accounts.filter(function (x) { return x.id !== pendingId; });
+      populateYearDropdown();
+      refreshStats();
+      renderTable();
+      closeModal('modal-delete');
+      showToast('Đã xóa tài khoản khỏi danh sách.');
+      pendingId = null;
+    });
+    document.querySelectorAll('.modal-delete-cancel').forEach(function (b) {
+      b.addEventListener('click', function () { closeModal('modal-delete'); pendingId = null; });
+    });
+    document.getElementById('modal-delete').addEventListener('click', function (e) {
+      if (e.target.id === 'modal-delete') { closeModal('modal-delete'); pendingId = null; }
+    });
+
+    document.getElementById('modal-lock-ok').addEventListener('click', function () {
+      if (pendingId == null) return;
+      var a = accounts.find(function (x) { return x.id === pendingId; });
+      if (a) {
+        a.isLocked = !a.isLocked;
+        refreshStats();
+        renderTable();
+        showToast(a.isLocked ? 'Đã khóa tài khoản.' : 'Đã mở khóa tài khoản.');
+      }
+      closeModal('modal-lock');
+      pendingId = null;
+    });
+    document.querySelectorAll('.modal-lock-cancel').forEach(function (b) {
+      b.addEventListener('click', function () { closeModal('modal-lock'); pendingId = null; });
+    });
+    document.getElementById('modal-lock').addEventListener('click', function (e) {
+      if (e.target.id === 'modal-lock') { closeModal('modal-lock'); pendingId = null; }
+    });
+
+    /* ---------- Nút khác ---------- */
+    document.getElementById('btn-logout').addEventListener('click', function () {
+      alert('Demo: Đăng xuất');
+    });
+    document.getElementById('btn-export').addEventListener('click', function () {
+      alert('Demo: Xuất file Excel');
+    });
+
+    document.getElementById('btn-search').addEventListener('click', function () {
+      currentPage = 1;
+      renderTable();
+    });
+    document.getElementById('f-search').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        currentPage = 1;
+        renderTable();
+      }
+    });
+
+    document.getElementById('btn-filter-reset').addEventListener('click', function () {
+      document.getElementById('f-scope').value = 'all';
+      document.getElementById('f-year').value = 'all';
+      document.getElementById('f-activation').value = 'all';
+      document.getElementById('f-search').value = '';
+      document.getElementById('f-new7').checked = false;
+      document.getElementById('f-soon').checked = false;
+      currentPage = 1;
+      renderTable();
+    });
+
+    ['f-scope', 'f-year', 'f-activation', 'f-new7', 'f-soon'].forEach(function (id) {
+      document.getElementById(id).addEventListener('change', function () {
+        currentPage = 1;
+        renderTable();
+      });
+    });
+
+    /* Tìm kiếm gần real-time (debounce 300ms) */
+    var searchTimer = null;
+    document.getElementById('f-search').addEventListener('input', function () {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () {
+        currentPage = 1;
+        renderTable();
+      }, 300);
+    });
+
+    /* ---------- Init ---------- */
+    populateYearDropdown();
+    refreshStats();
+    renderTable();
+  </script>
+</body>
+</html>

@@ -241,16 +241,28 @@ const RESOLVED_CAP_VIEN_UPLOADS_ROOT = path.resolve(uploadDirCapVien);
 
 /**
  * Chuỗi đường dẫn lưu trong CSDL → file thật trên đĩa.
- * Hỗ trợ tiền tố uploads/ và uploads-cap-vien/ (cũ: relative từ thư mục code).
+ * - uploads-cap-vien: có thể xuất hiện ở đầu chuỗi hoặc sau ../ (code /opt/app, file ở APP_DATA_DIR).
+ * - public-templates/...: lưu mới (relative tới uploads-cap-vien).
+ * - uploads/: thư mục upload chung (missions, htqt, …).
  */
 function resolveStoredFileFromDb(raw) {
   const s = String(raw || '').trim();
   if (!s) return null;
   if (path.isAbsolute(s)) return path.normalize(path.resolve(s));
-  const n = s.replace(/\\/g, '/');
-  if (n.startsWith('uploads-cap-vien/')) {
-    return path.normalize(path.resolve(uploadDirCapVien, n.slice('uploads-cap-vien/'.length)));
+  let n = s.replace(/\\/g, '/');
+  if (n.startsWith('./')) n = n.slice(2);
+
+  const capMarker = 'uploads-cap-vien/';
+  const capIdx = n.indexOf(capMarker);
+  if (capIdx !== -1) {
+    const rest = n.slice(capIdx + capMarker.length);
+    return path.normalize(path.resolve(uploadDirCapVien, rest));
   }
+
+  if (n.startsWith('public-templates/')) {
+    return path.normalize(path.resolve(uploadDirCapVien, n));
+  }
+
   if (n.startsWith('uploads/')) {
     return path.normalize(path.resolve(uploadDir, n.slice('uploads/'.length)));
   }
@@ -4722,6 +4734,8 @@ function isApiPathAllowedForCrdOnlyUser(urlPath) {
   if (p === '/api/me' || p === '/api/logout') return true;
   if (p === '/api/activity/track') return true;
   if (p === '/api/health') return true;
+  if (p.startsWith('/api/pub-analytics')) return true;
+  if (p.startsWith('/api/dashboard-perms/') && p.endsWith('/check')) return true;
   return false;
 }
 
@@ -4763,6 +4777,46 @@ function authMiddleware(req, res, next) {
   } catch (e) {
     return res.status(401).json({ message: 'Phiên đăng nhập hết hạn' });
   }
+}
+
+/** JWT tuỳ chọn — không có token thì req.user = null (dùng cho chế độ public / kiểm tra quyền). */
+function optionalAuthMiddleware(req, res, next) {
+  const token = getTokenFromReq(req);
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (userIdIsBanned(payload.id)) {
+      return res.status(403).json({ message: 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.' });
+    }
+    let reqUser = payload;
+    try {
+      const row = db.prepare('SELECT id, email, fullname, role FROM users WHERE id = ?').get(payload.id);
+      if (row) {
+        reqUser = {
+          id: row.id,
+          email: row.email,
+          fullname: row.fullname,
+          role: row.role,
+        };
+      }
+    } catch (_) {}
+    req.user = reqUser;
+    next();
+  } catch (e) {
+    req.user = null;
+    next();
+  }
+}
+
+/** GET .../dashboard-perms/:id/check dùng optional auth (public analytics có thể không cần đăng nhập). */
+function authUnlessDashboardPermCheck(req, res, next) {
+  if (req.method === 'GET' && /^\/[^/]+\/check\/?$/.test(req.path || '')) {
+    return optionalAuthMiddleware(req, res, next);
+  }
+  return authMiddleware(req, res, next);
 }
 
 function thuyKyOrAdmin(req, res, next) {
@@ -4807,6 +4861,13 @@ function masterAdminOnly(req, res, next) {
     return res.status(403).json({ message: 'Chỉ Master Admin mới được thực hiện thao tác này.' });
   }
   next();
+}
+
+/** Admin (role) hoặc Master Admin (email) — dùng cho tìm user, phân quyền dashboard, v.v. */
+function adminOrMasterAdminApi(req, res, next) {
+  if ((req.user.role || '').toLowerCase() === 'admin') return next();
+  if (reqIsMasterAdmin(req)) return next();
+  return res.status(403).json({ ok: false, success: false, error: 'Chỉ Admin hoặc Master Admin mới có quyền này' });
 }
 
 function adminOrPhongKhcn(req, res, next) {
@@ -6225,7 +6286,9 @@ app.post(
     if (!f) {
       return res.status(400).json({ message: 'Thiếu file (form field: file)' });
     }
-    const relStored = path.relative(__dirname, f.path);
+    const relStored = path
+      .relative(uploadDirCapVien, path.normalize(f.path))
+      .replace(/\\/g, '/');
     const orig = fixFilenameEncoding(f.originalname) || path.basename(f.path);
     try {
       const prev = db.prepare('SELECT stored_path FROM cap_vien_public_template_files WHERE task_code = ?').get(taskCode);
@@ -12723,9 +12786,7 @@ app.get('/api/me', authMiddleware, (req, res) => {
     const row = db.prepare('SELECT id, email, fullname, role FROM users WHERE id = ?').get(user.id);
     if (!row) return res.status(404).json({ message: 'Không tìm thấy.' });
     const out = { id: row.id, email: row.email, fullname: row.fullname, role: row.role };
-    if ((out.role || '').toLowerCase() === 'admin') {
-      out.isMasterAdmin = userEmailIsMasterAdmin(out.email);
-    }
+    out.isMasterAdmin = userEmailIsMasterAdmin(out.email);
     return res.json(out);
   } catch(e) {
     return res.json(req.user || {});
@@ -13840,10 +13901,38 @@ try {
   console.warn('[migrations/005_dashboard_access_log]', e.message);
 }
 
+try {
+  const rowMode = db.prepare('SELECT 1 FROM system_settings WHERE key = ?').get('pub_analytics_access_mode');
+  if (!rowMode) {
+    db.prepare('INSERT INTO system_settings (key, value) VALUES (?, ?)').run(
+      'pub_analytics_access_mode',
+      'whitelist'
+    );
+  }
+  const rowSuf = db.prepare('SELECT 1 FROM system_settings WHERE key = ?').get('pub_analytics_email_suffix');
+  if (!rowSuf) {
+    db.prepare('INSERT INTO system_settings (key, value) VALUES (?, ?)').run('pub_analytics_email_suffix', '@sci.edu.vn');
+  }
+  const rowSufVal = db.prepare('SELECT value FROM system_settings WHERE key = ?').get('pub_analytics_email_suffix');
+  if (rowSufVal && String(rowSufVal.value || '').toLowerCase() === '@sci.edu') {
+    db.prepare('UPDATE system_settings SET value = ? WHERE key = ?').run('@sci.edu.vn', 'pub_analytics_email_suffix');
+  }
+} catch (e) {
+  console.warn('[system_settings pub_analytics]', e.message);
+}
+
 /** CRUD quyền xem dashboard — routes/dashboardPermissions.js */
 try {
   const createDashboardPermissionsRouter = require('./routes/dashboardPermissions');
-  app.use('/api/dashboard-perms', authMiddleware, createDashboardPermissionsRouter({ db }));
+  app.use(
+    '/api/dashboard-perms',
+    authUnlessDashboardPermCheck,
+    createDashboardPermissionsRouter({
+      db,
+      isMasterAdmin: reqIsMasterAdmin,
+      isUserMasterAdmin: (u) => userEmailIsMasterAdmin(u && u.email),
+    })
+  );
   console.log('[DASH] Đã mount /api/dashboard-perms');
 } catch (e) {
   console.warn('[DASH] Không mount dashboard-perms:', e.message);
@@ -13869,19 +13958,58 @@ try {
   console.warn('[DMS] Không mount /api/dms:', e.message);
 }
 
-/** Thống kê công bố — admin hoặc user được cấp trong dashboard_permissions (pub_analytics) */
+/** Thống kê công bố — theo chính sách pub_analytics (whitelist / nội bộ / STIMS / public) */
 try {
   const createPublicationAnalyticsRouter = require('./routes/publicationAnalytics');
-  const { createCheckDashboardPermission } = require('./middleware/checkDashboardPermission');
-  const checkPubAnalytics = createCheckDashboardPermission(db, { dashboardId: 'pub_analytics' });
-  app.use('/api/pub-analytics', authMiddleware, checkPubAnalytics, createPublicationAnalyticsRouter({ db }));
-  console.log('[PUB] Đã mount /api/pub-analytics (admin + quyền dashboard)');
+  const { createCheckPubAnalyticsAccess } = require('./middleware/pubAnalyticsAccess');
+  const checkPubAnalytics = createCheckPubAnalyticsAccess(db, {
+    isUserMasterAdmin: (u) => userEmailIsMasterAdmin(u && u.email),
+  });
+  app.use('/api/pub-analytics', optionalAuthMiddleware, checkPubAnalytics, createPublicationAnalyticsRouter({ db }));
+  console.log('[PUB] Đã mount /api/pub-analytics (chính sách truy cập dashboard)');
 } catch (e) {
   console.warn('[PUB] Không mount pub-analytics:', e.message);
 }
 
+/** Dev (Master Admin): cấu hình chính sách truy cập dashboard phân tích công bố */
+app.get('/api/dev/pub-analytics-access', authMiddleware, adminOrMasterAdminApi, (req, res) => {
+  try {
+    const { getPubAnalyticsSettings } = require('./middleware/pubAnalyticsAccess');
+    const s = getPubAnalyticsSettings(db);
+    return res.json({ ok: true, mode: s.mode, email_suffix: s.emailSuffix });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+  }
+});
+
+app.put('/api/dev/pub-analytics-access', authMiddleware, adminOrMasterAdminApi, (req, res) => {
+  try {
+    const allowed = ['whitelist', 'internal_domain', 'stims_all', 'public'];
+    const raw = req.body && req.body.mode != null ? String(req.body.mode).trim().toLowerCase() : '';
+    if (!allowed.includes(raw)) {
+      return res.status(400).json({ ok: false, error: 'mode không hợp lệ' });
+    }
+    let suffix = req.body && req.body.email_suffix != null ? String(req.body.email_suffix).trim().toLowerCase() : '@sci.edu.vn';
+    if (suffix && !suffix.startsWith('@')) suffix = '@' + suffix;
+    if (suffix.length < 2 || suffix.length > 80) {
+      return res.status(400).json({ ok: false, error: 'email_suffix không hợp lệ' });
+    }
+    db.prepare(
+      `INSERT INTO system_settings (key, value) VALUES (?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    ).run('pub_analytics_access_mode', raw);
+    db.prepare(
+      `INSERT INTO system_settings (key, value) VALUES (?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    ).run('pub_analytics_email_suffix', suffix);
+    return res.json({ ok: true, mode: raw, email_suffix: suffix });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+  }
+});
+
 /** Tìm user (autocomplete phân quyền dashboard) — chỉ Admin */
-app.get('/api/users/search', authMiddleware, adminOnly, (req, res) => {
+app.get('/api/users/search', authMiddleware, adminOrMasterAdminApi, (req, res) => {
   try {
     const raw = String(req.query.q || '').trim();
     if (raw.length < 1) {
