@@ -242,19 +242,42 @@ const RESOLVED_CAP_VIEN_UPLOADS_ROOT = path.resolve(uploadDirCapVien);
 /**
  * Chuỗi đường dẫn lưu trong CSDL → file thật trên đĩa.
  * Hỗ trợ tiền tố uploads/ và uploads-cap-vien/ (cũ: relative từ thư mục code).
+ * Lưu ý: bản cũ dùng path.relative(__dirname, file) nên có thể là
+ * "data/uploads-cap-vien/..." — phải nhận diện uploads-cap-vien/ ở bất kỳ vị trí nào trong chuỗi.
+ * Tương tự với uploads/ (vd. data/uploads/htqt-...) khi APP_DATA_DIR tách khỏi thư mục code.
  */
 function resolveStoredFileFromDb(raw) {
   const s = String(raw || '').trim();
   if (!s) return null;
   if (path.isAbsolute(s)) return path.normalize(path.resolve(s));
   const n = s.replace(/\\/g, '/');
-  if (n.startsWith('uploads-cap-vien/')) {
-    return path.normalize(path.resolve(uploadDirCapVien, n.slice('uploads-cap-vien/'.length)));
+  const capMarker = 'uploads-cap-vien/';
+  const capIdx = n.toLowerCase().indexOf(capMarker);
+  if (capIdx !== -1) {
+    const rest = n.slice(capIdx + capMarker.length);
+    return path.normalize(path.resolve(uploadDirCapVien, rest));
   }
-  if (n.startsWith('uploads/')) {
-    return path.normalize(path.resolve(uploadDir, n.slice('uploads/'.length)));
+  const upMarker = 'uploads/';
+  const upIdx = n.toLowerCase().indexOf(upMarker);
+  if (upIdx !== -1) {
+    const rest = n.slice(upIdx + upMarker.length);
+    return path.normalize(path.resolve(uploadDir, rest));
+  }
+  // Legacy: một số bản ghi sai chỉ còn nhánh public-templates/... (resolve cũ gắn nhầm uploads/)
+  if (n.startsWith('public-templates/')) {
+    return path.normalize(path.resolve(uploadDirCapVien, n));
   }
   return path.normalize(path.resolve(uploadDir, n));
+}
+
+/** File vừa ghi dưới uploadDir → chuỗi lưu CSDL dạng uploads/... (không phụ thuộc __dirname / APP_DATA_DIR). */
+function storedUploadsPathForDatabase(absoluteFilePath) {
+  const abs = path.resolve(absoluteFilePath);
+  const rel = path.relative(uploadDir, abs);
+  if (!rel.startsWith('..') && !path.isAbsolute(rel)) {
+    return 'uploads/' + rel.split(path.sep).join('/');
+  }
+  return path.relative(__dirname, abs).split(path.sep).join('/');
 }
 
 function pathIsStrictlyInsideResolvedRoot(resolvedRootAbs, candidateAbs) {
@@ -277,7 +300,8 @@ function downloadPathIsAllowed(normAbs) {
 function normalizeAndCheckDownloadPath(storedPath) {
   const raw = storedPath == null ? '' : String(storedPath).trim();
   if (!raw) return { err: 404 };
-  const norm = path.resolve(raw);
+  const norm = resolveStoredFileFromDb(raw);
+  if (!norm) return { err: 404 };
   if (!downloadPathIsAllowed(norm)) return { err: 403 };
   try {
     if (!fs.existsSync(norm) || !fs.statSync(norm).isFile()) return { err: 404 };
@@ -2808,7 +2832,8 @@ const HOMEPAGE_MODULES_DEFAULT = [
   { code: 'facilities', label: 'CRD Lab Booking', enabled: 1 },
   { code: 'ethics_integrity', label: 'Đạo đức và Liêm chính khoa học', enabled: 0 },
   { code: 'reward', label: 'Quản lý Khen thưởng & Đánh giá', enabled: 0 },
-  { code: 'dms', label: 'Quản lý tài liệu & hồ sơ (Hành chính)', enabled: 1 }
+  { code: 'dms', label: 'Quản lý tài liệu & hồ sơ (Hành chính)', enabled: 1 },
+  { code: 'document_workflow', label: 'Quy trình văn bản nội bộ', enabled: 1 },
 ];
 
 (function migrateHomepageModuleSortOrder() {
@@ -2886,6 +2911,33 @@ const HOMEPAGE_MODULES_DEFAULT = [
     }
   } catch (e) {
     console.warn('[DB] repairHomepageModulesCorruption:', e.message || e);
+  }
+})();
+
+/** Nối mã document_workflow vào JSON thứ tự cũ (13 mã) để kéo thả admin không lỗi */
+(function migrateHomepageModuleOrderAddDocumentWorkflow() {
+  try {
+    const row = db.prepare('SELECT value FROM system_settings WHERE key = ?').get('homepage_module_order');
+    if (!row || row.value == null || String(row.value).trim() === '') return;
+    let parsed;
+    try {
+      parsed = JSON.parse(row.value);
+    } catch (e) {
+      return;
+    }
+    if (!Array.isArray(parsed) || parsed.includes('document_workflow')) return;
+    if (parsed.length !== HOMEPAGE_MODULES_DEFAULT.length - 1) return;
+    const idx = parsed.indexOf('dms');
+    if (idx >= 0) parsed.splice(idx + 1, 0, 'document_workflow');
+    else parsed.push('document_workflow');
+    if (parsed.length === HOMEPAGE_MODULES_DEFAULT.length) {
+      db.prepare('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)').run(
+        'homepage_module_order',
+        JSON.stringify(parsed)
+      );
+    }
+  } catch (e) {
+    console.warn('[DB] migrateHomepageModuleOrderAddDocumentWorkflow:', e.message || e);
   }
 })();
 
@@ -6225,7 +6277,11 @@ app.post(
     if (!f) {
       return res.status(400).json({ message: 'Thiếu file (form field: file)' });
     }
-    const relStored = path.relative(__dirname, f.path);
+    const relWithinCapVien = path.relative(uploadDirCapVien, f.path);
+    const relStored =
+      !relWithinCapVien.startsWith('..') && !path.isAbsolute(relWithinCapVien)
+        ? 'uploads-cap-vien/' + relWithinCapVien.split(path.sep).join('/')
+        : path.relative(__dirname, f.path).split(path.sep).join('/');
     const orig = fixFilenameEncoding(f.originalname) || path.basename(f.path);
     try {
       const prev = db.prepare('SELECT stored_path FROM cap_vien_public_template_files WHERE task_code = ?').get(taskCode);
@@ -14844,7 +14900,8 @@ function coopTryAutoGenerateDoanRaVanBan(id) {
     const safeMa = (row.ma_de_xuat || 'doan-ra-' + nid).replace(/[^a-zA-Z0-9._\u00C0-\u024F-]/g, '_');
     const outName = `To-trinh-${safeMa}.docx`;
     const outRel = path.join('uploads', 'htqt-doan-ra', 'doan_ra_' + nid + '_to_trinh_' + Date.now() + '.docx').replace(/\\/g, '/');
-    const abs = path.join(__dirname, outRel);
+    const abs = resolveStoredFileFromDb(outRel);
+    try { fs.mkdirSync(path.dirname(abs), { recursive: true }); } catch (_) {}
     fs.writeFileSync(abs, buf);
     db.prepare(`UPDATE cooperation_doan_ra SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
       .run(outRel, outName, nid);
@@ -14951,7 +15008,8 @@ function coopTryAutoGenerateDoanVaoVanBan(id) {
     const safeMa = (row.ma_de_xuat || 'doan-vao-' + nid).replace(/[^a-zA-Z0-9._\u00C0-\u024F-]/g, '_');
     const outName = `To-trinh-${safeMa}.docx`;
     const outRel = path.join('uploads', 'htqt-doan-vao', 'doan_vao_' + nid + '_to_trinh_' + Date.now() + '.docx').replace(/\\/g, '/');
-    const abs = path.join(__dirname, outRel);
+    const abs = resolveStoredFileFromDb(outRel);
+    try { fs.mkdirSync(path.dirname(abs), { recursive: true }); } catch (_) {}
     fs.writeFileSync(abs, buf);
     db.prepare(`UPDATE cooperation_doan_vao SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
       .run(outRel, outName, nid);
@@ -14983,8 +15041,8 @@ function coopEnsureFreshDoanRaVanBan(id) {
   if (!row.van_ban_word_path) {
     shouldRegen = true;
   } else if (coopVanBanIsAutoMergedOutput(row.van_ban_word_path)) {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (!fs.existsSync(abs)) {
+    const abs = resolveStoredFileFromDb(row.van_ban_word_path);
+    if (!abs || !fs.existsSync(abs)) {
       shouldRegen = true;
     } else {
       try {
@@ -15012,8 +15070,8 @@ function coopEnsureFreshDoanVaoVanBan(id) {
   if (!row.van_ban_word_path) {
     shouldRegen = true;
   } else if (coopVanBanIsAutoMergedOutput(row.van_ban_word_path)) {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (!fs.existsSync(abs)) {
+    const abs = resolveStoredFileFromDb(row.van_ban_word_path);
+    if (!abs || !fs.existsSync(abs)) {
       shouldRegen = true;
     } else {
       try {
@@ -15114,7 +15172,8 @@ function coopTryAutoGenerateMouVanBan(id) {
     const safeMa = (row.ma_de_xuat || 'mou-' + nid).replace(/[^a-zA-Z0-9._\u00C0-\u024F-]/g, '_');
     const outName = `To-trinh-${safeMa}.docx`;
     const outRel = path.join('uploads', 'htqt-mou', 'mou_' + nid + '_to_trinh_' + Date.now() + '.docx').replace(/\\/g, '/');
-    const abs = path.join(__dirname, outRel);
+    const abs = resolveStoredFileFromDb(outRel);
+    try { fs.mkdirSync(path.dirname(abs), { recursive: true }); } catch (_) {}
     fs.writeFileSync(abs, buf);
     db.prepare(`UPDATE cooperation_mou_de_xuat SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
       .run(outRel, outName, nid);
@@ -15137,8 +15196,8 @@ function coopEnsureFreshMouVanBan(id) {
   if (!row.van_ban_word_path) {
     shouldRegen = true;
   } else if (coopVanBanIsAutoMergedOutput(row.van_ban_word_path)) {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (!fs.existsSync(abs)) {
+    const abs = resolveStoredFileFromDb(row.van_ban_word_path);
+    if (!abs || !fs.existsSync(abs)) {
       shouldRegen = true;
     } else {
       try {
@@ -15278,7 +15337,8 @@ function coopTryAutoGenerateYtnnVanBan(id) {
     const safeMa = (row.ma_de_xuat || 'ytnn-' + nid).replace(/[^a-zA-Z0-9._\u00C0-\u024F-]/g, '_');
     const outName = `To-trinh-${safeMa}.docx`;
     const outRel = path.join('uploads', 'htqt-ytnn', 'ytnn_' + nid + '_to_trinh_' + Date.now() + '.docx').replace(/\\/g, '/');
-    const abs = path.join(__dirname, outRel);
+    const abs = resolveStoredFileFromDb(outRel);
+    try { fs.mkdirSync(path.dirname(abs), { recursive: true }); } catch (_) {}
     fs.writeFileSync(abs, buf);
     db.prepare(`UPDATE htqt_de_xuat SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
       .run(outRel, outName, nid);
@@ -15301,8 +15361,8 @@ function coopEnsureFreshYtnnVanBan(id) {
   if (!row.van_ban_word_path) {
     shouldRegen = true;
   } else if (coopVanBanIsAutoMergedOutput(row.van_ban_word_path)) {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (!fs.existsSync(abs)) {
+    const abs = resolveStoredFileFromDb(row.van_ban_word_path);
+    if (!abs || !fs.existsSync(abs)) {
       shouldRegen = true;
     } else {
       try {
@@ -15912,7 +15972,7 @@ app.post('/api/admin/cooperation/doan-ra/:id/van-ban-word', authMiddleware, admi
   uploadHtqtDoanRa.single('file')(req, res, (err) => {
     if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
-    const rel = path.relative(__dirname, req.file.path).replace(/\\/g, '/');
+    const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkDoanRaVanBanFile(row);
     const orig = (req.file.originalname || 'van-ban.docx').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
     db.prepare(`UPDATE cooperation_doan_ra SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
@@ -15944,9 +16004,9 @@ app.get('/api/cooperation/doan-ra/:id/van-ban-word', authMiddleware, (req, res) 
   }
   row = coopEnsureFreshDoanRaVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
-  const abs = path.join(__dirname, row.van_ban_word_path);
+  const abs = resolveStoredFileFromDb(row.van_ban_word_path);
   const baseDir = path.resolve(path.join(uploadDir, 'htqt-doan-ra'));
-  if (!abs.startsWith(baseDir) || abs.includes('..')) {
+  if (!abs || !pathIsStrictlyInsideResolvedRoot(baseDir, abs)) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
   if (!fs.existsSync(abs)) return res.status(404).json({ message: 'File không còn trên máy chủ.' });
@@ -16012,7 +16072,7 @@ app.post('/api/admin/cooperation/doan-vao/:id/van-ban-word', authMiddleware, adm
   uploadHtqtDoanVao.single('file')(req, res, (err) => {
     if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
-    const rel = path.relative(__dirname, req.file.path).replace(/\\/g, '/');
+    const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkDoanVaoVanBanFile(row);
     const orig = (req.file.originalname || 'van-ban.docx').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
     db.prepare(`UPDATE cooperation_doan_vao SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
@@ -16044,9 +16104,9 @@ app.get('/api/cooperation/doan-vao/:id/van-ban-word', authMiddleware, (req, res)
   }
   row = coopEnsureFreshDoanVaoVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
-  const abs = path.join(__dirname, row.van_ban_word_path);
+  const abs = resolveStoredFileFromDb(row.van_ban_word_path);
   const baseDir = path.resolve(path.join(uploadDir, 'htqt-doan-vao'));
-  if (!abs.startsWith(baseDir) || abs.includes('..')) {
+  if (!abs || !pathIsStrictlyInsideResolvedRoot(baseDir, abs)) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
   if (!fs.existsSync(abs)) return res.status(404).json({ message: 'File không còn trên máy chủ.' });
@@ -16112,7 +16172,7 @@ app.post('/api/admin/cooperation/mou/:id/van-ban-word', authMiddleware, adminOnl
   uploadHtqtMou.single('file')(req, res, (err) => {
     if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
-    const rel = path.relative(__dirname, req.file.path).replace(/\\/g, '/');
+    const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkMouVanBanFile(row);
     const orig = (req.file.originalname || 'van-ban.docx').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
     db.prepare(`UPDATE cooperation_mou_de_xuat SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
@@ -16144,9 +16204,9 @@ app.get('/api/cooperation/mou/:id/van-ban-word', authMiddleware, (req, res) => {
   }
   row = coopEnsureFreshMouVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
-  const abs = path.join(__dirname, row.van_ban_word_path);
+  const abs = resolveStoredFileFromDb(row.van_ban_word_path);
   const baseDir = path.resolve(path.join(uploadDir, 'htqt-mou'));
-  if (!abs.startsWith(baseDir) || abs.includes('..')) {
+  if (!abs || !pathIsStrictlyInsideResolvedRoot(baseDir, abs)) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
   if (!fs.existsSync(abs)) return res.status(404).json({ message: 'File không còn trên máy chủ.' });
@@ -16212,7 +16272,7 @@ app.post('/api/admin/cooperation/ytnn/:id/van-ban-word', authMiddleware, adminOn
   uploadHtqtYtnn.single('file')(req, res, (err) => {
     if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
-    const rel = path.relative(__dirname, req.file.path).replace(/\\/g, '/');
+    const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkYtnnVanBanFile(row);
     const orig = (req.file.originalname || 'van-ban.docx').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
     db.prepare(`UPDATE htqt_de_xuat SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
@@ -16244,9 +16304,9 @@ app.get('/api/cooperation/ytnn/:id/van-ban-word', authMiddleware, (req, res) => 
   }
   row = coopEnsureFreshYtnnVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
-  const abs = path.join(__dirname, row.van_ban_word_path);
+  const abs = resolveStoredFileFromDb(row.van_ban_word_path);
   const baseDir = path.resolve(path.join(uploadDir, 'htqt-ytnn'));
-  if (!abs.startsWith(baseDir) || abs.includes('..')) {
+  if (!abs || !pathIsStrictlyInsideResolvedRoot(baseDir, abs)) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
   if (!fs.existsSync(abs)) return res.status(404).json({ message: 'File không còn trên máy chủ.' });
