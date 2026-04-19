@@ -44,7 +44,10 @@
           Tạo và cập nhật người dùng, theo dõi kích hoạt, khóa tài khoản, phân quyền.
         </p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+        <button type="button" id="btn-demo-login" class="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100" title="Giả lập kiểm tra đăng nhập theo trạng thái xác thực email">
+          <i class="fa-solid fa-right-to-bracket mr-1"></i>Thử đăng nhập
+        </button>
         <span id="admin-greeting" class="text-sm text-slate-700"><i class="fa-solid fa-user-shield mr-1 text-indigo-600"></i>Xin chào <strong>Admin</strong></span>
         <button type="button" id="btn-logout" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
           <i class="fa-solid fa-right-from-bracket mr-1"></i>Đăng xuất
@@ -123,6 +126,13 @@
             <span>Tạo mật khẩu ngay (bắt buộc nhập mật khẩu để kích hoạt)</span>
           </label>
         </div>
+        <!-- Mặc định bật: tài khoản mới cần xác thực email trước khi đăng nhập (admin có thể tắt để bỏ qua) -->
+        <div class="flex flex-col justify-end sm:col-span-2 lg:col-span-1">
+          <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-amber-100 bg-amber-50/40 px-3 py-2 text-sm text-slate-800">
+            <input id="add-require-email-verify" type="checkbox" checked class="rounded border-slate-300 text-amber-600 focus:ring-amber-500" />
+            <span>Yêu cầu xác thực email</span>
+          </label>
+        </div>
         <div class="flex items-end sm:col-span-2 lg:col-span-3">
           <button type="submit" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
             <i class="fa-solid fa-plus mr-2"></i>Thêm tài khoản
@@ -154,6 +164,14 @@
             <option value="inactive">Chưa kích hoạt</option>
           </select>
         </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600" for="f-email-verify">Xác thực email</label>
+          <select id="f-email-verify" class="mt-1 min-w-[160px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+            <option value="all">Tất cả</option>
+            <option value="verified">Đã xác thực</option>
+            <option value="unverified">Chưa xác thực</option>
+          </select>
+        </div>
         <div class="min-w-[200px] flex-1">
           <label class="block text-xs font-medium text-slate-600" for="f-search">Tìm kiếm</label>
           <input id="f-search" type="search" placeholder="Email, họ tên..."
@@ -181,7 +199,7 @@
     <!-- ========== Bảng ========== -->
     <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[1000px] text-left text-sm">
+        <table class="w-full min-w-[1120px] text-left text-sm">
           <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
             <tr>
               <th class="whitespace-nowrap px-3 py-3">ID</th>
@@ -189,6 +207,7 @@
               <th class="px-3 py-3">Họ tên</th>
               <th class="whitespace-nowrap px-3 py-3">Phạm vi</th>
               <th class="whitespace-nowrap px-3 py-3">Kích hoạt</th>
+              <th class="whitespace-nowrap px-3 py-3">Xác thực email</th>
               <th class="whitespace-nowrap px-3 py-3">Học hàm/HV</th>
               <th class="whitespace-nowrap px-3 py-3">Vai trò</th>
               <th class="whitespace-nowrap px-3 py-3">Ngày tạo</th>
@@ -248,23 +267,24 @@
      * ========== Cấu hình & dữ liệu mẫu ==========
      * isActive: đã kích hoạt (đã có mật khẩu) / chưa kích hoạt
      * isLocked: bị khóa đăng nhập
+     * emailVerified: đã xác thực địa chỉ email (bắt buộc để đăng nhập khi triển khai thật; demo dùng nút Thử đăng nhập)
      * soonDisable: cờ demo cho bộ lọc "sắp vô hiệu hóa"
      */
     var INTERNAL_DOMAIN = 'psci.edu.vn';
 
     var accounts = [
-      { id: 11, email: 'chaudo@psci.edu.vn', fullName: 'Đỗ Phương Khánh Châu', role: 'Nghiên cứu viên', degree: 'TS', isActive: true, isLocked: false, createdAt: '2026-04-01', soonDisable: false },
-      { id: 9, email: 'phucpham@psci.edu.vn', fullName: 'Phạm Văn Phúc', role: 'Nghiên cứu viên', degree: 'PGS.TS', isActive: true, isLocked: false, createdAt: '2026-03-29', soonDisable: false },
-      { id: 6, email: 'admin@gmail.com', fullName: 'Admin', role: 'Admin', degree: 'Khác', isActive: true, isLocked: false, createdAt: '2026-02-23', soonDisable: false },
-      { id: 12, email: 'nguyenvana@psci.edu.vn', fullName: 'Nguyễn Văn A', role: 'Nghiên cứu viên', degree: 'ThS', isActive: false, isLocked: false, createdAt: '2026-04-10', soonDisable: false },
-      { id: 13, email: 'tranthib@example.com', fullName: 'Trần Thị B', role: 'Nghiên cứu viên', degree: 'TS', isActive: true, isLocked: true, createdAt: '2025-12-01', soonDisable: true },
-      { id: 14, email: 'levanc@psci.edu.vn', fullName: 'Lê Văn C', role: 'Trưởng phòng', degree: 'PGS.TS', isActive: true, isLocked: false, createdAt: '2026-01-15', soonDisable: false },
-      { id: 15, email: 'reviewer@outlook.com', fullName: 'Phản biện ngoài', role: 'Nghiên cứu viên', degree: 'TS', isActive: false, isLocked: false, createdAt: '2026-04-18', soonDisable: false },
-      { id: 16, email: 'ketoan@psci.edu.vn', fullName: 'Hoàng Thị D', role: 'Phòng KHCN', degree: 'ThS', isActive: true, isLocked: false, createdAt: '2025-08-20', soonDisable: true },
-      { id: 17, email: 'thuky@psci.edu.vn', fullName: 'Mai Văn E', role: 'Thư ký HĐKHCN', degree: 'TS', isActive: true, isLocked: false, createdAt: '2024-11-05', soonDisable: false },
-      { id: 18, email: 'guest@yahoo.com', fullName: 'Khách mời F', role: 'Nghiên cứu viên', degree: 'Khác', isActive: true, isLocked: true, createdAt: '2025-03-10', soonDisable: false },
-      { id: 19, email: 'sinhnguyen@psci.edu.vn', fullName: 'Nguyễn Trường Sinh', role: 'Nghiên cứu viên', degree: 'TS', isActive: true, isLocked: false, createdAt: '2026-04-19', soonDisable: false },
-      { id: 20, email: 'olduser@psci.edu.vn', fullName: 'Người dùng cũ', role: 'Nghiên cứu viên', degree: 'ThS', isActive: false, isLocked: false, createdAt: '2023-06-01', soonDisable: false },
+      { id: 11, email: 'chaudo@psci.edu.vn', fullName: 'Đỗ Phương Khánh Châu', role: 'Nghiên cứu viên', degree: 'TS', isActive: true, isLocked: false, emailVerified: false, createdAt: '2026-04-01', soonDisable: false },
+      { id: 9, email: 'phucpham@psci.edu.vn', fullName: 'Phạm Văn Phúc', role: 'Nghiên cứu viên', degree: 'PGS.TS', isActive: true, isLocked: false, emailVerified: true, createdAt: '2026-03-29', soonDisable: false },
+      { id: 6, email: 'admin@gmail.com', fullName: 'Admin', role: 'Admin', degree: 'Khác', isActive: true, isLocked: false, emailVerified: true, createdAt: '2026-02-23', soonDisable: false },
+      { id: 12, email: 'nguyenvana@psci.edu.vn', fullName: 'Nguyễn Văn A', role: 'Nghiên cứu viên', degree: 'ThS', isActive: false, isLocked: false, emailVerified: false, createdAt: '2026-04-10', soonDisable: false },
+      { id: 13, email: 'tranthib@example.com', fullName: 'Trần Thị B', role: 'Nghiên cứu viên', degree: 'TS', isActive: true, isLocked: true, emailVerified: true, createdAt: '2025-12-01', soonDisable: true },
+      { id: 14, email: 'levanc@psci.edu.vn', fullName: 'Lê Văn C', role: 'Trưởng phòng', degree: 'PGS.TS', isActive: true, isLocked: false, emailVerified: true, createdAt: '2026-01-15', soonDisable: false },
+      { id: 15, email: 'reviewer@outlook.com', fullName: 'Phản biện ngoài', role: 'Nghiên cứu viên', degree: 'TS', isActive: false, isLocked: false, emailVerified: false, createdAt: '2026-04-18', soonDisable: false },
+      { id: 16, email: 'ketoan@psci.edu.vn', fullName: 'Hoàng Thị D', role: 'Phòng KHCN', degree: 'ThS', isActive: true, isLocked: false, emailVerified: true, createdAt: '2025-08-20', soonDisable: true },
+      { id: 17, email: 'thuky@psci.edu.vn', fullName: 'Mai Văn E', role: 'Thư ký HĐKHCN', degree: 'TS', isActive: true, isLocked: false, emailVerified: true, createdAt: '2024-11-05', soonDisable: false },
+      { id: 18, email: 'guest@yahoo.com', fullName: 'Khách mời F', role: 'Nghiên cứu viên', degree: 'Khác', isActive: true, isLocked: true, emailVerified: true, createdAt: '2025-03-10', soonDisable: false },
+      { id: 19, email: 'sinhnguyen@psci.edu.vn', fullName: 'Nguyễn Trường Sinh', role: 'Nghiên cứu viên', degree: 'TS', isActive: true, isLocked: false, emailVerified: true, createdAt: '2026-04-19', soonDisable: false },
+      { id: 20, email: 'olduser@psci.edu.vn', fullName: 'Người dùng cũ', role: 'Nghiên cứu viên', degree: 'ThS', isActive: false, isLocked: false, emailVerified: false, createdAt: '2023-06-01', soonDisable: false },
     ];
 
     var nextId = 21;
@@ -354,6 +374,7 @@
       var scope = document.getElementById('f-scope').value;
       var year = document.getElementById('f-year').value;
       var act = document.getElementById('f-activation').value;
+      var ev = document.getElementById('f-email-verify').value;
       var q = (document.getElementById('f-search').value || '').trim().toLowerCase();
       var new7 = document.getElementById('f-new7').checked;
       var soon = document.getElementById('f-soon').checked;
@@ -366,6 +387,8 @@
         if (year !== 'all' && (a.createdAt || '').slice(0, 4) !== year) return false;
         if (act === 'active' && !a.isActive) return false;
         if (act === 'inactive' && a.isActive) return false;
+        if (ev === 'verified' && !a.emailVerified) return false;
+        if (ev === 'unverified' && a.emailVerified) return false;
         if (q) {
           var hit = a.email.toLowerCase().indexOf(q) !== -1 || (a.fullName || '').toLowerCase().indexOf(q) !== -1;
           if (!hit) return false;
@@ -402,6 +425,22 @@
           ? '<span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Bị khóa</span>'
           : '<span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">Hoạt động</span>';
 
+        var emailVerCell;
+        if (a.emailVerified) {
+          emailVerCell =
+            '<span class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Đã xác thực</span>';
+        } else {
+          emailVerCell =
+            '<div class="flex flex-wrap items-center gap-1.5">' +
+            '<span class="inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800">Chưa xác thực</span>' +
+            '<button type="button" class="btn-resend-verify inline-flex h-7 w-7 items-center justify-center rounded-md border border-orange-200 bg-white text-orange-600 hover:bg-orange-50" data-id="' + a.id + '" title="Gửi lại email">' +
+            '<i class="fa-solid fa-envelope text-xs"></i></button></div>';
+        }
+
+        var manualVerifyBtn = !a.emailVerified
+          ? '<button type="button" class="btn-verify-manual inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-50" data-id="' + a.id + '" title="Xác thực thủ công"><i class="fa-solid fa-circle-check text-xs"></i></button>'
+          : '';
+
         var tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-50/90';
         tr.innerHTML =
@@ -410,6 +449,7 @@
           '<td class="px-3 py-2.5 font-medium text-slate-900">' + escapeHtml(a.fullName) + '</td>' +
           '<td class="px-3 py-2.5">' + scopeLabel + '</td>' +
           '<td class="px-3 py-2.5">' + actBadge + '</td>' +
+          '<td class="px-3 py-2.5">' + emailVerCell + '</td>' +
           '<td class="whitespace-nowrap px-3 py-2.5 text-slate-700">' + escapeHtml(a.degree) + '</td>' +
           '<td class="whitespace-nowrap px-3 py-2.5 text-slate-700">' + escapeHtml(a.role) + '</td>' +
           '<td class="whitespace-nowrap px-3 py-2.5 font-mono text-xs">' + escapeHtml(a.createdAt) + '</td>' +
@@ -419,6 +459,7 @@
           '<button type="button" class="btn-reset inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-indigo-600 hover:bg-indigo-50" data-id="' + a.id + '" title="Đặt lại mật khẩu"><i class="fa-solid fa-key text-xs"></i></button>' +
           '<button type="button" class="btn-lock inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100" data-id="' + a.id + '" title="' + (a.isLocked ? 'Mở khóa' : 'Khóa') + '"><i class="fa-solid ' + (a.isLocked ? 'fa-unlock' : 'fa-lock') + ' text-xs"></i></button>' +
           '<button type="button" class="btn-del inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 bg-white text-red-600 hover:bg-red-50" data-id="' + a.id + '" title="Xóa"><i class="fa-solid fa-trash text-xs"></i></button>' +
+          manualVerifyBtn +
           '</div></td>';
         tb.appendChild(tr);
       });
@@ -507,6 +548,7 @@
       var degree = document.getElementById('add-degree').value;
       var password = document.getElementById('add-password').value;
       var createPw = document.getElementById('add-create-pw').checked;
+      var requireEmailVerify = document.getElementById('add-require-email-verify').checked;
 
       if (!name || !email || !role) {
         showToast('Vui lòng điền đầy đủ các trường bắt buộc.', 'error');
@@ -545,6 +587,9 @@
       var now = new Date();
       var createdAt = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 
+      // Bật "Yêu cầu xác thực email" → emailVerified = false; tắt → admin bỏ qua, coi như đã xác thực
+      var emailVerified = !requireEmailVerify;
+
       accounts.push({
         id: nextId++,
         email: email,
@@ -553,6 +598,7 @@
         degree: degree,
         isActive: isActive,
         isLocked: false,
+        emailVerified: emailVerified,
         createdAt: createdAt,
         soonDisable: false,
       });
@@ -561,11 +607,19 @@
       refreshStats();
       currentPage = 1;
       renderTable();
-      showToast('Đã thêm tài khoản thành công.' + (isActive ? ' Tài khoản đã được kích hoạt.' : ' Trạng thái: chưa kích hoạt.'));
+      if (requireEmailVerify) {
+        alert('Đã gửi email xác thực đến ' + email + ' (demo)');
+      }
+      showToast(
+        'Đã thêm tài khoản thành công.' +
+        (isActive ? ' Tài khoản đã được kích hoạt.' : ' Trạng thái: chưa kích hoạt.') +
+        (requireEmailVerify ? ' Email chưa xác thực — người dùng không thể đăng nhập cho đến khi xác thực (demo).' : '')
+      );
 
       this.reset();
       document.getElementById('err-email-dup').classList.add('hidden');
       document.getElementById('add-email').classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+      document.getElementById('add-require-email-verify').checked = true;
     });
 
     /* ---------- Modals ---------- */
@@ -581,6 +635,32 @@
     }
 
     document.getElementById('tbody-accounts').addEventListener('click', function (e) {
+      var resendBtn = e.target.closest('.btn-resend-verify');
+      var verifyManualBtn = e.target.closest('.btn-verify-manual');
+      if (resendBtn) {
+        var rid = parseInt(resendBtn.getAttribute('data-id'), 10);
+        var ra = accounts.find(function (x) { return x.id === rid; });
+        if (ra) alert('Demo: Gửi lại email xác thực đến ' + ra.email);
+        return;
+      }
+      if (verifyManualBtn) {
+        var vid = parseInt(verifyManualBtn.getAttribute('data-id'), 10);
+        var va = accounts.find(function (x) { return x.id === vid; });
+        if (!va || va.emailVerified) return;
+        if (
+          !confirm(
+            'Xác nhận đánh dấu email đã xác thực cho ' + va.email + '?\nNgười dùng sẽ có thể đăng nhập (theo luồng demo).'
+          )
+        ) {
+          return;
+        }
+        va.emailVerified = true;
+        refreshStats();
+        renderTable();
+        showToast('Đã xác thực email thủ công cho ' + va.email + '.');
+        return;
+      }
+
       var resetBtn = e.target.closest('.btn-reset');
       var lockBtn = e.target.closest('.btn-lock');
       var delBtn = e.target.closest('.btn-del');
@@ -659,6 +739,29 @@
     });
 
     /* ---------- Nút khác ---------- */
+    /** Demo: giả lập đăng nhập — chỉ kiểm tra emailVerified (không gọi API) */
+    document.getElementById('btn-demo-login').addEventListener('click', function () {
+      var input = window.prompt('Nhập email để thử đăng nhập (demo):', '');
+      if (input == null) return;
+      var em = (input || '').trim().toLowerCase();
+      if (!em) {
+        alert('Vui lòng nhập email.');
+        return;
+      }
+      var u = accounts.find(function (x) {
+        return (x.email || '').toLowerCase() === em;
+      });
+      if (!u) {
+        alert('Không tìm thấy tài khoản với email này (demo).');
+        return;
+      }
+      if (!u.emailVerified) {
+        alert('Tài khoản chưa xác thực email. Vui lòng kiểm tra email để kích hoạt.');
+        return;
+      }
+      alert('Đăng nhập thành công (demo)');
+    });
+
     document.getElementById('btn-logout').addEventListener('click', function () {
       alert('Demo: Đăng xuất');
     });
@@ -681,6 +784,7 @@
       document.getElementById('f-scope').value = 'all';
       document.getElementById('f-year').value = 'all';
       document.getElementById('f-activation').value = 'all';
+      document.getElementById('f-email-verify').value = 'all';
       document.getElementById('f-search').value = '';
       document.getElementById('f-new7').checked = false;
       document.getElementById('f-soon').checked = false;
@@ -688,7 +792,7 @@
       renderTable();
     });
 
-    ['f-scope', 'f-year', 'f-activation', 'f-new7', 'f-soon'].forEach(function (id) {
+    ['f-scope', 'f-year', 'f-activation', 'f-email-verify', 'f-new7', 'f-soon'].forEach(function (id) {
       document.getElementById(id).addEventListener('change', function () {
         currentPage = 1;
         renderTable();
