@@ -17802,8 +17802,12 @@ app.get('/public/vendor/Sortable.min.js', (req, res) => {
 const adminUiDistDir = path.join(__dirname, 'frontend', 'document-workflow-ui', 'dist');
 const adminUiIndexFile = path.join(adminUiDistDir, 'index.html');
 const legacyWorkflowHtml = path.join(__dirname, 'quy-trinh-van-ban-noi-bo.html');
+let adminUiServeMode = 'uninitialized';
+let adminUiModeReason = '';
 
 if (fs.existsSync(adminUiIndexFile)) {
+  adminUiServeMode = 'react-build';
+  adminUiModeReason = `Found build file: ${adminUiIndexFile}`;
   // Vite build currently emits absolute /assets/* URLs by default.
   // Serve both /assets and /admin/assets to avoid 404 in admin SPA.
   app.use(
@@ -17827,6 +17831,10 @@ if (fs.existsSync(adminUiIndexFile)) {
     return res.sendFile(adminUiIndexFile);
   });
 } else {
+  adminUiServeMode = fs.existsSync(legacyWorkflowHtml) ? 'legacy-fallback' : 'unavailable';
+  adminUiModeReason = fs.existsSync(legacyWorkflowHtml)
+    ? `Missing React build (${adminUiIndexFile}); using legacy page (${legacyWorkflowHtml})`
+    : `Missing React build (${adminUiIndexFile}) and legacy page (${legacyWorkflowHtml})`;
   app.get(['/admin', '/admin/*'], (req, res) => {
     if (fs.existsSync(legacyWorkflowHtml)) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -17835,6 +17843,26 @@ if (fs.existsSync(adminUiIndexFile)) {
     return res.status(503).send('Admin UI is not available. Missing frontend build and legacy fallback page.');
   });
 }
+console.log(`[ADMIN UI] Mode=${adminUiServeMode}. ${adminUiModeReason}`);
+function sendAdminUiStatus(res) {
+  res.set('Cache-Control', 'no-store');
+  return res.json({
+    ok: adminUiServeMode !== 'unavailable',
+    mode: adminUiServeMode,
+    reason: adminUiModeReason,
+    reactBuildIndexExists: fs.existsSync(adminUiIndexFile),
+    legacyFallbackExists: fs.existsSync(legacyWorkflowHtml),
+    adminPath: '/admin',
+  });
+}
+// Public status endpoint (không đi qua namespace /api để tránh bị auth middleware chặn).
+app.get('/admin-ui-status', (req, res) => {
+  return sendAdminUiStatus(res);
+});
+// Giữ endpoint cũ để tương thích nếu môi trường không chặn /api.
+app.get('/api/admin-ui-status', (req, res) => {
+  return sendAdminUiStatus(res);
+});
 
 app.use(
   express.static(__dirname, {
