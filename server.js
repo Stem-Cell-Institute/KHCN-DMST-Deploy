@@ -25,7 +25,14 @@ const appPaths = require('./lib/appPaths');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 const express = require('express');
-const rateLimit = require('express-rate-limit');
+const rateLimitLib = require('express-rate-limit');
+const rateLimit = rateLimitLib.rateLimit || rateLimitLib;
+const ipKeyGenerator =
+  rateLimitLib.ipKeyGenerator ||
+  ((ip) => {
+    const raw = String(ip || '').trim();
+    return raw || 'unknown';
+  });
 const helmet = require('helmet');
 const cors = require('cors');
 const multer = require('multer');
@@ -111,7 +118,7 @@ process.on('unhandledRejection', (reason) => {
     const xff = String(req.headers['x-forwarded-for'] || '').trim();
     const firstForwardedIp = xff ? xff.split(',')[0].trim() : '';
     const ip = firstForwardedIp || req.ip || req.socket?.remoteAddress || 'unknown';
-    return `ip:${String(ip).trim().toLowerCase()}`;
+    return `ip:${ipKeyGenerator(ip)}`;
   }
   const apiRateLimiter = rateLimit({
     windowMs,
@@ -14098,22 +14105,6 @@ try {
   console.warn('[DOCFLOW] Không mount internal documents workflow:', e.message);
 }
 
-/** Serve giao diện React của workflow admin tại /admin (production build). */
-try {
-  const workflowAdminDist = path.join(__dirname, 'frontend', 'document-workflow-ui', 'dist');
-  if (fs.existsSync(workflowAdminDist)) {
-    app.use('/admin', express.static(workflowAdminDist));
-    app.get('/admin/*', (req, res) => {
-      res.sendFile(path.join(workflowAdminDist, 'index.html'));
-    });
-    console.log('[DOCFLOW UI] Đã mount SPA /admin từ', workflowAdminDist);
-  } else {
-    console.warn('[DOCFLOW UI] Chưa thấy dist, chạy build ở frontend/document-workflow-ui để bật /admin');
-  }
-} catch (e) {
-  console.warn('[DOCFLOW UI] Không mount SPA /admin:', e.message);
-}
-
 /** Bảng dashboard_permissions (migrations/004_dashboard_permissions.sql) */
 try {
   const dashPermSql = path.join(__dirname, 'migrations', '004_dashboard_permissions.sql');
@@ -17805,12 +17796,12 @@ app.get('/public/vendor/Sortable.min.js', (req, res) => {
   }
 });
 
-// Admin UI (React Vite) bridge:
-// - If built bundle exists, serve it at /admin
-// - Otherwise redirect to Vite dev server (default :5178)
+// Admin UI bridge:
+// - If built bundle exists, serve React app at /admin
+// - Otherwise fallback to legacy HTML workflow page from backend
 const adminUiDistDir = path.join(__dirname, 'frontend', 'document-workflow-ui', 'dist');
 const adminUiIndexFile = path.join(adminUiDistDir, 'index.html');
-const adminUiDevUrl = String(process.env.ADMIN_UI_DEV_URL || 'http://localhost:5178').replace(/\/$/, '');
+const legacyWorkflowHtml = path.join(__dirname, 'quy-trinh-van-ban-noi-bo.html');
 
 if (fs.existsSync(adminUiIndexFile)) {
   // Vite build currently emits absolute /assets/* URLs by default.
@@ -17837,8 +17828,11 @@ if (fs.existsSync(adminUiIndexFile)) {
   });
 } else {
   app.get(['/admin', '/admin/*'], (req, res) => {
-    const tail = String(req.originalUrl || '').replace(/^\/admin/, '');
-    return res.redirect(302, `${adminUiDevUrl}/admin${tail}`);
+    if (fs.existsSync(legacyWorkflowHtml)) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      return res.sendFile(legacyWorkflowHtml);
+    }
+    return res.status(503).send('Admin UI is not available. Missing frontend build and legacy fallback page.');
   });
 }
 
