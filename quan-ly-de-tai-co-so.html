@@ -2468,9 +2468,122 @@
                 ${detailLink}
             `;
             renderTienTrinhTab(task);
+            renderOutputsTab(task);
             renderDocumentsTab(task);
             setMissionDetailFooterVisibility(task);
             document.getElementById('taskDetailModal').classList.add('active');
+        }
+
+        function renderOutputsTab(task) {
+            const container = document.getElementById('outputsContent');
+            if (!container) return;
+            const isCapVien = task.source_type === 'cap_vien' && task.source_id;
+            const missionId = task.id;
+            if (isCapVien) {
+                container.innerHTML = '<div class="doc-section"><h4>Sản phẩm đề tài cấp Viện</h4><p style="color:#666;margin:10px 0;">Đề tài này được đồng bộ từ hệ thống cấp Viện. Vui lòng quản lý sản phẩm và file trực tiếp tại trang tiến trình đề tài cấp Viện.</p><a href="theo-doi-de-tai-cap-vien-chi-tiet.html?id=' + task.source_id + '" class="btn btn-primary">Xem trang tiến trình đề tài cấp Viện</a></div>';
+                return;
+            }
+            if (!missionId) {
+                container.innerHTML = '<p style="color:#666;">Đề tài này chưa có ID. Lưu đề tài trước khi quản lý sản phẩm.</p>';
+                return;
+            }
+            container.innerHTML = '<div class="doc-section"><h4>Sản phẩm đề tài</h4><p style="color:#666;margin:10px 0;font-size:0.9rem;">Admin và Chủ nhiệm có thể upload file sản phẩm để lưu trữ trên hệ thống và tải lại khi cần.</p><div id="sanPhamFileList" class="ho-so-list"></div><div id="sanPhamFileForm" class="ho-so-form"><h5 style="margin-bottom:12px;">Upload file sản phẩm</h5><form id="formSanPhamFile" onsubmit="return submitSanPhamFile(event)"><div class="form-group"><label>File tài liệu sản phẩm (chọn nhiều file cùng lúc)</label><input type="file" id="sanPhamFileInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.csv,.zip,.rar,.7z" multiple required><p style="margin:6px 0 0 0;font-size:12px;color:#888;">Giữ nguyên tên file tiếng Việt khi tải về.</p></div><button type="submit" class="btn btn-primary">Upload sản phẩm</button></form></div></div>';
+            loadSanPhamFiles(missionId);
+        }
+
+        function loadSanPhamFiles(missionId) {
+            const listEl = document.getElementById('sanPhamFileList');
+            if (!listEl) return;
+            const token = localStorage.getItem('token');
+            const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+            fetch(apiBase + '/api/missions/' + missionId + '/san-pham-files', { headers })
+                .then(function(r) {
+                    return r.json().then(function(data) {
+                        if (!r.ok) throw new Error((data && data.message) || 'Lỗi tải danh sách file sản phẩm.');
+                        return data;
+                    });
+                })
+                .then(function(data) {
+                    const files = data.files || [];
+                    if (files.length === 0) {
+                        listEl.innerHTML = '<p style="color:#999;font-size:0.9rem;">Chưa có file sản phẩm nào được upload.</p>';
+                        return;
+                    }
+                    let html = '<table class="ho-so-table"><thead><tr><th>File</th><th>Ngày tải lên</th><th></th></tr></thead><tbody>';
+                    files.forEach(function(f) {
+                        const createdAt = f.created_at ? formatDateTime(f.created_at) : '—';
+                        const safeName = (f.original_name || 'file').replace(/"/g, '');
+                        const dlLink = '<button type="button" class="btn-dl" style="font-size:12px;padding:4px 10px;cursor:pointer;border:1px solid #667eea;background:#667eea;color:white;border-radius:6px;" onclick="downloadSanPhamFile(' + missionId + ',' + f.id + ',\'' + safeName.replace(/'/g, "\\'") + '\')">Tải</button>';
+                        html += '<tr><td>' + escapeHtml(f.original_name || '—') + '</td><td>' + createdAt + '</td><td>' + dlLink + '</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                    listEl.innerHTML = html;
+                })
+                .catch(function(err) {
+                    listEl.innerHTML = '<p style="color:#c00;">' + escapeHtml(err.message || 'Lỗi tải danh sách file sản phẩm.') + '</p>';
+                });
+        }
+
+        function submitSanPhamFile(e) {
+            e.preventDefault();
+            if (!currentTask || !currentTask.id) return false;
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Vui lòng đăng nhập để upload sản phẩm.');
+                return false;
+            }
+            const fileInput = document.getElementById('sanPhamFileInput');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                alert('Vui lòng chọn ít nhất 1 file.');
+                return false;
+            }
+            const fd = new FormData();
+            Array.prototype.forEach.call(fileInput.files, function(file) {
+                fd.append('files', file);
+            });
+            const btn = e.target.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Đang upload...'; }
+            fetch(apiBase + '/api/missions/' + currentTask.id + '/san-pham-files', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: fd
+            })
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(res) {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Upload sản phẩm'; }
+                    if (res.ok) {
+                        fileInput.value = '';
+                        loadSanPhamFiles(currentTask.id);
+                        alert((res.data && res.data.message) || 'Đã lưu file sản phẩm.');
+                    } else {
+                        alert((res.data && res.data.message) || 'Upload file sản phẩm thất bại.');
+                    }
+                })
+                .catch(function() {
+                    if (btn) { btn.disabled = false; btn.textContent = 'Upload sản phẩm'; }
+                    alert('Lỗi kết nối.');
+                });
+            return false;
+        }
+
+        function downloadSanPhamFile(missionId, fileId, filename) {
+            const token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập để tải file.'); return; }
+            fetch(apiBase + '/api/missions/' + missionId + '/san-pham-files/' + fileId + '/download', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('Lỗi tải file');
+                    return r.blob();
+                })
+                .then(function(blob) {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = filename || 'download';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                })
+                .catch(function() { alert('Lỗi tải file. Kiểm tra đăng nhập.'); });
         }
 
         function renderDocumentsTab(task) {

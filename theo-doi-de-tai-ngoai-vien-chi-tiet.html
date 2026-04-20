@@ -717,7 +717,7 @@
             html += '<div class="stage-card completed" style="border-left-color:#4caf50;"><div class="stage-header"><div class="stage-icon" style="background:#4caf50;color:white;">📁</div><div class="stage-info" style="flex:1;"><p style="margin:0 0 8px 0;color:#666;font-size:14px;">Mẫu do Bộ/ĐHQG quy định. Hệ thống chỉ lưu trữ file đã nộp.</p>';
             html += '<div id="hoSoNgoaiListTimeline"></div>';
             html += '<div id="hoSoNgoaiFormTimeline" style="margin-top:15px;padding-top:15px;border-top:1px solid #e0e0e0;"><h5 style="margin-bottom:10px;font-size:14px;">Nộp hồ sơ mới</h5>';
-            html += '<form id="formHoSoNgoaiTimeline" onsubmit="return window.submitHoSoNgoaiTimeline(event)"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;"><div><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">File (PDF, Word, Excel)</label><input type="file" id="hoSoNgoaiFileTimeline" accept=".pdf,.doc,.docx,.xls,.xlsx" required style="width:100%;padding:8px;"></div><div><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Ngày nộp</label><input type="date" id="hoSoNgoaiDateTimeline" style="width:100%;padding:8px;"></div></div><div style="margin-bottom:12px;"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Ghi chú</label><textarea id="hoSoNgoaiNoteTimeline" rows="2" placeholder="VD: Nộp Bộ KHCN, số công văn..." style="width:100%;padding:8px;border:1px solid #e0e0e0;border-radius:6px;"></textarea></div><button type="submit" class="btn-back" style="margin:0;">Nộp hồ sơ</button></form></div></div></div>';
+            html += '<form id="formHoSoNgoaiTimeline" onsubmit="return window.submitHoSoNgoaiTimeline(event)"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;"><div><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">File tài liệu (chọn nhiều file cùng lúc)</label><input type="file" id="hoSoNgoaiFileTimeline" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.csv,.zip,.rar,.7z" multiple required style="width:100%;padding:8px;"><p style="margin:6px 0 0 0;font-size:12px;color:#888;">Giữ nguyên tên tài liệu tiếng Việt khi tải về.</p></div><div><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Ngày nộp</label><input type="date" id="hoSoNgoaiDateTimeline" style="width:100%;padding:8px;"></div></div><div style="margin-bottom:12px;"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Ghi chú</label><textarea id="hoSoNgoaiNoteTimeline" rows="2" placeholder="VD: Nộp Bộ KHCN, số công văn..." style="width:100%;padding:8px;border:1px solid #e0e0e0;border-radius:6px;"></textarea></div><button type="submit" class="btn-back" style="margin:0;">Nộp hồ sơ</button></form></div></div></div>';
 
             contentEl.innerHTML = html;
             window._missionIdForHoSo = m.id;
@@ -757,9 +757,11 @@
             var token = localStorage.getItem('token');
             if (!token) { alert('Vui lòng đăng nhập để nộp hồ sơ.'); return false; }
             var fileInput = document.getElementById('hoSoNgoaiFileTimeline');
-            if (!fileInput || !fileInput.files || !fileInput.files[0]) { alert('Vui lòng chọn file.'); return false; }
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) { alert('Vui lòng chọn ít nhất 1 file.'); return false; }
             var fd = new FormData();
-            fd.append('file', fileInput.files[0]);
+            Array.prototype.forEach.call(fileInput.files, function(file) {
+                fd.append('files', file);
+            });
             var dateVal = document.getElementById('hoSoNgoaiDateTimeline').value;
             if (dateVal) fd.append('submission_date', dateVal);
             var noteVal = (document.getElementById('hoSoNgoaiNoteTimeline') || {}).value.trim();
@@ -775,11 +777,12 @@
                 .then(function(res) {
                     if (btn) { btn.disabled = false; btn.textContent = 'Nộp hồ sơ'; }
                     if (res.ok) {
+                        var uploadedCount = (res.data && res.data.files && res.data.files.length) ? res.data.files.length : fileInput.files.length;
                         fileInput.value = '';
                         var dEl = document.getElementById('hoSoNgoaiDateTimeline'); if (dEl) dEl.value = '';
                         var nEl = document.getElementById('hoSoNgoaiNoteTimeline'); if (nEl) nEl.value = '';
                         loadHoSoNgoaiTimeline(missionId);
-                        alert(res.data.message || 'Đã lưu hồ sơ.');
+                        alert(res.data.message || ('Đã lưu ' + uploadedCount + ' hồ sơ.'));
                     } else {
                         alert(res.data.message || 'Nộp hồ sơ thất bại.');
                     }

@@ -2138,6 +2138,12 @@ try {
 try {
   db.prepare('INSERT OR IGNORE INTO cooperation_settings (key, value) VALUES (?, ?)').run('cap_vien_step7_complete_send_email', '1');
 } catch (e) { /* ignore */ }
+try {
+  db.prepare('INSERT OR IGNORE INTO cooperation_settings (key, value) VALUES (?, ?)').run('chairman_email_controls', '{}');
+} catch (e) { /* ignore */ }
+try {
+  db.prepare('INSERT OR IGNORE INTO cooperation_settings (key, value) VALUES (?, ?)').run('council_member_email_controls', '{}');
+} catch (e) { /* ignore */ }
 try { db.prepare('ALTER TABLE cooperation_thoa_thuan ADD COLUMN expiry_alert_sent_at TEXT').run(); } catch (e) { /* đã có cột */ }
 try { db.prepare('ALTER TABLE cooperation_thoa_thuan ADD COLUMN post_expiry_alert_count INTEGER DEFAULT 0').run(); } catch (e) { /* đã có cột */ }
 try { db.prepare('ALTER TABLE cooperation_thoa_thuan ADD COLUMN last_post_expiry_alert_at TEXT').run(); } catch (e) { /* đã có cột */ }
@@ -3303,6 +3309,112 @@ function getChairmanEmail() {
   return row ? row.email : null;
 }
 
+const CHAIRMAN_EMAIL_CONTROL_KEY = 'chairman_email_controls';
+const CHAIRMAN_EMAIL_CONTROL_DEFAULTS = {
+  ngoai_vien_step2_to_chairman: true,
+  cap_vien_new_submission: true,
+  cap_vien_step2_revision_notice: true,
+  cap_vien_step2_validated_notice: true,
+  cap_vien_supplement_submitted_notice: true,
+  cap_vien_step3_assign_notice: true,
+  cap_vien_step4a_budget_cc_notice: true,
+  cap_vien_step5_ready_notice: true,
+  cap_vien_step5_secretary_revision_notice: true,
+  cap_vien_step5_revision_uploaded_notice: true,
+  cap_vien_step5_chair_request_more_notice: true,
+  cap_vien_step5_chair_approved_notice: true,
+  cap_vien_step5_council_passed_notice: true,
+  cap_vien_step6_completed_notice: true,
+  cap_vien_step7_completed_notice: true
+};
+
+const COUNCIL_MEMBER_EMAIL_CONTROL_KEY = 'council_member_email_controls';
+const COUNCIL_MEMBER_EMAIL_CONTROL_DEFAULTS = {
+  generic_council_notice: true,
+  cap_vien_new_submission: true,
+  cap_vien_step2_revision_notice: true,
+  cap_vien_step2_validated_notice: true,
+  cap_vien_supplement_submitted_notice: true,
+  cap_vien_step3_assign_notice: true,
+  cap_vien_step4a_budget_cc_notice: true,
+  cap_vien_step5_ready_notice: true,
+  cap_vien_step5_secretary_revision_notice: true,
+  cap_vien_step5_revision_uploaded_notice: true,
+  cap_vien_step5_chair_request_more_notice: true,
+  cap_vien_step5_chair_approved_notice: true,
+  cap_vien_step5_council_passed_notice: true,
+  cap_vien_step6_completed_notice: true,
+  cap_vien_step7_completed_notice: true
+};
+
+function getChairmanEmailControls() {
+  let parsed = {};
+  try {
+    const row = db.prepare('SELECT value FROM cooperation_settings WHERE key = ?').get(CHAIRMAN_EMAIL_CONTROL_KEY);
+    if (row && row.value) {
+      const j = JSON.parse(String(row.value || '{}'));
+      if (j && typeof j === 'object') parsed = j;
+    }
+  } catch (e) { /* ignore parse / table errors */ }
+  return Object.assign({}, CHAIRMAN_EMAIL_CONTROL_DEFAULTS, parsed);
+}
+
+function isChairmanEmailEnabled(notificationKey) {
+  if (!notificationKey) return true;
+  const controls = getChairmanEmailControls();
+  const v = controls[notificationKey];
+  if (v === undefined) return true;
+  return !!v;
+}
+
+function getCouncilMemberEmailControls() {
+  let parsed = {};
+  try {
+    const row = db.prepare('SELECT value FROM cooperation_settings WHERE key = ?').get(COUNCIL_MEMBER_EMAIL_CONTROL_KEY);
+    if (row && row.value) {
+      const j = JSON.parse(String(row.value || '{}'));
+      if (j && typeof j === 'object') parsed = j;
+    }
+  } catch (e) { /* ignore parse / table errors */ }
+  return Object.assign({}, COUNCIL_MEMBER_EMAIL_CONTROL_DEFAULTS, parsed);
+}
+
+function isCouncilMemberEmailEnabled(notificationKey) {
+  const key = notificationKey || 'generic_council_notice';
+  const controls = getCouncilMemberEmailControls();
+  const v = controls[key];
+  if (v === undefined) return true;
+  return !!v;
+}
+
+function getCouncilMemberEmailsExcludeChair() {
+  try {
+    return db.prepare("SELECT email FROM users WHERE role IN ('thu_ky','thanh_vien')").all()
+      .map(r => String(r.email || '').trim().toLowerCase())
+      .filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+}
+
+function applyCouncilMemberControlToRecipients(emails, notificationKey) {
+  const normalized = (emails || []).map(e => String(e || '').trim().toLowerCase()).filter(Boolean);
+  if (normalized.length === 0) return [];
+  if (isCouncilMemberEmailEnabled(notificationKey)) return Array.from(new Set(normalized));
+  const memberEmails = new Set(getCouncilMemberEmailsExcludeChair());
+  if (memberEmails.size === 0) return Array.from(new Set(normalized));
+  return Array.from(new Set(normalized.filter(e => !memberEmails.has(e))));
+}
+
+function applyChairmanControlToRecipients(emails, notificationKey) {
+  const normalized = (emails || []).map(e => String(e || '').trim().toLowerCase()).filter(Boolean);
+  if (normalized.length === 0) return [];
+  if (isChairmanEmailEnabled(notificationKey)) return Array.from(new Set(normalized));
+  const chairmanEmail = (getChairmanEmail() || '').trim().toLowerCase();
+  if (!chairmanEmail) return Array.from(new Set(normalized));
+  return Array.from(new Set(normalized.filter(e => e !== chairmanEmail)));
+}
+
 function computeNhanhFromLevel(level) {
   const lev = (level || '').toLowerCase();
   if (['ministry', 'university'].includes(lev)) return 'A';
@@ -3311,18 +3423,23 @@ function computeNhanhFromLevel(level) {
 }
 
 // Danh sách email nhận thông báo: ưu tiên bảng notification_recipients (Admin quản lý), không có thì NOTIFICATION_EMAILS, rồi Hội đồng trong DB
-function getNotificationEmails() {
+function getNotificationEmails(notificationKey) {
+  const resolvedKey = notificationKey || 'generic_council_notice';
+  let baseList = [];
   try {
     const rows = db.prepare('SELECT email FROM notification_recipients ORDER BY id').all();
     if (rows && rows.length > 0) {
-      return rows.map(r => (r.email || '').trim().toLowerCase()).filter(Boolean);
+      baseList = rows.map(r => (r.email || '').trim().toLowerCase()).filter(Boolean);
+      return applyCouncilMemberControlToRecipients(applyChairmanControlToRecipients(baseList, resolvedKey), resolvedKey);
     }
   } catch (e) { /* bảng chưa có */ }
   const envList = (process.env.NOTIFICATION_EMAILS || '').trim();
   if (envList) {
-    return envList.split(/[,;]/).map(e => e.trim().toLowerCase()).filter(Boolean);
+    baseList = envList.split(/[,;]/).map(e => e.trim().toLowerCase()).filter(Boolean);
+    return applyCouncilMemberControlToRecipients(applyChairmanControlToRecipients(baseList, resolvedKey), resolvedKey);
   }
-  return getCouncilEmails();
+  baseList = getCouncilEmails();
+  return applyCouncilMemberControlToRecipients(applyChairmanControlToRecipients(baseList, resolvedKey), resolvedKey);
 }
 
 // Module Hợp tác quốc tế: lấy email nhận thông báo theo topic (doan_ra, mou, ...) hoặc 'all'
@@ -3600,7 +3717,7 @@ function getCapVienStepInfo(status) {
 // Đề tài cấp Viện: gửi thông báo khi có hồ sơ mới nộp
 function sendCapVienNewSubmissionEmail(opts) {
   const { submissionId, submissionTitle, submittedByEmail, submittedByName, createdAt, status } = opts;
-  const toList = getNotificationEmails();
+  const toList = getNotificationEmails('cap_vien_new_submission');
   if (!transporter || toList.length === 0) return Promise.resolve();
   const baseUrl = process.env.BASE_URL || ('http://localhost:' + PORT);
   const councilUrl = baseUrl + '/hoi-dong-de-tai-cap-vien.html';
@@ -3691,7 +3808,7 @@ function sendCapVienStep2RevisionEmail(submissionTitle, researcherEmail, note, s
   }
 
   // Email phụ: thành viên Hội đồng — thông báo để nắm thông tin
-  const councilList = getNotificationEmails();
+  const councilList = getNotificationEmails('cap_vien_step2_revision_notice');
   if (councilList.length > 0) {
     const subjectCouncil = '[Đề tài cấp Viện Tế bào gốc] (Thông báo) Thư ký đã yêu cầu bổ sung hồ sơ: ' + (submissionTitle || '');
     const textCouncil =
@@ -3761,7 +3878,7 @@ function sendCapVienStep2ValidatedEmail(opts) {
   }
 
   // (2) Email phụ: Thành viên Hội đồng — thông báo để nắm thông tin
-  const toList = getNotificationEmails();
+  const toList = getNotificationEmails('cap_vien_step2_validated_notice');
   if (toList.length > 0) {
     const subjectCouncil = hasSupplement
       ? '[Đề tài cấp Viện Tế bào gốc]: Hồ sơ bổ sung đã được kiểm tra hợp lệ (Bước 2): ' + (submissionTitle || '')
@@ -3807,7 +3924,7 @@ function sendCapVienStep2ValidatedEmail(opts) {
 // Đề tài cấp Viện — Nghiên cứu viên đã nộp hồ sơ bổ sung: gửi thông báo đến các thành viên Hội đồng
 function sendCapVienSupplementSubmittedEmail(opts) {
   const { submissionTitle, submittedByEmail, submittedByName, createdAt, status, supplementRound } = opts;
-  const toList = getNotificationEmails();
+  const toList = getNotificationEmails('cap_vien_supplement_submitted_notice');
   if (!transporter || toList.length === 0) return Promise.resolve();
   const baseUrl = process.env.BASE_URL || ('http://localhost:' + PORT);
   const councilUrl = baseUrl + '/hoi-dong-de-tai-cap-vien.html';
@@ -3887,7 +4004,7 @@ function sendCapVienStep3AssignEmail(submissionTitle, chairmanName, reviewerEmai
       html: htmlYou
     }).catch(err => console.error('[Email] Lỗi gửi (phân công phản biện → PB):', err.message)));
   });
-  const toList = getNotificationEmails();
+  const toList = getNotificationEmails('cap_vien_step3_assign_notice');
   if (toList.length > 0) {
     promises.push(transporter.sendMail({
       from: getSmtpFrom(),
@@ -3905,7 +4022,7 @@ function sendCapVienStep4aNotifyBudgetTeamEmail(opts) {
   const { submissionTitle, submissionId } = opts;
   if (!transporter) return Promise.resolve();
   const budgetTeamEmails = getBudgetTeamEmails();
-  const councilList = getNotificationEmails();
+  const councilList = getNotificationEmails('cap_vien_step4a_budget_cc_notice');
   if (!budgetTeamEmails || budgetTeamEmails.length === 0) {
     console.log('[Email] Bỏ qua gửi Tổ thẩm định: chưa có thành viên Tổ thẩm định tài chính trong hệ thống.');
     return Promise.resolve();
@@ -4009,7 +4126,7 @@ function sendCapVienBudgetApprovedEmail(opts) {
 function sendCapVienStep5ReadyEmail(opts) {
   const { submissionTitle, submissionId } = opts;
   if (!transporter) return Promise.resolve();
-  const councilList = getNotificationEmails();
+  const councilList = getNotificationEmails('cap_vien_step5_ready_notice');
   if (!councilList || councilList.length === 0) return Promise.resolve();
   const baseUrl = process.env.BASE_URL || ('http://localhost:' + PORT);
   const timelineUrl = baseUrl + '/theo-doi-de-tai-cap-vien-chi-tiet.html?id=' + (submissionId || '');
@@ -6546,6 +6663,36 @@ app.put('/api/admin/cap-vien/settings/step7-complete-email', authMiddleware, adm
   return res.json({ message: on ? 'Đã bật gửi email khi hoàn thành Bước 7.' : 'Đã tắt gửi email khi hoàn thành Bước 7.', enabled: on });
 });
 
+app.get('/api/admin/cap-vien/settings/chairman-email-controls', authMiddleware, adminOnly, (req, res) => {
+  return res.json({ controls: getChairmanEmailControls(), defaults: CHAIRMAN_EMAIL_CONTROL_DEFAULTS });
+});
+
+app.put('/api/admin/cap-vien/settings/chairman-email-controls', authMiddleware, adminOnly, (req, res) => {
+  const incoming = (req.body && req.body.controls && typeof req.body.controls === 'object') ? req.body.controls : {};
+  const merged = Object.assign({}, CHAIRMAN_EMAIL_CONTROL_DEFAULTS);
+  Object.keys(merged).forEach((k) => {
+    if (Object.prototype.hasOwnProperty.call(incoming, k)) merged[k] = !!incoming[k];
+  });
+  db.prepare('INSERT INTO cooperation_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+    .run(CHAIRMAN_EMAIL_CONTROL_KEY, JSON.stringify(merged));
+  return res.json({ message: 'Đã lưu cấu hình email cho Chủ tịch HĐKHCN.', controls: merged });
+});
+
+app.get('/api/admin/cap-vien/settings/council-member-email-controls', authMiddleware, adminOnly, (req, res) => {
+  return res.json({ controls: getCouncilMemberEmailControls(), defaults: COUNCIL_MEMBER_EMAIL_CONTROL_DEFAULTS });
+});
+
+app.put('/api/admin/cap-vien/settings/council-member-email-controls', authMiddleware, adminOnly, (req, res) => {
+  const incoming = (req.body && req.body.controls && typeof req.body.controls === 'object') ? req.body.controls : {};
+  const merged = Object.assign({}, COUNCIL_MEMBER_EMAIL_CONTROL_DEFAULTS);
+  Object.keys(merged).forEach((k) => {
+    if (Object.prototype.hasOwnProperty.call(incoming, k)) merged[k] = !!incoming[k];
+  });
+  db.prepare('INSERT INTO cooperation_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+    .run(COUNCIL_MEMBER_EMAIL_CONTROL_KEY, JSON.stringify(merged));
+  return res.json({ message: 'Đã lưu cấu hình email cho thành viên HĐKHCN (ngoài Chủ tịch).', controls: merged });
+});
+
 app.put('/api/admin/cap-vien/submissions/:id/code', authMiddleware, adminOnly, (req, res) => {
   const id = parseInt(req.params.id, 10);
   const newCode = (req.body && req.body.code != null) ? String(req.body.code).trim() : '';
@@ -7507,7 +7654,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/council-request-revision', authM
     note,
     requestedByName: req.user.fullname || req.user.email,
     researcherEmail: researcherR ? researcherR.email : null,
-    councilList: getNotificationEmails()
+    councilList: getNotificationEmails('cap_vien_step5_secretary_revision_notice')
   });
   return res.json({ message: 'Đã gửi yêu cầu chỉnh sửa tới Chủ nhiệm (vòng ' + nextRound + ').', round: nextRound, status: 'waiting_researcher' });
 });
@@ -7573,7 +7720,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/council-revision-upload', authMi
     round,
     fileCount: fList.length,
     uploaderName: req.user.fullname || req.user.email || uploaderRoleLabel,
-    councilList: getNotificationEmails(),
+    councilList: getNotificationEmails('cap_vien_step5_revision_uploaded_notice'),
     researcherEmail: researcherUp ? researcherUp.email : null
   });
   return res.json({ message: 'Đã lưu hồ sơ chỉnh sửa. Chủ tịch HĐKHCN sẽ thông qua hoặc yêu cầu chỉnh sửa tiếp.', status: 'waiting_chair', round });
@@ -7601,7 +7748,6 @@ app.post('/api/cap-vien/submissions/:id/steps/5/council-revision-chair', authMid
   const roleDb = role === 'admin' ? 'admin' : (role === 'thu_ky' ? 'secretary' : 'chu_tich');
   const chairOrActorName = req.user.fullname || req.user.email;
   const researcherCh = sub.submittedById ? db.prepare('SELECT email, fullname FROM users WHERE id = ?').get(sub.submittedById) : null;
-  const councilListCh = getNotificationEmails();
   if (action === 'approve') {
     const roundAp = sub.step5_council_revision_round || 1;
     db.prepare(`UPDATE cap_vien_submissions SET
@@ -7619,7 +7765,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/council-revision-chair', authMid
       chairName: chairOrActorName,
       researcherEmail: researcherCh ? researcherCh.email : null,
       researcherName: researcherCh ? researcherCh.fullname : null,
-      councilList: councilListCh
+      councilList: getNotificationEmails('cap_vien_step5_chair_approved_notice')
     });
     return res.json({ message: 'Đã thông qua bản chỉnh sửa. Có thể tiếp tục quy trình Bước 5 (ghi nhận thông qua Hội đồng hoặc yêu cầu vòng mới).', status: null });
   }
@@ -7642,7 +7788,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/council-revision-chair', authMid
     note,
     chairName: chairOrActorName,
     researcherEmail: researcherCh ? researcherCh.email : null,
-    councilList: councilListCh
+    councilList: getNotificationEmails('cap_vien_step5_chair_request_more_notice')
   });
   return res.json({ message: 'Đã yêu cầu Chủ nhiệm chỉnh sửa tiếp (vòng ' + nextRound + ').', round: nextRound, status: 'waiting_researcher' });
 });
@@ -7675,7 +7821,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/council-pass', authMiddleware, (
     submissionId: id,
     researcherEmail: researcherPass ? researcherPass.email : null,
     researcherName: researcherPass ? researcherPass.fullname : null,
-    councilList: getNotificationEmails(),
+    councilList: getNotificationEmails('cap_vien_step5_council_passed_notice'),
     recordedByName: req.user.fullname || req.user.email
   });
   return res.json({ message: 'Đã ghi nhận Hội đồng KHCN thông qua. Hồ sơ chuyển sang Bước 6 (Cấp Quyết định phê duyệt).', status: 'CONDITIONAL' });
@@ -7857,7 +8003,7 @@ app.post('/api/cap-vien/submissions/:id/steps/:step', authMiddleware, (req, res)
       researcherEmail,
       researcherName: rowMail ? rowMail.ownerName : null,
       soQd: rowMail ? rowMail.step6_so_qd : sub6.step6_so_qd,
-      councilList: getNotificationEmails()
+      councilList: getNotificationEmails('cap_vien_step6_completed_notice')
     }).catch((err) => console.error('[Email] Bước 6 hoàn thành:', err && err.message));
     return res.json({ message: 'Đã ghi nhận hoàn thành Bước 6. Hồ sơ chuyển sang Bước 7 (Ký hợp đồng). Đã gửi thông báo hành chính tới Chủ nhiệm (CC Hội đồng KHCN).', status: 'APPROVED' });
   }
@@ -7898,7 +8044,7 @@ app.post('/api/cap-vien/submissions/:id/steps/:step', authMiddleware, (req, res)
         submissionId: id,
         researcherEmail,
         researcherName: rowMail ? rowMail.ownerName : null,
-        councilList: getNotificationEmails()
+        councilList: getNotificationEmails('cap_vien_step7_completed_notice')
       }).catch((err) => console.error('[Email] Bước 7 hoàn thành:', err && err.message));
     }
     const msg = sendMail
@@ -8715,10 +8861,13 @@ app.post('/api/admin/users', authMiddleware, adminOnly, async (req, res) => {
   if (!em) return res.status(400).json({ message: 'Vui lòng nhập email' });
   const allowed = ['researcher', 'thanh_vien', 'thu_ky', 'chu_tich', 'admin', 'phong_khcn', 'vien_truong', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
   const r = (role || 'researcher').toLowerCase().trim();
-  if (!allowed.includes(r)) return res.status(400).json({ message: 'Vai trò không hợp lệ. Vui lòng khởi động lại server (node server.js) và thử lại.' });
   const councilRoles = ['chu_tich', 'thu_ky', 'thanh_vien'];
+  if (!allowed.includes(r)) return res.status(400).json({ message: 'Vai trò không hợp lệ. Vui lòng khởi động lại server (node server.js) và thử lại.' });
   if (councilRoles.includes(r) && !em.endsWith(ALLOWED_EMAIL_DOMAIN)) {
     return res.status(400).json({ message: 'Chỉ email @sci.edu.vn mới được gán vai trò Chủ tịch, Thư ký, Thành viên Hội đồng' });
+  }
+  if (councilRoles.includes(r) && !reqIsMasterAdmin(req)) {
+    return res.status(403).json({ message: 'Chỉ Master Admin mới được cấp vai trò thành viên Hội đồng KHCN.' });
   }
   const existing = db.prepare('SELECT id, role FROM users WHERE email = ?').get(em);
   const acadTitle = (academicTitle || '').trim() || null;
@@ -9495,7 +9644,7 @@ app.post('/api/missions/:id/step2-approve', authMiddleware, thuyKyOrAdmin, (req,
   const actor = (req.user.fullname || req.user.email || 'Thư ký').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const chairmanEmail = getChairmanEmail();
   const reviewUrl = (process.env.BASE_URL || ('http://localhost:' + PORT)) + '/ct-hd-xet-duyet-de-tai.html?id=' + id;
-  if (transporter && chairmanEmail) {
+  if (transporter && chairmanEmail && isChairmanEmailEnabled('ngoai_vien_step2_to_chairman')) {
     const subject = '[Đề tài ngoài Viện] Có 1 đề tài chờ anh/chị xét duyệt: ' + (mission.title || '');
     const text = 'Phòng KHCN&QHĐN đã xác nhận hồ sơ hợp lệ. Có 1 đề tài chờ anh/chị xét duyệt: "' + (mission.title || '') + '" (Chủ nhiệm: ' + (mission.principal || '') + '). Vào xem và điền phiếu nhận xét: ' + reviewUrl;
     const html = '<p>Phòng KHCN&QHĐN (' + actor + ') đã xác nhận hồ sơ hợp lệ.</p><p><strong>Có 1 đề tài chờ anh/chị xét duyệt:</strong> ' + (mission.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + ' (Chủ nhiệm: ' + (mission.principal || '').replace(/</g, '&lt;') + ').</p><p>Vui lòng vào xem thuyết minh và điền phiếu nhận xét.</p><p><a href="' + reviewUrl + '" style="color:#1565c0;font-weight:600">Vào trang xét duyệt</a></p>';
@@ -10423,7 +10572,7 @@ app.get('/api/missions/:id/ho-so-ngoai', authMiddleware, (req, res) => {
   return res.json({ files: rows });
 });
 
-app.post('/api/missions/:id/ho-so-ngoai', authMiddleware, upload.single('file'), (req, res) => {
+app.post('/api/missions/:id/ho-so-ngoai', authMiddleware, upload.fields([{ name: 'files', maxCount: 20 }, { name: 'file', maxCount: 1 }]), (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) return res.status(400).json({ message: 'ID không hợp lệ' });
   const mission = db.prepare('SELECT id, principal FROM missions WHERE id = ?').get(id);
@@ -10431,23 +10580,38 @@ app.post('/api/missions/:id/ho-so-ngoai', authMiddleware, upload.single('file'),
   if (!canUserAccessMissionHoSoNgoai(req, mission)) {
     return res.status(403).json({ message: 'Chỉ Admin hoặc Chủ nhiệm đề tài mới được nộp hồ sơ.' });
   }
-  if (!req.file || !req.file.path) return res.status(400).json({ message: 'Vui lòng chọn file để upload' });
-  const ext = (req.file.originalname || '').split('.').pop().toLowerCase();
-  const allowed = ['pdf', 'doc', 'docx', 'xls', 'xlsx'];
-  if (!allowed.includes(ext)) return res.status(400).json({ message: 'Chỉ chấp nhận file PDF, Word, Excel' });
+  const files = []
+    .concat((req.files && Array.isArray(req.files.files)) ? req.files.files : [])
+    .concat((req.files && Array.isArray(req.files.file)) ? req.files.file : []);
+  if (files.length === 0) return res.status(400).json({ message: 'Vui lòng chọn ít nhất 1 file để upload' });
+  const allowed = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'csv', 'zip', 'rar', '7z'];
+  for (const f of files) {
+    const ext = (f.originalname || '').split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) {
+      return res.status(400).json({ message: 'Chỉ chấp nhận tài liệu: PDF, Word, Excel, PowerPoint, TXT, CSV, ZIP/RAR/7Z' });
+    }
+  }
   const destDir = path.join(uploadDir, 'missions', String(id));
   fs.mkdirSync(destDir, { recursive: true });
-  const finalName = Date.now() + '_' + (req.file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
-  const destPath = path.join(destDir, finalName);
-  fs.copyFileSync(req.file.path, destPath);
-  try { fs.unlinkSync(req.file.path); } catch (_) {}
   const submissionDate = (req.body.submission_date || '').trim() || null;
   const note = (req.body.note || '').trim() || null;
-  const relPath = path.join('missions', String(id), finalName);
-  db.prepare('INSERT INTO missions_ho_so_ngoai (mission_id, original_name, path, submission_date, note) VALUES (?, ?, ?, ?, ?)'
-  ).run(id, req.file.originalname || finalName, relPath, submissionDate, note);
-  const row = db.prepare('SELECT id, original_name, path, submission_date, note, created_at FROM missions_ho_so_ngoai WHERE id = last_insert_rowid()').get();
-  return res.status(201).json({ message: 'Đã lưu hồ sơ nộp cơ quan ngoài', file: row });
+  const insertStmt = db.prepare('INSERT INTO missions_ho_so_ngoai (mission_id, original_name, path, submission_date, note) VALUES (?, ?, ?, ?, ?)');
+  const getLastStmt = db.prepare('SELECT id, original_name, path, submission_date, note, created_at FROM missions_ho_so_ngoai WHERE id = last_insert_rowid()');
+  const savedRows = [];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    const finalName = Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 8) + '_' + (f.originalname || 'file').replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
+    const destPath = path.join(destDir, finalName);
+    fs.copyFileSync(f.path, destPath);
+    try { fs.unlinkSync(f.path); } catch (_) {}
+    const relPath = path.join('missions', String(id), finalName);
+    insertStmt.run(id, f.originalname || finalName, relPath, submissionDate, note);
+    savedRows.push(getLastStmt.get());
+  }
+  return res.status(201).json({
+    message: 'Đã lưu ' + savedRows.length + ' hồ sơ nộp cơ quan ngoài',
+    files: savedRows
+  });
 });
 
 app.get('/api/missions/:id/ho-so-ngoai/:fileId/download', authMiddleware, (req, res) => {
@@ -10464,8 +10628,91 @@ app.get('/api/missions/:id/ho-so-ngoai/:fileId/download', authMiddleware, (req, 
   const checked = normalizeAndCheckDownloadPath(row.path);
   if (checked.err === 403) return res.status(403).json({ message: 'Truy cập bị từ chối' });
   if (checked.err) return res.status(404).json({ message: 'File không tồn tại' });
-  const safeName = (row.original_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
-  res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '"');
+  const originalName = (row.original_name || 'download').replace(/[\r\n]/g, '').trim() || 'download';
+  const fallbackName = originalName.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
+  const encodedName = encodeURIComponent(originalName)
+    .replace(/['()]/g, escape)
+    .replace(/\*/g, '%2A');
+  res.setHeader('Content-Disposition', 'attachment; filename="' + fallbackName + '"; filename*=UTF-8\'\'' + encodedName);
+  return res.sendFile(checked.norm);
+});
+
+app.get('/api/missions/:id/san-pham-files', authMiddleware, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id || isNaN(id)) return res.status(400).json({ message: 'ID không hợp lệ' });
+  const mission = db.prepare('SELECT id, principal FROM missions WHERE id = ?').get(id);
+  if (!mission) return res.status(404).json({ message: 'Không tìm thấy đề tài' });
+  if (!canUserAccessMissionDetail(req, mission)) {
+    return res.status(403).json({ message: 'Bạn không có quyền xem sản phẩm của đề tài này.' });
+  }
+  const rows = db.prepare(
+    "SELECT id, original_name, path, created_at FROM missions_files WHERE mission_id = ? AND field_name = 'san_pham_upload' ORDER BY created_at DESC, id DESC"
+  ).all(id);
+  return res.json({ files: rows });
+});
+
+app.post('/api/missions/:id/san-pham-files', authMiddleware, upload.fields([{ name: 'files', maxCount: 20 }, { name: 'file', maxCount: 1 }]), (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id || isNaN(id)) return res.status(400).json({ message: 'ID không hợp lệ' });
+  const mission = db.prepare('SELECT id, principal FROM missions WHERE id = ?').get(id);
+  if (!mission) return res.status(404).json({ message: 'Không tìm thấy đề tài' });
+  if (!canUserAccessMissionHoSoNgoai(req, mission)) {
+    return res.status(403).json({ message: 'Chỉ Admin hoặc Chủ nhiệm đề tài mới được upload sản phẩm.' });
+  }
+  const files = []
+    .concat((req.files && Array.isArray(req.files.files)) ? req.files.files : [])
+    .concat((req.files && Array.isArray(req.files.file)) ? req.files.file : []);
+  if (files.length === 0) return res.status(400).json({ message: 'Vui lòng chọn ít nhất 1 file để upload' });
+  const allowed = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'csv', 'zip', 'rar', '7z'];
+  for (const f of files) {
+    const ext = (f.originalname || '').split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) {
+      return res.status(400).json({ message: 'Chỉ chấp nhận tài liệu: PDF, Word, Excel, PowerPoint, TXT, CSV, ZIP/RAR/7Z' });
+    }
+  }
+  const destDir = path.join(uploadDir, 'missions', String(id), 'san-pham');
+  fs.mkdirSync(destDir, { recursive: true });
+  const insertStmt = db.prepare('INSERT INTO missions_files (mission_id, field_name, original_name, path) VALUES (?, ?, ?, ?)');
+  const getLastStmt = db.prepare('SELECT id, field_name, original_name, path, created_at FROM missions_files WHERE id = last_insert_rowid()');
+  const savedRows = [];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    const finalName = Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 8) + '_' + (f.originalname || 'file').replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
+    const destPath = path.join(destDir, finalName);
+    fs.copyFileSync(f.path, destPath);
+    try { fs.unlinkSync(f.path); } catch (_) {}
+    const relPath = path.join('missions', String(id), 'san-pham', finalName);
+    insertStmt.run(id, 'san_pham_upload', f.originalname || finalName, relPath);
+    savedRows.push(getLastStmt.get());
+  }
+  return res.status(201).json({
+    message: 'Đã lưu ' + savedRows.length + ' file sản phẩm',
+    files: savedRows
+  });
+});
+
+app.get('/api/missions/:id/san-pham-files/:fileId/download', authMiddleware, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const fileId = parseInt(req.params.fileId, 10);
+  if (!id || !fileId) return res.status(400).json({ message: 'ID không hợp lệ' });
+  const mission = db.prepare('SELECT id, principal FROM missions WHERE id = ?').get(id);
+  if (!mission) return res.status(404).json({ message: 'Không tìm thấy đề tài' });
+  if (!canUserAccessMissionDetail(req, mission)) {
+    return res.status(403).json({ message: 'Bạn không có quyền tải file sản phẩm của đề tài này.' });
+  }
+  const row = db.prepare(
+    "SELECT id, mission_id, original_name, path FROM missions_files WHERE id = ? AND mission_id = ? AND field_name = 'san_pham_upload'"
+  ).get(fileId, id);
+  if (!row) return res.status(404).json({ message: 'Không tìm thấy file' });
+  const checked = normalizeAndCheckDownloadPath(row.path);
+  if (checked.err === 403) return res.status(403).json({ message: 'Truy cập bị từ chối' });
+  if (checked.err) return res.status(404).json({ message: 'File không tồn tại' });
+  const originalName = (row.original_name || 'download').replace(/[\r\n]/g, '').trim() || 'download';
+  const fallbackName = originalName.replace(/[^\x20-\x7E]/g, '_').replace(/["\\]/g, '_');
+  const encodedName = encodeURIComponent(originalName)
+    .replace(/['()]/g, escape)
+    .replace(/\*/g, '%2A');
+  res.setHeader('Content-Disposition', 'attachment; filename="' + fallbackName + '"; filename*=UTF-8\'\'' + encodedName);
   return res.sendFile(checked.norm);
 });
 
@@ -12658,12 +12905,16 @@ app.put('/api/admin/users/role', authMiddleware, adminOnly, (req, res) => {
   if (!allowed.includes(role)) {
     return res.status(400).json({ message: 'Vai trò không hợp lệ' });
   }
+  const councilRoles = ['chu_tich', 'thu_ky', 'thanh_vien'];
   const targetRow = db.prepare('SELECT role FROM users WHERE email = ?').get(em);
   if (!targetRow) {
     return res.status(404).json({ message: 'Không tìm thấy tài khoản' });
   }
   const prevRole = (targetRow.role || '').toLowerCase();
   const newRole = (role || '').toLowerCase();
+  if ((councilRoles.includes(prevRole) || councilRoles.includes(newRole)) && !reqIsMasterAdmin(req)) {
+    return res.status(403).json({ message: 'Chỉ Master Admin mới được sửa vai trò thành viên Hội đồng KHCN.' });
+  }
   if (newRole === 'admin' && prevRole !== 'admin' && !reqIsMasterAdmin(req)) {
     return res.status(403).json({ message: 'Chỉ Master Admin mới được cấp vai trò Admin.' });
   }
@@ -12675,7 +12926,6 @@ app.put('/api/admin/users/role', authMiddleware, adminOnly, (req, res) => {
       return res.status(400).json({ message: 'Không thể gỡ quyền Master Admin hệ thống.' });
     }
   }
-  const councilRoles = ['chu_tich', 'thu_ky', 'thanh_vien'];
   if (councilRoles.includes(role) && !em.endsWith(ALLOWED_EMAIL_DOMAIN)) {
     return res.status(400).json({ message: 'Chỉ tài khoản có đuôi @sci.edu.vn mới được gán vai trò Chủ tịch, Thư ký, Thành viên Hội đồng' });
   }
@@ -12793,6 +13043,30 @@ app.delete('/api/admin/users/:email', authMiddleware, adminOnly, async (req, res
   }
   db.prepare('DELETE FROM users WHERE id = ?').run(row.id);
   return res.json({ message: 'Đã xóa tài khoản.' });
+});
+
+// Master Admin: xóa thành viên Hội đồng KHCN (chu_tich/thu_ky/thanh_vien)
+app.delete('/api/admin/council-members/:email', authMiddleware, adminOnly, (req, res) => {
+  if (!reqIsMasterAdmin(req)) {
+    return res.status(403).json({ message: 'Chỉ Master Admin mới được xóa thành viên Hội đồng KHCN.' });
+  }
+  const em = decodeURIComponent((req.params.email || '').trim()).toLowerCase();
+  if (!em) return res.status(400).json({ message: 'Email không hợp lệ' });
+  const currentEmail = (req.user.email || '').toLowerCase();
+  if (em === currentEmail) return res.status(400).json({ message: 'Bạn không thể tự xóa tài khoản của chính mình' });
+  const row = db.prepare('SELECT id, role FROM users WHERE email = ?').get(em);
+  if (!row) return res.status(404).json({ message: 'Không tìm thấy tài khoản' });
+  const councilRoles = ['chu_tich', 'thu_ky', 'thanh_vien'];
+  if (!councilRoles.includes((row.role || '').toLowerCase())) {
+    return res.status(400).json({ message: 'Tài khoản này không phải thành viên Hội đồng KHCN.' });
+  }
+  const hasSubs = db.prepare('SELECT 1 FROM submissions WHERE submittedById = ? LIMIT 1').get(row.id);
+  const hasCapVien = db.prepare('SELECT 1 FROM cap_vien_submissions WHERE submittedById = ? LIMIT 1').get(row.id);
+  if (hasSubs || hasCapVien) {
+    return res.status(400).json({ message: 'Không thể xóa: thành viên này đã có hồ sơ nộp trong hệ thống.' });
+  }
+  db.prepare('DELETE FROM users WHERE id = ?').run(row.id);
+  return res.json({ message: 'Đã xóa thành viên Hội đồng KHCN.' });
 });
 
 // Khởi tạo Admin mặc định (ADMIN_EMAIL) nếu chưa có — đồng bộ để tránh race khi đăng nhập ngay sau khởi động

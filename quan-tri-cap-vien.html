@@ -233,9 +233,9 @@
             <div class="method-card">
                 <h3>Phương thức cấp vai trò HĐKHCN</h3>
                 <ol class="method-steps">
-                    <li>Vai trò: <strong>Chủ tịch HĐKHCN</strong>, <strong>Thư ký HĐKHCN</strong>, <strong>Thành viên HĐKHCN</strong>, <strong>Nghiên cứu viên</strong>.</li>
+                    <li>Vai trò HĐKHCN chỉ gồm: <strong>Chủ tịch HĐKHCN</strong>, <strong>Thư ký HĐKHCN</strong>, <strong>Thành viên HĐKHCN</strong>.</li>
                     <li>Chỉ tài khoản có đuôi <strong>@sci.edu.vn</strong> mới được gán vai trò Chủ tịch, Thư ký hoặc Thành viên HĐKHCN.</li>
-                    <li>Dùng form bên dưới hoặc sửa vai trò trực tiếp trong bảng.</li>
+                    <li>Chỉ <strong>Master Admin</strong> được cấp / sửa / xóa thành viên Hội đồng KHCN.</li>
                 </ol>
             </div>
             <div id="msg" class="msg"></div>
@@ -254,7 +254,6 @@
                         <div class="form-group">
                             <label for="add-role">Vai trò</label>
                             <select id="add-role" name="role">
-                                <option value="researcher">Nghiên cứu viên</option>
                                 <option value="thanh_vien">Thành viên HĐKHCN</option>
                                 <option value="thu_ky">Thư ký HĐKHCN</option>
                                 <option value="chu_tich">Chủ tịch HĐKHCN</option>
@@ -274,8 +273,14 @@
                 </form>
             </div>
             <div class="card">
-                <h3>Danh sách thành viên HĐKHCN và Nghiên cứu viên</h3>
-                <div id="users-table-wrap">
+                <h3>Danh sách thành viên Hội đồng KHCN</h3>
+                <div id="council-table-wrap">
+                    <div class="empty-state">Đang tải...</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Danh sách nghiên cứu viên</h3>
+                <div id="researchers-table-wrap">
                     <div class="empty-state">Đang tải...</div>
                 </div>
             </div>
@@ -664,6 +669,56 @@
                 </div>
                 <div id="step7-email-setting-msg" class="msg" style="display:none;"></div>
             </div>
+            <div class="card" style="margin-top:1.25rem;">
+                <h3>🎛️ Kiểm soát email Chủ tịch HĐKHCN</h3>
+                <p class="note">Bật/tắt theo từng tình huống để kiểm soát chính xác những email mà Chủ tịch HĐKHCN sẽ nhận trong module Nhiệm vụ KHCN.</p>
+                <div id="chairman-email-controls-wrap" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:8px 16px;">
+                    <label><input type="checkbox" data-chairman-key="ngoai_vien_step2_to_chairman"> Đề tài ngoài Viện: Bước 2 hợp lệ → gửi Chủ tịch xét duyệt</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_new_submission"> Đề tài cấp Viện: hồ sơ mới được nộp</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step2_revision_notice"> Đề tài cấp Viện: Thư ký yêu cầu bổ sung (B2)</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step2_validated_notice"> Đề tài cấp Viện: hồ sơ hợp lệ (B2)</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_supplement_submitted_notice"> Đề tài cấp Viện: NCV nộp hồ sơ bổ sung</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step3_assign_notice"> Đề tài cấp Viện: Chủ tịch phân công phản biện (B3)</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step4a_budget_cc_notice"> Đề tài cấp Viện: thẩm định dự toán (CC Hội đồng)</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step5_ready_notice"> Đề tài cấp Viện: sẵn sàng họp Hội đồng (B5)</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step5_secretary_revision_notice"> Đề tài cấp Viện: Thư ký yêu cầu chỉnh sửa (B5)</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step5_revision_uploaded_notice"> Đề tài cấp Viện: Chủ nhiệm nộp chỉnh sửa (B5)</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step5_chair_request_more_notice"> Đề tài cấp Viện: Chủ tịch yêu cầu chỉnh sửa tiếp (B5)</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step5_chair_approved_notice"> Đề tài cấp Viện: Chủ tịch thông qua bản chỉnh sửa (B5)</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step5_council_passed_notice"> Đề tài cấp Viện: Hội đồng thông qua chuyển B6</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step6_completed_notice"> Đề tài cấp Viện: hoàn thành B6 (CC Hội đồng)</label>
+                    <label><input type="checkbox" data-chairman-key="cap_vien_step7_completed_notice"> Đề tài cấp Viện: hoàn thành B7 (CC Hội đồng)</label>
+                </div>
+                <div style="margin-top:12px;">
+                    <button type="button" class="btn-submit-role" id="btn-save-chairman-email-controls">Lưu cấu hình email Chủ tịch</button>
+                </div>
+                <div id="chairman-email-controls-msg" class="msg" style="display:none;"></div>
+            </div>
+            <div class="card" style="margin-top:1.25rem;">
+                <h3>🎛️ Kiểm soát email thành viên HĐKHCN (ngoài Chủ tịch)</h3>
+                <p class="note">Bật/tắt theo từng tình huống để kiểm soát email gửi tới Thư ký và Thành viên HĐKHCN. Mục <strong>Thông báo Hội đồng khác</strong> áp dụng cho các luồng chưa tách key riêng.</p>
+                <div id="member-email-controls-wrap" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:8px 16px;">
+                    <label><input type="checkbox" data-member-key="generic_council_notice"> Thông báo Hội đồng khác (nhóm chung)</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_new_submission"> Đề tài cấp Viện: hồ sơ mới được nộp</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step2_revision_notice"> Đề tài cấp Viện: Thư ký yêu cầu bổ sung (B2)</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step2_validated_notice"> Đề tài cấp Viện: hồ sơ hợp lệ (B2)</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_supplement_submitted_notice"> Đề tài cấp Viện: NCV nộp hồ sơ bổ sung</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step3_assign_notice"> Đề tài cấp Viện: Chủ tịch phân công phản biện (B3)</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step4a_budget_cc_notice"> Đề tài cấp Viện: thẩm định dự toán (CC Hội đồng)</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step5_ready_notice"> Đề tài cấp Viện: sẵn sàng họp Hội đồng (B5)</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step5_secretary_revision_notice"> Đề tài cấp Viện: Thư ký yêu cầu chỉnh sửa (B5)</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step5_revision_uploaded_notice"> Đề tài cấp Viện: Chủ nhiệm nộp chỉnh sửa (B5)</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step5_chair_request_more_notice"> Đề tài cấp Viện: Chủ tịch yêu cầu chỉnh sửa tiếp (B5)</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step5_chair_approved_notice"> Đề tài cấp Viện: Chủ tịch thông qua bản chỉnh sửa (B5)</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step5_council_passed_notice"> Đề tài cấp Viện: Hội đồng thông qua chuyển B6</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step6_completed_notice"> Đề tài cấp Viện: hoàn thành B6 (CC Hội đồng)</label>
+                    <label><input type="checkbox" data-member-key="cap_vien_step7_completed_notice"> Đề tài cấp Viện: hoàn thành B7 (CC Hội đồng)</label>
+                </div>
+                <div style="margin-top:12px;">
+                    <button type="button" class="btn-submit-role" id="btn-save-member-email-controls">Lưu cấu hình email thành viên HĐ</button>
+                </div>
+                <div id="member-email-controls-msg" class="msg" style="display:none;"></div>
+            </div>
             </section>
 
             <section id="section-audit" class="section-block section-audit">
@@ -767,6 +822,12 @@
                 var opt = document.querySelector('#add-account-role option[value="admin"]');
                 if (opt) opt.remove();
             }
+            var councilForm = document.getElementById('form-add-role');
+            if (councilForm) {
+                councilForm.querySelectorAll('input, select, button').forEach(function(el) {
+                    el.disabled = !isMasterAdmin;
+                });
+            }
         })();
 
         function canAssignCouncilRole(email) {
@@ -774,57 +835,74 @@
         }
 
         async function loadUsers() {
-            const wrap = document.getElementById('users-table-wrap');
+            const councilWrap = document.getElementById('council-table-wrap');
+            const researchersWrap = document.getElementById('researchers-table-wrap');
             if (!isAdmin) return;
             if (!token) {
-                wrap.innerHTML = '<div class="empty-state">Vui lòng <a href="dang-nhap.html">đăng nhập</a> bằng tài khoản Admin.</div>';
+                var loginMsg = '<div class="empty-state">Vui lòng <a href="dang-nhap.html">đăng nhập</a> bằng tài khoản Admin.</div>';
+                if (councilWrap) councilWrap.innerHTML = loginMsg;
+                if (researchersWrap) researchersWrap.innerHTML = loginMsg;
                 return;
             }
             try {
                 const res = await fetch(apiBase + '/api/admin/users', { headers: { 'Authorization': 'Bearer ' + token } });
                 if (res.status === 401 || res.status === 403) {
                     const msg = res.status === 401 ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng <a href="dang-nhap.html">đăng xuất và đăng nhập lại</a>.' : 'Token của bạn không có quyền Admin. Vui lòng <a href="dang-nhap.html">đăng xuất và đăng nhập lại</a> bằng tài khoản Admin.';
-                    wrap.innerHTML = '<div class="empty-state">' + msg + '</div>';
+                    if (councilWrap) councilWrap.innerHTML = '<div class="empty-state">' + msg + '</div>';
+                    if (researchersWrap) researchersWrap.innerHTML = '<div class="empty-state">' + msg + '</div>';
                     return;
                 }
                 const data = await res.json().catch(() => ({}));
                 const allUsers = data.users || data || [];
-                const councilRoles = ['chu_tich', 'thu_ky', 'thanh_vien', 'researcher'];
-                const users = allUsers.filter(function(u) { return councilRoles.indexOf((u.role || '').toLowerCase()) >= 0; });
-                if (users.length === 0) {
-                    wrap.innerHTML = '<div class="empty-state">Chưa có thành viên HĐKHCN hoặc nghiên cứu viên nào.</div>';
-                    return;
-                }
-                wrap.innerHTML = '<table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Thao tác</th></tr></thead><tbody>' +
-                    users.map(function(u) {
-                        const email = u.email || '';
-                        const fullname = u.fullname || '';
-                        const role = u.role || 'researcher';
-                        var roleOptions = ['researcher'];
-                        if (canAssignCouncilRole(email)) roleOptions = roleOptions.concat(['thanh_vien', 'thu_ky', 'chu_tich']);
-                        return '<tr><td>' + email + '</td><td>' + (fullname || '-') + '</td><td>' +
-                            '<select data-email="' + email + '" class="role-select">' +
-                                roleOptions.map(function(r) {
-                                    return '<option value="' + r + '"' + (r === role ? ' selected' : '') + '>' + (roleLabels[r] || r) + '</option>';
-                                }).join('') + '</select>' +
-                            '</td><td><div class="btn-row"><button type="button" class="btn-sm btn-save-role" data-email="' + email + '">Lưu</button></div></td></tr>';
-                    }).join('') + '</tbody></table>';
+                const councilRoles = ['chu_tich', 'thu_ky', 'thanh_vien'];
+                const councilUsers = allUsers.filter(function(u) { return councilRoles.indexOf((u.role || '').toLowerCase()) >= 0; });
+                const researchers = allUsers.filter(function(u) { return (u.role || '').toLowerCase() === 'researcher'; });
 
-                wrap.querySelectorAll('.btn-save-role').forEach(function(btn) {
-                    btn.addEventListener('click', function() {
-                        const email = this.getAttribute('data-email');
-                        const row = this.closest('tr');
-                        const select = row.querySelector('.role-select');
-                        const newRole = select ? select.value : '';
-                        saveRole(email, newRole);
-                    });
-                });
+                if (councilWrap) {
+                    if (councilUsers.length === 0) {
+                        councilWrap.innerHTML = '<div class="empty-state">Chưa có thành viên Hội đồng KHCN.</div>';
+                    } else {
+                        councilWrap.innerHTML = '<table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò HĐKHCN</th><th>Thao tác</th></tr></thead><tbody>' +
+                            councilUsers.map(function(u) {
+                                const email = u.email || '';
+                                const fullname = u.fullname || '';
+                                const role = (u.role || 'thanh_vien').toLowerCase();
+                                const emailEsc = email.replace(/"/g, '&quot;');
+                                const roleSelect = '<select data-email="' + emailEsc + '" class="role-select-council" ' + (isMasterAdmin ? '' : 'disabled') + '>' +
+                                    ['thanh_vien', 'thu_ky', 'chu_tich'].map(function(r) {
+                                        return '<option value="' + r + '"' + (r === role ? ' selected' : '') + '>' + (roleLabels[r] || r) + '</option>';
+                                    }).join('') + '</select>';
+                                const actionButtons = isMasterAdmin
+                                    ? '<div class="btn-row"><button type="button" class="btn-sm btn-edit-council" data-email="' + emailEsc + '">Sửa</button><button type="button" class="btn-sm btn-delete btn-delete-council" data-email="' + emailEsc + '">Xóa</button></div>'
+                                    : '<span style="color:#777;font-size:0.85rem;">Chỉ Master Admin</span>';
+                                return '<tr><td>' + email + '</td><td>' + (fullname || '-') + '</td><td>' + roleSelect + '</td><td>' + actionButtons + '</td></tr>';
+                            }).join('') + '</tbody></table>';
+                    }
+                }
+
+                if (researchersWrap) {
+                    if (researchers.length === 0) {
+                        researchersWrap.innerHTML = '<div class="empty-state">Chưa có nghiên cứu viên nào.</div>';
+                    } else {
+                        researchersWrap.innerHTML = '<table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th></tr></thead><tbody>' +
+                            researchers.map(function(u) {
+                                return '<tr><td>' + (u.email || '') + '</td><td>' + (u.fullname || '-') + '</td><td>' + (roleLabels.researcher || 'Nghiên cứu viên') + '</td></tr>';
+                            }).join('') + '</tbody></table>';
+                    }
+                }
             } catch (err) {
-                wrap.innerHTML = '<div class="empty-state">Không thể tải danh sách. Vui lòng chạy backend.</div>';
+                if (councilWrap) councilWrap.innerHTML = '<div class="empty-state">Không thể tải danh sách. Vui lòng chạy backend.</div>';
+                if (researchersWrap) researchersWrap.innerHTML = '<div class="empty-state">Không thể tải danh sách. Vui lòng chạy backend.</div>';
             }
         }
         async function saveRole(email, role) {
             const msgEl = document.getElementById('msg');
+            const councilRoles = ['chu_tich', 'thu_ky', 'thanh_vien'];
+            if (councilRoles.indexOf((role || '').toLowerCase()) >= 0 && !isMasterAdmin) {
+                msgEl.textContent = 'Chỉ Master Admin mới được sửa vai trò thành viên Hội đồng KHCN.';
+                msgEl.className = 'msg error';
+                return;
+            }
             try {
                 const res = await fetch(apiBase + '/api/admin/users/role', {
                     method: 'PUT',
@@ -838,6 +916,34 @@
                     loadUsers();
                 } else {
                     msgEl.textContent = data.message || 'Cập nhật thất bại.';
+                    msgEl.className = 'msg error';
+                }
+            } catch (err) {
+                msgEl.textContent = 'Lỗi kết nối.';
+                msgEl.className = 'msg error';
+            }
+        }
+
+        async function deleteCouncilMember(email) {
+            const msgEl = document.getElementById('msg');
+            if (!isMasterAdmin) {
+                msgEl.textContent = 'Chỉ Master Admin mới được xóa thành viên Hội đồng KHCN.';
+                msgEl.className = 'msg error';
+                return;
+            }
+            if (!confirm('Bạn có chắc muốn xóa thành viên Hội đồng KHCN: ' + email + '?')) return;
+            try {
+                const res = await fetch(apiBase + '/api/admin/council-members/' + encodeURIComponent(email), {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    msgEl.textContent = data.message || 'Đã xóa thành viên Hội đồng KHCN.';
+                    msgEl.className = 'msg success';
+                    loadUsers();
+                } else {
+                    msgEl.textContent = data.message || 'Xóa thất bại.';
                     msgEl.className = 'msg error';
                 }
             } catch (err) {
@@ -970,6 +1076,50 @@
                 if (msgEl) {
                     msgEl.style.display = 'block';
                     msgEl.textContent = 'Không kết nối được máy chủ.';
+                    msgEl.className = 'msg error';
+                }
+            }
+        }
+
+        async function loadChairmanEmailControls() {
+            const wrap = document.getElementById('chairman-email-controls-wrap');
+            const msgEl = document.getElementById('chairman-email-controls-msg');
+            if (!wrap || !isAdmin || !token) return;
+            try {
+                const res = await fetch(apiBase + '/api/admin/cap-vien/settings/chairman-email-controls', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.message || 'Không tải được cấu hình email Chủ tịch.');
+                const controls = (data && data.controls) || {};
+                wrap.querySelectorAll('input[type="checkbox"][data-chairman-key]').forEach(function(chk) {
+                    var key = chk.getAttribute('data-chairman-key');
+                    chk.checked = controls[key] !== false;
+                });
+            } catch (e) {
+                if (msgEl) {
+                    msgEl.style.display = 'block';
+                    msgEl.textContent = e.message || 'Không kết nối được máy chủ.';
+                    msgEl.className = 'msg error';
+                }
+            }
+        }
+
+        async function loadMemberEmailControls() {
+            const wrap = document.getElementById('member-email-controls-wrap');
+            const msgEl = document.getElementById('member-email-controls-msg');
+            if (!wrap || !isAdmin || !token) return;
+            try {
+                const res = await fetch(apiBase + '/api/admin/cap-vien/settings/council-member-email-controls', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.message || 'Không tải được cấu hình email thành viên HĐ.');
+                const controls = (data && data.controls) || {};
+                wrap.querySelectorAll('input[type="checkbox"][data-member-key]').forEach(function(chk) {
+                    var key = chk.getAttribute('data-member-key');
+                    chk.checked = controls[key] !== false;
+                });
+            } catch (e) {
+                if (msgEl) {
+                    msgEl.style.display = 'block';
+                    msgEl.textContent = e.message || 'Không kết nối được máy chủ.';
                     msgEl.className = 'msg error';
                 }
             }
@@ -1231,6 +1381,8 @@
         if (isAdmin) {
             loadRecipients();
             loadStep7EmailSetting();
+            loadChairmanEmailControls();
+            loadMemberEmailControls();
             var btnSaveStep7Mail = document.getElementById('btn-save-step7-email-setting');
             if (btnSaveStep7Mail) btnSaveStep7Mail.addEventListener('click', async function() {
                 const chk = document.getElementById('cap-vien-step7-email-enabled');
@@ -1241,6 +1393,66 @@
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                         body: JSON.stringify({ enabled: !!chk.checked })
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (msgEl) {
+                        msgEl.style.display = 'block';
+                        msgEl.textContent = data.message || (res.ok ? 'Đã lưu.' : 'Lỗi');
+                        msgEl.className = 'msg ' + (res.ok ? 'success' : 'error');
+                    }
+                } catch (e) {
+                    if (msgEl) {
+                        msgEl.style.display = 'block';
+                        msgEl.textContent = 'Lỗi kết nối.';
+                        msgEl.className = 'msg error';
+                    }
+                }
+            });
+            var btnSaveChairmanMail = document.getElementById('btn-save-chairman-email-controls');
+            if (btnSaveChairmanMail) btnSaveChairmanMail.addEventListener('click', async function() {
+                const wrap = document.getElementById('chairman-email-controls-wrap');
+                const msgEl = document.getElementById('chairman-email-controls-msg');
+                if (!wrap || !token) return;
+                const controls = {};
+                wrap.querySelectorAll('input[type="checkbox"][data-chairman-key]').forEach(function(chk) {
+                    var key = chk.getAttribute('data-chairman-key');
+                    controls[key] = !!chk.checked;
+                });
+                try {
+                    const res = await fetch(apiBase + '/api/admin/cap-vien/settings/chairman-email-controls', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ controls: controls })
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (msgEl) {
+                        msgEl.style.display = 'block';
+                        msgEl.textContent = data.message || (res.ok ? 'Đã lưu.' : 'Lỗi');
+                        msgEl.className = 'msg ' + (res.ok ? 'success' : 'error');
+                    }
+                } catch (e) {
+                    if (msgEl) {
+                        msgEl.style.display = 'block';
+                        msgEl.textContent = 'Lỗi kết nối.';
+                        msgEl.className = 'msg error';
+                    }
+                }
+            });
+            var btnSaveMemberMail = document.getElementById('btn-save-member-email-controls');
+            if (btnSaveMemberMail) btnSaveMemberMail.addEventListener('click', async function() {
+                const wrap = document.getElementById('member-email-controls-wrap');
+                const msgEl = document.getElementById('member-email-controls-msg');
+                if (!wrap || !token) return;
+                const controls = {};
+                wrap.querySelectorAll('input[type="checkbox"][data-member-key]').forEach(function(chk) {
+                    var key = chk.getAttribute('data-member-key');
+                    controls[key] = !!chk.checked;
+                });
+                try {
+                    const res = await fetch(apiBase + '/api/admin/cap-vien/settings/council-member-email-controls', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ controls: controls })
                     });
                     const data = await res.json().catch(() => ({}));
                     if (msgEl) {
@@ -1646,6 +1858,13 @@
                     var nonMasterNote = document.getElementById('admin-team-non-master-note');
                     if (masterOnly) masterOnly.style.display = isMasterAdmin ? 'block' : 'none';
                     if (nonMasterNote) nonMasterNote.style.display = isMasterAdmin ? 'none' : 'block';
+                    var councilForm = document.getElementById('form-add-role');
+                    if (councilForm) {
+                        councilForm.querySelectorAll('input, select, button').forEach(function(el) {
+                            el.disabled = !isMasterAdmin;
+                        });
+                    }
+                    loadUsers();
                     loadAdminUsers();
                 })
                 .catch(function() {
@@ -1653,6 +1872,13 @@
                     var nonMasterNote = document.getElementById('admin-team-non-master-note');
                     if (masterOnly) masterOnly.style.display = isMasterAdmin ? 'block' : 'none';
                     if (nonMasterNote) nonMasterNote.style.display = isMasterAdmin ? 'none' : 'block';
+                    var councilForm = document.getElementById('form-add-role');
+                    if (councilForm) {
+                        councilForm.querySelectorAll('input, select, button').forEach(function(el) {
+                            el.disabled = !isMasterAdmin;
+                        });
+                    }
+                    loadUsers();
                     loadAdminUsers();
                 });
         }
@@ -1838,6 +2064,7 @@
                 const role = document.getElementById('add-role').value;
                 const passwordTrim = (document.getElementById('add-password').value || '').trim();
                 if (!email) { msgEl.textContent = 'Vui lòng nhập email.'; msgEl.className = 'msg error'; return; }
+                if (!isMasterAdmin) { msgEl.textContent = 'Chỉ Master Admin mới được cấp vai trò thành viên Hội đồng KHCN.'; msgEl.className = 'msg error'; return; }
                 msgEl.className = 'msg'; msgEl.textContent = '';
                 btn.disabled = true;
                 try {
@@ -1980,6 +2207,23 @@
                     msgEl.className = 'msg error';
                 }
                 btn.disabled = false;
+            });
+
+            document.getElementById('council-table-wrap')?.addEventListener('click', function(e) {
+                var editBtn = e.target.closest('.btn-edit-council');
+                if (editBtn) {
+                    var email = editBtn.getAttribute('data-email') || '';
+                    var row = editBtn.closest('tr');
+                    var select = row ? row.querySelector('.role-select-council') : null;
+                    var newRole = select ? select.value : '';
+                    if (email && newRole) saveRole(email, newRole);
+                    return;
+                }
+                var delBtn = e.target.closest('.btn-delete-council');
+                if (delBtn) {
+                    var targetEmail = delBtn.getAttribute('data-email') || '';
+                    if (targetEmail) deleteCouncilMember(targetEmail);
+                }
             });
 
             document.getElementById('btn-audit-apply').addEventListener('click', function () { loadAuditLog(); });
