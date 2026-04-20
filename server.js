@@ -253,14 +253,10 @@ function resolveStoredFileFromDb(raw) {
   const s = String(raw || '').trim();
   if (!s) return null;
   if (path.isAbsolute(s)) return path.normalize(path.resolve(s));
-  const n = s.replace(/\\/g, '/');
-  const capMarker = 'uploads-cap-vien/';
-  const capIdx = n.toLowerCase().indexOf(capMarker);
   let n = s.replace(/\\/g, '/');
   if (n.startsWith('./')) n = n.slice(2);
-
   const capMarker = 'uploads-cap-vien/';
-  const capIdx = n.indexOf(capMarker);
+  const capIdx = n.toLowerCase().indexOf(capMarker);
   if (capIdx !== -1) {
     const rest = n.slice(capIdx + capMarker.length);
     return path.normalize(path.resolve(uploadDirCapVien, rest));
@@ -272,9 +268,6 @@ function resolveStoredFileFromDb(raw) {
     return path.normalize(path.resolve(uploadDir, rest));
   }
   // Legacy: một số bản ghi sai chỉ còn nhánh public-templates/... (resolve cũ gắn nhầm uploads/)
-  if (n.startsWith('public-templates/')) {
-    return path.normalize(path.resolve(uploadDirCapVien, n));
-
   if (n.startsWith('public-templates/')) {
     return path.normalize(path.resolve(uploadDirCapVien, n));
   }
@@ -6346,9 +6339,6 @@ app.post(
       !relWithinCapVien.startsWith('..') && !path.isAbsolute(relWithinCapVien)
         ? 'uploads-cap-vien/' + relWithinCapVien.split(path.sep).join('/')
         : path.relative(__dirname, f.path).split(path.sep).join('/');
-    const relStored = path
-      .relative(uploadDirCapVien, path.normalize(f.path))
-      .replace(/\\/g, '/');
     const orig = fixFilenameEncoding(f.originalname) || path.basename(f.path);
     try {
       const prev = db.prepare('SELECT stored_path FROM cap_vien_public_template_files WHERE task_code = ?').get(taskCode);
