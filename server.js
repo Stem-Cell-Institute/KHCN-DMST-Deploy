@@ -14098,6 +14098,22 @@ try {
   console.warn('[DOCFLOW] Không mount internal documents workflow:', e.message);
 }
 
+/** Serve giao diện React của workflow admin tại /admin (production build). */
+try {
+  const workflowAdminDist = path.join(__dirname, 'frontend', 'document-workflow-ui', 'dist');
+  if (fs.existsSync(workflowAdminDist)) {
+    app.use('/admin', express.static(workflowAdminDist));
+    app.get('/admin/*', (req, res) => {
+      res.sendFile(path.join(workflowAdminDist, 'index.html'));
+    });
+    console.log('[DOCFLOW UI] Đã mount SPA /admin từ', workflowAdminDist);
+  } else {
+    console.warn('[DOCFLOW UI] Chưa thấy dist, chạy build ở frontend/document-workflow-ui để bật /admin');
+  }
+} catch (e) {
+  console.warn('[DOCFLOW UI] Không mount SPA /admin:', e.message);
+}
+
 /** Bảng dashboard_permissions (migrations/004_dashboard_permissions.sql) */
 try {
   const dashPermSql = path.join(__dirname, 'migrations', '004_dashboard_permissions.sql');
