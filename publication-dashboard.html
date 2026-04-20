@@ -38,6 +38,7 @@
     <div class="pd-tabs">
       <button type="button" class="pd-tab active" id="pd-tab-btn-dash">Thống kê</button>
       <button type="button" class="pd-tab" id="pd-tab-btn-perms" hidden>Phân quyền</button>
+      <button type="button" class="pd-tab" id="pd-tab-btn-dev" hidden>Công cụ dev</button>
     </div>
 
     <div id="pd-panel-dash" class="pd-panel">
@@ -149,6 +150,38 @@
         <button type="button" class="pd-btn" id="dp-btn-grant-group">Cấp nhóm</button>
         <button type="button" class="pd-btn pd-btn-ghost" id="dp-btn-revoke-selected">Thu hồi đã chọn</button>
       </div>
+    </div>
+
+    <div id="pd-panel-dev" class="pd-panel" hidden>
+      <h2 style="font-size:1.05rem;margin-bottom:8px;">Chính sách truy cập dashboard</h2>
+      <p style="font-size:13px;color:#5c5c6e;margin-bottom:14px;">
+        Tab này chỉ hiện với <strong>Admin</strong> (hoặc Master Admin). Đây là cấu hình <em>ai được vào</em> trang phân tích công bố — khác với biểu đồ thống kê ở tab <strong>Thống kê</strong>.
+        Tab <strong>Phân quyền</strong> dùng khi chọn chế độ “Danh sách cho phép”.
+      </p>
+      <div class="pd-dev-modes" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+        <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;">
+          <input type="radio" name="pd-dev-mode" value="whitelist" checked />
+          <span><strong>Danh sách cho phép</strong> — chỉ tài khoản được Admin/Master thêm trong tab Phân quyền.</span>
+        </label>
+        <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;">
+          <input type="radio" name="pd-dev-mode" value="internal_domain" />
+          <span><strong>Nội bộ viện</strong> — chỉ email có đuôi (mặc định <code>@sci.edu.vn</code>).</span>
+        </label>
+        <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;">
+          <input type="radio" name="pd-dev-mode" value="stims_all" />
+          <span><strong>Toàn bộ STIMS</strong> — mọi tài khoản đã đăng nhập hệ thống.</span>
+        </label>
+        <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;">
+          <input type="radio" name="pd-dev-mode" value="public" />
+          <span><strong>Công khai</strong> — không cần đăng nhập để xem thống kê (dữ liệu chỉ đọc).</span>
+        </label>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px;color:#444;">Đuôi email nội bộ (áp dụng khi chọn “Nội bộ viện”)
+          <input type="text" id="pd-dev-suffix" placeholder="@sci.edu.vn" style="display:block;margin-top:6px;padding:8px 12px;border:1px solid #d0cdc4;border-radius:8px;min-width:220px;max-width:100%;" />
+        </label>
+      </div>
+      <button type="button" class="pd-btn" id="pd-dev-save">Lưu cấu hình</button>
     </div>
   </div>
 

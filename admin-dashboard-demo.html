@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — Quản trị hệ thống KHCN</title>
+  <!-- Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+          }
+        }
+      }
+    };
+  </script>
+  <!-- Font Awesome 6 Free -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" />
+  <style>
+    /* Tùy chỉnh bổ sung (Tailwind CDN không biên dịch @apply trong khối này) */
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .sidebar-link.active {
+      background-color: #4f46e5;
+      color: #fff;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.12);
+    }
+    #sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+    #sidebar-overlay { transition: opacity 0.2s; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen antialiased">
+
+  <!-- Mobile overlay -->
+  <div id="sidebar-overlay" class="fixed inset-0 bg-black/40 z-30 opacity-0 pointer-events-none lg:hidden" aria-hidden="true"></div>
+
+  <!-- ========== SIDEBAR ========== -->
+  <aside id="sidebar" class="fixed top-0 left-0 z-40 h-full w-64 bg-slate-900 text-slate-200 flex flex-col shadow-xl transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-out">
+    <div class="flex items-center gap-3 px-4 py-5 border-b border-slate-700/80">
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-600 text-white">
+        <i class="fa-solid fa-flask text-lg"></i>
+      </div>
+      <div>
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-wide">KHCN</p>
+        <p class="text-sm font-semibold text-white">Admin Dashboard</p>
+      </div>
+    </div>
+    <nav class="flex-1 overflow-y-auto py-4 px-2 space-y-0.5" id="main-nav">
+      <!-- Menu items — data-section maps to content panels -->
+      <button type="button" class="sidebar-link w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="ticker">
+        <i class="fa-solid fa-bullhorn w-5 text-center opacity-90"></i>
+        <span>Ticker Thông Báo</span>
+      </button>
+      <button type="button" class="sidebar-link active w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="accounts">
+        <i class="fa-solid fa-users w-5 text-center opacity-90"></i>
+        <span>Quản lý tài khoản</span>
+      </button>
+      <button type="button" class="sidebar-link w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="hdkhcn">
+        <i class="fa-solid fa-people-group w-5 text-center opacity-90"></i>
+        <span>Hội đồng KHCN</span>
+      </button>
+      <button type="button" class="sidebar-link w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="thamdinh">
+        <i class="fa-solid fa-file-invoice-dollar w-5 text-center opacity-90"></i>
+        <span>Tổ thẩm định tài chính</span>
+      </button>
+      <button type="button" class="sidebar-link w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="admin-team">
+        <i class="fa-solid fa-user-shield w-5 text-center opacity-90"></i>
+        <span>Tổ Admin hệ thống</span>
+      </button>
+      <button type="button" class="sidebar-link w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="hangmuc">
+        <i class="fa-solid fa-layer-group w-5 text-center opacity-90"></i>
+        <span>Hạng mục đề tài cấp Viện</span>
+      </button>
+      <button type="button" class="sidebar-link w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="nhiemvu">
+        <i class="fa-solid fa-list-check w-5 text-center opacity-90"></i>
+        <span>Nhiệm vụ KHCN</span>
+      </button>
+      <button type="button" class="sidebar-link w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="homepage">
+        <i class="fa-solid fa-sliders w-5 text-center opacity-90"></i>
+        <span>Cấu hình trang chủ &amp; hệ thống</span>
+      </button>
+      <button type="button" class="sidebar-link w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="rss">
+        <i class="fa-solid fa-rss w-5 text-center opacity-90"></i>
+        <span>Tin RSS cập nhật</span>
+      </button>
+      <button type="button" class="sidebar-link w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="email">
+        <i class="fa-solid fa-envelope w-5 text-center opacity-90"></i>
+        <span>Email thông báo</span>
+      </button>
+      <button type="button" class="sidebar-link w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="logs">
+        <i class="fa-solid fa-clock-rotate-left w-5 text-center opacity-90"></i>
+        <span>Nhật ký hệ thống</span>
+      </button>
+    </nav>
+    <div class="p-3 border-t border-slate-700/80 text-xs text-slate-500">
+      <p>Demo UI — dữ liệu mẫu, không lưu server.</p>
+    </div>
+  </aside>
+
+  <!-- ========== MAIN ========== -->
+  <div class="lg:pl-64 min-h-screen flex flex-col">
+    <!-- Top bar -->
+    <header class="sticky top-0 z-20 flex items-center gap-3 bg-white border-b border-slate-200 px-4 py-3 shadow-sm">
+      <button type="button" id="btn-menu" class="lg:hidden inline-flex items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-700 hover:bg-slate-50" aria-label="Mở menu">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div class="flex-1 min-w-0">
+        <h1 id="page-title" class="text-lg font-semibold text-slate-900 truncate">Quản lý tài khoản</h1>
+        <p class="text-xs text-slate-500 hidden sm:block">Hệ thống quản trị nghiên cứu khoa học — giao diện mẫu</p>
+      </div>
+      <span class="hidden sm:inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
+        <i class="fa-solid fa-circle text-[8px] text-emerald-500"></i> Demo
+      </span>
+    </header>
+
+    <main class="flex-1 p-4 sm:p-6 max-w-[1600px] mx-auto w-full">
+
+      <!-- ===== 1. Ticker Thông Báo ===== -->
+      <section id="section-ticker" class="content-section hidden space-y-6">
+        <div class="rounded-xl bg-white p-5 sm:p-6 shadow-sm border border-slate-200/80">
+          <h2 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-bullhorn text-indigo-600"></i> Cài đặt thanh tin Ticker
+          </h2>
+          <p class="mt-1 text-sm text-slate-600">Điều chỉnh hiển thị thông báo chạy trên trang chủ (demo).</p>
+          <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <label class="block">
+              <span class="text-xs font-medium text-slate-600">Vòng cuộn (giây)</span>
+              <input type="number" min="0" max="300" value="30" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none" />
+            </label>
+            <label class="block">
+              <span class="text-xs font-medium text-slate-600">Cỡ chữ (px)</span>
+              <input type="number" min="10" max="28" value="14" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none" />
+            </label>
+            <label class="block">
+              <span class="text-xs font-medium text-slate-600">Màu chữ</span>
+              <input type="color" value="#1e293b" class="mt-1 h-10 w-full cursor-pointer rounded-lg border border-slate-200" />
+            </label>
+            <div class="flex items-end">
+              <button type="button" class="demo-alert w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition">
+                <i class="fa-solid fa-floppy-disk mr-2"></i>Lưu cài đặt
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 2. Quản lý tài khoản (mặc định) ===== -->
+      <section id="section-accounts" class="content-section space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 class="text-base font-semibold text-slate-900">Danh sách tài khoản</h2>
+            <p class="text-sm text-slate-600 mt-0.5">Quản lý người dùng hệ thống (dữ liệu mẫu).</p>
+          </div>
+          <button type="button" id="btn-open-add-account" class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 shadow-sm transition">
+            <i class="fa-solid fa-user-plus"></i> Thêm tài khoản
+          </button>
+        </div>
+
+        <!-- Bộ lọc demo -->
+        <div class="rounded-xl bg-white p-4 shadow-sm border border-slate-200/80 flex flex-wrap gap-3 items-end">
+          <label class="min-w-[140px]">
+            <span class="text-xs font-medium text-slate-600">Phạm vi</span>
+            <select id="filter-scope" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white">
+              <option>Tất cả</option>
+              <option>Nội viện</option>
+              <option>Ngoại viện</option>
+            </select>
+          </label>
+          <label class="min-w-[120px]">
+            <span class="text-xs font-medium text-slate-600">Năm tạo</span>
+            <select id="filter-year" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white">
+              <option>2026</option>
+              <option>2025</option>
+              <option>2024</option>
+            </select>
+          </label>
+          <button type="button" class="demo-alert rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Áp dụng lọc</button>
+        </div>
+
+        <div class="rounded-xl bg-white shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                <tr>
+                  <th class="px-4 py-3 whitespace-nowrap">ID</th>
+                  <th class="px-4 py-3 whitespace-nowrap">Họ tên</th>
+                  <th class="px-4 py-3 whitespace-nowrap">Email</th>
+                  <th class="px-4 py-3 whitespace-nowrap">Số điện thoại</th>
+                  <th class="px-4 py-3 whitespace-nowrap">Vai trò</th>
+                  <th class="px-4 py-3 whitespace-nowrap">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr class="hover:bg-slate-50/80 transition">
+                  <td class="px-4 py-3 font-mono text-xs">1</td>
+                  <td class="px-4 py-3">Quản trị hệ thống</td>
+                  <td class="px-4 py-3 text-indigo-600">admin@example.com</td>
+                  <td class="px-4 py-3">0901 000 001</td>
+                  <td class="px-4 py-3"><span class="rounded-full bg-violet-100 text-violet-800 px-2 py-0.5 text-xs font-medium">Admin</span></td>
+                  <td class="px-4 py-3"><span class="text-emerald-600 font-medium">Hoạt động</span></td>
+                </tr>
+                <tr class="hover:bg-slate-50/80 transition">
+                  <td class="px-4 py-3 font-mono text-xs">2</td>
+                  <td class="px-4 py-3">Nguyễn Văn A</td>
+                  <td class="px-4 py-3 text-indigo-600">nguyenvana@sci.edu.vn</td>
+                  <td class="px-4 py-3">0902 222 333</td>
+                  <td class="px-4 py-3"><span class="rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-xs font-medium">Nghiên cứu viên</span></td>
+                  <td class="px-4 py-3"><span class="text-emerald-600 font-medium">Hoạt động</span></td>
+                </tr>
+                <tr class="hover:bg-slate-50/80 transition">
+                  <td class="px-4 py-3 font-mono text-xs">3</td>
+                  <td class="px-4 py-3">Trần Thị B</td>
+                  <td class="px-4 py-3 text-indigo-600">tranthib@gmail.com</td>
+                  <td class="px-4 py-3">—</td>
+                  <td class="px-4 py-3"><span class="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-xs font-medium">Cộng tác viên</span></td>
+                  <td class="px-4 py-3"><span class="text-amber-600 font-medium">Chờ duyệt</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 3. Hội đồng KHCN ===== -->
+      <section id="section-hdkhcn" class="content-section hidden space-y-6">
+        <div class="rounded-xl bg-indigo-50 border border-indigo-100 p-4 text-sm text-indigo-900">
+          <p class="font-medium"><i class="fa-solid fa-circle-info mr-1"></i> Phương thức cấp vai trò</p>
+          <p class="mt-1 text-indigo-800/90">Chỉ tài khoản email <strong>@sci.edu.vn</strong> mới được cấp vai trò trong Hội đồng KHCN. Bốn vai trò: Chủ tịch HDKHCN, Thư ký HDKHCN, Thành viên HĐKHCN, Nghiên cứu viên.</p>
+        </div>
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900 mb-4">Thêm / cấp vai trò</h3>
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <label class="block sm:col-span-2">
+              <span class="text-xs font-medium text-slate-600">Họ tên</span>
+              <input type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Họ và tên" />
+            </label>
+            <label class="block sm:col-span-2">
+              <span class="text-xs font-medium text-slate-600">Email (@sci.edu.vn)</span>
+              <input type="email" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="user@sci.edu.vn" />
+            </label>
+            <label class="block">
+              <span class="text-xs font-medium text-slate-600">Vai trò</span>
+              <select class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <option>Chủ tịch HDKHCN</option>
+                <option>Thư ký HDKHCN</option>
+                <option>Thành viên HĐKHCN</option>
+                <option>Nghiên cứu viên</option>
+              </select>
+            </label>
+            <div class="flex flex-wrap items-end gap-2 sm:col-span-3 lg:col-span-1">
+              <button type="button" class="demo-alert flex-1 min-w-[140px] rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">Thêm / Cấp vai trò</button>
+              <button type="button" class="demo-alert rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 whitespace-nowrap" title="Gửi email thông báo"><i class="fa-solid fa-paper-plane mr-1"></i>Gửi email thông báo</button>
+            </div>
+          </div>
+        </div>
+        <div class="rounded-xl bg-white shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-100 font-medium text-slate-800">Danh sách thành viên HDKHCN</div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                <tr>
+                  <th class="px-4 py-3">Email</th>
+                  <th class="px-4 py-3">Họ tên</th>
+                  <th class="px-4 py-3">Vai trò</th>
+                  <th class="px-4 py-3">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr class="hover:bg-slate-50/80">
+                  <td class="px-4 py-3">phucpham@sci.edu.vn</td>
+                  <td class="px-4 py-3">Phạm Văn Phúc</td>
+                  <td class="px-4 py-3">Chủ tịch HDKHCN</td>
+                  <td class="px-4 py-3"><button type="button" class="demo-alert text-indigo-600 hover:underline text-sm font-medium">Lưu</button></td>
+                </tr>
+                <tr class="hover:bg-slate-50/80">
+                  <td class="px-4 py-3">sinhnguyen@sci.edu.vn</td>
+                  <td class="px-4 py-3">Nguyễn Trường Sinh</td>
+                  <td class="px-4 py-3">Nghiên cứu viên</td>
+                  <td class="px-4 py-3"><button type="button" class="demo-alert text-indigo-600 hover:underline text-sm font-medium">Lưu</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 4. Tổ thẩm định tài chính ===== -->
+      <section id="section-thamdinh" class="content-section hidden space-y-6">
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900">Phương thức hoạt động</h3>
+          <p class="mt-2 text-sm text-slate-600 leading-relaxed">
+            <strong>Tổ trưởng</strong> điều phối phiếu thẩm định; <strong>Thành viên</strong> tham gia đánh giá theo phân công.
+            Người được cấp quyền có thể <strong>nộp phiếu thẩm định</strong> tài chính cho đề tài theo quy trình hệ thống (demo).
+          </p>
+        </div>
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900 mb-4">Thêm thành viên</h3>
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <label><span class="text-xs font-medium text-slate-600">Họ tên</span><input type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+            <label><span class="text-xs font-medium text-slate-600">Email</span><input type="email" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+            <label><span class="text-xs font-medium text-slate-600">Học hàm học vị</span>
+              <select class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <option>PGS.TS</option><option>TS</option><option>ThS</option><option>KS</option>
+              </select>
+            </label>
+            <label><span class="text-xs font-medium text-slate-600">Vai trò</span>
+              <select class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <option>Tổ trưởng</option><option>Thành viên</option>
+              </select>
+            </label>
+          </div>
+          <button type="button" class="demo-alert mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Thêm / Cấp vai trò</button>
+        </div>
+        <div class="rounded-xl bg-white shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                <tr>
+                  <th class="px-4 py-3">Họ tên</th>
+                  <th class="px-4 py-3">Email</th>
+                  <th class="px-4 py-3">Học hàm học vị</th>
+                  <th class="px-4 py-3">Vai trò</th>
+                  <th class="px-4 py-3">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-slate-50/80 border-b border-slate-100">
+                  <td class="px-4 py-3">Nguyễn Văn A</td>
+                  <td class="px-4 py-3">a@sci.edu.vn</td>
+                  <td class="px-4 py-3">PGS.TS</td>
+                  <td class="px-4 py-3">Tổ trưởng</td>
+                  <td class="px-4 py-3"><button type="button" class="demo-alert text-red-600 hover:underline text-sm">Xóa</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 5. Tổ Admin hệ thống ===== -->
+      <section id="section-admin-team" class="content-section hidden space-y-6">
+        <div class="rounded-xl bg-amber-50 border border-amber-100 p-4 text-sm text-amber-950">
+          <p><strong>Master Admin</strong> (nhà phát triển): toàn quyền cấu hình hệ thống, cấp Admin phụ.</p>
+          <p class="mt-1"><strong>Admin phụ</strong>: quyền hạn giới hạn theo phân quyền (demo).</p>
+        </div>
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80 border-dashed border-indigo-200">
+          <p class="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-3">Chỉ Master Admin (demo: luôn hiển thị)</p>
+          <h3 class="text-sm font-semibold text-slate-900 mb-4">Thêm Admin</h3>
+          <div class="grid gap-4 sm:grid-cols-3">
+            <label><span class="text-xs font-medium text-slate-600">Họ tên</span><input type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+            <label><span class="text-xs font-medium text-slate-600">Email</span><input type="email" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+            <label><span class="text-xs font-medium text-slate-600">Mật khẩu</span><input type="password" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+          </div>
+          <button type="button" class="demo-alert mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Thêm Admin</button>
+        </div>
+        <div class="rounded-xl bg-white shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                <tr>
+                  <th class="px-4 py-3">Email</th>
+                  <th class="px-4 py-3">Họ tên</th>
+                  <th class="px-4 py-3">Cấp</th>
+                  <th class="px-4 py-3">Ghi chú</th>
+                  <th class="px-4 py-3">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-slate-50/80 border-b border-slate-100">
+                  <td class="px-4 py-3">ntsinh0409@gmail.com</td>
+                  <td class="px-4 py-3">Admin</td>
+                  <td class="px-4 py-3"><span class="rounded bg-violet-100 text-violet-800 px-2 py-0.5 text-xs font-semibold">Master</span></td>
+                  <td class="px-4 py-3 text-slate-600">Quản trị tối cao</td>
+                  <td class="px-4 py-3"><button type="button" class="demo-alert text-indigo-600 text-sm font-medium hover:underline">Gửi quyền Admin</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 6. Hạng mục đề tài cấp Viện (4 bảng) ===== -->
+      <section id="section-hangmuc" class="content-section hidden space-y-8">
+        <!-- Lĩnh vực -->
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">Lĩnh vực KHCN</h3>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <input class="rounded-lg border border-slate-200 px-2 py-1.5 text-sm w-28" placeholder="Mã" />
+            <input class="rounded-lg border border-slate-200 px-2 py-1.5 text-sm flex-1 min-w-[120px]" placeholder="Nội dung" />
+            <button type="button" class="demo-alert rounded-lg bg-indigo-600 px-3 py-1.5 text-sm text-white">Thêm</button>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-slate-100">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50"><tr><th class="px-3 py-2 text-left">Mã</th><th class="px-3 py-2 text-left">Nội dung</th><th class="px-3 py-2">Thao tác</th></tr></thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono text-xs">stem-cell</td><td class="px-3 py-2">Tế bào gốc</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono text-xs">biotechnology</td><td class="px-3 py-2">Công nghệ sinh học</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono text-xs">medicine</td><td class="px-3 py-2">Y sinh học</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono text-xs">other</td><td class="px-3 py-2">Khác</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Loại đề tài -->
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">Loại đề tài</h3>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <input class="rounded-lg border border-slate-200 px-2 py-1.5 text-sm w-28" placeholder="Mã" />
+            <input class="rounded-lg border border-slate-200 px-2 py-1.5 text-sm flex-1 min-w-[120px]" placeholder="Nội dung" />
+            <button type="button" class="demo-alert rounded-lg bg-indigo-600 px-3 py-1.5 text-sm text-white">Thêm</button>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-slate-100">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50"><tr><th class="px-3 py-2 text-left">Mã</th><th class="px-3 py-2 text-left">Nội dung</th><th class="px-3 py-2">Thao tác</th></tr></thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono text-xs">research</td><td class="px-3 py-2">Đề tài nghiên cứu</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono text-xs">project</td><td class="px-3 py-2">Dự án</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono text-xs">program</td><td class="px-3 py-2">Chương trình</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Đơn vị chủ trì -->
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">Đơn vị chủ trì</h3>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <input class="rounded-lg border border-slate-200 px-2 py-1.5 text-sm w-28" placeholder="Mã" />
+            <input class="rounded-lg border border-slate-200 px-2 py-1.5 text-sm flex-1 min-w-[120px]" placeholder="Nội dung" />
+            <button type="button" class="demo-alert rounded-lg bg-indigo-600 px-3 py-1.5 text-sm text-white">Thêm</button>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-slate-100">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50"><tr><th class="px-3 py-2 text-left">Mã</th><th class="px-3 py-2 text-left">Nội dung</th><th class="px-3 py-2">Thao tác</th></tr></thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono text-xs">lab1</td><td class="px-3 py-2">Phòng Lab 1</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono text-xs">lab2</td><td class="px-3 py-2">Phòng Lab 2</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- Khoản mục chi — phân cấp -->
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">Khoản mục chi dự toán</h3>
+          <div class="flex flex-wrap gap-2 mb-4 items-end">
+            <label class="text-xs text-slate-600">Mã <input class="mt-0.5 block rounded-lg border border-slate-200 px-2 py-1.5 text-sm w-24" /></label>
+            <label class="text-xs text-slate-600 flex-1 min-w-[140px]">Nội dung <input class="mt-0.5 block w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm" /></label>
+            <label class="text-xs text-slate-600">Mã cha <input class="mt-0.5 block rounded-lg border border-slate-200 px-2 py-1.5 text-sm w-20" placeholder="Trống" /></label>
+            <button type="button" class="demo-alert rounded-lg bg-indigo-600 px-3 py-2 text-sm text-white">Thêm</button>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-slate-100">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50"><tr><th class="px-3 py-2 text-left">Mã</th><th class="px-3 py-2 text-left">Nội dung</th><th class="px-3 py-2 text-left">Mã cha</th><th class="px-3 py-2">Thao tác</th></tr></thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono">1</td><td class="px-3 py-2">Chi thù lao cho cán bộ khoa học</td><td class="px-3 py-2 text-slate-400">—</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono pl-8">1.1</td><td class="px-3 py-2">Chi nhiệm vụ đề tài</td><td class="px-3 py-2 font-mono text-xs">1</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono pl-8">1.2</td><td class="px-3 py-2">Thành viên chính</td><td class="px-3 py-2 font-mono text-xs">1</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono">2</td><td class="px-3 py-2">Chi mua vật tư, nguyên liệu</td><td class="px-3 py-2 text-slate-400">—</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono pl-8">2.1</td><td class="px-3 py-2">Hóa chất</td><td class="px-3 py-2 font-mono text-xs">2</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-mono pl-8">2.2</td><td class="px-3 py-2">Sinh phẩm</td><td class="px-3 py-2 font-mono text-xs">2</td><td class="px-3 py-2 text-center space-x-2"><button class="demo-alert text-indigo-600 text-xs">Sửa</button><button class="demo-alert text-red-600 text-xs">Xóa</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 7. Nhiệm vụ KHCN ===== -->
+      <section id="section-nhiemvu" class="content-section hidden space-y-6">
+        <button type="button" class="demo-alert inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 shadow-sm">
+          <i class="fa-solid fa-rotate"></i> Đồng bộ từ đề tài cấp Viện
+        </button>
+        <div class="rounded-xl bg-white shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-100 font-medium">Đề tài cấp Viện (Admin)</div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                <tr>
+                  <th class="px-4 py-3 whitespace-nowrap">Mã đề tài</th>
+                  <th class="px-4 py-3">Tên đề tài</th>
+                  <th class="px-4 py-3">Chủ nhiệm</th>
+                  <th class="px-4 py-3">Trạng thái</th>
+                  <th class="px-4 py-3">Ngày nộp</th>
+                  <th class="px-4 py-3">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr class="hover:bg-slate-50/80">
+                  <td class="px-4 py-3 font-mono text-xs whitespace-nowrap">DTK-1-L08-2023-002</td>
+                  <td class="px-4 py-3 max-w-xs truncate" title="Nghiên cứu khả năng mang thuốc...">Nghiên cứu khả năng mang thuốc...</td>
+                  <td class="px-4 py-3 whitespace-nowrap">Nguyễn Trường Sinh</td>
+                  <td class="px-4 py-3"><span class="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-xs">Đã ký HĐ</span></td>
+                  <td class="px-4 py-3 whitespace-nowrap">2025-02-23</td>
+                  <td class="px-4 py-3 whitespace-nowrap space-x-2"><button type="button" class="demo-alert text-indigo-600 text-sm">Chi tiết</button><button type="button" class="demo-alert text-red-600 text-sm">Xóa</button></td>
+                </tr>
+                <tr class="hover:bg-slate-50/80">
+                  <td class="px-4 py-3 font-mono text-xs whitespace-nowrap">DTK-1-L09-2024-015</td>
+                  <td class="px-4 py-3">Ứng dụng AI trong phân tích dữ liệu sinh học</td>
+                  <td class="px-4 py-3 whitespace-nowrap">Lê Văn C</td>
+                  <td class="px-4 py-3"><span class="rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs">Đã nộp</span></td>
+                  <td class="px-4 py-3 whitespace-nowrap">2026-01-10</td>
+                  <td class="px-4 py-3 whitespace-nowrap space-x-2"><button type="button" class="demo-alert text-indigo-600 text-sm">Chi tiết</button><button type="button" class="demo-alert text-red-600 text-sm">Xóa</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 8. Cấu hình trang chủ & hệ thống ===== -->
+      <section id="section-homepage" class="content-section hidden space-y-6">
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900 mb-4">Module hiển thị trên trang chủ</h3>
+          <p class="text-xs text-slate-500 mb-3">Mặc định tất cả <strong>Bật</strong>. Toggle gọi alert demo khi đổi trạng thái.</p>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[640px]">
+              <thead class="bg-slate-50 border-b border-slate-200">
+                <tr><th class="px-3 py-2 text-left">Module</th><th class="px-3 py-2 text-left">Mã</th><th class="px-3 py-2 text-center">Hiển thị</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100" id="module-toggles">
+                <!-- rows generated conceptually — static for demo -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900 mb-4">Cài đặt thanh tin TÚC (ticker)</h3>
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <label><span class="text-xs font-medium text-slate-600">Vòng cuộn (giây)</span><input type="number" min="0" max="300" value="30" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+            <label><span class="text-xs font-medium text-slate-600">Cỡ chữ (px)</span><input type="number" min="10" max="28" value="14" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+            <label><span class="text-xs font-medium text-slate-600">Màu chữ</span><input type="color" value="#1e293b" class="mt-1 h-10 w-full rounded-lg border border-slate-200" /></label>
+            <div class="flex items-end"><button type="button" class="demo-alert w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white hover:bg-indigo-700">Lưu cài đặt</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <h3 class="text-sm font-semibold text-slate-900">Ô danh đầu (ảnh hưởng mã số)</h3>
+            <button type="button" id="btn-open-prefix" class="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100">Thêm</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 border-b border-slate-200"><tr><th class="px-3 py-2 text-left">Mã</th><th class="px-3 py-2 text-left">Nội dung</th><th class="px-3 py-2 text-center">Ảnh hưởng mã số</th></tr></thead>
+              <tbody>
+                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                  <td class="px-3 py-2 font-mono">coe</td>
+                  <td class="px-3 py-2">CoE</td>
+                  <td class="px-3 py-2 text-center">
+                    <label class="inline-flex items-center cursor-pointer gap-2">
+                      <input type="checkbox" class="demo-toggle sr-only peer" checked />
+                      <span class="w-10 h-5 bg-slate-200 rounded-full relative after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:bg-white after:rounded-full peer-checked:bg-indigo-600 peer-checked:after:translate-x-5 after:transition-all"></span>
+                      <span class="text-xs text-slate-600 toggle-label">Bật</span>
+                    </label>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 9. Tin RSS ===== -->
+      <section id="section-rss" class="content-section hidden space-y-6">
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900 mb-4">Thêm nguồn RSS</h3>
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <label><span class="text-xs font-medium text-slate-600">Loại</span>
+              <select class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"><option>RSS</option><option>Atom</option></select>
+            </label>
+            <label class="sm:col-span-2"><span class="text-xs font-medium text-slate-600">Nhãn</span><input type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Tên hiển thị" /></label>
+            <label class="sm:col-span-2 lg:col-span-1"><span class="text-xs font-medium text-slate-600">URL</span><input type="url" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+            <div class="flex items-end"><button type="button" class="demo-alert w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white">Thêm nguồn</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl bg-white shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                <tr><th class="px-4 py-3">Loại</th><th class="px-4 py-3">Nhãn</th><th class="px-4 py-3">URL</th><th class="px-4 py-3">Thao tác</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr class="hover:bg-slate-50"><td class="px-4 py-3">RSS</td><td class="px-4 py-3">NAFOSTED</td><td class="px-4 py-3 text-indigo-600 truncate max-w-[200px]"><a href="#" class="hover:underline">https://nafosted.gov.vn/rss</a></td><td class="px-4 py-3"><button type="button" class="demo-alert text-red-600 text-sm">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-4 py-3">RSS</td><td class="px-4 py-3">HCMUS</td><td class="px-4 py-3 text-indigo-600 truncate max-w-[200px]"><a href="#" class="hover:underline">https://hcmus.edu.vn/rss</a></td><td class="px-4 py-3"><button type="button" class="demo-alert text-red-600 text-sm">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-4 py-3">RSS</td><td class="px-4 py-3">VNU HCM</td><td class="px-4 py-3 text-indigo-600 truncate max-w-[200px]"><a href="#" class="hover:underline">https://vnu.edu.vn/rss</a></td><td class="px-4 py-3"><button type="button" class="demo-alert text-red-600 text-sm">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-4 py-3">RSS</td><td class="px-4 py-3">Viện TBG</td><td class="px-4 py-3 text-indigo-600 truncate max-w-[200px]"><a href="#" class="hover:underline">https://vic.edu.vn/rss</a></td><td class="px-4 py-3"><button type="button" class="demo-alert text-red-600 text-sm">Xóa</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 10. Email thông báo ===== -->
+      <section id="section-email" class="content-section hidden space-y-6">
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900 mb-4">Thêm người nhận (Đề tài cấp Viện)</h3>
+          <div class="flex flex-wrap gap-3 items-end">
+            <label class="flex-1 min-w-[200px]"><span class="text-xs font-medium text-slate-600">Email</span><input type="email" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+            <label class="flex-1 min-w-[200px]"><span class="text-xs font-medium text-slate-600">Họ tên</span><input type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+            <button type="button" class="demo-alert rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Thêm</button>
+          </div>
+        </div>
+        <div class="rounded-xl bg-white shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                <tr><th class="px-4 py-3">Email</th><th class="px-4 py-3">Họ tên</th><th class="px-4 py-3">Ngày thêm</th><th class="px-4 py-3">Thao tác</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr class="hover:bg-slate-50"><td class="px-4 py-3">sinhnguyen@sci.edu.vn</td><td class="px-4 py-3">TS. Nguyễn Trường Sinh</td><td class="px-4 py-3">2026-02-23</td><td class="px-4 py-3"><button type="button" class="demo-alert text-red-600 text-sm">Xóa</button></td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-4 py-3">chaudo@sci.edu.vn</td><td class="px-4 py-3">Đỗ Phương Khánh Châu</td><td class="px-4 py-3">2026-03-18</td><td class="px-4 py-3"><button type="button" class="demo-alert text-red-600 text-sm">Xóa</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="rounded-xl bg-white p-5 shadow-sm border border-slate-200/80">
+          <h3 class="text-sm font-semibold text-slate-900 mb-3">Cài đặt email khi hoàn thành Bước 7</h3>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" class="demo-toggle h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+            <span class="text-sm text-slate-700">Gửi email tự động khi hoàn thành Bước 7</span>
+          </label>
+          <button type="button" class="demo-alert mt-4 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50">Lưu cài đặt</button>
+        </div>
+      </section>
+
+      <!-- ===== 11. Nhật ký hệ thống ===== -->
+      <section id="section-logs" class="content-section hidden space-y-6">
+        <div class="rounded-xl bg-white p-4 shadow-sm border border-slate-200/80 flex flex-wrap gap-3 items-end">
+          <label>
+            <span class="text-xs font-medium text-slate-600">Loại hành động</span>
+            <select class="mt-1 block w-full min-w-[180px] rounded-lg border border-slate-200 px-3 py-2 text-sm">
+              <option>Đăng nhập</option>
+              <option>Đăng xuất</option>
+              <option>Truy cập trang</option>
+              <option>Thao tác quản trị</option>
+            </select>
+          </label>
+          <label><span class="text-xs font-medium text-slate-600">Từ ngày</span><input type="date" class="mt-1 block rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+          <label><span class="text-xs font-medium text-slate-600">Đến ngày</span><input type="date" class="mt-1 block rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+          <button type="button" class="demo-alert rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Lọc</button>
+        </div>
+        <div class="rounded-xl bg-white shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                <tr>
+                  <th class="px-4 py-3 whitespace-nowrap">Thời gian</th>
+                  <th class="px-4 py-3">Người dùng</th>
+                  <th class="px-4 py-3">Hành động</th>
+                  <th class="px-4 py-3">IP</th>
+                  <th class="px-4 py-3">Trình duyệt</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr class="hover:bg-slate-50"><td class="px-4 py-3 whitespace-nowrap font-mono text-xs">2026-04-18 08:12:01</td><td class="px-4 py-3">admin@example.com</td><td class="px-4 py-3">Đăng nhập thành công</td><td class="px-4 py-3 font-mono text-xs">203.113.45.12</td><td class="px-4 py-3">Chrome 124 / Win</td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-4 py-3 whitespace-nowrap font-mono text-xs">2026-04-18 08:15:22</td><td class="px-4 py-3">admin@example.com</td><td class="px-4 py-3">Truy cập trang đề tài cấp Viện</td><td class="px-4 py-3 font-mono text-xs">203.113.45.12</td><td class="px-4 py-3">Chrome 124 / Win</td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-4 py-3 whitespace-nowrap font-mono text-xs">2026-04-17 21:03:44</td><td class="px-4 py-3">unknown</td><td class="px-4 py-3 text-amber-800">Đăng nhập thất bại (sai mật khẩu)</td><td class="px-4 py-3 font-mono text-xs">14.162.88.90</td><td class="px-4 py-3">Firefox / macOS</td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-4 py-3 whitespace-nowrap font-mono text-xs">2026-04-17 17:40:09</td><td class="px-4 py-3">nguyenvana@sci.edu.vn</td><td class="px-4 py-3">Đăng xuất</td><td class="px-4 py-3 font-mono text-xs">10.0.4.22</td><td class="px-4 py-3">Edge / Win</td></tr>
+                <tr class="hover:bg-slate-50"><td class="px-4 py-3 whitespace-nowrap font-mono text-xs">2026-04-16 14:22:18</td><td class="px-4 py-3">sinhnguyen@sci.edu.vn</td><td class="px-4 py-3">Truy cập trang công bố KH</td><td class="px-4 py-3 font-mono text-xs">171.224.11.5</td><td class="px-4 py-3">Safari / iOS</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===== Modal: Thêm tài khoản ===== -->
+  <div id="modal-account" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative animate-[fadeIn_0.2s_ease-out]">
+      <button type="button" id="modal-account-close" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600" aria-label="Đóng"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <h3 class="text-lg font-semibold text-slate-900 mb-4">Thêm tài khoản</h3>
+      <form id="form-add-account" class="space-y-3">
+        <label class="block"><span class="text-xs font-medium text-slate-600">Họ tên</span><input required type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+        <label class="block"><span class="text-xs font-medium text-slate-600">Email</span><input required type="email" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+        <label class="block"><span class="text-xs font-medium text-slate-600">Số điện thoại</span><input type="tel" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+        <label class="block"><span class="text-xs font-medium text-slate-600">Mật khẩu</span><input required type="password" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+        <label class="block"><span class="text-xs font-medium text-slate-600">Vai trò</span>
+          <select class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+            <option>Admin</option>
+            <option>Nghiên cứu viên</option>
+            <option>Cộng tác viên</option>
+          </select>
+        </label>
+        <div class="flex gap-2 justify-end pt-2">
+          <button type="button" id="modal-account-cancel" class="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">Hủy</button>
+          <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== Modal: Thêm ô danh đầu ===== -->
+  <div id="modal-prefix" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/50">
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 relative">
+      <button type="button" id="modal-prefix-close" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      <h3 class="text-lg font-semibold text-slate-900 mb-4">Thêm ô danh đầu</h3>
+      <form id="form-prefix" class="space-y-3">
+        <label class="block"><span class="text-xs font-medium text-slate-600">Mã</span><input type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="vd: coe" /></label>
+        <label class="block"><span class="text-xs font-medium text-slate-600">Nội dung</span><input type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label>
+        <button type="submit" class="demo-alert w-full rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white">Xác nhận</button>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+    #modal-account.flex, #modal-prefix.flex { display: flex; }
+  </style>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var titles = {
+        ticker: 'Ticker Thông Báo',
+        accounts: 'Quản lý tài khoản',
+        hdkhcn: 'Hội đồng KHCN',
+        thamdinh: 'Tổ thẩm định tài chính',
+        'admin-team': 'Tổ Admin hệ thống',
+        hangmuc: 'Hạng mục đề tài cấp Viện',
+        nhiemvu: 'Nhiệm vụ KHCN',
+        homepage: 'Cấu hình trang chủ & hệ thống',
+        rss: 'Tin RSS cập nhật (Trang chủ)',
+        email: 'Email thông báo',
+        logs: 'Nhật ký hệ thống'
+      };
+
+      function showSection(id) {
+        document.querySelectorAll('.content-section').forEach(function (el) {
+          el.classList.add('hidden');
+        });
+        var panel = document.getElementById('section-' + id);
+        if (panel) panel.classList.remove('hidden');
+
+        document.querySelectorAll('.sidebar-link').forEach(function (btn) {
+          btn.classList.toggle('active', btn.getAttribute('data-section') === id);
+        });
+
+        var titleEl = document.getElementById('page-title');
+        if (titleEl) titleEl.textContent = titles[id] || id;
+      }
+
+      document.getElementById('main-nav').addEventListener('click', function (e) {
+        var btn = e.target.closest('.sidebar-link');
+        if (!btn) return;
+        var id = btn.getAttribute('data-section');
+        if (id) showSection(id);
+        closeMobileSidebar();
+      });
+
+      /* --- Mobile sidebar --- */
+      var sidebar = document.getElementById('sidebar');
+      var overlay = document.getElementById('sidebar-overlay');
+      function openMobileSidebar() {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.add('open');
+        document.body.classList.add('overflow-hidden');
+      }
+      function closeMobileSidebar() {
+        if (window.innerWidth >= 1024) return;
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.remove('open');
+        document.body.classList.remove('overflow-hidden');
+      }
+      document.getElementById('btn-menu').addEventListener('click', openMobileSidebar);
+      overlay.addEventListener('click', closeMobileSidebar);
+      window.addEventListener('resize', function () {
+        if (window.innerWidth >= 1024) {
+          sidebar.classList.remove('-translate-x-full');
+          overlay.classList.remove('open');
+          document.body.classList.remove('overflow-hidden');
+        } else {
+          sidebar.classList.add('-translate-x-full');
+        }
+      });
+
+      /* --- Demo alerts --- */
+      function bindDemoAlerts() {
+        document.querySelectorAll('.demo-alert').forEach(function (el) {
+          el.addEventListener('click', function (ev) {
+            if (el.type === 'submit') return;
+            ev.preventDefault();
+            alert('Chức năng đang phát triển');
+          });
+        });
+      }
+
+      /* --- Module table for homepage --- */
+      var modules = [
+        ['Quản lý nhiệm vụ KHCN', 'decision'],
+        ['Quản lý Công bố Khoa học', 'publications'],
+        ['Quản lý Cơ sở vật chất', 'facilities'],
+        ['Quản lý tài liệu & hồ sơ', 'docs'],
+        ['Quản lý Hợp tác', 'cooperation'],
+        ['Quản trị thiết bị', 'equipment_states'],
+        ['Hội đồng đạo đức', 'ethics_ace'],
+        ['Quản lý Nhân lực KHCN', 'personnel'],
+        ['Quản lý Tài sản Trí tuệ', 'log'],
+        ['Quản lý Tài chính KHCN', 'finance']
+      ];
+      var tbody = document.getElementById('module-toggles');
+      if (tbody) {
+        modules.forEach(function (row) {
+          var tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 border-b border-slate-100';
+          tr.innerHTML =
+            '<td class="px-3 py-2">' + row[0] + '</td>' +
+            '<td class="px-3 py-2 font-mono text-xs text-slate-600">' + row[1] + '</td>' +
+            '<td class="px-3 py-2 text-center">' +
+            '<label class="inline-flex items-center cursor-pointer">' +
+            '<input type="checkbox" class="module-toggle sr-only peer" checked />' +
+            '<span class="w-10 h-5 bg-slate-200 rounded-full relative inline-block after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:bg-white after:rounded-full peer-checked:bg-indigo-600 peer-checked:after:translate-x-5 after:transition-all"></span>' +
+            '<span class="ml-2 text-xs text-emerald-600 font-medium">Bật</span>' +
+            '</label></td>';
+          tbody.appendChild(tr);
+        });
+        tbody.querySelectorAll('.module-toggle').forEach(function (cb) {
+          cb.addEventListener('change', function () {
+            alert('Chức năng đang phát triển');
+          });
+        });
+      }
+
+      /* --- Prefix row toggles --- */
+      document.querySelectorAll('.demo-toggle').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          alert('Chức năng đang phát triển');
+          var row = cb.closest('tr');
+          if (row) {
+            var label = row.querySelector('.toggle-label');
+            if (label) label.textContent = cb.checked ? 'Bật' : 'Tắt';
+          }
+        });
+      });
+
+      /* --- Modals --- */
+      var modalAcc = document.getElementById('modal-account');
+      function openModalAcc() {
+        modalAcc.classList.remove('hidden');
+        modalAcc.classList.add('flex');
+      }
+      function closeModalAcc() {
+        modalAcc.classList.add('hidden');
+        modalAcc.classList.remove('flex');
+      }
+      document.getElementById('btn-open-add-account').addEventListener('click', openModalAcc);
+      document.getElementById('modal-account-close').addEventListener('click', closeModalAcc);
+      document.getElementById('modal-account-cancel').addEventListener('click', closeModalAcc);
+      modalAcc.addEventListener('click', function (e) {
+        if (e.target === modalAcc) closeModalAcc();
+      });
+      document.getElementById('form-add-account').addEventListener('submit', function (e) {
+        e.preventDefault();
+        alert('Chức năng đang phát triển');
+        closeModalAcc();
+      });
+
+      var modalPre = document.getElementById('modal-prefix');
+      function openPre() {
+        modalPre.classList.remove('hidden');
+        modalPre.classList.add('flex');
+      }
+      function closePre() {
+        modalPre.classList.add('hidden');
+        modalPre.classList.remove('flex');
+      }
+      document.getElementById('btn-open-prefix').addEventListener('click', openPre);
+      document.getElementById('modal-prefix-close').addEventListener('click', closePre);
+      modalPre.addEventListener('click', function (e) {
+        if (e.target === modalPre) closePre();
+      });
+      document.getElementById('form-prefix').addEventListener('submit', function (e) {
+        e.preventDefault();
+        alert('Chức năng đang phát triển');
+        closePre();
+      });
+
+      bindDemoAlerts();
+      showSection('accounts');
+    })();
+  </script>
+</body>
+</html>

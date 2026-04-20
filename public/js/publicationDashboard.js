@@ -10,10 +10,11 @@
     return localStorage.getItem('token');
   }
 
-  function authHeaders() {
+  function authHeaders(json) {
     const t = getToken();
     const h = { Accept: 'application/json' };
     if (t) h.Authorization = 'Bearer ' + t;
+    if (json) h['Content-Type'] = 'application/json';
     return h;
   }
 
@@ -312,21 +313,99 @@
     document.getElementById('pd-filter-from').value = y - 5;
     document.getElementById('pd-filter-to').value = y;
 
-    if (isAdmin()) {
-      document.getElementById('pd-tab-perms').hidden = false;
+    /** Quyền Admin / Master: lấy từ /api/me (DB), không tin localStorage — tránh role lệch → ẩn tab. */
+    var isAdminApi = false;
+    var isMaster = false;
+    if (getToken()) {
+      try {
+        const me = await fetch('/api/me', { headers: authHeaders() });
+        if (me.ok) {
+          const mj = await me.json();
+          isAdminApi = String(mj.role || '').toLowerCase() === 'admin';
+          isMaster = mj.isMasterAdmin === true;
+        }
+      } catch (e) {}
     }
+    var showPerms = isAdminApi || isMaster || isAdmin();
+    var showDevTools = isAdminApi || isMaster || isAdmin();
 
-    loadDashboard();
+    var permsBtn = document.getElementById('pd-tab-btn-perms');
+    if (permsBtn) permsBtn.hidden = !showPerms;
+    var devBtn = document.getElementById('pd-tab-btn-dev');
+    if (devBtn) devBtn.hidden = !showDevTools;
+
+    var wantDevTab = false;
+    try {
+      var params = new URLSearchParams(window.location.search);
+      wantDevTab =
+        params.get('tab') === 'dev' || /^dev$/i.test((window.location.hash || '').replace(/^#/, ''));
+    } catch (e) {}
+
+    if (wantDevTab && showDevTools) {
+      switchTab('dev');
+    } else {
+      if (wantDevTab && !showDevTools) {
+        toast('Cần quyền Admin hoặc tài khoản Master Admin để mở công cụ cấu hình.', false);
+      }
+      loadDashboard();
+    }
+  }
+
+  async function loadDevAccessSettings() {
+    var suffixEl = document.getElementById('pd-dev-suffix');
+    if (!suffixEl || !getToken()) return;
+    try {
+      var res = await fetch('/api/dev/pub-analytics-access', { headers: authHeaders() });
+      if (!res.ok) return;
+      var j = await res.json();
+      if (j.mode) {
+        var r = document.querySelector('input[name="pd-dev-mode"][value="' + j.mode + '"]');
+        if (r) r.checked = true;
+      }
+      if (j.email_suffix) suffixEl.value = j.email_suffix;
+    } catch (e) {}
+  }
+
+  async function saveDevAccessSettings() {
+    if (!getToken()) {
+      toast('Cần đăng nhập quản trị (Admin)', false);
+      return;
+    }
+    var modeEl = document.querySelector('input[name="pd-dev-mode"]:checked');
+    var mode = modeEl ? modeEl.value : 'whitelist';
+    var suffix = (document.getElementById('pd-dev-suffix') || {}).value || '@sci.edu.vn';
+    try {
+      var res = await fetch('/api/dev/pub-analytics-access', {
+        method: 'PUT',
+        headers: authHeaders(true),
+        body: JSON.stringify({ mode: mode, email_suffix: suffix.trim() }),
+      });
+      var j = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        toast(j.error || 'Lưu thất bại', false);
+        return;
+      }
+      toast('Đã lưu chính sách truy cập', true);
+    } catch (e) {
+      toast('Lỗi lưu', false);
+    }
   }
 
   function switchTab(which) {
     document.getElementById('pd-tab-btn-dash').classList.toggle('active', which === 'dash');
     document.getElementById('pd-tab-btn-perms').classList.toggle('active', which === 'perms');
+    var devBtn = document.getElementById('pd-tab-btn-dev');
+    if (devBtn) devBtn.classList.toggle('active', which === 'dev');
     document.getElementById('pd-panel-dash').hidden = which !== 'dash';
     document.getElementById('pd-panel-perms').hidden = which !== 'perms';
+    var devPanel = document.getElementById('pd-panel-dev');
+    if (devPanel) devPanel.hidden = which !== 'dev';
     if (which === 'perms' && window.DashboardPermissions && window.DashboardPermissions.reload) {
       window.DashboardPermissions.reload();
     }
+    if (which === 'dev') loadDevAccessSettings();
   }
 
   document.getElementById('pd-btn-apply').addEventListener('click', function () {
@@ -340,6 +419,14 @@
   document.getElementById('pd-tab-btn-perms').addEventListener('click', function () {
     switchTab('perms');
   });
+  var pdTabDev = document.getElementById('pd-tab-btn-dev');
+  if (pdTabDev) {
+    pdTabDev.addEventListener('click', function () {
+      switchTab('dev');
+    });
+  }
+  var pdDevSave = document.getElementById('pd-dev-save');
+  if (pdDevSave) pdDevSave.addEventListener('click', saveDevAccessSettings);
 
   window.addEventListener('DOMContentLoaded', gate);
 })();

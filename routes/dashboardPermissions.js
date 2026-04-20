@@ -4,12 +4,14 @@
  */
 
 const express = require('express');
+const { evaluatePubAnalyticsAccess } = require('../middleware/pubAnalyticsAccess');
 
-function adminOnly(req, res, next) {
-  if ((req.user.role || '').toLowerCase() !== 'admin') {
-    return res.status(403).json({ ok: false, success: false, error: 'Chỉ Admin mới có quyền này' });
-  }
-  next();
+function createAdminOrMasterOnly(isMasterAdmin) {
+  return function adminOrMasterOnly(req, res, next) {
+    if ((req.user.role || '').toLowerCase() === 'admin') return next();
+    if (typeof isMasterAdmin === 'function' && isMasterAdmin(req)) return next();
+    return res.status(403).json({ ok: false, success: false, error: 'Chỉ Admin hoặc Master Admin mới có quyền này' });
+  };
 }
 
 function resolveGroupUserIds(db, group) {
@@ -45,15 +47,26 @@ function resolveGroupUserIds(db, group) {
   return [];
 }
 
-module.exports = function createDashboardPermissionsRouter({ db }) {
+module.exports = function createDashboardPermissionsRouter({ db, isMasterAdmin, isUserMasterAdmin }) {
   const router = express.Router();
+  const adminOrMasterOnly = createAdminOrMasterOnly(isMasterAdmin);
 
-  /** Kiểm tra quyền user hiện tại (không cần admin) */
+  /** Kiểm tra quyền user hiện tại (không cần admin). pub_analytics: hỗ trợ chế độ public (không bắt buộc đăng nhập). */
   router.get('/:dashboardId/check', (req, res) => {
     try {
       const dashboardId = String(req.params.dashboardId || '').trim();
       if (!dashboardId) {
         return res.status(400).json({ ok: false, success: false, error: 'Thiếu dashboardId' });
+      }
+      if (dashboardId === 'pub_analytics') {
+        const user = req.user || null;
+        const ev = evaluatePubAnalyticsAccess(db, user, { isUserMasterAdmin });
+        return res.json({
+          ok: true,
+          success: true,
+          allowed: ev.allowed,
+          mode: ev.mode,
+        });
       }
       const user = req.user;
       if (!user || user.id == null) {
@@ -79,7 +92,7 @@ module.exports = function createDashboardPermissionsRouter({ db }) {
   });
 
   /** Danh sách user được cấp (admin) */
-  router.get('/:dashboardId', adminOnly, (req, res) => {
+  router.get('/:dashboardId', adminOrMasterOnly, (req, res) => {
     try {
       const dashboardId = String(req.params.dashboardId || '').trim();
       const rows = db
@@ -109,7 +122,7 @@ module.exports = function createDashboardPermissionsRouter({ db }) {
    * Cấp quyền: body { user_ids: [1,2], expires_at: "2026-12-31" | null }
    * hoặc { group: "ncv"|"leadership"|"accounting", expires_at }
    */
-  router.post('/:dashboardId', adminOnly, (req, res) => {
+  router.post('/:dashboardId', adminOrMasterOnly, (req, res) => {
     try {
       const dashboardId = String(req.params.dashboardId || '').trim();
       const grantedBy = req.user.id;
@@ -157,7 +170,7 @@ module.exports = function createDashboardPermissionsRouter({ db }) {
     }
   });
 
-  router.delete('/:dashboardId/:userId', adminOnly, (req, res) => {
+  router.delete('/:dashboardId/:userId', adminOrMasterOnly, (req, res) => {
     try {
       const dashboardId = String(req.params.dashboardId || '').trim();
       const userId = Number(req.params.userId);

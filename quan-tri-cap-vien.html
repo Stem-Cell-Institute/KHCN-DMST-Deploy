@@ -211,7 +211,7 @@
                     <div class="admin-sidebar-title">Danh mục</div>
                     <nav class="admin-sidebar-nav">
                         <a href="/admin/ticker" id="nav-ticker-admin" style="display:none;">📢 Ticker Thông Báo</a>
-                        <a href="#section-accounts">Quản lý tài khoản</a>
+                        <a href="quan-tri-tai-khoan.html">Quản lý tài khoản</a>
                         <a href="#section-hdkhcn">Hội đồng KHCN</a>
                         <a href="#section-budget">Tổ thẩm định tài chính</a>
                         <a href="#section-admin-team">Tổ Admin hệ thống</a>
@@ -385,117 +385,14 @@
             </div>
             </section>
 
-            <!-- PHẦN 4: QUẢN LÝ TÀI KHOẢN (toàn hệ thống) -->
+            <!-- PHẦN 4: QUẢN LÝ TÀI KHOẢN — trang riêng -->
             <section id="section-accounts" class="section-block section-members accounts-section">
-            <header class="accounts-hero">
-                <div>
-                    <h2 class="accounts-hero__title">Quản lý tài khoản</h2>
-                    <p class="accounts-hero__lead">Tạo và cập nhật người dùng toàn hệ thống, theo dõi kích hoạt, khóa tài khoản hoặc xóa khi chưa có hồ sơ nộp.</p>
-                </div>
-                <div class="accounts-hero__actions">
-                    <a href="dang-ky.html">Đăng ký (user)</a>
-                </div>
-            </header>
-
-            <details class="accounts-help-details">
-                <summary>Hướng dẫn nhanh — thao tác trên tài khoản</summary>
-                <div class="accounts-guide-grid" role="list">
-                    <article class="accounts-guide-card" role="listitem">
-                        <div class="accounts-guide-card__icon" aria-hidden="true">➕</div>
-                        <p class="accounts-guide-card__label">Thêm / cập nhật</p>
-                        <p class="accounts-guide-card__text">Dùng form bên dưới. Email đã tồn tại → chỉ cập nhật họ tên và vai trò; không đổi mật khẩu từ đây.</p>
-                    </article>
-                    <article class="accounts-guide-card" role="listitem">
-                        <div class="accounts-guide-card__icon" aria-hidden="true">🔐</div>
-                        <p class="accounts-guide-card__label">Kích hoạt</p>
-                        <p class="accounts-guide-card__text">Cột kích hoạt: <strong>Chưa kích hoạt</strong> hoặc <strong>Đã kích hoạt</strong>. Admin có thể đặt mật khẩu lúc tạo (≥6 ký tự) hoặc để user tự đặt qua Đăng ký.</p>
-                    </article>
-                    <article class="accounts-guide-card" role="listitem">
-                        <div class="accounts-guide-card__icon" aria-hidden="true">🔄</div>
-                        <p class="accounts-guide-card__label">Cấp lại MK</p>
-                        <p class="accounts-guide-card__text">Đưa về chưa kích hoạt (xóa mật khẩu). User vào <strong>Đăng ký</strong> với cùng email @sci.edu.vn. Không áp dụng Admin.</p>
-                    </article>
-                    <article class="accounts-guide-card" role="listitem">
-                        <div class="accounts-guide-card__icon" aria-hidden="true">🔒</div>
-                        <p class="accounts-guide-card__label">Khóa / mở khóa</p>
-                        <p class="accounts-guide-card__text">Tài khoản bị khóa không đăng nhập được. Không khóa chính mình.</p>
-                    </article>
-                    <article class="accounts-guide-card" role="listitem">
-                        <div class="accounts-guide-card__icon" aria-hidden="true">🗑️</div>
-                        <p class="accounts-guide-card__label">Xóa tài khoản</p>
-                        <p class="accounts-guide-card__text">Chỉ khi user <strong>chưa có hồ sơ nộp</strong>. Không xóa chính mình.</p>
-                    </article>
-                </div>
-            </details>
-
-            <div id="msg-members" class="msg"></div>
-
-            <div class="accounts-layout">
-                <div class="accounts-layout__form">
-                    <div class="card add-role-card accounts-form-card">
-                <h3>Thêm tài khoản</h3>
-                <p class="accounts-form-note">Tạo user mới hoặc (email đã có) cập nhật họ tên và vai trò. Để trống mật khẩu → <strong>chưa kích hoạt</strong>; user đặt mật khẩu tại <strong>Đăng ký</strong> (@sci.edu.vn). <strong>Lưu ý:</strong> nếu trình duyệt tự điền ô mật khẩu, hãy xóa sạch trước khi gửi — chuỗi ≥6 ký tự sẽ được coi là mật khẩu thật.</p>
-                <form id="form-add-account" class="add-role-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="add-account-fullname">Họ và tên</label>
-                            <input type="text" id="add-account-fullname" name="fullname" placeholder="VD: Nguyễn Văn A" autocomplete="name">
-                        </div>
-                        <div class="form-group">
-                            <label for="add-account-email">Email</label>
-                            <input type="email" id="add-account-email" name="email" placeholder="user@sci.edu.vn" required autocomplete="email">
-                        </div>
-                        <div class="form-group">
-                            <label for="add-account-role">Vai trò</label>
-                            <select id="add-account-role" name="role">
-                                <option value="researcher">Nghiên cứu viên</option>
-                                <option value="thanh_vien">Thành viên HĐKHCN</option>
-                                <option value="thu_ky">Thư ký HĐKHCN</option>
-                                <option value="chu_tich">Chủ tịch HĐKHCN</option>
-                                <option value="phong_khcn">Phòng KHCN</option>
-                                <option value="totruong_tham_dinh_tc">Tổ trưởng Tổ thẩm định TC</option>
-                                <option value="thanh_vien_tham_dinh_tc">Thành viên Tổ thẩm định TC</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="add-account-academic">Học hàm / học vị (tùy chọn)</label>
-                            <input type="text" id="add-account-academic" name="academicTitle" placeholder="VD: PGS.TS — thường dùng cho Tổ thẩm định TC">
-                        </div>
-                        <div class="form-group">
-                            <label for="add-account-password">Mật khẩu (chỉ khi tạo mới)</label>
-                            <input type="text" id="add-account-password" name="password" placeholder="Để trống = chưa kích hoạt; ≥6 ký tự = kích hoạt ngay" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
-                        </div>
-                        <div class="form-group form-group-btn">
-                            <button type="submit" class="btn-submit-role" id="btn-add-account">Thêm tài khoản</button>
-                        </div>
-                    </div>
-                </form>
-                    </div>
-                </div>
-                <aside class="accounts-aside" aria-label="Mẹo nhanh">
-                    <h4>Mẹo</h4>
-                    <ul>
-                        <li>Ưu tiên để trống mật khẩu và gửi user qua trang Đăng ký để tự đặt — an toàn hơn.</li>
-                        <li>Dùng ô <strong>Lọc danh sách</strong> để tìm nhanh theo email, tên hoặc vai trò.</li>
-                        <li>Cần chỉnh HĐ / Tổ TC riêng? Cuộn tới các mục tương ứng trong danh mục bên trái.</li>
-                    </ul>
-                </aside>
-            </div>
-
-            <div class="card accounts-table-card">
-                <div class="card__toolbar">
-                    <h3>Danh sách tất cả tài khoản</h3>
-                    <div class="accounts-filter-wrap">
-                        <label for="accounts-member-filter" class="visually-hidden">Lọc danh sách tài khoản</label>
-                        <input type="search" id="accounts-member-filter" class="accounts-filter-input" placeholder="Lọc theo email, tên, vai trò…" autocomplete="off">
-                    </div>
-                </div>
-                <div id="members-table-wrap" class="accounts-table-wrap accounts-table-scroll">
-                    <div class="empty-state">Đang tải...</div>
-                </div>
+            <div class="card">
+                <h2 class="page-title" style="margin-top:0;">Quản lý tài khoản</h2>
+                <p class="note" style="margin-top:0;">Danh sách toàn hệ thống, lọc theo <strong>nội / ngoại viện</strong> và <strong>năm tạo</strong>, làm nổi bật tài khoản mới — đã chuyển sang <strong>trang riêng</strong> để dễ thao tác khi dữ liệu nhiều.</p>
+                <p style="margin:0;">
+                    <a href="quan-tri-tai-khoan.html" class="btn-submit-role" style="display:inline-block;text-decoration:none;">Mở trang Quản lý tài khoản →</a>
+                </p>
             </div>
             </section>
 
@@ -1777,7 +1674,6 @@
                 }
                 if (res.ok) {
                     loadAdminUsers();
-                    loadMembers();
                 }
             } catch (err) {
                 if (msgEl) {
@@ -1797,121 +1693,6 @@
             demoteAdminRole(email);
         });
 
-        async function loadMembers() {
-            const wrap = document.getElementById('members-table-wrap');
-            if (!isAdmin || !token) return;
-            try {
-                const res = await fetch(apiBase + '/api/admin/users', { headers: { 'Authorization': 'Bearer ' + token } });
-                if (res.status === 401 || res.status === 403) {
-                    const msg = res.status === 401 ? 'Phiên đăng nhập hết hạn. <a href="dang-nhap.html">Đăng nhập lại</a>.' : 'Token không có quyền Admin. <a href="dang-nhap.html">Đăng nhập lại</a>.';
-                    wrap.innerHTML = '<div class="empty-state">' + msg + '</div>';
-                    return;
-                }
-                const data = await res.json().catch(() => ({}));
-                const users = data.users || [];
-                const currentEmail = (user.email || '').toLowerCase();
-                if (users.length === 0) {
-                    wrap.innerHTML = '<div class="empty-state">Chưa có thành viên nào.</div>';
-                    return;
-                }
-                function escHtml(s) {
-                    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-                }
-                wrap.innerHTML = '<table><thead><tr><th>ID</th><th>Email</th><th>Họ tên</th><th>Kích hoạt đăng nhập</th><th>Học hàm/HV</th><th>Vai trò</th><th>Ngày tạo</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>' +
-                    users.map(function(u) {
-                        const email = (u.email || '').replace(/"/g, '&quot;');
-                        const date = (u.createdAt || '').slice(0, 10);
-                        const isSelf = (u.email || '').toLowerCase() === currentEmail;
-                        const banned = Number(u.is_banned) === 1;
-                        const statusHtml = banned
-                            ? '<span class="badge-ban on">Đã khóa</span>'
-                            : '<span class="badge-ban off">Hoạt động</span>';
-                        const acad = (u.academicTitle || '').replace(/</g, '&lt;') || '—';
-                        const activated = u.activated !== false && u.activated !== 0 && u.activated !== '0';
-                        var pwdCell;
-                        if (!activated) {
-                            pwdCell = '<span style="display:inline-block;padding:0.2rem 0.55rem;border-radius:6px;background:#fffbeb;color:#f59e0b;font-size:0.82rem;font-weight:600;">⏳ Chưa kích hoạt</span>';
-                        } else {
-                            pwdCell = '<span style="display:inline-block;padding:0.2rem 0.55rem;border-radius:6px;background:#ecfdf5;color:#15803d;font-size:0.82rem;font-weight:600;">✅ Đã kích hoạt</span>';
-                        }
-                        const uid = u.id != null ? String(u.id) : '';
-                        const isRowAdmin = (u.role || '').toLowerCase() === 'admin';
-                        const resetBtn = isRowAdmin
-                            ? ''
-                            : '<button type="button" class="btn-sm btn-reset-pw" data-email="' + email + '" data-user-id="' + uid + '" style="background:#17a2b8">Cấp lại MK</button>';
-                        return '<tr' + (banned ? ' style="opacity:0.92"' : '') + '><td>' + (u.id != null ? u.id : '—') + '</td><td>' + email + '</td><td>' + (u.fullname || '-') + '</td><td>' + pwdCell + '</td><td>' + acad + '</td><td>' + (roleLabels[u.role] || u.role) + '</td><td>' + date + '</td><td>' + statusHtml + '</td>' +
-                            '<td><div class="btn-row">' + resetBtn +
-                            (isSelf ? '' : '<button type="button" class="btn-sm btn-ban-toggle" data-email="' + email + '" data-banned="' + (banned ? '1' : '0') + '" style="background:#6f42c1">' + (banned ? 'Mở khóa' : 'Khóa TK') + '</button>' +
-                            '<button type="button" class="btn-sm btn-delete-member btn-delete" data-email="' + email + '">Xóa</button>') + '</div></td></tr>';
-                    }).join('') + '</tbody></table>';
-                var filtEl = document.getElementById('accounts-member-filter');
-                if (filtEl && filtEl.value) filtEl.dispatchEvent(new Event('input', { bubbles: true }));
-            } catch (err) {
-                wrap.innerHTML = '<div class="empty-state">Không thể tải danh sách.</div>';
-            }
-        }
-        if (isAdmin) loadMembers();
-
-        (function initAccountsMemberFilter() {
-            var inp = document.getElementById('accounts-member-filter');
-            var wrap = document.getElementById('members-table-wrap');
-            if (!inp || !wrap) return;
-            function applyFilter() {
-                var q = (inp.value || '').trim().toLowerCase();
-                var tbody = wrap.querySelector('table tbody');
-                if (!tbody) return;
-                Array.prototype.forEach.call(tbody.rows, function(tr) {
-                    if (!q) { tr.hidden = false; return; }
-                    tr.hidden = tr.textContent.toLowerCase().indexOf(q) === -1;
-                });
-            }
-            inp.addEventListener('input', applyFilter);
-            inp.addEventListener('search', applyFilter);
-        })();
-
-        document.getElementById('members-table-wrap').addEventListener('click', function(e) {
-            const btn = e.target.closest('.btn-reset-pw, .btn-delete-member, .btn-ban-toggle');
-            if (!btn) return;
-            const email = btn.getAttribute('data-email');
-            if (!email) return;
-            if (btn.classList.contains('btn-reset-pw')) {
-                const uid = btn.getAttribute('data-user-id');
-                if (!uid) { alert('Thiếu ID tài khoản.'); return; }
-                if (confirm('Đưa tài khoản ' + email + ' về trạng thái chưa kích hoạt?\nUser sẽ phải vào trang Đăng ký (@sci.edu.vn) để đặt mật khẩu lần đầu. Không áp dụng Admin.')) {
-                    resetUserToUnactivated(uid);
-                }
-            } else if (btn.classList.contains('btn-ban-toggle')) {
-                const cur = btn.getAttribute('data-banned') === '1';
-                if (confirm(cur ? 'Mở khóa đăng nhập cho ' + email + '?' : 'Khóa tài khoản ' + email + '? User sẽ không đăng nhập được.')) {
-                    setMemberBanned(email, !cur);
-                }
-            } else if (btn.classList.contains('btn-delete-member')) {
-                if (confirm('Xóa tài khoản ' + email + '? Chỉ xóa được khi chưa có hồ sơ nộp.')) deleteMember(email);
-            }
-        });
-
-        async function setMemberBanned(email, banned) {
-            const msgEl = document.getElementById('msg-members');
-            if (msgEl) { msgEl.style.display = 'block'; msgEl.textContent = 'Đang cập nhật...'; msgEl.className = 'msg'; }
-            try {
-                const res = await fetch(apiBase + '/api/admin/users/' + encodeURIComponent(email) + '/banned', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ banned: !!banned })
-                });
-                const data = await res.json().catch(() => ({}));
-                if (msgEl) { msgEl.style.display = 'block'; }
-                if (res.ok) {
-                    if (msgEl) { msgEl.textContent = data.message || 'Đã cập nhật.'; msgEl.className = 'msg success'; }
-                    loadMembers();
-                } else {
-                    if (msgEl) { msgEl.textContent = data.message || 'Thất bại.'; msgEl.className = 'msg error'; }
-                }
-            } catch (err) {
-                if (msgEl) { msgEl.textContent = 'Lỗi kết nối.'; msgEl.className = 'msg error'; msgEl.style.display = 'block'; }
-            }
-        }
-
         (function initAdminSidebarActive() {
             var nav = document.querySelector('.admin-sidebar-nav');
             if (!nav) return;
@@ -1928,60 +1709,6 @@
             window.addEventListener('hashchange', function() { setActive(); });
             setActive();
         })();
-
-        async function resetUserToUnactivated(userId) {
-            const msgEl = document.getElementById('msg-members');
-            if (msgEl) { msgEl.style.display = 'block'; msgEl.textContent = 'Đang reset kích hoạt...'; msgEl.className = 'msg'; }
-            try {
-                const res = await fetch(apiBase + '/api/admin/reset-user-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ userId: parseInt(userId, 10) })
-                });
-                const data = await res.json().catch(() => ({}));
-                msgEl.style.display = 'block';
-                if (res.ok) {
-                    msgEl.textContent = data.message || 'Đã reset.';
-                    msgEl.className = 'msg success';
-                    loadMembers();
-                } else {
-                    msgEl.textContent = data.message || 'Thất bại.';
-                    msgEl.className = 'msg error';
-                }
-            } catch (err) {
-                msgEl.textContent = 'Lỗi kết nối.';
-                msgEl.className = 'msg error';
-                msgEl.style.display = 'block';
-            }
-        }
-
-        async function deleteMember(email) {
-            const msgEl = document.getElementById('msg-members');
-            if (msgEl) { msgEl.style.display = 'block'; msgEl.textContent = 'Đang xóa...'; msgEl.className = 'msg'; }
-            try {
-                const res = await fetch(apiBase + '/api/admin/users/' + encodeURIComponent(email), {
-                    method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                const data = await res.json().catch(() => ({}));
-                msgEl.style.display = 'block';
-                if (res.ok) {
-                    msgEl.textContent = data.message || 'Đã xóa tài khoản.';
-                    msgEl.className = 'msg success';
-                    loadMembers();
-                    loadUsers();
-                    loadBudgetTeam();
-                    loadAdminUsers();
-                } else {
-                    msgEl.textContent = data.message || 'Xóa thất bại.';
-                    msgEl.className = 'msg error';
-                }
-            } catch (err) {
-                msgEl.textContent = 'Lỗi kết nối.';
-                msgEl.className = 'msg error';
-                msgEl.style.display = 'block';
-            }
-        }
 
         const auditActionLabels = {
             login: 'Đăng nhập',
@@ -2141,74 +1868,6 @@
                 } catch (err) {
                     msgEl.textContent = 'Lỗi kết nối.';
                     msgEl.className = 'msg error';
-                }
-                btn.disabled = false;
-            });
-
-            document.getElementById('form-add-account').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const msgEl = document.getElementById('msg-members');
-                const btn = document.getElementById('btn-add-account');
-                const email = document.getElementById('add-account-email').value.trim();
-                const fullname = document.getElementById('add-account-fullname').value.trim();
-                const role = document.getElementById('add-account-role').value;
-                const passwordTrim = (document.getElementById('add-account-password').value || '').trim();
-                const academicTitle = document.getElementById('add-account-academic').value.trim();
-                if (!email) {
-                    if (msgEl) {
-                        msgEl.style.display = 'block';
-                        msgEl.textContent = 'Vui lòng nhập email.';
-                        msgEl.className = 'msg error';
-                    }
-                    return;
-                }
-                if (msgEl) {
-                    msgEl.className = 'msg';
-                    msgEl.textContent = '';
-                }
-                btn.disabled = true;
-                try {
-                    const res = await fetch(apiBase + '/api/admin/users', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                        body: JSON.stringify({
-                            email,
-                            fullname,
-                            role,
-                            password: passwordTrim || undefined,
-                            academicTitle: academicTitle || undefined
-                        })
-                    });
-                    const data = await res.json().catch(() => ({}));
-                    if (msgEl) msgEl.style.display = 'block';
-                    if (res.ok) {
-                        if (msgEl) {
-                            msgEl.className = 'msg success';
-                            msgEl.textContent =
-                                data.activated === false
-                                    ? (data.message || 'Đã thêm tài khoản chưa kích hoạt.')
-                                    : (data.message || 'Đã xử lý.');
-                        }
-                        document.getElementById('add-account-email').value = '';
-                        document.getElementById('add-account-fullname').value = '';
-                        document.getElementById('add-account-password').value = '';
-                        document.getElementById('add-account-academic').value = '';
-                        loadMembers();
-                        loadUsers();
-                        loadBudgetTeam();
-                        loadAdminUsers();
-                    } else {
-                        if (msgEl) {
-                            msgEl.textContent = data.message || 'Thao tác thất bại.';
-                            msgEl.className = 'msg error';
-                        }
-                    }
-                } catch (err) {
-                    if (msgEl) {
-                        msgEl.style.display = 'block';
-                        msgEl.textContent = 'Lỗi kết nối.';
-                        msgEl.className = 'msg error';
-                    }
                 }
                 btn.disabled = false;
             });
