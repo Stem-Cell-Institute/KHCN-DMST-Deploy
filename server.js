@@ -21,6 +21,7 @@ if (!process.env.TZ) {
 const path = require('path');
 const { startWorker } = require(path.join(__dirname, 'services', 'enrichmentWorker.js'));
 const fs = require('fs');
+const { spawnSync } = require('child_process');
 const appPaths = require('./lib/appPaths');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
@@ -17799,13 +17800,55 @@ app.get('/public/vendor/Sortable.min.js', (req, res) => {
 // Admin UI bridge:
 // - If built bundle exists, serve React app at /admin
 // - Otherwise fallback to legacy HTML workflow page from backend
-const adminUiDistDir = path.join(__dirname, 'frontend', 'document-workflow-ui', 'dist');
-const adminUiIndexFile = path.join(adminUiDistDir, 'index.html');
+const adminUiDistCandidates = [
+  process.env.ADMIN_UI_DIST || '',
+  path.join(__dirname, 'frontend', 'document-workflow-ui', 'dist'),
+  path.join(__dirname, 'document-workflow-ui', 'dist'),
+  path.join(__dirname, 'dist', 'document-workflow-ui'),
+].filter(Boolean);
+const adminUiAutoBuildDisabled =
+  String(process.env.ADMIN_UI_AUTO_BUILD || '').toLowerCase() === '0' ||
+  String(process.env.ADMIN_UI_AUTO_BUILD || '').toLowerCase() === 'false';
+function tryAutoBuildAdminUi() {
+  const frontendDir = path.join(__dirname, 'frontend', 'document-workflow-ui');
+  const frontendPkg = path.join(frontendDir, 'package.json');
+  if (adminUiAutoBuildDisabled) return { attempted: false, ok: false, reason: 'disabled-by-env' };
+  if (!fs.existsSync(frontendPkg)) return { attempted: false, ok: false, reason: 'missing-frontend-package' };
+
+  console.log('[ADMIN UI] dist missing -> attempting auto build (npm install + npm run build)');
+  const installResult = spawnSync('npm', ['install'], {
+    cwd: frontendDir,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
+  if (installResult.status !== 0) {
+    console.error('[ADMIN UI] Auto-build failed at npm install');
+    return { attempted: true, ok: false, reason: 'install-failed' };
+  }
+  const buildResult = spawnSync('npm', ['run', 'build'], {
+    cwd: frontendDir,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
+  if (buildResult.status !== 0) {
+    console.error('[ADMIN UI] Auto-build failed at npm run build');
+    return { attempted: true, ok: false, reason: 'build-failed' };
+  }
+  console.log('[ADMIN UI] Auto-build succeeded');
+  return { attempted: true, ok: true, reason: 'build-succeeded' };
+}
+
+let adminUiAutoBuildState = { attempted: false, ok: false, reason: 'not-needed' };
+if (!adminUiDistCandidates.some((dir) => fs.existsSync(path.join(dir, 'index.html')))) {
+  adminUiAutoBuildState = tryAutoBuildAdminUi();
+}
+const adminUiDistDir = adminUiDistCandidates.find((dir) => fs.existsSync(path.join(dir, 'index.html'))) || null;
+const adminUiIndexFile = adminUiDistDir ? path.join(adminUiDistDir, 'index.html') : '';
 const legacyWorkflowHtml = path.join(__dirname, 'quy-trinh-van-ban-noi-bo.html');
 let adminUiServeMode = 'uninitialized';
 let adminUiModeReason = '';
 
-if (fs.existsSync(adminUiIndexFile)) {
+if (adminUiDistDir && fs.existsSync(adminUiIndexFile)) {
   adminUiServeMode = 'react-build';
   adminUiModeReason = `Found build file: ${adminUiIndexFile}`;
   // Vite build currently emits absolute /assets/* URLs by default.
@@ -17832,9 +17875,12 @@ if (fs.existsSync(adminUiIndexFile)) {
   });
 } else {
   adminUiServeMode = fs.existsSync(legacyWorkflowHtml) ? 'legacy-fallback' : 'unavailable';
+  const checkedDistPaths = adminUiDistCandidates.length
+    ? adminUiDistCandidates.join(', ')
+    : '(none)';
   adminUiModeReason = fs.existsSync(legacyWorkflowHtml)
-    ? `Missing React build (${adminUiIndexFile}); using legacy page (${legacyWorkflowHtml})`
-    : `Missing React build (${adminUiIndexFile}) and legacy page (${legacyWorkflowHtml})`;
+    ? `Missing React build (checked: ${checkedDistPaths}); using legacy page (${legacyWorkflowHtml})`
+    : `Missing React build (checked: ${checkedDistPaths}) and legacy page (${legacyWorkflowHtml})`;
   app.get(['/admin', '/admin/*'], (req, res) => {
     if (fs.existsSync(legacyWorkflowHtml)) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -17850,7 +17896,9 @@ function sendAdminUiStatus(res) {
     ok: adminUiServeMode !== 'unavailable',
     mode: adminUiServeMode,
     reason: adminUiModeReason,
-    reactBuildIndexExists: fs.existsSync(adminUiIndexFile),
+    reactBuildIndexExists: !!(adminUiDistDir && fs.existsSync(adminUiIndexFile)),
+    reactBuildDistDir: adminUiDistDir,
+    autoBuild: adminUiAutoBuildState,
     legacyFallbackExists: fs.existsSync(legacyWorkflowHtml),
     adminPath: '/admin',
   });

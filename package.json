@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "build": "npm run build:workflow-ui && npm run build:crd",
+    "build:workflow-ui": "npm --prefix frontend/document-workflow-ui install && npm --prefix frontend/document-workflow-ui run build",
     "build:crd": "esbuild crd-lab-booking/main.jsx --bundle --outfile=crd-lab-booking/bundle.js --format=iife --loader:.jsx=jsx --jsx=automatic --platform=browser",
     "migrate:turso": "node scripts/migrate-to-turso.js",
     "db:status": "node scripts/db-status.js",
