@@ -253,6 +253,13 @@ function createDocumentWorkflowAdminController(deps) {
         const suffix = String(b.internal_domain_email_suffix || '').trim() || '@sci.edu.vn';
         documentModel.setModuleSetting('internal_domain_email_suffix', suffix, req.user.id);
       }
+      if (b.step5_recipient_mode != null) {
+        const modeRaw = String(b.step5_recipient_mode || '').trim().toLowerCase();
+        const mode = ['module_manager_assigned', 'broad_roles'].includes(modeRaw)
+          ? modeRaw
+          : 'module_manager_assigned';
+        documentModel.setModuleSetting('step5_recipient_mode', mode, req.user.id);
+      }
       if (b.email_templates != null) {
         documentModel.setModuleSetting('email_templates', JSON.stringify(b.email_templates || {}), req.user.id);
       }

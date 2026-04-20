@@ -33,6 +33,7 @@ export function ModuleSettingsPage() {
               default_assignment_days: Number((f.elements.namedItem("default_assignment_days") as HTMLInputElement).value),
               default_review_remind_days: Number((f.elements.namedItem("default_review_remind_days") as HTMLInputElement).value),
               email_enabled: (f.elements.namedItem("email_enabled") as HTMLInputElement).checked,
+              step5_recipient_mode: (f.elements.namedItem("step5_recipient_mode") as HTMLSelectElement).value,
             };
             await saveModuleSettings(payload);
             setMsg("Đã lưu cấu hình module.");
@@ -48,6 +49,17 @@ export function ModuleSettingsPage() {
           <label className="flex items-center gap-2 text-sm md:col-span-2">
             <input name="email_enabled" type="checkbox" defaultChecked={settings.email_enabled === "1"} />
             Bật gửi email thông báo
+          </label>
+          <label className="text-sm md:col-span-2">
+            Chế độ người nhận email khi duyệt bước 4 (chuyển bước 5)
+            <select
+              name="step5_recipient_mode"
+              defaultValue={settings.step5_recipient_mode || "module_manager_assigned"}
+              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+            >
+              <option value="module_manager_assigned">Module Manager + Người soạn thảo được phân công</option>
+              <option value="broad_roles">Toàn bộ role Drafter + Leader + Reviewer + Người soạn thảo</option>
+            </select>
           </label>
           <p className="text-xs text-slate-500 md:col-span-2">
             Hệ thống đang dùng mẫu nội dung và danh sách người nhận tự động theo logic nghiệp vụ từng bước.

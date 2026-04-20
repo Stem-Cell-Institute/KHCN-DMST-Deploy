@@ -13,6 +13,12 @@ function stepForward(currentStep, forcedNextStep) {
   return Math.min(9, Math.max(1, Number(currentStep) + 1));
 }
 
+function safeAsciiFilename(name) {
+  return String(name || 'file')
+    .replace(/[^\x20-\x7E]/g, '_')
+    .replace(/["\\]/g, '_');
+}
+
 function createDocumentWorkflowController(deps) {
   const { db, documentModel, uploadsRoot, hasAnyRole, canAccessDocument, mailSend, baseUrl } = deps;
 
@@ -62,7 +68,9 @@ function createDocumentWorkflowController(deps) {
 
   function documentLink(documentId) {
     const base = String(baseUrl || process.env.BASE_URL || '').replace(/\/$/, '');
-    return base ? `${base}/tai-lieu-hanh-chinh.html?documentId=${documentId}` : `/tai-lieu-hanh-chinh.html?documentId=${documentId}`;
+    return base
+      ? `${base}/quy-trinh-van-ban-noi-bo.html?documentId=${documentId}`
+      : `/quy-trinh-van-ban-noi-bo.html?documentId=${documentId}`;
   }
 
   function composeFormalEmail(lines) {
@@ -129,6 +137,15 @@ function createDocumentWorkflowController(deps) {
     }
   }
 
+  function getModuleSetting(key, fallback) {
+    try {
+      const row = db.prepare(`SELECT setting_value FROM module_settings WHERE setting_key = ?`).get(String(key || ''));
+      return row && row.setting_value != null ? String(row.setting_value) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   function saveFiles(documentId, step, files, category, uploadedBy) {
     const ids = [];
     for (const f of files || []) {
@@ -137,7 +154,7 @@ function createDocumentWorkflowController(deps) {
         documentModel.addAttachment(documentId, {
           step,
           category: category || null,
-          originalName: f.originalname,
+          originalName: String((f && f.originalname) || '').trim() || 'file',
           storedName: f.filename,
           mimeType: f.mimetype || null,
           fileSize: Number(f.size || 0),
@@ -207,7 +224,7 @@ function createDocumentWorkflowController(deps) {
       history(record.id, 1, 'proposal_created', 'Khởi tạo đề xuất văn bản', req);
       safeSendMail({
         to: getModuleManagerEmails(),
-        subject: `[DOCFLOW] Hồ sơ mới được tạo: #${record.id}`,
+        subject: `[Quy trình ban hành văn bản] Hồ sơ mới được tạo: #${record.id}`,
         text: composeFormalEmail([
           `Hồ sơ "${record.title || ''}" vừa được tạo ở bước 1.`,
           `Loại văn bản: ${record.doc_type || 'N/A'}`,
@@ -392,7 +409,7 @@ function createDocumentWorkflowController(deps) {
       safeSendMail({
         to: toList,
         cc: ccList,
-        subject: `[DOCFLOW] Phân công soạn thảo hồ sơ #${documentId}`,
+        subject: `[Quy trình ban hành văn bản] Phân công soạn thảo hồ sơ #${documentId}`,
         text: composeFormalEmail([
           `Quý Thầy/Cô được phân công soạn thảo hồ sơ: ${updated.title || ''}`,
           `Hạn hoàn thành: ${updated.assignment_deadline || 'chưa đặt'}`,
@@ -431,7 +448,7 @@ function createDocumentWorkflowController(deps) {
       history(documentId, 3, 'upload_draft', `Tải dự thảo lần 1 (${attachmentIds.length} file)`, req);
       safeSendMail({
         to: getModuleManagerEmails(),
-        subject: `[DOCFLOW] Hồ sơ #${documentId} hoàn tất bước 3`,
+        subject: `[Quy trình ban hành văn bản] Hồ sơ #${documentId} hoàn tất bước 3`,
         text: composeFormalEmail([
           `Hồ sơ "${updated.title || record.title || ''}" đã upload dự thảo và chuyển sang bước 4.`,
           `Số file dự thảo: ${attachmentIds.length}`,
@@ -476,7 +493,7 @@ function createDocumentWorkflowController(deps) {
         const to = getUserEmailById(record.assigned_to_id);
         safeSendMail({
           to: resolveRecipients('review_reject', to ? [to] : []),
-          subject: `[DOCFLOW] Hồ sơ #${documentId} bị từ chối thẩm định`,
+          subject: `[Quy trình ban hành văn bản] Hồ sơ #${documentId} bị từ chối thẩm định`,
           text: composeFormalEmail([
             `Hồ sơ "${record.title || ''}" đã bị từ chối ở bước thẩm định và quay về bước 3.`,
             `Lý do: ${comment || 'Không có'}`,
@@ -484,17 +501,26 @@ function createDocumentWorkflowController(deps) {
           ]),
         });
       } else {
-        const recipients = Array.from(
-          new Set([
-            ...getRoleEmails('drafter'),
-            ...getRoleEmails('leader'),
-            ...getRoleEmails('reviewer'),
-            getUserEmailById(record.assigned_to_id),
-          ].filter(Boolean))
-        );
+        const mode = String(getModuleSetting('step5_recipient_mode', 'module_manager_assigned') || '').trim().toLowerCase();
+        const recipients =
+          mode === 'broad_roles'
+            ? Array.from(
+                new Set([
+                  ...getRoleEmails('drafter'),
+                  ...getRoleEmails('leader'),
+                  ...getRoleEmails('reviewer'),
+                  getUserEmailById(record.assigned_to_id),
+                ].filter(Boolean))
+              )
+            : Array.from(
+                new Set([
+                  ...getModuleManagerEmails(),
+                  getUserEmailById(record.assigned_to_id),
+                ].filter(Boolean))
+              );
         safeSendMail({
           to: resolveRecipients('step5_approved', recipients),
-          subject: `[DOCFLOW] Hồ sơ #${documentId} đã chuyển sang bước 5`,
+          subject: `[Quy trình ban hành văn bản] Hồ sơ #${documentId} đã chuyển sang bước 5`,
           text: composeFormalEmail([
             `Hồ sơ "${record.title || ''}" đã được duyệt thẩm định và chuyển sang bước 5 (lấy ý kiến góp ý).`,
             `Kính đề nghị Quý Thầy/Cô phối hợp phản hồi góp ý theo quy trình.`,
@@ -527,7 +553,7 @@ function createDocumentWorkflowController(deps) {
       history(documentId, 5, 'feedback_added', content.slice(0, 200), req);
       safeSendMail({
         to: getModuleManagerEmails(),
-        subject: `[DOCFLOW] Hồ sơ #${documentId} có góp ý mới (bước 5)`,
+        subject: `[Quy trình ban hành văn bản] Hồ sơ #${documentId} có góp ý mới (bước 5)`,
         text: composeFormalEmail([
           `Hồ sơ "${record.title || ''}" đã có góp ý và chuyển sang bước 6.`,
           `Nội dung góp ý (rút gọn): ${content.slice(0, 180)}`,
@@ -563,7 +589,7 @@ function createDocumentWorkflowController(deps) {
       history(documentId, 6, 'draft_finalized', `Hoàn thiện dự thảo (${attachmentIds.length} file)`, req);
       safeSendMail({
         to: getModuleManagerEmails(),
-        subject: `[DOCFLOW] Hồ sơ #${documentId} hoàn tất bước 6`,
+        subject: `[Quy trình ban hành văn bản] Hồ sơ #${documentId} hoàn tất bước 6`,
         text: composeFormalEmail([
           `Hồ sơ "${updated.title || record.title || ''}" đã hoàn thiện dự thảo và chuyển sang bước 7.`,
           `Xem chi tiết: ${documentLink(documentId)}`,
@@ -594,7 +620,7 @@ function createDocumentWorkflowController(deps) {
       history(documentId, 7, 'submitted_for_sign', note || 'Trình ký ban hành', req);
       safeSendMail({
         to: getModuleManagerEmails(),
-        subject: `[DOCFLOW] Hồ sơ #${documentId} hoàn tất bước 7`,
+        subject: `[Quy trình ban hành văn bản] Hồ sơ #${documentId} hoàn tất bước 7`,
         text: composeFormalEmail([
           `Hồ sơ "${updated.title || record.title || ''}" đã trình ký và chuyển sang bước 8.`,
           `Xem chi tiết: ${documentLink(documentId)}`,
@@ -624,7 +650,7 @@ function createDocumentWorkflowController(deps) {
       history(documentId, 8, 'document_published', updated.document_number || null, req);
       safeSendMail({
         to: resolveRecipients('publish', getAllUnitEmails()),
-        subject: `[DOCFLOW] Văn bản mới được ban hành: ${updated.document_number || `#${documentId}`}`,
+        subject: `[Quy trình ban hành văn bản] Văn bản mới được ban hành: ${updated.document_number || `#${documentId}`}`,
         text: composeFormalEmail([
           `Văn bản "${updated.title || ''}" đã được ban hành.`,
           `Số hiệu: ${updated.document_number || 'N/A'}`,
@@ -659,7 +685,7 @@ function createDocumentWorkflowController(deps) {
       history(documentId, 9, 'document_archived', 'Lưu trữ và hậu kiểm hồ sơ', req);
       safeSendMail({
         to: getModuleManagerEmails(),
-        subject: `[DOCFLOW] Hồ sơ #${documentId} hoàn tất bước 9`,
+        subject: `[Quy trình ban hành văn bản] Hồ sơ #${documentId} hoàn tất bước 9`,
         text: composeFormalEmail([
           `Hồ sơ "${updated.title || record.title || ''}" đã lưu trữ/hậu kiểm.`,
           `Xem chi tiết: ${documentLink(documentId)}`,
@@ -718,9 +744,12 @@ function createDocumentWorkflowController(deps) {
         return res.status(404).json({ message: 'File không tồn tại trên máy chủ.' });
       }
       res.setHeader('Content-Type', attachment.mime_type || 'application/octet-stream');
+      const downloadName = String(attachment.original_name || path.basename(normalized) || 'file').trim() || 'file';
+      const encodedName = encodeURIComponent(downloadName);
+      const asciiFallback = safeAsciiFilename(downloadName);
       res.setHeader(
         'Content-Disposition',
-        `inline; filename="${encodeURIComponent(attachment.original_name || path.basename(normalized))}"`
+        `inline; filename="${asciiFallback}"; filename*=UTF-8''${encodedName}`
       );
       return res.sendFile(normalized);
     } catch (e) {

@@ -206,6 +206,12 @@ class DocumentModel {
     this.db
       .prepare(`INSERT OR IGNORE INTO module_settings(setting_key, setting_value) VALUES ('internal_domain_email_suffix', '@sci.edu.vn')`)
       .run();
+    this.db
+      .prepare(
+        `INSERT OR IGNORE INTO module_settings(setting_key, setting_value)
+         VALUES ('step5_recipient_mode', 'module_manager_assigned')`
+      )
+      .run();
 
     const defaultTypes = [
       ['quy_che', 'Quy chế', 1],

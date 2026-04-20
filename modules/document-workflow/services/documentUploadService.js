@@ -20,6 +20,18 @@ function sanitizeName(name) {
   return String(name || 'file').replace(/[^\w.\-()\s]/g, '_');
 }
 
+function decodeOriginalName(name) {
+  const raw = String(name || '').trim();
+  if (!raw) return 'file';
+  try {
+    // Busboy/multer can expose UTF-8 bytes as latin1; convert back.
+    const repaired = Buffer.from(raw, 'latin1').toString('utf8');
+    return repaired && repaired.includes('\uFFFD') ? raw : repaired;
+  } catch (_) {
+    return raw;
+  }
+}
+
 function createDocumentUpload(uploadsRoot) {
   const documentsRoot = path.join(uploadsRoot, 'documents');
   fs.mkdirSync(documentsRoot, { recursive: true });
@@ -35,7 +47,9 @@ function createDocumentUpload(uploadsRoot) {
       cb(null, dir);
     },
     filename: (req, file, cb) => {
-      cb(null, `${Date.now()}_${sanitizeName(file.originalname)}`);
+      const displayName = decodeOriginalName(file.originalname);
+      file.originalname = displayName;
+      cb(null, `${Date.now()}_${sanitizeName(displayName)}`);
     },
   });
 
