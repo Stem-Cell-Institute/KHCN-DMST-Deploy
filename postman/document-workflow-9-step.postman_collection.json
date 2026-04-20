@@ -1,0 +1,394 @@
+{
+  "info": {
+    "_postman_id": "0f2b6119-6729-4ca2-9a95-51f7b2065c17",
+    "name": "STIMS - Document Workflow 9 Steps",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection mau kiem thu day du quy trinh 9 buoc ban hanh van ban noi bo."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "tokenLeader", "value": "" },
+    { "key": "tokenProposer", "value": "" },
+    { "key": "tokenDrafter", "value": "" },
+    { "key": "tokenReviewer", "value": "" },
+    { "key": "tokenAdmin", "value": "" },
+    { "key": "documentId", "value": "" },
+    { "key": "unitId", "value": "1" },
+    { "key": "assignedToId", "value": "2" }
+  ],
+  "item": [
+    {
+      "name": "Step 1 - Create Proposal",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{tokenProposer}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Quy che quan ly van ban noi bo 2026\",\n  \"doc_type\": \"quy_che\",\n  \"reason\": \"Can cap nhat theo quy dinh moi\",\n  \"proposalSummary\": \"De xuat xay dung quy che quan ly van ban noi bo\"\n}"
+        },
+        "url": "{{baseUrl}}/api/documents"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "pm.test('Response contains document id', function () {",
+              "  pm.expect(json).to.have.property('data');",
+              "  pm.expect(json.data).to.have.property('id');",
+              "});",
+              "",
+              "const id = String(json.data.id);",
+              "pm.collectionVariables.set('documentId', id);",
+              "pm.environment.set('documentId', id);",
+              "console.log('documentId saved =', id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List Documents",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenLeader}}", "type": "text" }],
+        "url": "{{baseUrl}}/api/documents?step=1&page=1&limit=20"
+      }
+    },
+    {
+      "name": "Step 2 - Assign Drafter",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{tokenLeader}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"unitId\": {{unitId}},\n  \"assignedToId\": {{assignedToId}},\n  \"deadline\": \"2026-05-15\"\n}"
+        },
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/assign"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const docId = (pm.collectionVariables.get('documentId') || pm.environment.get('documentId') || '').trim();",
+              "pm.test('documentId must be set before Step 2', function () {",
+              "  pm.expect(docId, 'documentId chua duoc set. Hay chay Step 1 - Create Proposal truoc.').to.not.equal('');",
+              "});",
+              "if (!docId) {",
+              "  throw new Error('Stop Step 2: documentId chua duoc set. Hay chay Step 1 truoc.');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 3 - Upload Draft V1",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenDrafter}}", "type": "text" }],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "step", "value": "3", "type": "text" },
+            { "key": "legalBasis", "value": "Luat vien chuc va quy dinh noi bo", "type": "text" },
+            { "key": "scope", "value": "Ap dung toan vien", "type": "text" },
+            { "key": "applicableSubjects", "value": "Tat ca don vi", "type": "text" },
+            { "key": "mainContent", "value": "Noi dung du thao lan 1", "type": "text" },
+            { "key": "executionClause", "value": "Hieu luc sau 15 ngay", "type": "text" },
+            { "key": "files", "type": "file", "src": "" }
+          ]
+        },
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/draft"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const docId = (pm.collectionVariables.get('documentId') || pm.environment.get('documentId') || '').trim();",
+              "pm.test('documentId must be set before Step 3', function () {",
+              "  pm.expect(docId, 'documentId chua duoc set. Hay chay Step 1 - Create Proposal truoc.').to.not.equal('');",
+              "});",
+              "if (!docId) {",
+              "  throw new Error('Stop Step 3: documentId chua duoc set. Hay chay Step 1 truoc.');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 4 - Review Approve",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{tokenReviewer}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"approve\",\n  \"comment\": \"Du thao dat yeu cau, chuyen lay y kien\"\n}"
+        },
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/review"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const docId = (pm.collectionVariables.get('documentId') || pm.environment.get('documentId') || '').trim();",
+              "pm.test('documentId must be set before Step 4 approve', function () {",
+              "  pm.expect(docId, 'documentId chua duoc set. Hay chay Step 1 - Create Proposal truoc.').to.not.equal('');",
+              "});",
+              "if (!docId) {",
+              "  throw new Error('Stop Step 4 approve: documentId chua duoc set. Hay chay Step 1 truoc.');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 4 - Review Reject (Optional)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{tokenReviewer}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"reject\",\n  \"comment\": \"Can bo sung can cu phap ly va bo cuc\"\n}"
+        },
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/review"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const docId = (pm.collectionVariables.get('documentId') || pm.environment.get('documentId') || '').trim();",
+              "pm.test('documentId must be set before Step 4 reject', function () {",
+              "  pm.expect(docId, 'documentId chua duoc set. Hay chay Step 1 - Create Proposal truoc.').to.not.equal('');",
+              "});",
+              "if (!docId) {",
+              "  throw new Error('Stop Step 4 reject: documentId chua duoc set. Hay chay Step 1 truoc.');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 5 - Add Feedback",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{tokenLeader}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"De nghi bo sung muc trach nhiem thuc hien\"\n}"
+        },
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/feedback"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const docId = (pm.collectionVariables.get('documentId') || pm.environment.get('documentId') || '').trim();",
+              "pm.test('documentId must be set before Step 5', function () {",
+              "  pm.expect(docId, 'documentId chua duoc set. Hay chay Step 1 - Create Proposal truoc.').to.not.equal('');",
+              "});",
+              "if (!docId) {",
+              "  throw new Error('Stop Step 5: documentId chua duoc set. Hay chay Step 1 truoc.');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 6 - Finalize Draft",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenDrafter}}", "type": "text" }],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "step", "value": "6", "type": "text" },
+            { "key": "explainReceive", "value": "Da tiep thu day du gop y", "type": "text" },
+            { "key": "feedbackSummary", "value": "Tong hop 12 y kien", "type": "text" },
+            { "key": "meetingHeld", "value": "true", "type": "text" },
+            { "key": "meetingMinutesNote", "value": "Hop ngay 2026-05-10", "type": "text" },
+            { "key": "files", "type": "file", "src": "" }
+          ]
+        },
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/finalize"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const docId = (pm.collectionVariables.get('documentId') || pm.environment.get('documentId') || '').trim();",
+              "pm.test('documentId must be set before Step 6', function () {",
+              "  pm.expect(docId, 'documentId chua duoc set. Hay chay Step 1 - Create Proposal truoc.').to.not.equal('');",
+              "});",
+              "if (!docId) {",
+              "  throw new Error('Stop Step 6: documentId chua duoc set. Hay chay Step 1 truoc.');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 7 - Submit For Sign",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenDrafter}}", "type": "text" }],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "step", "value": "7", "type": "text" },
+            { "key": "submitNote", "value": "Da dong goi day du ho so trinh ky", "type": "text" },
+            { "key": "files", "type": "file", "src": "" }
+          ]
+        },
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/submit"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const docId = (pm.collectionVariables.get('documentId') || pm.environment.get('documentId') || '').trim();",
+              "pm.test('documentId must be set before Step 7', function () {",
+              "  pm.expect(docId, 'documentId chua duoc set. Hay chay Step 1 - Create Proposal truoc.').to.not.equal('');",
+              "});",
+              "if (!docId) {",
+              "  throw new Error('Stop Step 7: documentId chua duoc set. Hay chay Step 1 truoc.');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 8 - Publish",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenAdmin}}", "type": "text" }],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "step", "value": "8", "type": "text" },
+            { "key": "signedConfirmed", "value": "true", "type": "text" },
+            { "key": "publishDate", "value": "2026-05-20", "type": "text" },
+            { "key": "documentNumber", "value": "QĐ-2026-15", "type": "text" },
+            { "key": "files", "type": "file", "src": "" }
+          ]
+        },
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/publish"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const docId = (pm.collectionVariables.get('documentId') || pm.environment.get('documentId') || '').trim();",
+              "pm.test('documentId must be set before Step 8', function () {",
+              "  pm.expect(docId, 'documentId chua duoc set. Hay chay Step 1 - Create Proposal truoc.').to.not.equal('');",
+              "});",
+              "if (!docId) {",
+              "  throw new Error('Stop Step 8: documentId chua duoc set. Hay chay Step 1 truoc.');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 9 - Archive",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{tokenAdmin}}", "type": "text" },
+          { "key": "Content-Type", "value": "application/json", "type": "text" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"expireDate\": \"2028-05-20\",\n  \"remindAfterDays\": 180\n}"
+        },
+        "url": "{{baseUrl}}/api/documents/{{documentId}}/archive"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const docId = (pm.collectionVariables.get('documentId') || pm.environment.get('documentId') || '').trim();",
+              "pm.test('documentId must be set before Step 9', function () {",
+              "  pm.expect(docId, 'documentId chua duoc set. Hay chay Step 1 - Create Proposal truoc.').to.not.equal('');",
+              "});",
+              "if (!docId) {",
+              "  throw new Error('Stop Step 9: documentId chua duoc set. Hay chay Step 1 truoc.');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Document Detail + History",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenLeader}}", "type": "text" }],
+        "url": "{{baseUrl}}/api/documents/{{documentId}}"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const docId = (pm.collectionVariables.get('documentId') || pm.environment.get('documentId') || '').trim();",
+              "pm.test('documentId must be set before Get Document Detail + History', function () {",
+              "  pm.expect(docId, 'documentId chua duoc set. Hay chay Step 1 - Create Proposal truoc.').to.not.equal('');",
+              "});",
+              "if (!docId) {",
+              "  throw new Error('Stop Get Document Detail + History: documentId chua duoc set. Hay chay Step 1 truoc.');",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

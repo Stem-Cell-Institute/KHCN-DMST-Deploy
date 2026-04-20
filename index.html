@@ -154,6 +154,11 @@
         .module-card[data-module="ethics_integrity"] .module-icon-bg svg { stroke: #4f46e5 !important; }
         .module-card[data-module="reward"] .module-icon-bg svg { stroke: #ca8a04 !important; }
         .module-card[data-module="dms"] .module-icon-bg svg { stroke: #4338ca !important; }
+        .module-card[data-module="document_workflow"] .module-icon-bg {
+            background: linear-gradient(145deg, #eef2ff 0%, #e0e7ff 100%);
+            border-color: rgba(67, 56, 202, 0.45);
+        }
+        .module-card[data-module="document_workflow"] .module-icon-bg svg { stroke: #4338ca !important; stroke-width: 2 !important; }
         .module-card[data-module="equipment_stims"] .module-icon-bg {
             background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 100%);
             border-color: rgba(13, 148, 136, 0.45);
@@ -677,6 +682,29 @@
                 <button type="button" class="btn-access" onclick="window.location.href='tai-lieu-hanh-chinh.html'">Truy cập →</button>
             </div>
 
+            <div class="module-card" data-module="document_workflow">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4338ca" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M9 13h6"></path><path d="M9 17h6"></path><path d="M9 9h1"></path></svg></span></div>
+                <div class="module-title">Quy trình văn bản nội bộ</div>
+                <div class="module-description">
+                    Quản lý quy trình ban hành văn bản hành chính nội bộ theo 9 bước: đề xuất, phân công, soạn thảo, thẩm định, lấy ý kiến, hoàn thiện, trình ký, ban hành và lưu trữ.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat" data-stat="documentWorkflowMini" data-facility-key="inProgress">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Đang xử lý</div>
+                    </div>
+                    <div class="mini-stat" data-stat="documentWorkflowMini" data-facility-key="completed">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Đã hoàn thành</div>
+                    </div>
+                    <div class="mini-stat" data-stat="documentWorkflowMini" data-facility-key="overdue">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Trễ hạn</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-access" onclick="window.location.href='quy-trinh-van-ban-noi-bo.html?v=20260417-assign-fix'">Truy cập →</button>
+            </div>
+
             <!-- 7c. Quản trị thiết bị (hồ sơ, PDF, QR) -->
             <div class="module-card" data-module="equipment_stims">
                 <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg></span></div>
@@ -836,7 +864,7 @@
                 isAdmin = (u.role || '').toLowerCase() === 'admin';
             } catch (e) {}
             var LS_ORDER_KEY = 'homepage_module_order';
-            var HOMEPAGE_CODES = ['missions','ethics_ace','personnel','ip','finance','publications','cooperation','dms','equipment_stims','tech_transfer','facilities','ethics_integrity','reward'];
+            var HOMEPAGE_CODES = ['missions','ethics_ace','personnel','ip','finance','publications','cooperation','dms','document_workflow','equipment_stims','tech_transfer','facilities','ethics_integrity','reward'];
             function distinctSortOrderCount(modules) {
                 var seen = {};
                 var n = 0;
@@ -917,6 +945,28 @@
                 var headers = token ? { Authorization: 'Bearer ' + token } : {};
                 fetch(apiBase + '/api/homepage-stats', { headers: headers })
                     .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data) return;
+                        var hasDocWorkflowMini =
+                            data.documentWorkflowMini &&
+                            typeof data.documentWorkflowMini === 'object' &&
+                            Object.prototype.hasOwnProperty.call(data.documentWorkflowMini, 'inProgress');
+                        if (!hasDocWorkflowMini) {
+                            return fetch(apiBase + '/api/dashboard/stats', { headers: headers })
+                                .then(function(r) { return r.json(); })
+                                .then(function(wf) {
+                                    var s = wf && wf.data ? wf.data : {};
+                                    data.documentWorkflowMini = {
+                                        inProgress: Number(s.inProgressCount || 0),
+                                        completed: Number(s.completedCount || 0),
+                                        overdue: Number(s.overdueCount || 0),
+                                    };
+                                    return data;
+                                })
+                                .catch(function() { return data; });
+                        }
+                        return data;
+                    })
                     .then(function(data) {
                         if (!data) return;
                         document.querySelectorAll('.stat-card[data-stat]').forEach(function(card) {

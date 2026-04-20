@@ -361,6 +361,60 @@ a.dms-btn {
   border-left: 2px solid var(--dms-border);
 }
 
+.dms-workflow-cta {
+  margin: 10px 0 2px;
+  display: block;
+  padding: 12px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 55%, #312e81 100%);
+  border: 1px solid rgba(67, 56, 202, 0.35);
+  box-shadow: 0 8px 20px rgba(67, 56, 202, 0.28);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+  animation: dms-workflow-cta-pulse 2.2s ease-in-out infinite;
+}
+
+.dms-workflow-cta:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+  box-shadow: 0 12px 24px rgba(67, 56, 202, 0.35);
+  animation: none;
+}
+
+.dms-workflow-cta:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.75), 0 0 0 6px var(--dms-accent-ring);
+}
+
+.dms-workflow-cta__title {
+  display: block;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.dms-workflow-cta__sub {
+  margin-top: 2px;
+  display: block;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+@keyframes dms-workflow-cta-pulse {
+  0%, 100% {
+    box-shadow:
+      0 8px 20px rgba(67, 56, 202, 0.24),
+      0 0 0 0 rgba(99, 102, 241, 0.00);
+  }
+  50% {
+    box-shadow:
+      0 10px 24px rgba(67, 56, 202, 0.32),
+      0 0 0 6px rgba(99, 102, 241, 0.20);
+  }
+}
+
 /* —— Sidebar: trung tâm biểu mẫu ISO —— */
 .dms-template-sidebar {
   margin-bottom: 6px;

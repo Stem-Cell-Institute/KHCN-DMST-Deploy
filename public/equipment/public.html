@@ -126,6 +126,35 @@
   var params = new URLSearchParams(location.search);
   var id = params.get('id');
   var msg = document.getElementById('msg');
+  var moduleCtx = { loaded: false, isManagerOrHigher: false };
+  function loadModuleContext() {
+    var tok = '';
+    try {
+      tok = localStorage.getItem('token');
+    } catch (e) {}
+    if (!tok) return Promise.resolve(moduleCtx);
+    return fetch('/api/equipment/module/me', {
+      headers: { Authorization: 'Bearer ' + tok },
+      credentials: 'same-origin',
+    })
+      .then(function (r) {
+        return r.json().then(function (j) {
+          return { ok: r.ok, data: j };
+        });
+      })
+      .then(function (res) {
+        var d = res && res.data && res.data.data ? res.data.data : {};
+        var role = String((d.assignment && d.assignment.module_role) || '').toLowerCase();
+        moduleCtx.loaded = true;
+        moduleCtx.isManagerOrHigher = !!(d.isMasterAdmin || role === 'manager');
+        return moduleCtx;
+      })
+      .catch(function () {
+        moduleCtx.loaded = true;
+        moduleCtx.isManagerOrHigher = false;
+        return moduleCtx;
+      });
+  }
   if (localStorage.getItem('token')) {
     var nl = document.getElementById('nav-login');
     nl.textContent = 'Quản trị thiết bị';
@@ -149,8 +178,21 @@
       }
     }
     if (tok) {
-      cta.href = '/' + detailUrl;
-      cta.textContent = 'Mở Báo cáo sự cố';
+      if (publicIncidentAllowed && !moduleCtx.isManagerOrHigher) {
+        cta.href = '#';
+        cta.textContent = 'Mở Báo cáo sự cố';
+        cta.onclick = function (ev) {
+          ev.preventDefault();
+          var modalPubEl = document.getElementById('modal-pub-incident');
+          var pubMsg = document.getElementById('pub-inc-msg');
+          if (modalPubEl) modalPubEl.hidden = false;
+          if (pubMsg) pubMsg.textContent = '';
+        };
+      } else {
+        cta.href = '/' + detailUrl;
+        cta.textContent = 'Mở Báo cáo sự cố';
+        cta.onclick = null;
+      }
       if (sub) {
         sub.textContent = publicIncidentAllowed
           ? 'Bạn có thể gửi nhanh từ QR bên dưới, hoặc mở quản trị để theo dõi.'
@@ -188,6 +230,7 @@
     var t = localStorage.getItem('token');
     if (t) headers['Authorization'] = 'Bearer ' + t;
   } catch (e) {}
+  loadModuleContext().finally(function () {
   fetch('/api/equipment/' + id + '/public', { headers: headers, credentials: 'same-origin' })
     .then(function (r) {
       return r.json().then(function (j) {
@@ -303,6 +346,7 @@
         tb.appendChild(tr);
       }
     });
+  });
 
   var modalPubEl = document.getElementById('modal-pub-incident');
   var formPub = document.getElementById('form-pub-incident');

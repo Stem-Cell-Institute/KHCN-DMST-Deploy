@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const appPaths = require('../lib/appPaths');
 const { createConferenceEmailService } = require('../services/conferenceEmailService');
 const { exportApprovalWord } = require('../services/conferenceWordExport');
 
@@ -18,10 +19,34 @@ function sanitizeOrig(name) {
 }
 
 function relUpload(absPath) {
-  const base = path.join(process.cwd(), 'uploads', 'conference');
-  const rel = path.relative(process.cwd(), absPath).split(path.sep).join('/');
-  if (rel && !rel.startsWith('..')) return rel;
+  const root = appPaths.uploadsRoot();
+  const rel = path.relative(root, absPath);
+  if (!rel.startsWith('..') && !path.isAbsolute(rel)) {
+    return 'uploads/' + rel.split(path.sep).join('/');
+  }
   return `uploads/conference/${path.basename(absPath)}`;
+}
+
+/** Chuỗi trong CSDL → đường dẫn tuyệt đối (hỗ trợ uploads/ ở giữa chuỗi, vd. data/uploads/...). */
+function resolveConferenceStoredPath(raw, conferenceUploadRoot) {
+  const s = String(raw || '').trim();
+  if (!s) return null;
+  if (path.isAbsolute(s)) return path.normalize(path.resolve(s));
+  const n = s.replace(/\\/g, '/');
+  const marker = 'uploads/';
+  const idx = n.toLowerCase().indexOf(marker);
+  if (idx !== -1) {
+    return path.normalize(path.resolve(appPaths.uploadsRoot(), n.slice(idx + marker.length)));
+  }
+  return path.normalize(path.resolve(conferenceUploadRoot, n));
+}
+
+function pathIsStrictlyInsideDir(resolvedDirAbs, candidateAbs) {
+  const root = path.resolve(resolvedDirAbs);
+  const cand = path.resolve(candidateAbs);
+  if (cand === root) return false;
+  const rel = path.relative(root, cand);
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
 function nextSubmissionCode(db) {
@@ -123,7 +148,7 @@ function rowToResponse(row) {
 
 module.exports = function createConferenceRegistrationRouter(deps) {
   const { db, coopSendMail, coopBuildEmail, baseUrl, coopIsVienTruong } = deps;
-  const uploadRoot = path.join(__dirname, '..', 'uploads', 'conference');
+  const uploadRoot = path.join(appPaths.uploadsRoot(), 'conference');
   fs.mkdirSync(uploadRoot, { recursive: true });
 
   const emails = createConferenceEmailService({
@@ -744,7 +769,10 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       if (!canViewRegistration(req, row, coopIsVienTruong)) return res.status(403).json({ message: 'Không có quyền' });
       const att = db.prepare('SELECT * FROM conference_attachments WHERE id = ? AND registration_id = ?').get(aid, id);
       if (!att) return res.status(404).json({ message: 'Không có file' });
-      const abs = path.isAbsolute(att.stored_path) ? att.stored_path : path.join(process.cwd(), att.stored_path.split('/').join(path.sep));
+      const abs = resolveConferenceStoredPath(att.stored_path, uploadRoot);
+      if (!abs || !pathIsStrictlyInsideDir(uploadRoot, abs)) {
+        return res.status(404).json({ message: 'File không tồn tại trên máy chủ' });
+      }
       if (!fs.existsSync(abs)) return res.status(404).json({ message: 'File không tồn tại trên máy chủ' });
       res.download(abs, att.original_name || path.basename(abs));
     } catch (e) {

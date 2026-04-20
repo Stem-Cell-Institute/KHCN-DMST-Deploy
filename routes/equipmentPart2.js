@@ -1,5 +1,5 @@
 /**
- * Equipment module — Prompt 2: stats, workflow duyệt, bảo trì, sự cố, thông báo, thay thế tài liệu.
+ * Equipment module — Prompt 2: stats, bảo trì, sự cố, thông báo, thay thế tài liệu.
  * Gắn vào router TRƯỚC các route GET /:id đơn (chỉ một segment).
  */
 
@@ -37,12 +37,6 @@ function isAdmin(req) {
 
 function isResearcher(req) {
   return String(req.user && req.user.role ? req.user.role : '').toLowerCase() === 'researcher';
-}
-
-function reviewStatus(eq) {
-  const s = eq && eq.review_status != null ? String(eq.review_status) : '';
-  if (!s) return 'approved';
-  return s;
 }
 
 function insertNotification(db, userId, eventType, title, body, link) {
@@ -800,96 +794,6 @@ function registerEquipmentPart2(router, deps) {
     }
   });
 
-  router.get('/pending', authMiddleware, moduleViewerMw, adminOnly, (req, res) => {
-    try {
-      const rows = db
-        .prepare(
-          `SELECT e.*, u.fullname AS created_by_name FROM equipments e
-           LEFT JOIN users u ON u.id = e.created_by
-           WHERE e.review_status = 'pending_review' AND e.status != 'retired'
-           ORDER BY e.updated_at DESC`
-        )
-        .all();
-      res.json({ ok: true, data: rows });
-    } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
-    }
-  });
-
-  router.post('/:id/submit-review', authMiddleware, moduleViewerMw, express.json(), (req, res) => {
-    try {
-      const id = parseEquipmentId(req.params.id);
-      if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
-      const eq = db.prepare('SELECT * FROM equipments WHERE id = ?').get(id);
-      if (!eq) return res.status(404).json({ message: 'Không tìm thấy' });
-      const role = String(req.user.role || '').toLowerCase();
-      if (!['researcher', 'manager', 'phong_khcn', 'admin'].includes(role)) {
-        return res.status(403).json({ message: 'Không có quyền gửi duyệt' });
-      }
-      if (!canManageEquipment(req) && Number(eq.created_by) !== Number(req.user.id)) {
-        return res.status(403).json({ message: 'Chỉ người tạo hoặc quản trị mới gửi duyệt hồ sơ này' });
-      }
-      const rs = reviewStatus(eq);
-      if (!['draft', 'rejected'].includes(rs)) {
-        return res.status(400).json({ message: 'Hồ sơ không ở trạng thái gửi duyệt được' });
-      }
-      db.prepare(`UPDATE equipments SET review_status = 'pending_review', review_rejection_note = NULL, updated_at = datetime('now') WHERE id = ?`).run(
-        id
-      );
-      notifyAdmins(db, 'equip_review_pending', 'Hồ sơ thiết bị chờ duyệt', `${eq.equipment_code} — ${eq.name}`, `/public/equipment/pending.html`);
-      res.json({ ok: true });
-    } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
-    }
-  });
-
-  router.patch('/:id/review', authMiddleware, moduleViewerMw, adminOnly, express.json(), (req, res) => {
-    try {
-      const id = parseEquipmentId(req.params.id);
-      if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
-      const eq = db.prepare('SELECT * FROM equipments WHERE id = ?').get(id);
-      if (!eq) return res.status(404).json({ message: 'Không tìm thấy' });
-      const decision = String(req.body && req.body.decision ? req.body.decision : '').toLowerCase();
-      const note = req.body && req.body.note != null ? String(req.body.note).slice(0, 2000) : null;
-      if (decision === 'approve') {
-        db.prepare(
-          `UPDATE equipments SET review_status = 'approved', published_at = datetime('now'), review_rejection_note = NULL, updated_at = datetime('now') WHERE id = ?`
-        ).run(id);
-        if (eq.created_by) {
-          notifyUserId(
-            db,
-            eq.created_by,
-            'equip_approved',
-            'Hồ sơ thiết bị đã được duyệt',
-            eq.equipment_code + ' — ' + eq.name,
-            `/public/equipment/detail.html?id=${id}`
-          );
-        }
-        notifyEquipmentStakeholders(db, eq, 'equip_approved', 'Đã duyệt hồ sơ', eq.equipment_code, `/public/equipment/detail.html?id=${id}`);
-        return res.json({ ok: true, review_status: 'approved' });
-      }
-      if (decision === 'reject') {
-        db.prepare(
-          `UPDATE equipments SET review_status = 'rejected', review_rejection_note = ?, updated_at = datetime('now') WHERE id = ?`
-        ).run(note, id);
-        if (eq.created_by) {
-          notifyUserId(
-            db,
-            eq.created_by,
-            'equip_rejected',
-            'Hồ sơ thiết bị bị trả về',
-            (note || '') + ' — ' + eq.equipment_code,
-            `/public/equipment/form.html?id=${id}`
-          );
-        }
-        return res.json({ ok: true, review_status: 'rejected' });
-      }
-      return res.status(400).json({ message: 'decision phải là approve hoặc reject' });
-    } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
-    }
-  });
-
   router.get('/:id/qr-data', optionalAuth, async (req, res) => {
     try {
       const id = parseEquipmentId(req.params.id);
@@ -1393,6 +1297,5 @@ module.exports = {
   detectPlatformFromUrl,
   notifyEquipmentStakeholders,
   notifyAdmins,
-  reviewStatus,
   generateEquipmentCode,
 };

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quy trình ban hành văn bản nội bộ - STIMS</title>
+  <link rel="stylesheet" href="css/document-workflow.css">
+</head>
+<body>
+  <div class="wf-page">
+    <header class="wf-header">
+      <div>
+        <p class="wf-kicker">STIMS - Document Workflow</p>
+        <h1>Quản lý quy trình ban hành văn bản nội bộ</h1>
+        <p class="wf-greeting" id="wf-greeting">Xin chào!</p>
+      </div>
+      <div class="wf-header-actions">
+        <a class="wf-btn wf-btn-ghost" href="index.html">← Trang chủ</a>
+        <a class="wf-btn wf-btn-ghost" href="/admin">Admin Panel</a>
+        <button id="wf-refresh-btn" class="wf-btn">Làm mới dữ liệu</button>
+      </div>
+    </header>
+
+    <section class="wf-stats" id="wf-stats"></section>
+
+    <section class="wf-create">
+      <h2>Tạo hồ sơ mới (Bước 1)</h2>
+      <form id="wf-create-form" class="wf-form-grid">
+        <label>Tiêu đề
+          <input type="text" name="title" required>
+        </label>
+        <label>Loại văn bản
+          <select name="doc_type" required>
+            <option value="quy_che">Quy chế</option>
+            <option value="quy_dinh">Quy định</option>
+            <option value="noi_quy">Nội quy</option>
+            <option value="huong_dan">Hướng dẫn</option>
+          </select>
+        </label>
+        <label>Lý do ban hành
+          <textarea name="reason" rows="2"></textarea>
+        </label>
+        <label>Nội dung đề xuất sơ bộ
+          <textarea name="proposalSummary" rows="2"></textarea>
+        </label>
+        <div class="wf-form-actions">
+          <button class="wf-btn" type="submit">Tạo hồ sơ</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="wf-main">
+      <aside class="wf-list-panel">
+        <h2>Danh sách hồ sơ</h2>
+        <form id="wf-filter-form" class="wf-filter">
+          <input name="search" placeholder="Tìm theo tiêu đề...">
+          <select name="step">
+            <option value="">Tất cả bước</option>
+          </select>
+          <select name="status">
+            <option value="">Tất cả trạng thái</option>
+            <option value="in_progress">in_progress</option>
+            <option value="archived">archived</option>
+            <option value="aborted">aborted</option>
+          </select>
+          <select name="unitId">
+            <option value="">Tất cả đơn vị</option>
+          </select>
+          <button class="wf-btn wf-btn-small" type="submit">Lọc</button>
+        </form>
+        <div id="wf-doc-list" class="wf-doc-list"></div>
+      </aside>
+
+      <article class="wf-detail-panel" id="wf-detail-panel">
+        <h2>Chi tiết hồ sơ</h2>
+        <p class="wf-muted">Chọn một hồ sơ ở cột trái để xem tiến trình, tệp đính kèm và thao tác theo bước.</p>
+      </article>
+    </section>
+  </div>
+
+  <script src="js/document-workflow-app.js"></script>
+</body>
+</html>

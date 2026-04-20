@@ -11,7 +11,6 @@ const { checkEquipmentDocAccess } = require('../middleware/checkEquipmentDocAcce
 const {
   registerEquipmentPart2,
   maintenanceBadgeForRow,
-  reviewStatus,
   generateEquipmentCode,
   extractYoutubeId,
   detectPlatformFromUrl,
@@ -43,10 +42,7 @@ function requireManage(req, res, next) {
 }
 
 function canUploadEquipmentMedia(req, eq) {
-  if (!eq) return false;
-  if (canManageEquipment(req)) return true;
-  if (Number(eq.created_by) !== Number(req.user && req.user.id)) return false;
-  return ['draft', 'rejected'].includes(reviewStatus(eq));
+  return !!eq && canManageEquipment(req);
 }
 
 function validateVideoUrl(url, platform) {
@@ -153,10 +149,6 @@ function canViewEquipmentDetail(req, row, db, accessMode) {
   if (canManageEquipment(req)) return { ok: true };
   if (row.status === 'retired') return { ok: false, status: 404 };
   if (String(accessMode || '').toLowerCase() === 'public') return { ok: true };
-  const rs = reviewStatus(row);
-  if (['draft', 'pending_review'].includes(rs) && Number(row.created_by) !== Number(req.user && req.user.id)) {
-    return { ok: false, status: 404 };
-  }
   if (isResearcher(req)) {
     if (row.profile_visibility !== 'public') return { ok: false, status: 403 };
     return { ok: true };
@@ -305,7 +297,7 @@ module.exports = function createEquipmentRouter(deps) {
   ).run();
   db.prepare(
     `INSERT OR IGNORE INTO equipment_module_settings(setting_key, setting_value)
-     VALUES ('viewer_visible_fields', '["equipment_code","name","asset_group","model","serial_number","manufacturer","purchase_year","purchase_value","asset_type_code","year_in_use","unit_name","quantity_book","quantity_actual","quantity_diff","remaining_value","utilization_note","condition_note","disaster_impact_note","construction_asset_note","usage_count_note","land_attached_note","asset_note","department_id","manager_id","location","status","profile_visibility","created_at","updated_at","published_at","last_maintenance_date","next_maintenance_date","calibration_due_date","specs_json"]')`
+     VALUES ('viewer_visible_fields', '["equipment_code","name","asset_group","model","serial_number","manufacturer","purchase_year","purchase_value","asset_type_code","year_in_use","unit_name","quantity_book","quantity_actual","quantity_diff","remaining_value","utilization_note","condition_note","disaster_impact_note","construction_asset_note","usage_count_note","land_attached_note","asset_note","department_id","manager_id","location","status","profile_visibility","created_at","updated_at","last_maintenance_date","next_maintenance_date","calibration_due_date","specs_json"]')`
   ).run();
   db.prepare(`INSERT OR IGNORE INTO equipment_module_settings(setting_key, setting_value) VALUES ('incident_emails_new', '[]')`).run();
   db.prepare(`INSERT OR IGNORE INTO equipment_module_settings(setting_key, setting_value) VALUES ('incident_emails_resolved', '[]')`).run();
@@ -411,20 +403,7 @@ module.exports = function createEquipmentRouter(deps) {
 
   function computePublicIncidentAllowed(eq, equipmentId) {
     if (!eq || eq.status === 'retired' || !publicIncidentReportsEnabled()) return false;
-    const rs = reviewStatus(eq);
-    if (rs !== 'approved') return false;
-    const docsAll = db
-      .prepare(
-        `SELECT is_disabled, is_current, access_level FROM equipment_documents WHERE equipment_id = ? ORDER BY created_at DESC`
-      )
-      .all(equipmentId);
-    const hasPublicDoc = (docsAll || []).some((d) => {
-      if (d.is_disabled) return false;
-      const cur = d.is_current == null || Number(d.is_current) === 1;
-      if (!cur) return false;
-      return String(d.access_level || '').toLowerCase() === 'public';
-    });
-    return hasPublicDoc;
+    return true;
   }
 
   function normalizeAccessMode(mode) {
@@ -555,7 +534,6 @@ module.exports = function createEquipmentRouter(deps) {
       { key: 'profile_visibility', label: 'Hiển thị hồ sơ' },
       { key: 'created_at', label: 'Ngày tạo' },
       { key: 'updated_at', label: 'Ngày cập nhật' },
-      { key: 'published_at', label: 'Ngày xuất bản' },
       { key: 'last_maintenance_date', label: 'Lần bảo trì gần nhất' },
       { key: 'next_maintenance_date', label: 'Hạn bảo trì tiếp theo' },
       { key: 'calibration_due_date', label: 'Hạn kiểm định' },
@@ -1053,21 +1031,17 @@ module.exports = function createEquipmentRouter(deps) {
         if (accessMode !== 'public') {
           if (role === 'researcher') {
             where.push(
-              `(e.created_by = ? OR (
-                (e.review_status IS NULL OR e.review_status = 'approved') AND e.profile_visibility = 'public'
-              ))`
+              `(e.created_by = ? OR e.profile_visibility = 'public')`
             );
             params.push(uid);
           } else {
             where.push(
               `(e.created_by = ? OR (
-                (e.review_status IS NULL OR e.review_status = 'approved') AND (
-                  e.profile_visibility IN ('public','institute')
-                  OR (
-                    e.profile_visibility = 'internal'
-                    AND e.department_id IS NOT NULL
-                    AND e.department_id = (SELECT department_id FROM users WHERE id = ?)
-                  )
+                e.profile_visibility IN ('public','institute')
+                OR (
+                  e.profile_visibility = 'internal'
+                  AND e.department_id IS NOT NULL
+                  AND e.department_id = (SELECT department_id FROM users WHERE id = ?)
                 )
               ))`
             );
@@ -1167,21 +1141,17 @@ module.exports = function createEquipmentRouter(deps) {
         if (accessMode !== 'public') {
           if (role === 'researcher') {
             where.push(
-              `(e.created_by = ? OR (
-                (e.review_status IS NULL OR e.review_status = 'approved') AND e.profile_visibility = 'public'
-              ))`
+              `(e.created_by = ? OR e.profile_visibility = 'public')`
             );
             params.push(uid);
           } else {
             where.push(
               `(e.created_by = ? OR (
-                (e.review_status IS NULL OR e.review_status = 'approved') AND (
-                  e.profile_visibility IN ('public','institute')
-                  OR (
-                    e.profile_visibility = 'internal'
-                    AND e.department_id IS NOT NULL
-                    AND e.department_id = (SELECT department_id FROM users WHERE id = ?)
-                  )
+                e.profile_visibility IN ('public','institute')
+                OR (
+                  e.profile_visibility = 'internal'
+                  AND e.department_id IS NOT NULL
+                  AND e.department_id = (SELECT department_id FROM users WHERE id = ?)
                 )
               ))`
             );
@@ -1239,11 +1209,11 @@ module.exports = function createEquipmentRouter(deps) {
         if (accessMode !== 'public') {
           if (role === 'researcher') {
             extra +=
-              " AND (e.created_by = ? OR ((e.review_status IS NULL OR e.review_status = 'approved') AND e.profile_visibility = 'public')) ";
+              " AND (e.created_by = ? OR e.profile_visibility = 'public') ";
             searchTail.push(uid);
           } else {
             extra +=
-              " AND (e.created_by = ? OR ((e.review_status IS NULL OR e.review_status = 'approved') AND ( e.profile_visibility IN ('public','institute') OR (e.profile_visibility = 'internal' AND e.department_id IS NOT NULL AND e.department_id = (SELECT department_id FROM users WHERE id = ?)) ))) ";
+              " AND (e.created_by = ? OR ( e.profile_visibility IN ('public','institute') OR (e.profile_visibility = 'internal' AND e.department_id IS NOT NULL AND e.department_id = (SELECT department_id FROM users WHERE id = ?)) )) ";
             searchTail.push(uid, uid);
           }
         }
@@ -1666,14 +1636,6 @@ module.exports = function createEquipmentRouter(deps) {
         ? String(b.profile_visibility)
         : 'institute';
       const manager_id = b.manager_id != null && b.manager_id !== '' ? parseInt(b.manager_id, 10) : null;
-      let review_status = 'draft';
-      if (
-        canManageEquipment(req) &&
-        b.review_status &&
-        ['draft', 'pending_review', 'approved', 'rejected'].includes(String(b.review_status))
-      ) {
-        review_status = String(b.review_status);
-      }
       const created_by = req.user.id;
       const utilizationNoteNorm = normalizeEquipmentCodeField(b.utilization_note);
       const conditionNoteNorm = normalizeEquipmentCodeField(b.condition_note);
@@ -1681,11 +1643,11 @@ module.exports = function createEquipmentRouter(deps) {
         .prepare(
           `INSERT INTO equipments (
             equipment_code, name, asset_group, model, serial_number, manufacturer, purchase_year, purchase_value,
-            department_id, manager_id, location, specs_json, status, profile_visibility, review_status, created_by,
+            department_id, manager_id, location, specs_json, status, profile_visibility, created_by,
             asset_type_code, year_in_use, unit_name, quantity_book, quantity_actual, quantity_diff, remaining_value,
             utilization_note, condition_note, disaster_impact_note, construction_asset_note, usage_count_note,
             land_attached_note, asset_note
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
         )
         .run(
           equipment_code,
@@ -1702,7 +1664,6 @@ module.exports = function createEquipmentRouter(deps) {
           b.specs_json != null ? (typeof b.specs_json === 'string' ? b.specs_json : JSON.stringify(b.specs_json)) : null,
           ['active', 'maintenance', 'broken', 'retired'].includes(String(b.status)) ? String(b.status) : 'active',
           profile_visibility,
-          review_status,
           created_by,
           b.asset_type_code != null ? String(b.asset_type_code) : null,
           b.year_in_use != null ? parseInt(b.year_in_use, 10) : null,
@@ -1737,15 +1698,6 @@ module.exports = function createEquipmentRouter(deps) {
       if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
       const cur = db.prepare('SELECT * FROM equipments WHERE id = ?').get(id);
       if (!cur) return res.status(404).json({ message: 'Không tìm thấy' });
-      if (!canManageEquipment(req)) {
-        if (Number(cur.created_by) !== Number(req.user.id)) {
-          return res.status(403).json({ message: 'Chỉ người tạo hoặc quản trị mới sửa được' });
-        }
-        const rs = reviewStatus(cur);
-        if (!['draft', 'rejected'].includes(rs)) {
-          return res.status(403).json({ message: 'Chỉ sửa được hồ sơ ở trạng thái nháp hoặc bị trả về' });
-        }
-      }
       const b = req.body || {};
       const equipment_code = String(b.equipment_code || cur.equipment_code).trim();
       const name = String(b.name || cur.name).trim();

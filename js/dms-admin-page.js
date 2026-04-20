@@ -101,6 +101,7 @@
     moduleUsers: [],
     moduleAccess: [],
     accessIdSet: null,
+    allInstituteEnabled: false,
   };
 
   function el(id) {
@@ -334,6 +335,15 @@
     var d = await api('/admin/module-access');
     state.moduleAccess = d.users || [];
     state.accessIdSet = new Set(state.moduleAccess.map(function (x) { return x.user_id; }));
+    state.allInstituteEnabled = state.moduleAccess.some(function (u) {
+      return String((u && u.email) || '').toLowerCase().endsWith('@sci.edu.vn');
+    });
+    var allBtn = el('btn-access-all-institute');
+    if (allBtn) {
+      allBtn.textContent = state.allInstituteEnabled ? 'Tắt thêm toàn viện' : 'Thêm toàn viện';
+      allBtn.classList.toggle('adm-btn-danger', state.allInstituteEnabled);
+      allBtn.classList.toggle('adm-btn--teal', !state.allInstituteEnabled);
+    }
     var tb = el('tbl-module-access');
     if (!tb) return;
     tb.innerHTML = state.moduleAccess
@@ -616,18 +626,33 @@
     });
 
     el('btn-access-all-institute').addEventListener('click', async function () {
-      if (
-        !confirm(
-          'Thêm tất cả tài khoản trong hệ thống (không bị khóa) vào danh sách được mở truy cập module? Mỗi tài khoản mới được mặc định vai trò module «chỉ xem» (có thể nâng quyền ở bước 2).'
-        )
-      )
-        return;
       try {
-        var r = await api('/admin/module-access', {
-          method: 'POST',
-          headers: authHeaders(true),
-          body: JSON.stringify({ all_institute: true }),
-        });
+        var r;
+        if (state.allInstituteEnabled) {
+          if (
+            !confirm(
+              'Tắt thêm toàn viện? Hệ thống sẽ gỡ toàn bộ tài khoản nội viện (@sci.edu.vn) khỏi danh sách mở truy cập module và xóa luôn vai trò module đã gán bằng cơ chế này.'
+            )
+          )
+            return;
+          r = await api('/admin/module-access', {
+            method: 'POST',
+            headers: authHeaders(true),
+            body: JSON.stringify({ disable_all_institute: true, email_suffix: '@sci.edu.vn' }),
+          });
+        } else {
+          if (
+            !confirm(
+              'Thêm tất cả tài khoản trong hệ thống (không bị khóa) vào danh sách được mở truy cập module? Mỗi tài khoản mới được mặc định vai trò module «chỉ xem» (có thể nâng quyền ở bước 2).'
+            )
+          )
+            return;
+          r = await api('/admin/module-access', {
+            method: 'POST',
+            headers: authHeaders(true),
+            body: JSON.stringify({ all_institute: true }),
+          });
+        }
         alert(r.message || 'Đã cập nhật.');
         await refreshModuleAccess();
         await refreshModuleUsers();

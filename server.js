@@ -241,6 +241,10 @@ const RESOLVED_CAP_VIEN_UPLOADS_ROOT = path.resolve(uploadDirCapVien);
 
 /**
  * Chuỗi đường dẫn lưu trong CSDL → file thật trên đĩa.
+ * Hỗ trợ tiền tố uploads/ và uploads-cap-vien/ (cũ: relative từ thư mục code).
+ * Lưu ý: bản cũ dùng path.relative(__dirname, file) nên có thể là
+ * "data/uploads-cap-vien/..." — phải nhận diện uploads-cap-vien/ ở bất kỳ vị trí nào trong chuỗi.
+ * Tương tự với uploads/ (vd. data/uploads/htqt-...) khi APP_DATA_DIR tách khỏi thư mục code.
  * - uploads-cap-vien: có thể xuất hiện ở đầu chuỗi hoặc sau ../ (code /opt/app, file ở APP_DATA_DIR).
  * - public-templates/...: lưu mới (relative tới uploads-cap-vien).
  * - uploads/: thư mục upload chung (missions, htqt, …).
@@ -249,6 +253,9 @@ function resolveStoredFileFromDb(raw) {
   const s = String(raw || '').trim();
   if (!s) return null;
   if (path.isAbsolute(s)) return path.normalize(path.resolve(s));
+  const n = s.replace(/\\/g, '/');
+  const capMarker = 'uploads-cap-vien/';
+  const capIdx = n.toLowerCase().indexOf(capMarker);
   let n = s.replace(/\\/g, '/');
   if (n.startsWith('./')) n = n.slice(2);
 
@@ -258,6 +265,15 @@ function resolveStoredFileFromDb(raw) {
     const rest = n.slice(capIdx + capMarker.length);
     return path.normalize(path.resolve(uploadDirCapVien, rest));
   }
+  const upMarker = 'uploads/';
+  const upIdx = n.toLowerCase().indexOf(upMarker);
+  if (upIdx !== -1) {
+    const rest = n.slice(upIdx + upMarker.length);
+    return path.normalize(path.resolve(uploadDir, rest));
+  }
+  // Legacy: một số bản ghi sai chỉ còn nhánh public-templates/... (resolve cũ gắn nhầm uploads/)
+  if (n.startsWith('public-templates/')) {
+    return path.normalize(path.resolve(uploadDirCapVien, n));
 
   if (n.startsWith('public-templates/')) {
     return path.normalize(path.resolve(uploadDirCapVien, n));
@@ -267,6 +283,16 @@ function resolveStoredFileFromDb(raw) {
     return path.normalize(path.resolve(uploadDir, n.slice('uploads/'.length)));
   }
   return path.normalize(path.resolve(uploadDir, n));
+}
+
+/** File vừa ghi dưới uploadDir → chuỗi lưu CSDL dạng uploads/... (không phụ thuộc __dirname / APP_DATA_DIR). */
+function storedUploadsPathForDatabase(absoluteFilePath) {
+  const abs = path.resolve(absoluteFilePath);
+  const rel = path.relative(uploadDir, abs);
+  if (!rel.startsWith('..') && !path.isAbsolute(rel)) {
+    return 'uploads/' + rel.split(path.sep).join('/');
+  }
+  return path.relative(__dirname, abs).split(path.sep).join('/');
 }
 
 function pathIsStrictlyInsideResolvedRoot(resolvedRootAbs, candidateAbs) {
@@ -289,7 +315,8 @@ function downloadPathIsAllowed(normAbs) {
 function normalizeAndCheckDownloadPath(storedPath) {
   const raw = storedPath == null ? '' : String(storedPath).trim();
   if (!raw) return { err: 404 };
-  const norm = path.resolve(raw);
+  const norm = resolveStoredFileFromDb(raw);
+  if (!norm) return { err: 404 };
   if (!downloadPathIsAllowed(norm)) return { err: 403 };
   try {
     if (!fs.existsSync(norm) || !fs.statSync(norm).isFile()) return { err: 404 };
@@ -2820,7 +2847,8 @@ const HOMEPAGE_MODULES_DEFAULT = [
   { code: 'facilities', label: 'CRD Lab Booking', enabled: 1 },
   { code: 'ethics_integrity', label: 'Đạo đức và Liêm chính khoa học', enabled: 0 },
   { code: 'reward', label: 'Quản lý Khen thưởng & Đánh giá', enabled: 0 },
-  { code: 'dms', label: 'Quản lý tài liệu & hồ sơ (Hành chính)', enabled: 1 }
+  { code: 'dms', label: 'Quản lý tài liệu & hồ sơ (Hành chính)', enabled: 1 },
+  { code: 'document_workflow', label: 'Quy trình văn bản nội bộ', enabled: 1 },
 ];
 
 (function migrateHomepageModuleSortOrder() {
@@ -2898,6 +2926,33 @@ const HOMEPAGE_MODULES_DEFAULT = [
     }
   } catch (e) {
     console.warn('[DB] repairHomepageModulesCorruption:', e.message || e);
+  }
+})();
+
+/** Nối mã document_workflow vào JSON thứ tự cũ (13 mã) để kéo thả admin không lỗi */
+(function migrateHomepageModuleOrderAddDocumentWorkflow() {
+  try {
+    const row = db.prepare('SELECT value FROM system_settings WHERE key = ?').get('homepage_module_order');
+    if (!row || row.value == null || String(row.value).trim() === '') return;
+    let parsed;
+    try {
+      parsed = JSON.parse(row.value);
+    } catch (e) {
+      return;
+    }
+    if (!Array.isArray(parsed) || parsed.includes('document_workflow')) return;
+    if (parsed.length !== HOMEPAGE_MODULES_DEFAULT.length - 1) return;
+    const idx = parsed.indexOf('dms');
+    if (idx >= 0) parsed.splice(idx + 1, 0, 'document_workflow');
+    else parsed.push('document_workflow');
+    if (parsed.length === HOMEPAGE_MODULES_DEFAULT.length) {
+      db.prepare('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)').run(
+        'homepage_module_order',
+        JSON.stringify(parsed)
+      );
+    }
+  } catch (e) {
+    console.warn('[DB] migrateHomepageModuleOrderAddDocumentWorkflow:', e.message || e);
   }
 })();
 
@@ -6286,6 +6341,11 @@ app.post(
     if (!f) {
       return res.status(400).json({ message: 'Thiếu file (form field: file)' });
     }
+    const relWithinCapVien = path.relative(uploadDirCapVien, f.path);
+    const relStored =
+      !relWithinCapVien.startsWith('..') && !path.isAbsolute(relWithinCapVien)
+        ? 'uploads-cap-vien/' + relWithinCapVien.split(path.sep).join('/')
+        : path.relative(__dirname, f.path).split(path.sep).join('/');
     const relStored = path
       .relative(uploadDirCapVien, path.normalize(f.path))
       .replace(/\\/g, '/');
@@ -8947,6 +9007,39 @@ app.get('/api/homepage-stats', (req, res) => {
   } catch (e) {
     /* bảng Equipment chưa có */
   }
+  let documentWorkflowMini = { inProgress: 0, completed: 0, overdue: 0 };
+  try {
+    documentWorkflowMini.inProgress = db
+      .prepare(
+        `SELECT COUNT(*) AS c
+         FROM documents
+         WHERE deleted_at IS NULL
+           AND status IN ('pending','in_progress')
+           AND current_step BETWEEN 1 AND 8`
+      )
+      .get().c;
+    documentWorkflowMini.completed = db
+      .prepare(
+        `SELECT COUNT(*) AS c
+         FROM documents
+         WHERE deleted_at IS NULL
+           AND (status = 'archived' OR current_step >= 9)`
+      )
+      .get().c;
+    documentWorkflowMini.overdue = db
+      .prepare(
+        `SELECT COUNT(*) AS c
+         FROM documents
+         WHERE deleted_at IS NULL
+           AND assignment_deadline IS NOT NULL
+           AND assignment_deadline < date('now')
+           AND current_step BETWEEN 2 AND 7
+           AND status IN ('pending', 'in_progress')`
+      )
+      .get().c;
+  } catch (e) {
+    /* bảng document workflow chưa có */
+  }
   return res.json({
     missions,
     missionMini,
@@ -8959,6 +9052,7 @@ app.get('/api/homepage-stats', (req, res) => {
     facilities,
     dmsMini,
     equipmentMini,
+    documentWorkflowMini,
   });
 });
 
@@ -13731,10 +13825,7 @@ try {
 }
 (function equipmentPrompt2Alters() {
   const alters = [
-    'ALTER TABLE equipments ADD COLUMN review_status TEXT',
     'ALTER TABLE equipments ADD COLUMN asset_group TEXT',
-    'ALTER TABLE equipments ADD COLUMN published_at TEXT',
-    'ALTER TABLE equipments ADD COLUMN review_rejection_note TEXT',
     'ALTER TABLE equipments ADD COLUMN created_by INTEGER REFERENCES users(id)',
     'ALTER TABLE equipments ADD COLUMN last_maintenance_date TEXT',
     'ALTER TABLE equipments ADD COLUMN next_maintenance_date TEXT',
@@ -13763,6 +13854,108 @@ try {
     } catch (e) {
       /* đã có cột */
     }
+  }
+})();
+
+(function dropLegacyEquipmentReviewColumns() {
+  try {
+    const cols = db.prepare(`PRAGMA table_info(equipments)`).all();
+    if (!cols || !cols.length) return;
+    const names = new Set(cols.map((c) => String(c.name || '')));
+    const legacyCols = ['review_status', 'published_at', 'review_rejection_note'];
+    const hasLegacy = legacyCols.some((c) => names.has(c));
+    if (!hasLegacy) return;
+
+    const keepCols = [
+      'id',
+      'equipment_code',
+      'name',
+      'asset_group',
+      'model',
+      'serial_number',
+      'manufacturer',
+      'purchase_year',
+      'purchase_value',
+      'department_id',
+      'manager_id',
+      'location',
+      'specs_json',
+      'status',
+      'profile_visibility',
+      'created_by',
+      'last_maintenance_date',
+      'next_maintenance_date',
+      'calibration_due_date',
+      'asset_type_code',
+      'year_in_use',
+      'unit_name',
+      'quantity_book',
+      'quantity_actual',
+      'quantity_diff',
+      'remaining_value',
+      'utilization_note',
+      'condition_note',
+      'disaster_impact_note',
+      'construction_asset_note',
+      'usage_count_note',
+      'land_attached_note',
+      'asset_note',
+      'created_at',
+      'updated_at',
+    ].filter((c) => names.has(c));
+    if (!keepCols.length) return;
+    const keepSql = keepCols.join(', ');
+
+    db.exec('BEGIN IMMEDIATE');
+    db.exec(`
+      CREATE TABLE __equipments_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        equipment_code TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        asset_group TEXT,
+        model TEXT,
+        serial_number TEXT,
+        manufacturer TEXT,
+        purchase_year INTEGER,
+        purchase_value REAL,
+        department_id TEXT,
+        manager_id INTEGER REFERENCES users(id),
+        location TEXT,
+        specs_json TEXT,
+        status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','maintenance','broken','retired')),
+        profile_visibility TEXT NOT NULL DEFAULT 'institute' CHECK(profile_visibility IN ('public','institute','internal')),
+        created_by INTEGER REFERENCES users(id),
+        last_maintenance_date TEXT,
+        next_maintenance_date TEXT,
+        calibration_due_date TEXT,
+        asset_type_code TEXT,
+        year_in_use INTEGER,
+        unit_name TEXT,
+        quantity_book REAL,
+        quantity_actual REAL,
+        quantity_diff REAL,
+        remaining_value REAL,
+        utilization_note TEXT,
+        condition_note TEXT,
+        disaster_impact_note TEXT,
+        construction_asset_note TEXT,
+        usage_count_note TEXT,
+        land_attached_note TEXT,
+        asset_note TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      )
+    `);
+    db.exec(`INSERT INTO __equipments_new (${keepSql}) SELECT ${keepSql} FROM equipments`);
+    db.exec(`DROP TABLE equipments`);
+    db.exec(`ALTER TABLE __equipments_new RENAME TO equipments`);
+    db.exec('COMMIT');
+    console.log('[EQUIP] dropped legacy review columns from equipments');
+  } catch (e) {
+    try {
+      db.exec('ROLLBACK');
+    } catch (_) {}
+    console.warn('[EQUIP] drop legacy review columns:', e.message);
   }
 })();
 
@@ -13879,6 +14072,40 @@ try {
   console.log('[EQUIP] Đã mount /api/equipment');
 } catch (e) {
   console.warn('[EQUIP] Không mount equipment:', e.message);
+}
+
+/** Quy trình ban hành văn bản hành chính nội bộ (9 bước) */
+try {
+  const createInternalDocumentsWorkflowRouter = require('./routes/internalDocumentsWorkflow');
+  function documentWorkflowMailSend(opts) {
+    if (!transporter || !opts) return Promise.resolve({ ok: false, reason: 'mail_not_configured' });
+    const toList = Array.isArray(opts.to) ? opts.to.filter(Boolean) : opts.to ? [opts.to] : [];
+    if (!toList.length) return Promise.resolve({ ok: false, reason: 'no_recipients' });
+    return transporter
+      .sendMail({
+        from: getSmtpFrom(),
+        to: toList.join(', '),
+        subject: opts.subject || 'Thông báo quy trình văn bản',
+        text: opts.text || '',
+        html: opts.html || opts.text || '',
+      })
+      .then(() => ({ ok: true }))
+      .catch((e) => {
+        console.warn('[DOCFLOW mail]', e.message);
+        return { ok: false, reason: 'smtp_error', error: e.message || 'smtp_error' };
+      });
+  }
+  const internalWorkflowRouter = createInternalDocumentsWorkflowRouter({
+    db,
+    authMiddleware,
+    uploadsRoot: appPaths.uploadsRoot(),
+    mailSend: documentWorkflowMailSend,
+    baseUrl: process.env.BASE_URL || '',
+  });
+  app.use('/api', internalWorkflowRouter);
+  console.log('[DOCFLOW] Đã mount /api/documents, /api/attachments, /api/units, /api/dashboard/stats');
+} catch (e) {
+  console.warn('[DOCFLOW] Không mount internal documents workflow:', e.message);
 }
 
 /** Bảng dashboard_permissions (migrations/004_dashboard_permissions.sql) */
@@ -14805,7 +15032,8 @@ function coopTryAutoGenerateDoanRaVanBan(id) {
     const safeMa = (row.ma_de_xuat || 'doan-ra-' + nid).replace(/[^a-zA-Z0-9._\u00C0-\u024F-]/g, '_');
     const outName = `To-trinh-${safeMa}.docx`;
     const outRel = path.join('uploads', 'htqt-doan-ra', 'doan_ra_' + nid + '_to_trinh_' + Date.now() + '.docx').replace(/\\/g, '/');
-    const abs = path.join(__dirname, outRel);
+    const abs = resolveStoredFileFromDb(outRel);
+    try { fs.mkdirSync(path.dirname(abs), { recursive: true }); } catch (_) {}
     fs.writeFileSync(abs, buf);
     db.prepare(`UPDATE cooperation_doan_ra SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
       .run(outRel, outName, nid);
@@ -14912,7 +15140,8 @@ function coopTryAutoGenerateDoanVaoVanBan(id) {
     const safeMa = (row.ma_de_xuat || 'doan-vao-' + nid).replace(/[^a-zA-Z0-9._\u00C0-\u024F-]/g, '_');
     const outName = `To-trinh-${safeMa}.docx`;
     const outRel = path.join('uploads', 'htqt-doan-vao', 'doan_vao_' + nid + '_to_trinh_' + Date.now() + '.docx').replace(/\\/g, '/');
-    const abs = path.join(__dirname, outRel);
+    const abs = resolveStoredFileFromDb(outRel);
+    try { fs.mkdirSync(path.dirname(abs), { recursive: true }); } catch (_) {}
     fs.writeFileSync(abs, buf);
     db.prepare(`UPDATE cooperation_doan_vao SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
       .run(outRel, outName, nid);
@@ -14944,8 +15173,8 @@ function coopEnsureFreshDoanRaVanBan(id) {
   if (!row.van_ban_word_path) {
     shouldRegen = true;
   } else if (coopVanBanIsAutoMergedOutput(row.van_ban_word_path)) {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (!fs.existsSync(abs)) {
+    const abs = resolveStoredFileFromDb(row.van_ban_word_path);
+    if (!abs || !fs.existsSync(abs)) {
       shouldRegen = true;
     } else {
       try {
@@ -14973,8 +15202,8 @@ function coopEnsureFreshDoanVaoVanBan(id) {
   if (!row.van_ban_word_path) {
     shouldRegen = true;
   } else if (coopVanBanIsAutoMergedOutput(row.van_ban_word_path)) {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (!fs.existsSync(abs)) {
+    const abs = resolveStoredFileFromDb(row.van_ban_word_path);
+    if (!abs || !fs.existsSync(abs)) {
       shouldRegen = true;
     } else {
       try {
@@ -15075,7 +15304,8 @@ function coopTryAutoGenerateMouVanBan(id) {
     const safeMa = (row.ma_de_xuat || 'mou-' + nid).replace(/[^a-zA-Z0-9._\u00C0-\u024F-]/g, '_');
     const outName = `To-trinh-${safeMa}.docx`;
     const outRel = path.join('uploads', 'htqt-mou', 'mou_' + nid + '_to_trinh_' + Date.now() + '.docx').replace(/\\/g, '/');
-    const abs = path.join(__dirname, outRel);
+    const abs = resolveStoredFileFromDb(outRel);
+    try { fs.mkdirSync(path.dirname(abs), { recursive: true }); } catch (_) {}
     fs.writeFileSync(abs, buf);
     db.prepare(`UPDATE cooperation_mou_de_xuat SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
       .run(outRel, outName, nid);
@@ -15098,8 +15328,8 @@ function coopEnsureFreshMouVanBan(id) {
   if (!row.van_ban_word_path) {
     shouldRegen = true;
   } else if (coopVanBanIsAutoMergedOutput(row.van_ban_word_path)) {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (!fs.existsSync(abs)) {
+    const abs = resolveStoredFileFromDb(row.van_ban_word_path);
+    if (!abs || !fs.existsSync(abs)) {
       shouldRegen = true;
     } else {
       try {
@@ -15239,7 +15469,8 @@ function coopTryAutoGenerateYtnnVanBan(id) {
     const safeMa = (row.ma_de_xuat || 'ytnn-' + nid).replace(/[^a-zA-Z0-9._\u00C0-\u024F-]/g, '_');
     const outName = `To-trinh-${safeMa}.docx`;
     const outRel = path.join('uploads', 'htqt-ytnn', 'ytnn_' + nid + '_to_trinh_' + Date.now() + '.docx').replace(/\\/g, '/');
-    const abs = path.join(__dirname, outRel);
+    const abs = resolveStoredFileFromDb(outRel);
+    try { fs.mkdirSync(path.dirname(abs), { recursive: true }); } catch (_) {}
     fs.writeFileSync(abs, buf);
     db.prepare(`UPDATE htqt_de_xuat SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
       .run(outRel, outName, nid);
@@ -15262,8 +15493,8 @@ function coopEnsureFreshYtnnVanBan(id) {
   if (!row.van_ban_word_path) {
     shouldRegen = true;
   } else if (coopVanBanIsAutoMergedOutput(row.van_ban_word_path)) {
-    const abs = path.join(__dirname, row.van_ban_word_path);
-    if (!fs.existsSync(abs)) {
+    const abs = resolveStoredFileFromDb(row.van_ban_word_path);
+    if (!abs || !fs.existsSync(abs)) {
       shouldRegen = true;
     } else {
       try {
@@ -15931,7 +16162,7 @@ app.post('/api/admin/cooperation/doan-ra/:id/van-ban-word', authMiddleware, admi
   uploadHtqtDoanRa.single('file')(req, res, (err) => {
     if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
-    const rel = path.relative(__dirname, req.file.path).replace(/\\/g, '/');
+    const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkDoanRaVanBanFile(row);
     const orig = (req.file.originalname || 'van-ban.docx').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
     db.prepare(`UPDATE cooperation_doan_ra SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
@@ -15963,9 +16194,9 @@ app.get('/api/cooperation/doan-ra/:id/van-ban-word', authMiddleware, (req, res) 
   }
   row = coopEnsureFreshDoanRaVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
-  const abs = path.join(__dirname, row.van_ban_word_path);
+  const abs = resolveStoredFileFromDb(row.van_ban_word_path);
   const baseDir = path.resolve(path.join(uploadDir, 'htqt-doan-ra'));
-  if (!abs.startsWith(baseDir) || abs.includes('..')) {
+  if (!abs || !pathIsStrictlyInsideResolvedRoot(baseDir, abs)) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
   if (!fs.existsSync(abs)) return res.status(404).json({ message: 'File không còn trên máy chủ.' });
@@ -16031,7 +16262,7 @@ app.post('/api/admin/cooperation/doan-vao/:id/van-ban-word', authMiddleware, adm
   uploadHtqtDoanVao.single('file')(req, res, (err) => {
     if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
-    const rel = path.relative(__dirname, req.file.path).replace(/\\/g, '/');
+    const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkDoanVaoVanBanFile(row);
     const orig = (req.file.originalname || 'van-ban.docx').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
     db.prepare(`UPDATE cooperation_doan_vao SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
@@ -16063,9 +16294,9 @@ app.get('/api/cooperation/doan-vao/:id/van-ban-word', authMiddleware, (req, res)
   }
   row = coopEnsureFreshDoanVaoVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
-  const abs = path.join(__dirname, row.van_ban_word_path);
+  const abs = resolveStoredFileFromDb(row.van_ban_word_path);
   const baseDir = path.resolve(path.join(uploadDir, 'htqt-doan-vao'));
-  if (!abs.startsWith(baseDir) || abs.includes('..')) {
+  if (!abs || !pathIsStrictlyInsideResolvedRoot(baseDir, abs)) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
   if (!fs.existsSync(abs)) return res.status(404).json({ message: 'File không còn trên máy chủ.' });
@@ -16131,7 +16362,7 @@ app.post('/api/admin/cooperation/mou/:id/van-ban-word', authMiddleware, adminOnl
   uploadHtqtMou.single('file')(req, res, (err) => {
     if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
-    const rel = path.relative(__dirname, req.file.path).replace(/\\/g, '/');
+    const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkMouVanBanFile(row);
     const orig = (req.file.originalname || 'van-ban.docx').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
     db.prepare(`UPDATE cooperation_mou_de_xuat SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
@@ -16163,9 +16394,9 @@ app.get('/api/cooperation/mou/:id/van-ban-word', authMiddleware, (req, res) => {
   }
   row = coopEnsureFreshMouVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
-  const abs = path.join(__dirname, row.van_ban_word_path);
+  const abs = resolveStoredFileFromDb(row.van_ban_word_path);
   const baseDir = path.resolve(path.join(uploadDir, 'htqt-mou'));
-  if (!abs.startsWith(baseDir) || abs.includes('..')) {
+  if (!abs || !pathIsStrictlyInsideResolvedRoot(baseDir, abs)) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
   if (!fs.existsSync(abs)) return res.status(404).json({ message: 'File không còn trên máy chủ.' });
@@ -16231,7 +16462,7 @@ app.post('/api/admin/cooperation/ytnn/:id/van-ban-word', authMiddleware, adminOn
   uploadHtqtYtnn.single('file')(req, res, (err) => {
     if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
-    const rel = path.relative(__dirname, req.file.path).replace(/\\/g, '/');
+    const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkYtnnVanBanFile(row);
     const orig = (req.file.originalname || 'van-ban.docx').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
     db.prepare(`UPDATE htqt_de_xuat SET van_ban_word_path=?, van_ban_word_original_name=?, van_ban_word_uploaded_at=datetime('now','localtime'), updated_at=datetime('now','localtime') WHERE id=?`)
@@ -16263,9 +16494,9 @@ app.get('/api/cooperation/ytnn/:id/van-ban-word', authMiddleware, (req, res) => 
   }
   row = coopEnsureFreshYtnnVanBan(id);
   if (!row || !row.van_ban_word_path) return res.status(404).json({ message: 'Chưa có văn bản Word.' });
-  const abs = path.join(__dirname, row.van_ban_word_path);
+  const abs = resolveStoredFileFromDb(row.van_ban_word_path);
   const baseDir = path.resolve(path.join(uploadDir, 'htqt-ytnn'));
-  if (!abs.startsWith(baseDir) || abs.includes('..')) {
+  if (!abs || !pathIsStrictlyInsideResolvedRoot(baseDir, abs)) {
     return res.status(400).json({ message: 'Đường dẫn file không hợp lệ.' });
   }
   if (!fs.existsSync(abs)) return res.status(404).json({ message: 'File không còn trên máy chủ.' });
@@ -17625,6 +17856,43 @@ app.get('/public/vendor/Sortable.min.js', (req, res) => {
     return res.status(404).send('sortable bundle not found');
   }
 });
+
+// Admin UI (React Vite) bridge:
+// - If built bundle exists, serve it at /admin
+// - Otherwise redirect to Vite dev server (default :5178)
+const adminUiDistDir = path.join(__dirname, 'frontend', 'document-workflow-ui', 'dist');
+const adminUiIndexFile = path.join(adminUiDistDir, 'index.html');
+const adminUiDevUrl = String(process.env.ADMIN_UI_DEV_URL || 'http://localhost:5178').replace(/\/$/, '');
+
+if (fs.existsSync(adminUiIndexFile)) {
+  // Vite build currently emits absolute /assets/* URLs by default.
+  // Serve both /assets and /admin/assets to avoid 404 in admin SPA.
+  app.use(
+    '/assets',
+    express.static(path.join(adminUiDistDir, 'assets'), {
+      etag: false,
+      lastModified: false,
+      maxAge: 0,
+    })
+  );
+  app.use(
+    '/admin/assets',
+    express.static(path.join(adminUiDistDir, 'assets'), {
+      etag: false,
+      lastModified: false,
+      maxAge: 0,
+    })
+  );
+  app.get(['/admin', '/admin/*'], (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    return res.sendFile(adminUiIndexFile);
+  });
+} else {
+  app.get(['/admin', '/admin/*'], (req, res) => {
+    const tail = String(req.originalUrl || '').replace(/^\/admin/, '');
+    return res.redirect(302, `${adminUiDevUrl}/admin${tail}`);
+  });
+}
 
 app.use(
   express.static(__dirname, {

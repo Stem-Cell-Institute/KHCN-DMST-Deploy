@@ -1996,6 +1996,34 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
 
   router.post('/admin/module-access', masterAdminOnly, express.json(), (req, res) => {
     try {
+      if (req.body && req.body.disable_all_institute === true) {
+        const suffix = String((req.body && req.body.email_suffix) || '@sci.edu.vn')
+          .trim()
+          .toLowerCase();
+        const likePattern = '%' + (suffix.startsWith('@') ? suffix : '@' + suffix);
+        const ids = db
+          .prepare(
+            `SELECT id FROM users
+             WHERE lower(trim(COALESCE(email,''))) LIKE ?`
+          )
+          .all(likePattern)
+          .map((x) => Number(x.id))
+          .filter((x) => Number.isFinite(x) && x > 0);
+        if (!ids.length) {
+          return res.json({ ok: true, removed: 0, message: 'Không có tài khoản nội viện để gỡ.' });
+        }
+        const marks = ids.map(() => '?').join(',');
+        db.prepare(`DELETE FROM dms_user_roles WHERE user_id IN (${marks})`).run(...ids);
+        const info = db.prepare(`DELETE FROM dms_module_access WHERE user_id IN (${marks})`).run(...ids);
+        const removed = Number(info.changes) || 0;
+        return res.json({
+          ok: true,
+          removed,
+          message: removed
+            ? `Đã tắt thêm toàn viện và gỡ ${removed} tài khoản nội viện khỏi danh sách truy cập module.`
+            : 'Không có tài khoản nội viện nào trong danh sách truy cập để gỡ.',
+        });
+      }
       if (req.body && req.body.all_institute === true) {
         const info = db
           .prepare(
