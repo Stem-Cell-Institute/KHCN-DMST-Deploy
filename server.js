@@ -15294,6 +15294,17 @@ function coopVTOrAdmin(req, res, next) {
 }
 
 const COOP_DASH_TABLES = ['cooperation_doan_ra', 'cooperation_doan_vao', 'cooperation_mou_de_xuat', 'htqt_de_xuat'];
+const COOP_DASH_SERIES_SOURCES = [
+  { table: 'cooperation_doan_ra', monthExpr: "strftime('%Y-%m', created_at)" },
+  { table: 'cooperation_doan_vao', monthExpr: "strftime('%Y-%m', created_at)" },
+  { table: 'cooperation_mou_de_xuat', monthExpr: "strftime('%Y-%m', created_at)" },
+  { table: 'htqt_de_xuat', monthExpr: "strftime('%Y-%m', created_at)" },
+  {
+    table: 'conference_registrations',
+    monthExpr: "strftime('%Y-%m', created_at)",
+    whereSql: "COALESCE(status,'') != 'cancelled'",
+  },
+];
 const COOP_PENDING_STATUSES = new Set([
   'dang_tham_dinh', 'cho_ky_duyet', 'cho_tham_dinh', 'cho_phong_duyet', 'cho_vt_duyet', 'cho_vt_phe_duyet',
   'yeu_cau_bo_sung', 'cho_phan_loai', 'dang_chuan_bi'
@@ -15321,6 +15332,22 @@ function coopDashGroupByMonth(table, emailLower) {
   }
 }
 
+function coopDashGroupByMonthSource(source, emailLower) {
+  try {
+    const monthExpr = source && source.monthExpr ? source.monthExpr : "strftime('%Y-%m', created_at)";
+    const whereParts = [
+      `${monthExpr} IS NOT NULL`,
+      `length(${monthExpr}) >= 7`,
+    ];
+    if (source && source.whereSql) whereParts.push('(' + source.whereSql + ')');
+    if (emailLower) whereParts.push("lower(trim(submitted_by_email)) = ?");
+    const sql = `SELECT ${monthExpr} AS ym, COUNT(*) AS c FROM ${source.table} WHERE ${whereParts.join(' AND ')} GROUP BY ym`;
+    return emailLower ? db.prepare(sql).all(emailLower) : db.prepare(sql).all();
+  } catch (e) {
+    return [];
+  }
+}
+
 function coopDashMergeStatusBuckets(emailLower) {
   const merged = {};
   for (const t of COOP_DASH_TABLES) {
@@ -15342,6 +15369,37 @@ function coopDashMergeStatusBuckets(emailLower) {
     else if (COOP_PENDING_STATUSES.has(st)) by.dang_xu_ly += n;
     else by.khac += n;
   }
+  // Bổ sung HN/HT để dashboard phản ánh toàn bộ module hợp tác.
+  try {
+    const hnhtRows = emailLower
+      ? db.prepare(
+          `SELECT lower(trim(COALESCE(status,''))) AS st, COUNT(*) AS c
+           FROM conference_registrations
+           WHERE lower(trim(submitted_by_email)) = ?
+           GROUP BY lower(trim(COALESCE(status,'')))`
+        ).all(emailLower)
+      : db.prepare(
+          `SELECT lower(trim(COALESCE(status,''))) AS st, COUNT(*) AS c
+           FROM conference_registrations
+           GROUP BY lower(trim(COALESCE(status,'')))`
+        ).all();
+    for (const r of hnhtRows) {
+      const st = (r && r.st ? r.st : '').toLowerCase();
+      const n = (r && r.c) || 0;
+      if (!n) continue;
+      if (st === 'director_approved' || st === 'approved' || st === 'da_duyet' || st === 'da_phe_duyet') by.da_phe_duyet += n;
+      else if (st === 'rejected' || st === 'tu_choi' || st === 'khong_phe_duyet') by.tu_choi += n;
+      else if (st === 'cancelled' || st.indexOf('ket_thuc') >= 0 || st === 'closed') by.ket_thuc += n;
+      else if (
+        st === 'submitted' ||
+        st === 'khcn_reviewing' ||
+        st === 'khcn_approved' ||
+        st === 'director_reviewing' ||
+        st === 'revision_requested'
+      ) by.dang_xu_ly += n;
+      else by.khac += n;
+    }
+  } catch (_) {}
   return by;
 }
 
@@ -15357,8 +15415,8 @@ function coopDashLast12MonthsKeys() {
 
 function coopDashSeries12m(emailLower) {
   const acc = {};
-  for (const t of COOP_DASH_TABLES) {
-    for (const r of coopDashGroupByMonth(t, emailLower)) {
+  for (const source of COOP_DASH_SERIES_SOURCES) {
+    for (const r of coopDashGroupByMonthSource(source, emailLower)) {
       const ym = r.ym;
       if (!ym || String(ym).length < 7) continue;
       acc[ym] = (acc[ym] || 0) + (r.c || 0);
