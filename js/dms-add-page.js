@@ -62,7 +62,176 @@
     return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
   }
 
-  var state = { categories: [], types: [], templates: [], tags: [], editId: null };
+  var state = { categories: [], types: [], templates: [], tags: [], editId: null, readOnly: false };
+
+  function ensureMultiFileUi() {
+    var baseInput = el('f-file');
+    if (!baseInput || !baseInput.parentElement) return;
+    var wrap = baseInput.parentElement;
+    wrap.classList.add('dms-attach-panel');
+    baseInput.classList.add('dms-attach-main-input');
+
+    if (!el('f-extra-files')) {
+      var extra = document.createElement('div');
+      extra.id = 'f-extra-files';
+      extra.className = 'dms-attach-extra-files';
+      wrap.insertBefore(extra, el('f-file-help'));
+    }
+    if (!el('f-add-file')) {
+      var addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'dms-btn dms-btn-ghost dms-attach-add-btn';
+      addBtn.id = 'f-add-file';
+      addBtn.textContent = '+ Thêm file';
+      wrap.insertBefore(addBtn, el('f-file-help'));
+    }
+    if (!el('f-upload-files')) {
+      var uploadBtn = document.createElement('button');
+      uploadBtn.type = 'button';
+      uploadBtn.className = 'dms-btn dms-btn-primary dms-attach-upload-btn';
+      uploadBtn.id = 'f-upload-files';
+      uploadBtn.textContent = 'Upload file bổ sung';
+      wrap.insertBefore(uploadBtn, el('f-file-help'));
+    }
+    if (!el('f-actions-row')) {
+      var actions = document.createElement('div');
+      actions.id = 'f-actions-row';
+      actions.className = 'dms-attach-actions';
+      var addBtnNode = el('f-add-file');
+      var uploadBtnNode = el('f-upload-files');
+      if (addBtnNode) actions.appendChild(addBtnNode);
+      if (uploadBtnNode) actions.appendChild(uploadBtnNode);
+      wrap.insertBefore(actions, el('f-extra-files'));
+    }
+    if (!el('f-existing-files')) {
+      var list = document.createElement('div');
+      list.id = 'f-existing-files';
+      list.className = 'dms-add-note dms-attach-existing';
+      wrap.insertBefore(list, el('f-file-help'));
+    }
+
+    var addBtnFinal = el('f-add-file');
+    if (addBtnFinal) {
+      addBtnFinal.classList.add('dms-btn', 'dms-attach-add-btn');
+      addBtnFinal.classList.remove('dms-btn-ghost');
+      addBtnFinal.textContent = '+ Thêm file';
+    }
+    var uploadBtnFinal = el('f-upload-files');
+    if (uploadBtnFinal) {
+      uploadBtnFinal.classList.add('dms-btn', 'dms-btn-primary', 'dms-attach-upload-btn');
+    }
+  }
+
+  function renderQuickDownloadLinks(doc) {
+    var scan = doc && doc.external_scan_link ? String(doc.external_scan_link).trim() : '';
+    var word = doc && doc.external_word_link ? String(doc.external_word_link).trim() : '';
+    var holder = el('f-download-links');
+    if (!holder) {
+      var panel = document.querySelector('[data-add-tab="manual"]');
+      var form = el('form-manual');
+      if (!panel || !form) return;
+      holder = document.createElement('div');
+      holder.id = 'f-download-links';
+      holder.className = 'dms-add-note';
+      holder.style.margin = '0 0 14px';
+      panel.insertBefore(holder, form);
+    }
+    if (!scan && !word) {
+      holder.innerHTML = '';
+      return;
+    }
+    var links = [];
+    if (scan) {
+      links.push(
+        '<a class="dms-btn dms-btn-ghost" target="_blank" rel="noopener noreferrer" href="' +
+          scan.replace(/"/g, '&quot;') +
+          '">Tải link PDF</a>'
+      );
+    }
+    if (word) {
+      links.push(
+        '<a class="dms-btn dms-btn-ghost" target="_blank" rel="noopener noreferrer" href="' +
+          word.replace(/"/g, '&quot;') +
+          '">Tải link Word</a>'
+      );
+    }
+    holder.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap"><strong style="align-self:center">Tải nhanh:</strong>' + links.join('') + '</div>';
+  }
+
+  function setFormReadOnly() {
+    var title = el('page-title');
+    if (title) title.textContent = 'Xem tài liệu';
+    var form = el('form-manual');
+    if (!form) return;
+    form.querySelectorAll('input, select, textarea, button, a').forEach(function (node) {
+      var tag = (node.tagName || '').toUpperCase();
+      if (tag === 'A') return;
+      var type = (node.getAttribute('type') || '').toLowerCase();
+      if (type === 'submit' || type === 'button' || type === 'file' || type === 'checkbox' || type === 'radio') {
+        node.disabled = true;
+        return;
+      }
+      node.readOnly = true;
+      node.disabled = true;
+    });
+    var actions = form.querySelector('.dms-add-actions');
+    if (actions) actions.style.display = 'none';
+    document.querySelectorAll('[data-add-tab-btn="import"]').forEach(function (b) {
+      b.style.display = 'none';
+    });
+    var note = document.createElement('p');
+    note.className = 'dms-add-note';
+    note.style.margin = '0 0 12px';
+    note.textContent = 'Bạn đang ở chế độ chỉ xem, không thể chỉnh sửa thông tin tài liệu.';
+    var panel = document.querySelector('[data-add-tab="manual"]');
+    if (panel) panel.insertBefore(note, panel.querySelector('h2').nextSibling);
+    renderReadonlyLinkActions();
+  }
+
+  function renderReadonlyLinkActions() {
+    var scanInput = el('f-scan');
+    var wordInput = el('f-word');
+    if (!scanInput || !wordInput) return;
+    var scanUrl = String(scanInput.value || '').trim();
+    var wordUrl = String(wordInput.value || '').trim();
+
+    var box = el('f-readonly-downloads');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'f-readonly-downloads';
+      box.className = 'dms-add-note';
+      box.style.marginTop = '10px';
+      var host = wordInput.closest('.dms-add-grid') || wordInput.parentElement;
+      if (!host || !host.parentElement) return;
+      host.parentElement.insertBefore(box, host.nextSibling);
+    }
+
+    if (!scanUrl && !wordUrl) {
+      box.innerHTML = '';
+      return;
+    }
+
+    var links = [];
+    if (scanUrl) {
+      links.push(
+        '<a class="dms-btn dms-btn-primary" target="_blank" rel="noopener noreferrer" href="' +
+          scanUrl.replace(/"/g, '&quot;') +
+          '">Mở link PDF</a>'
+      );
+    }
+    if (wordUrl) {
+      links.push(
+        '<a class="dms-btn dms-btn-primary" target="_blank" rel="noopener noreferrer" href="' +
+          wordUrl.replace(/"/g, '&quot;') +
+          '">Mở link Word</a>'
+      );
+    }
+    box.innerHTML =
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' +
+      '<strong>Tải tài liệu:</strong>' +
+      links.join('') +
+      '</div>';
+  }
 
   function showTab(name) {
     document.querySelectorAll('[data-add-tab]').forEach(function (p) {
@@ -156,13 +325,151 @@
 
   function resetManualFormForNextEntry() {
     el('form-manual').reset();
+    if (el('f-extra-files')) el('f-extra-files').innerHTML = '';
+    if (el('f-existing-files')) el('f-existing-files').innerHTML = '';
     fillTagChecks();
     fillTemplateSelect();
     syncVnDateHint('f-issue', 'f-issue-hint');
     syncVnDateHint('f-valid', 'f-valid-hint');
   }
 
+  function addExtraFileInput() {
+    var box = el('f-extra-files');
+    if (!box) return;
+    var row = document.createElement('div');
+    row.className = 'dms-attach-extra-row';
+    row.innerHTML =
+      '<input type="file" class="f-extra-file dms-attach-extra-input">' +
+      '<button type="button" class="dms-btn dms-btn-ghost f-extra-file-remove">Xóa dòng</button>';
+    box.appendChild(row);
+    var rm = row.querySelector('.f-extra-file-remove');
+    if (rm) {
+      rm.addEventListener('click', function () {
+        row.remove();
+      });
+    }
+  }
+
+  function collectExtraFiles() {
+    var files = [];
+    var box = el('f-extra-files');
+    if (!box) return files;
+    box.querySelectorAll('.f-extra-file').forEach(function (inp) {
+      if (inp.files && inp.files[0]) files.push(inp.files[0]);
+    });
+    return files;
+  }
+
+  async function uploadExtraFilesOnly() {
+    if (!state.editId) {
+      alert('Chỉ upload thêm file khi đang ở chế độ sửa tài liệu.');
+      return;
+    }
+    if (state.readOnly) return;
+    var allFiles = [];
+    var mainFile = el('f-file').files && el('f-file').files[0] ? el('f-file').files[0] : null;
+    if (mainFile) allFiles.push(mainFile);
+    allFiles = allFiles.concat(collectExtraFiles());
+    if (!allFiles.length) {
+      alert('Bạn chưa chọn file để upload.');
+      return;
+    }
+    var btn = el('f-upload-files');
+    var oldText = btn ? btn.textContent : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Đang upload...';
+    }
+    try {
+      var fd = new FormData();
+      allFiles.forEach(function (f) {
+        fd.append('files', f);
+      });
+      var r = await fetch(apiBase + '/api/dms/documents/' + state.editId + '/attachments', {
+        method: 'POST',
+        headers: { Accept: 'application/json', Authorization: 'Bearer ' + getToken() },
+        body: fd,
+      });
+      var j = await r.json().catch(function () {
+        return {};
+      });
+      if (!r.ok) throw new Error(j.message || 'Không upload được file bổ sung');
+      if (el('f-file')) el('f-file').value = '';
+      if (el('f-extra-files')) el('f-extra-files').innerHTML = '';
+      var refreshed = await api('/documents/' + state.editId);
+      renderExistingAttachments((refreshed.document && refreshed.document.attachments) || [], state.editId);
+      alert('Đã upload ' + (j.uploaded || allFiles.length) + ' file bổ sung.');
+    } catch (e) {
+      alert(e.message || String(e));
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = oldText || 'Upload file bổ sung';
+      }
+    }
+  }
+
+  function renderExistingAttachments(list, docId) {
+    var root = el('f-existing-files');
+    if (!root) return;
+    if (!list || !list.length) {
+      root.innerHTML = '<div class="dms-attach-empty">Chưa có file bổ sung.</div>';
+      return;
+    }
+    root.innerHTML =
+      '<div class="dms-attach-existing-title">File đã upload</div>' +
+      list
+        .map(function (a) {
+          return (
+            '<div class="dms-attach-item">' +
+            '<a class="dms-link dms-attach-item-name" target="_blank" rel="noopener" href="' +
+            apiBase +
+            '/api/dms/documents/' +
+            docId +
+            '/attachments/' +
+            a.id +
+            '/file">' +
+            escapeHtml(a.original_name || ('file_' + a.id)) +
+            '</a>' +
+            (state.readOnly
+              ? ''
+              : '<button type="button" class="dms-btn dms-btn-ghost dms-attach-delete" data-attachment-id="' +
+                a.id +
+                '">Xóa</button>') +
+            '</div>'
+          );
+        })
+        .join('');
+    root.querySelectorAll('.dms-attach-delete').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var attachmentId = Number(btn.getAttribute('data-attachment-id'));
+        if (!Number.isFinite(attachmentId) || attachmentId <= 0) return;
+        if (!confirm('Xóa file đính kèm này?')) return;
+        btn.disabled = true;
+        fetch(apiBase + '/api/dms/documents/' + docId + '/attachments/' + attachmentId, {
+          method: 'DELETE',
+          headers: { Accept: 'application/json', Authorization: 'Bearer ' + getToken() },
+        })
+          .then(async function (r) {
+            var j = await r.json().catch(function () {
+              return {};
+            });
+            if (!r.ok) throw new Error(j.message || 'Không xóa được file');
+            return api('/documents/' + docId);
+          })
+          .then(function (refreshed) {
+            renderExistingAttachments((refreshed.document && refreshed.document.attachments) || [], docId);
+          })
+          .catch(function (e) {
+            alert(e.message || String(e));
+            btn.disabled = false;
+          });
+      });
+    });
+  }
+
   async function submitManual(ev) {
+    if (state.readOnly) return;
     ev.preventDefault();
     var editId = state.editId;
     var tagEls = el('f-tags').querySelectorAll('input[name="tag"]:checked');
@@ -198,7 +505,33 @@
             tag_ids: JSON.stringify(tagIds),
           }),
         });
+        var allFiles = [];
+        var mainFile = el('f-file').files && el('f-file').files[0] ? el('f-file').files[0] : null;
+        if (mainFile) allFiles.push(mainFile);
+        allFiles = allFiles.concat(collectExtraFiles());
+        if (allFiles.length) {
+          var afd = new FormData();
+          allFiles.forEach(function (f) {
+            afd.append('files', f);
+          });
+          await fetch(apiBase + '/api/dms/documents/' + editId + '/attachments', {
+            method: 'POST',
+            headers: { Accept: 'application/json', Authorization: 'Bearer ' + getToken() },
+            body: afd,
+          }).then(async function (r) {
+            if (!r.ok) {
+              var j = await r.json().catch(function () {
+                return {};
+              });
+              throw new Error(j.message || 'Không tải được file đính kèm');
+            }
+          });
+        }
         alert('Đã lưu cập nhật tài liệu. Bạn có thể tiếp tục thao tác ngay tại trang này.');
+        if (el('f-file')) el('f-file').value = '';
+        if (el('f-extra-files')) el('f-extra-files').innerHTML = '';
+        var refreshed = await api('/documents/' + editId);
+        renderExistingAttachments((refreshed.document && refreshed.document.attachments) || [], editId);
         return;
       }
 
@@ -388,13 +721,17 @@
     fillTemplateSelect();
     fillImportSelects();
     fillTagChecks();
+    ensureMultiFileUi();
 
     var idParam = qs('id');
+    var mode = String(qs('mode') || '').toLowerCase();
+    state.readOnly = mode === 'view' || mode === 'readonly';
     if (idParam) {
       state.editId = Number(idParam);
       if (Number.isFinite(state.editId)) {
         var doc = await api('/documents/' + state.editId);
         var d = doc.document;
+        renderQuickDownloadLinks(d);
         el('page-title').textContent = 'Sửa tài liệu';
         el('f-title').value = d.title || '';
         el('f-ref').value = d.ref_number || '';
@@ -423,6 +760,7 @@
           ? String(d.destruction_eligible_date).slice(0, 10)
           : '';
         fillTagChecks(d.tags || []);
+        renderExistingAttachments(d.attachments || [], state.editId);
         el('f-file').removeAttribute('required');
         el('f-file-help').textContent =
           d.file_path === '__no_file__'
@@ -432,6 +770,7 @@
         document.querySelectorAll('[data-add-tab-btn="import"]').forEach(function (b) {
           b.style.display = 'none';
         });
+        if (state.readOnly) setFormReadOnly();
       }
     }
 
@@ -442,6 +781,20 @@
       showTab('import');
     });
     el('form-manual').addEventListener('submit', submitManual);
+    var addFileBtn = el('f-add-file');
+    if (addFileBtn) {
+      addFileBtn.addEventListener('click', function () {
+        addExtraFileInput();
+      });
+    }
+    var uploadFilesBtn = el('f-upload-files');
+    if (uploadFilesBtn) {
+      uploadFilesBtn.addEventListener('click', function () {
+        uploadExtraFilesOnly().catch(function (e) {
+          alert(e.message || String(e));
+        });
+      });
+    }
     el('f-issue').addEventListener('change', function () {
       syncVnDateHint('f-issue', 'f-issue-hint');
     });

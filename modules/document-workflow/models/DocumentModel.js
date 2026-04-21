@@ -5,6 +5,14 @@ class DocumentModel {
 
   ensureSchema() {
     this.db.exec(`
+      CREATE TABLE IF NOT EXISTS units (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE,
+        name TEXT NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+
       CREATE TABLE IF NOT EXISTS documents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
@@ -205,6 +213,9 @@ class DocumentModel {
       .run();
     this.db
       .prepare(`INSERT OR IGNORE INTO module_settings(setting_key, setting_value) VALUES ('internal_domain_email_suffix', '@sci.edu.vn')`)
+      .run();
+    this.db
+      .prepare(`INSERT OR IGNORE INTO module_settings(setting_key, setting_value) VALUES ('email_notification_toggles', '{}')`)
       .run();
     this.db
       .prepare(

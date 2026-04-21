@@ -859,6 +859,8 @@
                 ? 'http://localhost:3000' : '';
             var token = localStorage.getItem('token');
             var isAdmin = false;
+            var hasRunHomepageCountUp = false;
+            var COUNT_UP_DURATION_MS = 800;
             try {
                 var u = JSON.parse(localStorage.getItem('user') || '{}');
                 isAdmin = (u.role || '').toLowerCase() === 'admin';
@@ -940,6 +942,59 @@
                     numEl.textContent = (typeof val === 'number') ? val : (val != null ? val : '—');
                 }
             }
+            function parseCountUpValue(text) {
+                if (text == null) return null;
+                var raw = String(text).trim();
+                if (!raw) return null;
+                var normalized = raw.replace(/,/g, '').replace(/[^\d-]/g, '');
+                if (!normalized || normalized === '-') return null;
+                var parsed = parseInt(normalized, 10);
+                return isNaN(parsed) ? null : parsed;
+            }
+            function formatCountUpValue(value) {
+                return Number(value).toLocaleString('en-US');
+            }
+            function runCountUpOnElements(elements, durationMs) {
+                if (!elements || !elements.length) return;
+                var raf = window.requestAnimationFrame || function(cb) { return setTimeout(function() { cb(Date.now()); }, 16); };
+                var now = (window.performance && typeof window.performance.now === 'function')
+                    ? function() { return window.performance.now(); }
+                    : function() { return Date.now(); };
+                var totalDuration = Math.max(100, parseInt(durationMs, 10) || COUNT_UP_DURATION_MS);
+                elements.forEach(function(el) {
+                    if (!el || el.dataset.countUpDone === '1') return;
+                    var target = parseCountUpValue(el.textContent);
+                    if (target == null) return;
+                    var startValue = 0;
+                    var startTime = now();
+                    function tick() {
+                        var elapsed = now() - startTime;
+                        var progress = Math.min(elapsed / totalDuration, 1);
+                        var current = Math.round(startValue + (target - startValue) * progress);
+                        el.textContent = formatCountUpValue(current);
+                        if (progress < 1) {
+                            raf(tick);
+                        } else {
+                            el.textContent = formatCountUpValue(target);
+                            el.dataset.countUpDone = '1';
+                        }
+                    }
+                    tick();
+                });
+            }
+            function runHomepageCountUpOnce() {
+                if (hasRunHomepageCountUp) return;
+                document.querySelectorAll('.stat-number, .mini-stat-number').forEach(function(el) {
+                    el.classList.add('count-up');
+                });
+                var countUpTargets = Array.from(document.querySelectorAll('.count-up'));
+                var hasNumericTarget = countUpTargets.some(function(el) {
+                    return parseCountUpValue(el.textContent) != null;
+                });
+                if (!hasNumericTarget) return;
+                runCountUpOnElements(countUpTargets, COUNT_UP_DURATION_MS);
+                hasRunHomepageCountUp = true;
+            }
             function loadHomepageStats() {
                 var token = localStorage.getItem('token');
                 var headers = token ? { Authorization: 'Bearer ' + token } : {};
@@ -981,6 +1036,7 @@
                             var subKey = mini.getAttribute('data-facility-key');
                             fillStatElement(numEl, data, key, subKey);
                         });
+                        runHomepageCountUpOnce();
                     })
                     .catch(function() {});
             }

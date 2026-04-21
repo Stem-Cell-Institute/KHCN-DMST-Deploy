@@ -1,14 +1,15 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { DocumentDetailPage } from "@/pages/DocumentDetailPage";
-import { DocumentListPage } from "@/pages/DocumentListPage";
-import { AdminLayout } from "@/pages/admin/AdminLayout";
-import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
-import { UserManagementPage } from "@/pages/admin/UserManagementPage";
-import { ModulePermissionsPage } from "@/pages/admin/ModulePermissionsPage";
-import { UnitsManagementPage } from "@/pages/admin/UnitsManagementPage";
-import { ModuleSettingsPage } from "@/pages/admin/ModuleSettingsPage";
-import { AuditLogsPage } from "@/pages/admin/AuditLogsPage";
-import { AdminGuard } from "@/components/admin/AdminGuard";
+import { DocumentDetailPage } from "@/features/document-workflow/pages/DocumentDetailPage";
+import { DocumentListPage } from "@/features/document-workflow/pages/DocumentListPage";
+import { AdminLayout } from "@/features/document-workflow/admin/pages/AdminLayout";
+import { AdminDashboardPage } from "@/features/document-workflow/admin/pages/AdminDashboardPage";
+import { UserManagementPage } from "@/features/document-workflow/admin/pages/UserManagementPage";
+import { ModulePermissionsPage } from "@/features/document-workflow/admin/pages/ModulePermissionsPage";
+import { UnitsManagementPage } from "@/features/document-workflow/admin/pages/UnitsManagementPage";
+import { ModuleSettingsPage } from "@/features/document-workflow/admin/pages/ModuleSettingsPage";
+import { AuditLogsPage } from "@/features/document-workflow/admin/pages/AuditLogsPage";
+import { EmailNotificationsPage } from "@/features/document-workflow/admin/pages/EmailNotificationsPage";
+import { AdminGuard } from "@/features/document-workflow/admin/components/AdminGuard";
 
 export default function App() {
   return (
@@ -16,8 +17,11 @@ export default function App() {
       <Route path="/" element={<Navigate to="/documents" replace />} />
       <Route path="/documents" element={<DocumentListPage />} />
       <Route path="/documents/:id" element={<DocumentDetailPage />} />
-      <Route path="/admin" element={<AdminGuard><AdminLayout /></AdminGuard>}>
-        <Route index element={<Navigate to="/admin/module-settings" replace />} />
+      {/*
+        Không dùng path="/admin" khi có basename="/admin": pathname sau basename
+        là /module-settings, không còn tiền tố /admin.
+      */}
+      <Route element={<AdminGuard><AdminLayout /></AdminGuard>}>
         <Route
           path="dashboard"
           element={
@@ -38,6 +42,14 @@ export default function App() {
         <Route path="units" element={<UnitsManagementPage />} />
         <Route path="module-settings" element={<ModuleSettingsPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
+        <Route
+          path="email-notifications"
+          element={
+            <AdminGuard requiredRoles={["master_admin"]}>
+              <EmailNotificationsPage />
+            </AdminGuard>
+          }
+        />
       </Route>
     </Routes>
   );

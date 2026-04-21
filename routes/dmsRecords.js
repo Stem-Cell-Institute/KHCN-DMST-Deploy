@@ -231,6 +231,20 @@ module.exports = function createDmsRecordsRouter({
   const needCatalog = requireDmsCatalog(db);
   const needManageDocs = requireDmsManageDocs(db);
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS dms_document_attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      document_id INTEGER NOT NULL,
+      file_path TEXT NOT NULL,
+      original_name TEXT,
+      file_size INTEGER,
+      mime_type TEXT,
+      uploaded_by_id INTEGER,
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY(document_id) REFERENCES dms_documents(id) ON DELETE CASCADE
+    );
+  `);
+
   function parseBodyInt(v) {
     if (v === undefined) return undefined;
     if (v === null || v === '') return null;
@@ -1455,7 +1469,102 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
            JOIN dms_tags t ON t.id = dt.tag_id WHERE dt.document_id = ?`
         )
         .all(id);
-      res.json({ ok: true, document: { ...row, tags } });
+      const attachments = db
+        .prepare(
+          `SELECT id, document_id, original_name, file_size, mime_type, created_at
+           FROM dms_document_attachments
+           WHERE document_id = ?
+           ORDER BY id DESC`
+        )
+        .all(id);
+      res.json({ ok: true, document: { ...row, tags, attachments } });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/documents/:id/attachments', needUpload, upload.array('files', 20), (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const doc = db.prepare('SELECT * FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const role = getDmsModuleRole(db, req.user);
+      if (!canEditDocument(role, doc, req.user.id)) {
+        return res.status(403).json({ ok: false, message: 'Không có quyền thêm file cho tài liệu này' });
+      }
+      const files = Array.isArray(req.files) ? req.files : [];
+      if (!files.length) return res.status(400).json({ ok: false, message: 'Chưa chọn file để tải lên' });
+      const ins = db.prepare(
+        `INSERT INTO dms_document_attachments
+          (document_id, file_path, original_name, file_size, mime_type, uploaded_by_id)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      );
+      const ids = [];
+      for (const f of files) {
+        const r = ins.run(id, f.filename, f.originalname || null, f.size || null, f.mimetype || null, req.user.id);
+        ids.push(Number(r.lastInsertRowid));
+      }
+      res.json({ ok: true, uploaded: ids.length, ids });
+    } catch (e) {
+      const files = Array.isArray(req.files) ? req.files : [];
+      for (const f of files) {
+        try {
+          if (f && f.path) fs.unlinkSync(f.path);
+        } catch (_) {}
+      }
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.get('/documents/:id/attachments/:attachmentId/file', needView, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const attachmentId = Number(req.params.attachmentId);
+      const row = db
+        .prepare(
+          `SELECT id, document_id, file_path, original_name, mime_type
+           FROM dms_document_attachments
+           WHERE id = ? AND document_id = ?`
+        )
+        .get(attachmentId, id);
+      if (!row) return res.status(404).send('Not found');
+      const abs = path.isAbsolute(row.file_path) ? row.file_path : path.join(dmsDir, path.basename(row.file_path));
+      if (!fs.existsSync(abs)) return res.status(404).send('File missing');
+      if (row.mime_type) res.setHeader('Content-Type', row.mime_type);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${encodeURIComponent(row.original_name || 'attachment')}"`
+      );
+      return res.sendFile(abs);
+    } catch (e) {
+      res.status(500).send(e.message);
+    }
+  });
+
+  router.delete('/documents/:id/attachments/:attachmentId', needUpload, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const attachmentId = Number(req.params.attachmentId);
+      const doc = db.prepare('SELECT * FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy tài liệu' });
+      const role = getDmsModuleRole(db, req.user);
+      if (!canEditDocument(role, doc, req.user.id)) {
+        return res.status(403).json({ ok: false, message: 'Không có quyền xóa file đính kèm' });
+      }
+      const row = db
+        .prepare(
+          `SELECT id, document_id, file_path
+           FROM dms_document_attachments
+           WHERE id = ? AND document_id = ?`
+        )
+        .get(attachmentId, id);
+      if (!row) return res.status(404).json({ ok: false, message: 'Không tìm thấy file đính kèm' });
+      const abs = resolveDmsStoredFileForUnlink(row.file_path);
+      db.prepare('DELETE FROM dms_document_attachments WHERE id = ? AND document_id = ?').run(attachmentId, id);
+      try {
+        if (abs) fs.unlinkSync(abs);
+      } catch (_) {}
+      res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ ok: false, message: e.message });
     }

@@ -14375,7 +14375,7 @@ try {
     baseUrl: process.env.BASE_URL || '',
   });
   app.use('/api', internalWorkflowRouter);
-  console.log('[DOCFLOW] Đã mount /api/documents, /api/attachments, /api/units, /api/dashboard/stats');
+  console.log('[DOCFLOW] Đã mount /api/documents, /api/attachments, /api/units, /api/dashboard/stats, /api/docflow-admin/*');
 } catch (e) {
   console.warn('[DOCFLOW] Không mount internal documents workflow:', e.message);
 }

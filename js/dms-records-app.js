@@ -737,6 +737,17 @@
           if (act === 'phys') openPhysModal(id);
         });
       });
+      row.addEventListener('click', function (ev) {
+        var target = ev.target;
+        if (
+          target &&
+          target.closest &&
+          target.closest('button, a, input, select, textarea, label, [data-act], .dms-public-select, .dms-row-check')
+        ) {
+          return;
+        }
+        window.location.href = 'dms-them-tai-lieu.html?id=' + id + '&mode=view';
+      });
       var pubSel = row.querySelector('.dms-public-select');
       if (pubSel) {
         pubSel.addEventListener('change', function () {
