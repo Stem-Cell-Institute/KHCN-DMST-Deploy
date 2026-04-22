@@ -2,10 +2,18 @@ import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { fetchMe } from "@/lib/api";
 import { parseRoles } from "@/lib/auth";
+import { buildAppUrl } from "@/lib/url";
 import type { MeUser } from "@/lib/types";
 
 /**
  * Thanh điều hướng trên trang workflow (/documents) — không nằm trong AdminLayout nên cần link tới Admin Panel.
+ *
+ * Lưu ý triển khai: các nút chuyển vùng (Admin Panel) dùng <a href> với URL tuyệt đối
+ * dựng từ `import.meta.env.BASE_URL` (tức `/admin/...`). Lý do: khi deploy qua nginx,
+ * `basename` của React Router có thể bị lệch pha với pathname thực tế (ví dụ đang ở
+ * `/documents` thay vì `/admin/documents`), khiến <Link> của react-router sinh ra URL
+ * không ổn định giữa các lần truy cập. Dùng full page load đảm bảo luôn trỏ đúng
+ * route server `/admin/module-settings`, khớp với legacy (quy-trinh-van-ban-noi-bo.html).
  */
 export function WorkflowTopNav() {
   const [me, setMe] = useState<MeUser | null>(null);
@@ -42,12 +50,12 @@ export function WorkflowTopNav() {
       </div>
       {showAdmin ? (
         <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to="/module-settings"
+          <a
+            href={buildAppUrl("module-settings")}
             className="rounded-md bg-slate-800 px-3 py-2 font-medium text-white hover:bg-slate-900"
           >
             Admin Panel
-          </Link>
+          </a>
         </div>
       ) : null}
     </div>

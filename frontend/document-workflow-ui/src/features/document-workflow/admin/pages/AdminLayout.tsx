@@ -1,7 +1,8 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { fetchAdminMe } from "@/features/document-workflow/use-cases/adminWorkflowApi";
 import { parseRoles } from "@/lib/auth";
+import { buildAppUrl } from "@/lib/url";
 import { Page } from "@/components/ui";
 import { AdminSidebarCard } from "@/features/document-workflow/admin/components/AdminCards";
 
@@ -57,12 +58,14 @@ export function AdminLayout() {
               </NavLink>
             ))}
           </nav>
-          <Link
-            to="/documents"
+          {/* Dùng <a> + URL tuyệt đối (qua buildAppUrl) để full page reload về `/admin/documents`.
+              Tránh phụ thuộc vào basename của React Router — vốn có thể lệch khi deploy qua nginx. */}
+          <a
+            href={buildAppUrl("documents")}
             className="mt-3 block rounded-md border border-slate-700 px-3 py-2 text-center text-sm text-slate-200 hover:bg-slate-900"
           >
             Danh sách hồ sơ (React)
-          </Link>
+          </a>
           <a
             href="/quy-trinh-van-ban-noi-bo.html"
             className="mt-2 block rounded-md border border-slate-700 px-3 py-2 text-center text-sm text-slate-200 hover:bg-slate-900"

@@ -1650,7 +1650,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
             physical_location, physical_copy_type, physical_sheet_count, physical_page_count,
             retention_until, destruction_eligible_date, parent_case_ref,
             import_sheet, template_id, uploaded_by_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`
           )
           .run(
             title,
@@ -1702,7 +1702,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
             physical_location, physical_copy_type, physical_sheet_count, physical_page_count,
             retention_until, destruction_eligible_date, parent_case_ref,
             import_sheet, template_id, uploaded_by_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`
         )
         .run(
           title,
