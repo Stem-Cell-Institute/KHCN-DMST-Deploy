@@ -8,17 +8,21 @@
 
 ## 1. Tóm tắt lỗi
 
-- Trang **Quy trình văn bản nội bộ** (`/admin/documents`) có nút **Admin Panel** (bên React SPA, component `WorkflowTopNav`).
+- Trang **Quy trình văn bản nội bộ** (có thể vào qua `/admin/documents` hoặc `/documents` tùy môi trường) có nút **Admin Panel** (bên React SPA, component `WorkflowTopNav`).
 - Ở máy dev (local) bấm nút → mở đúng `/admin/module-settings`.
 - Trên production (`khcn-dmst.sci.edu.vn`) nút này "lúc đúng lúc sai": nhiều lần trỏ sang URL không mong muốn (ví dụ `/module-settings` thiếu prefix `/admin`, hoặc URL lạ tuỳ session).
 
 ### Nguyên nhân
 
-Nút cũ dùng `<Link to="/module-settings">` của **React Router**. SPA build với `vite base = "/admin/"` nên `basename` của Router = `/admin`. Khi deploy qua nginx, nếu trình duyệt đang đứng ở pathname không khớp basename (ví dụ `/documents` thay vì `/admin/documents`), React Router rơi vào trạng thái basename-lệch-pha → `<Link>` sinh ra URL không ổn định giữa các lần bấm.
+Nút cũ dùng `<Link to="/module-settings">` của **React Router**. SPA build với `vite base = "/admin/"` nên mặc định Router có `basename = /admin`. Khi deploy qua nginx, có môi trường để nguyên URL `/documents` (không có `/admin`) → basename bị lệch với pathname thực tế và `<Link>` sinh URL không ổn định.
 
 ### Cách sửa
 
-Chuyển các nút chuyển-vùng (Admin Panel ⇄ Danh sách hồ sơ React) sang **`<a href>` với URL tuyệt đối** dựng từ `import.meta.env.BASE_URL` (luôn = `/admin/` sau build) → full page reload, **không phụ thuộc trạng thái basename của SPA**. Cách này khớp với legacy HTML `quy-trinh-van-ban-noi-bo.html` (đã dùng `href="/admin/module-settings"` từ trước).
+Triển khai 2 lớp bảo vệ:
+1) Chuyển các nút chuyển-vùng (Admin Panel ⇄ Danh sách hồ sơ React) sang **`<a href>` URL tuyệt đối** (full reload, không phụ thuộc state router).  
+2) Thêm **runtime basename auto-detect** cho Router: nếu URL hiện tại bắt đầu bằng `/admin` thì dùng `basename="/admin"`, còn nếu đang chạy trực tiếp ở root (`/documents`) thì `basename=undefined`.  
+
+Kết quả: cùng một bundle hoạt động ổn định cho cả 2 kiểu mapping hạ tầng, không bắt buộc IT sửa nginx ngay.
 
 ---
 
@@ -28,7 +32,8 @@ Chuyển các nút chuyển-vùng (Admin Panel ⇄ Danh sách hồ sơ React) sa
 |---|---|---|
 | Sửa | `frontend/document-workflow-ui/src/components/WorkflowTopNav.tsx` | Nút "Admin Panel" dùng `<a href>` |
 | Sửa | `frontend/document-workflow-ui/src/features/document-workflow/admin/pages/AdminLayout.tsx` | Nút "Danh sách hồ sơ (React)" dùng `<a href>` |
-| Thêm | `frontend/document-workflow-ui/src/lib/url.ts` | Helper `buildAppUrl(path)` dựng URL tuyệt đối theo `BASE_URL` |
+| Thêm | `frontend/document-workflow-ui/src/lib/url.ts` | Helper `buildAppUrl(path)` + `getRuntimeRouterBasename()` |
+| Sửa | `frontend/document-workflow-ui/src/main.tsx` | Router dùng runtime basename auto-detect |
 
 **Không sửa**: `server.js`, routes backend, DB migrations, nginx config (trừ khi mục 4 ở phần kiểm tra phát hiện lệch).
 
@@ -173,11 +178,11 @@ Kết quả kỳ vọng: in ra **đúng 1 path** dạng `/admin/assets/index-<ha
 
 ### 5.3. Kiểm tra hành vi nút "Admin Panel" trên browser
 
-1. Mở (ở chế độ ẩn danh, tránh cache): `https://khcn-dmst.sci.edu.vn/admin/documents`.
+1. Mở (ở chế độ ẩn danh, tránh cache): `https://khcn-dmst.sci.edu.vn/admin/documents` **hoặc** `https://khcn-dmst.sci.edu.vn/documents` (tùy hạ tầng đang map path nào).
 2. Đăng nhập tài khoản có quyền `module_manager` hoặc `master_admin` hoặc `admin`.
 3. Ở góc phải thanh trên, bấm nút **Admin Panel**.
-4. Kỳ vọng: URL đổi thành `https://khcn-dmst.sci.edu.vn/admin/module-settings`, hiển thị giao diện "Cấu hình module" giống screenshot trong ticket. Bấm lặp lại nhiều lần (F5, navigate qua lại): URL **luôn** đúng, không bao giờ nhảy sang path khác.
-5. Ở trang Admin Panel, bấm nút **Danh sách hồ sơ (React)** trong sidebar → URL phải về `https://khcn-dmst.sci.edu.vn/admin/documents`.
+4. Kỳ vọng: URL đổi sang trang module settings tương ứng với prefix hiện tại (thường là `/admin/module-settings`; một số môi trường có thể là `/module-settings`). Bấm lặp lại nhiều lần (F5, navigate qua lại): URL **ổn định theo cùng một kiểu prefix**, không nhảy lung tung.
+5. Ở trang Admin Panel, bấm nút **Danh sách hồ sơ (React)** trong sidebar → URL quay về trang documents tương ứng cùng prefix (thường `/admin/documents` hoặc `/documents`).
 
 ### 5.4. Regression check
 

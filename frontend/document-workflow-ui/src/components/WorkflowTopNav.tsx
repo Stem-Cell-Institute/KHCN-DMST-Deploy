@@ -2,7 +2,6 @@ import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { fetchMe } from "@/lib/api";
 import { parseRoles } from "@/lib/auth";
-import { buildAppUrl } from "@/lib/url";
 import type { MeUser } from "@/lib/types";
 
 /**
@@ -51,7 +50,7 @@ export function WorkflowTopNav() {
       {showAdmin ? (
         <div className="flex flex-wrap items-center gap-2">
           <a
-            href={buildAppUrl("module-settings")}
+            href="/admin/module-settings"
             className="rounded-md bg-slate-800 px-3 py-2 font-medium text-white hover:bg-slate-900"
           >
             Admin Panel
