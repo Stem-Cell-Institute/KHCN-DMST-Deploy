@@ -3399,6 +3399,9 @@ async function openThoaThuanDetail(id){
   var r = await apiGet('/api/cooperation/thoa-thuan/' + id);
   if (!(r && r.ok && r.item)) { toast((r&&r.message)||'Không tải được chi tiết thỏa thuận', 'error'); return; }
   var it = r.item;
+  var tokenForFile = encodeURIComponent(localStorage.getItem('token') || '');
+  var scanViewHref = API + '/api/cooperation/thoa-thuan/' + it.id + '/scan?token=' + tokenForFile;
+  var termScanViewHref = API + '/api/cooperation/thoa-thuan/' + it.id + '/termination-scan?token=' + tokenForFile;
   window._thoaThuanDetailId = id;
   var ttl = { hieu_luc:'badge-green', sap_het_han:'badge-amber', het_han:'badge-red', dang_tham_dinh:'badge-blue' };
   var ttlb = { hieu_luc:'Hiệu lực', sap_het_han:'Sắp hết hạn', het_han:'Hết hạn', dang_tham_dinh:'Đang thẩm định' };
@@ -3409,7 +3412,7 @@ async function openThoaThuanDetail(id){
   if (it.terminated_at) {
     termExtra = '<div class="dk">Ngày kết thúc (ghi nhận)</div><div class="dv">' + fmtDate(it.terminated_at) + '</div>'
       + '<div class="dk">Văn bản kết thúc</div><div class="dv">' + (it.termination_scan_path
-        ? '<a class="tt-scan-link" target="_blank" href="' + esc(it.termination_scan_path) + '">📎 ' + esc(it.termination_scan_name || 'Mở file') + '</a>'
+        ? '<a class="tt-scan-link" target="_blank" rel="noopener noreferrer" href="' + esc(termScanViewHref) + '">📎 ' + esc(it.termination_scan_name || 'Mở file') + '</a>'
         : '—') + '</div>';
   }
   var mgrForm = '';
@@ -3437,7 +3440,7 @@ async function openThoaThuanDetail(id){
     + '<div class="dk">Hết hạn (lịch)</div><div class="dv">' + hetTxt + '</div>'
     + '<div class="dk">Trạng thái</div><div class="dv"><span class="badge ' + (ttl[st] || 'badge-gray') + '">' + esc(ttlb[st] || it.trang_thai || '—') + '</span></div>'
     + '<div class="dk">Ghi chú (P. KHCN)</div><div class="dv" style="white-space:normal">' + staffNotesHtml + '</div>'
-    + '<div class="dk">Bản scan</div><div class="dv">' + (it.scan_file_path ? '<a class="tt-scan-link" target="_blank" href="' + esc(it.scan_file_path) + '">📎 ' + esc(it.scan_file_name || 'Mở file scan') + '</a>' : 'Chưa có') + '</div>'
+    + '<div class="dk">Bản scan</div><div class="dv">' + (it.scan_file_path ? '<a class="tt-scan-link" target="_blank" rel="noopener noreferrer" href="' + esc(scanViewHref) + '">📎 ' + esc(it.scan_file_name || 'Mở file scan') + '</a>' : 'Chưa có') + '</div>'
     + termExtra
     + '</div>' + editForm + mgrForm;
   var footerHtml = '<button class="btn btn-outline btn-sm" onclick="closeModal()">Đóng</button>';

@@ -12666,6 +12666,63 @@ app.get('/api/cooperation/thoa-thuan/:id', authMiddleware, (req, res) => {
   }
 });
 
+function parseDownloadFlag(v) {
+  if (v === true || v === 1) return true;
+  const s = String(v == null ? '' : v).trim().toLowerCase();
+  return s === '1' || s === 'true' || s === 'yes' || s === 'on';
+}
+
+function sendCooperationScanFile(res, storedPath, originalName, forceDownload) {
+  const checked = normalizeAndCheckDownloadPath(storedPath);
+  if (checked.err === 403) return res.status(403).send('Truy cập bị từ chối');
+  if (checked.err) return res.status(404).send('File không tồn tại');
+
+  const displayName = String(originalName || path.basename(checked.norm) || 'scan.pdf').trim() || 'scan.pdf';
+  const fallbackName = displayName.replace(/["\\\r\n]/g, '_');
+  const encodedName = encodeURIComponent(displayName);
+  const disposition = forceDownload ? 'attachment' : 'inline';
+
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader(
+    'Content-Disposition',
+    `${disposition}; filename="${fallbackName}"; filename*=UTF-8''${encodedName}`
+  );
+  return res.sendFile(checked.norm);
+}
+
+// Xem / tải bản scan thỏa thuận qua API có auth (không mở trực tiếp /uploads/*)
+app.get('/api/cooperation/thoa-thuan/:id/scan', authMiddleware, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ message: 'ID không hợp lệ.' });
+  try {
+    const row = db.prepare('SELECT scan_file_path, scan_file_name FROM cooperation_thoa_thuan WHERE id = ?').get(id);
+    if (!row) return res.status(404).json({ message: 'Không tìm thấy thỏa thuận.' });
+    return sendCooperationScanFile(res, row.scan_file_path, row.scan_file_name, parseDownloadFlag(req.query.download));
+  } catch (e) {
+    return res.status(500).json({ message: 'Lỗi: ' + e.message });
+  }
+});
+
+// Xem / tải văn bản kết thúc thỏa thuận qua API có auth
+app.get('/api/cooperation/thoa-thuan/:id/termination-scan', authMiddleware, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ message: 'ID không hợp lệ.' });
+  try {
+    const row = db
+      .prepare('SELECT termination_scan_path, termination_scan_name FROM cooperation_thoa_thuan WHERE id = ?')
+      .get(id);
+    if (!row) return res.status(404).json({ message: 'Không tìm thấy thỏa thuận.' });
+    return sendCooperationScanFile(
+      res,
+      row.termination_scan_path,
+      row.termination_scan_name,
+      parseDownloadFlag(req.query.download)
+    );
+  } catch (e) {
+    return res.status(500).json({ message: 'Lỗi: ' + e.message });
+  }
+});
+
 
 // Admin / P.KHCN: xóa thỏa thuận
 app.delete('/api/admin/cooperation/thoa-thuan/:id', authMiddleware, coopPhongOrAdmin, (req, res) => {
