@@ -1,3 +1,5 @@
+'use strict';
+
 const express = require('express');
 const DocumentModel = require('../models/DocumentModel');
 const { createDocumentPermissionMiddleware } = require('../middleware/documentPermissionMiddleware');
@@ -5,24 +7,71 @@ const { createDocumentWorkflowController } = require('../controllers/documentWor
 const { createDocumentWorkflowAdminController } = require('../controllers/documentWorkflowAdminController');
 const { createDocumentUpload } = require('../services/documentUploadService');
 
+const { DocumentRepository } = require('../infrastructure/repositories/DocumentRepository');
+const { UnitRepository } = require('../infrastructure/repositories/UnitRepository');
+const { UserAdminRepository } = require('../infrastructure/repositories/UserAdminRepository');
+const { SettingsRepository } = require('../infrastructure/repositories/SettingsRepository');
+const { AuditLogRepository } = require('../infrastructure/repositories/AuditLogRepository');
+
+const { createEventBus } = require('../application/EventBus');
+const { createDocumentWorkflowService } = require('../application/services/DocumentWorkflowService');
+const { createWorkflowNotificationHandler } = require('../application/handlers/WorkflowNotificationHandler');
+const { createAuditLogHandler } = require('../application/handlers/AuditLogHandler');
+
+/**
+ * Composition Root: wiring DDD layers
+ *  interfaces(HTTP) -> application(services, handlers) -> infrastructure(repos, DB, mail).
+ *
+ * DocumentModel cu van duoc giu lam data source duy nhat va bi `wrap` boi cac repository;
+ * khi tach DB sau nay chi can thay implement repository ma khong cham controller.
+ */
 function createDocumentWorkflowRoutes(deps) {
   const { db, authMiddleware, uploadsRoot, mailSend, baseUrl } = deps;
   const router = express.Router();
-  const model = new DocumentModel(db);
-  model.ensureSchema();
 
-  const permission = createDocumentPermissionMiddleware(db);
-  const controller = createDocumentWorkflowController({
-    db,
-    documentModel: model,
-    uploadsRoot,
-    hasAnyRole: permission.hasAnyRole,
-    canAccessDocument: permission.canAccessDocument,
+  const documentModel = new DocumentModel(db);
+  documentModel.ensureSchema();
+
+  // ---- Infrastructure ------------------------------------------------------
+  const documentRepository = new DocumentRepository(db, documentModel);
+  const unitRepository = new UnitRepository(db, documentModel);
+  const userRepository = new UserAdminRepository(db, documentModel);
+  const settingsRepository = new SettingsRepository(db, documentModel);
+  const auditLogRepository = new AuditLogRepository(db, documentModel);
+
+  // ---- Application (event bus + service + handlers) ------------------------
+  const eventBus = createEventBus();
+  const workflowService = createDocumentWorkflowService({
+    documentRepository,
+    userRepository,
+    eventBus,
+  });
+
+  const notificationHandler = createWorkflowNotificationHandler({
+    userRepository,
+    settingsRepository,
     mailSend,
     baseUrl,
   });
+  notificationHandler.register(eventBus);
+
+  const auditLogHandler = createAuditLogHandler({ auditLogRepository });
+  auditLogHandler.register(eventBus);
+
+  // ---- Interfaces (HTTP) --------------------------------------------------
+  const permission = createDocumentPermissionMiddleware(db);
+  const controller = createDocumentWorkflowController({
+    db,
+    uploadsRoot,
+    hasAnyRole: permission.hasAnyRole,
+    canAccessDocument: permission.canAccessDocument,
+    workflowService,
+    unitRepository,
+    userRepository,
+  });
+  // Admin controller still consumes DocumentModel directly (same BC boundary for now):
   const adminController = createDocumentWorkflowAdminController({
-    documentModel: model,
+    documentModel,
     permission,
   });
 

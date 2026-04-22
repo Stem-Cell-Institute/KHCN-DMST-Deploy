@@ -1,14 +1,14 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { DocumentDetailPage } from "@/pages/DocumentDetailPage";
-import { DocumentListPage } from "@/pages/DocumentListPage";
-import { AdminLayout } from "@/pages/admin/AdminLayout";
-import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
-import { UserManagementPage } from "@/pages/admin/UserManagementPage";
-import { ModulePermissionsPage } from "@/pages/admin/ModulePermissionsPage";
-import { UnitsManagementPage } from "@/pages/admin/UnitsManagementPage";
-import { ModuleSettingsPage } from "@/pages/admin/ModuleSettingsPage";
-import { AuditLogsPage } from "@/pages/admin/AuditLogsPage";
-import { AdminGuard } from "@/components/admin/AdminGuard";
+import { DocumentDetailPage } from "@/features/document-workflow/pages/DocumentDetailPage";
+import { DocumentListPage } from "@/features/document-workflow/pages/DocumentListPage";
+import { AdminLayout } from "@/features/document-workflow/admin/pages/AdminLayout";
+import { AdminDashboardPage } from "@/features/document-workflow/admin/pages/AdminDashboardPage";
+import { UserManagementPage } from "@/features/document-workflow/admin/pages/UserManagementPage";
+import { ModulePermissionsPage } from "@/features/document-workflow/admin/pages/ModulePermissionsPage";
+import { UnitsManagementPage } from "@/features/document-workflow/admin/pages/UnitsManagementPage";
+import { ModuleSettingsPage } from "@/features/document-workflow/admin/pages/ModuleSettingsPage";
+import { AuditLogsPage } from "@/features/document-workflow/admin/pages/AuditLogsPage";
+import { AdminGuard } from "@/features/document-workflow/admin/components/AdminGuard";
 
 export default function App() {
   return (
