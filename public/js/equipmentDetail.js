@@ -736,6 +736,7 @@
       }
       eqRow = r.data.equipment;
       canManage = !!r.data.canManage;
+      canManageIncidents = !!r.data.canManageIncidents;
       canUpload = !!r.data.canUploadDocuments;
       if (navDash) navDash.style.display = canManage ? 'flex' : 'none';
 

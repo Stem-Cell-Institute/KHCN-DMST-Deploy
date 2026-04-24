@@ -704,7 +704,7 @@ function registerEquipmentPart2(router, deps) {
   });
 
   router.get('/stats/open-incidents', authMiddleware, moduleViewerMw, (req, res) => {
-    if (!canManageEquipment(req)) {
+    if (!canManageEquipmentIncidents(req)) {
       return res.status(403).json({ message: 'Không có quyền' });
     }
     try {

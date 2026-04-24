@@ -1585,6 +1585,8 @@ module.exports = function createEquipmentRouter(deps) {
       let maintenance = [];
       let incidents = [];
       const viewerVisible = new Set(parseViewerVisibleFields());
+      const moduleCaps = moduleAdminCaps(req);
+      const canManageIncidents = canManageEquipment(req) || !!(moduleCaps && moduleCaps.canConfigureViewerFields);
       try {
         maintenance = db
           .prepare(
@@ -1629,6 +1631,7 @@ module.exports = function createEquipmentRouter(deps) {
         incidents,
         maintenanceBadge: maintenanceBadgeForRow(eq),
         canManage: canManageEquipment(req),
+        canManageIncidents,
         canUploadDocuments: canUploadEquipmentMedia(req, eq),
         isAdmin: String(req.user.role || '').toLowerCase() === 'admin',
       });
