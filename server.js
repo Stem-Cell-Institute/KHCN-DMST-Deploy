@@ -18187,24 +18187,46 @@ function tryAutoBuildAdminUi(triggerReason) {
   if (adminUiAutoBuildDisabled) return { attempted: false, ok: false, reason: 'disabled-by-env' };
   if (!fs.existsSync(frontendPkg)) return { attempted: false, ok: false, reason: 'missing-frontend-package' };
 
-  console.log(`[ADMIN UI] ${triggerReason || 'dist missing'} -> attempting auto build (npm install + npm run build)`);
+  // Giới hạn tổng thời gian spawnSync để không chặn app.listen vô hạn nếu npm treo
+  // (mạng chậm, lockfile hỏng, postinstall hook stuck). Quá giờ -> SIGTERM child, server
+  // vẫn khởi động được với bundle cũ (nếu có) thay vì zombie không listen.
+  const DEFAULT_AUTO_BUILD_TIMEOUT_MS = 10 * 60 * 1000;
+  const parsedTimeout = Number.parseInt(String(process.env.ADMIN_UI_AUTO_BUILD_TIMEOUT_MS || ''), 10);
+  const perStepTimeoutMs =
+    Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : DEFAULT_AUTO_BUILD_TIMEOUT_MS;
+  const fmtTimeout = `${Math.round(perStepTimeoutMs / 1000)}s`;
+
+  console.log(
+    `[ADMIN UI] ${triggerReason || 'dist missing'} -> attempting auto build (npm install + npm run build; timeout=${fmtTimeout}/step)`
+  );
+
+  function describeSpawnFailure(label, result) {
+    if (result && result.signal) return `${label}: process bị kill bởi ${result.signal} (có thể do timeout=${fmtTimeout})`;
+    if (result && result.error) return `${label}: ${result.error.code || ''} ${result.error.message || result.error}`.trim();
+    return `${label}: exit code = ${result ? result.status : 'unknown'}`;
+  }
+
   const installResult = spawnSync('npm', ['install'], {
     cwd: frontendDir,
     stdio: 'inherit',
     shell: process.platform === 'win32',
+    timeout: perStepTimeoutMs,
+    killSignal: 'SIGTERM',
   });
   if (installResult.status !== 0) {
-    console.error('[ADMIN UI] Auto-build failed at npm install');
-    return { attempted: true, ok: false, reason: 'install-failed' };
+    console.error('[ADMIN UI] Auto-build failed at npm install -', describeSpawnFailure('npm install', installResult));
+    return { attempted: true, ok: false, reason: installResult.signal ? 'install-timeout' : 'install-failed' };
   }
   const buildResult = spawnSync('npm', ['run', 'build'], {
     cwd: frontendDir,
     stdio: 'inherit',
     shell: process.platform === 'win32',
+    timeout: perStepTimeoutMs,
+    killSignal: 'SIGTERM',
   });
   if (buildResult.status !== 0) {
-    console.error('[ADMIN UI] Auto-build failed at npm run build');
-    return { attempted: true, ok: false, reason: 'build-failed' };
+    console.error('[ADMIN UI] Auto-build failed at npm run build -', describeSpawnFailure('npm run build', buildResult));
+    return { attempted: true, ok: false, reason: buildResult.signal ? 'build-timeout' : 'build-failed' };
   }
   console.log('[ADMIN UI] Auto-build succeeded');
   return { attempted: true, ok: true, reason: 'build-succeeded' };
@@ -18793,9 +18815,25 @@ async function mountSciKhcnPublicationsRouters() {
       console.error('[EnrichWorker] Không khởi động được:', e.message || e);
     }
   }
-  if (bindHost) {
-    app.listen(PORT, bindHost, onListen);
-  } else {
-    app.listen(PORT, onListen);
-  }
+  const httpServer = bindHost ? app.listen(PORT, bindHost, onListen) : app.listen(PORT, onListen);
+  // Xử lý tường minh lỗi bind (EADDRINUSE, EACCES...): log + exit(1) để PM2/systemd
+  // restart sạch, tránh trạng thái zombie "process còn sống nhưng không listen"
+  // do uncaughtException handler mặc định chỉ log.
+  httpServer.on('error', (err) => {
+    const code = err && err.code ? err.code : '(unknown-code)';
+    if (code === 'EADDRINUSE') {
+      console.error(
+        `[FATAL] Không bind được PORT=${PORT} (EADDRINUSE): một tiến trình khác đã chiếm port.\n` +
+          `        Kill tiến trình cũ rồi thử lại. Trên Windows: netstat -ano | findstr :${PORT}\n` +
+          `        Trên Linux: lsof -i :${PORT}`
+      );
+    } else if (code === 'EACCES') {
+      console.error(
+        `[FATAL] Không có quyền bind PORT=${PORT} (EACCES). Dùng port >1024 hoặc chạy với quyền phù hợp.`
+      );
+    } else {
+      console.error('[FATAL] app.listen error:', code, err && err.stack ? err.stack : err);
+    }
+    process.exit(1);
+  });
 })();
