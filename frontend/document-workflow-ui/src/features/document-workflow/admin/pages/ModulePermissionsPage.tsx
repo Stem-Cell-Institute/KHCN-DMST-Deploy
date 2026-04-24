@@ -34,7 +34,7 @@ export function ModulePermissionsPage() {
       <Card className="p-4">
         <h2 className="text-lg font-semibold text-slate-800">Phân quyền module văn bản</h2>
         <p className="text-sm text-slate-500">
-          Master Admin gán hoặc thu hồi module_manager, leader, reviewer, drafter,
+          Master Admin gán hoặc thu hồi role Workflow Manager (module_manager), leader, reviewer, drafter,
           proposer.
         </p>
         {msg ? <p className="mt-2 text-sm text-slate-600">{msg}</p> : null}

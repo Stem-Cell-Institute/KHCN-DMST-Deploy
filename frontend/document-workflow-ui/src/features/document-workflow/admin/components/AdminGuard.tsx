@@ -61,7 +61,7 @@ export function AdminGuard({ children, requiredRoles }: AdminGuardProps) {
           <p className="font-medium">Không thể mở Admin Panel tại: {location.pathname}</p>
           <p className="mt-2">
             {accessCheckError ||
-              "Tài khoản hiện tại chưa có quyền admin/module manager cho khu vực này."}
+              "Tài khoản hiện tại chưa có quyền admin/workflow manager cho khu vực này."}
           </p>
           <p className="mt-2 text-amber-800">
             Vui lòng liên hệ quản trị hệ thống để cấp quyền nếu cần truy cập.

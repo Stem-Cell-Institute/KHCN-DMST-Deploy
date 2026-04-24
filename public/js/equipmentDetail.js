@@ -2,6 +2,7 @@
   var params = new URLSearchParams(location.search);
   var id = params.get('id');
   var canManage = false;
+  var canManageIncidents = false;
   var canUpload = false;
   var canSeeAdvancedTabs = false;
   var meId = null;
@@ -248,14 +249,17 @@
       .then(function (r) {
         if (!r.ok || !r.data || !r.data.data) {
           canSeeAdvancedTabs = false;
+          canManageIncidents = false;
           return;
         }
         var data = r.data.data || {};
         var role = String((data.assignment && data.assignment.module_role) || 'viewer').toLowerCase();
         canSeeAdvancedTabs = !!data.isMasterAdmin || role === 'manager' || role === 'editor' || role === 'admin';
+        canManageIncidents = canManage || canSeeAdvancedTabs;
       })
       .catch(function () {
         canSeeAdvancedTabs = false;
+        canManageIncidents = canManage;
       })
       .finally(function () {
         applyModuleTabVisibility();
@@ -800,7 +804,7 @@
       var mm = document.getElementById('maint-manage');
       if (mm) mm.style.display = canManage && canSeeAdvancedTabs ? 'block' : 'none';
       var ia = document.getElementById('incident-admin');
-      if (ia) ia.style.display = canManage && canSeeAdvancedTabs ? 'block' : 'none';
+      if (ia) ia.style.display = canManageIncidents && canSeeAdvancedTabs ? 'block' : 'none';
 
     });
   }
@@ -1052,6 +1056,7 @@
 
   var bir = document.getElementById('btn-inc-resolve');
   if (bir) bir.onclick = function () {
+    if (!canManageIncidents) return;
     var incId = document.getElementById('inc-resolve-id').value.trim();
     var note = document.getElementById('inc-resolution').value.trim();
     var cost = document.getElementById('inc-cost').value;

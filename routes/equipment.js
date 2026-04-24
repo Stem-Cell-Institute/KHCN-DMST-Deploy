@@ -448,11 +448,15 @@ module.exports = function createEquipmentRouter(deps) {
   function moduleAdminCaps(req) {
     const out = {
       isMaster: isMasterAdminReq(req),
+      canManagePolicy: false,
+      canManageUserAccess: false,
       canManageDepartments: false,
       canManagePublicContent: false,
       canConfigureViewerFields: false,
     };
     if (out.isMaster) {
+      out.canManagePolicy = true;
+      out.canManageUserAccess = true;
       out.canManageDepartments = true;
       out.canManagePublicContent = true;
       out.canConfigureViewerFields = true;
@@ -467,6 +471,8 @@ module.exports = function createEquipmentRouter(deps) {
         .get(req.user.id);
       if (!row) return out;
       const isManager = String(row.module_role || '') === 'manager';
+      out.canManagePolicy = isManager;
+      out.canManageUserAccess = isManager;
       out.canManageDepartments = isManager || Number(row.can_manage_departments) === 1;
       out.canManagePublicContent = isManager || Number(row.can_manage_public_content) === 1;
       out.canConfigureViewerFields = isManager;
@@ -484,6 +490,14 @@ module.exports = function createEquipmentRouter(deps) {
   function requireModuleMaster(req, res, next) {
     if (!isMasterAdminReq(req)) {
       return res.status(403).json({ message: 'Chỉ Master Admin mới dùng được công cụ này.' });
+    }
+    next();
+  }
+
+  function requireModuleManagerOrMaster(req, res, next) {
+    const caps = moduleAdminCaps(req);
+    if (!caps.isMaster && !caps.canManagePolicy && !caps.canManageUserAccess) {
+      return res.status(403).json({ message: 'Chỉ Equipment Manager hoặc Master Admin mới dùng được công cụ này.' });
     }
     next();
   }
@@ -608,6 +622,8 @@ module.exports = function createEquipmentRouter(deps) {
     const master = isMasterAdminReq(req);
     if (
       !master &&
+      !caps.canManagePolicy &&
+      !caps.canManageUserAccess &&
       !caps.canManageDepartments &&
       !caps.canManagePublicContent &&
       !caps.canConfigureViewerFields
@@ -624,69 +640,74 @@ module.exports = function createEquipmentRouter(deps) {
       const departments = db
         .prepare(`SELECT id, code, name, sort_order FROM equipment_departments ORDER BY sort_order ASC, name ASC`)
         .all();
+      const accessMode = moduleAccessMode();
+      const visibleFields = parseViewerVisibleFields();
+      const canSeePolicy = master || caps.canManagePolicy;
+      const canSeeUserAccess = master || caps.canManageUserAccess;
+      let policyPayload = null;
+      if (canSeePolicy) {
+        const fieldsRow = db
+          .prepare(`SELECT setting_value FROM equipment_module_settings WHERE setting_key = 'public_fields'`)
+          .get();
+        let publicFields = [];
+        try {
+          publicFields = JSON.parse(String(fieldsRow && fieldsRow.setting_value ? fieldsRow.setting_value : '[]'));
+        } catch (_) {
+          publicFields = [];
+        }
+        policyPayload = {
+          accessMode,
+          publicFields,
+          incidentEmailsNew: parseJsonEmailList('incident_emails_new'),
+          incidentEmailsResolved: parseJsonEmailList('incident_emails_resolved'),
+          publicIncidentReports: publicIncidentReportsEnabled(),
+        };
+      }
+      let users = [];
+      let assignments = [];
+      if (canSeeUserAccess) {
+        users = db
+          .prepare(
+            `SELECT id, email, fullname, role, department_id
+             FROM users
+             WHERE COALESCE(is_banned,0)=0
+             ORDER BY fullname COLLATE NOCASE, email COLLATE NOCASE
+             LIMIT 1200`
+          )
+          .all();
+        assignments = db
+          .prepare(
+            `SELECT a.user_id, a.module_role, a.view_scope, a.can_manage_categories, a.can_manage_departments,
+                    a.can_manage_public_content, a.note, a.updated_at, u.email, u.fullname, u.role
+             FROM equipment_module_user_access a
+             LEFT JOIN users u ON u.id = a.user_id
+             ORDER BY a.updated_at DESC, a.user_id DESC`
+          )
+          .all();
+      }
       if (!master) {
-        const visibleFields = parseViewerVisibleFields();
         return res.json({
           ok: true,
           data: {
             isMasterAdmin: false,
             capabilities: caps,
-            policy: null,
+            policy: policyPayload,
             viewerFieldPolicy: {
               defs: viewerFieldDefs(),
               visibleFields,
             },
-            users: [],
-            assignments: [],
+            users,
+            assignments,
             departments,
           },
         });
       }
-
-      const accessMode = moduleAccessMode();
-      const fieldsRow = db
-        .prepare(`SELECT setting_value FROM equipment_module_settings WHERE setting_key = 'public_fields'`)
-        .get();
-      let publicFields = [];
-      try {
-        publicFields = JSON.parse(String(fieldsRow && fieldsRow.setting_value ? fieldsRow.setting_value : '[]'));
-      } catch (_) {
-        publicFields = [];
-      }
-      const incidentEmailsNew = parseJsonEmailList('incident_emails_new');
-      const incidentEmailsResolved = parseJsonEmailList('incident_emails_resolved');
-      const publicIncidentReports = publicIncidentReportsEnabled();
-      const visibleFields = parseViewerVisibleFields();
-      const users = db
-        .prepare(
-          `SELECT id, email, fullname, role, department_id
-           FROM users
-           WHERE COALESCE(is_banned,0)=0
-           ORDER BY fullname COLLATE NOCASE, email COLLATE NOCASE
-           LIMIT 1200`
-        )
-        .all();
-      const assignments = db
-        .prepare(
-          `SELECT a.user_id, a.module_role, a.view_scope, a.can_manage_categories, a.can_manage_departments,
-                  a.can_manage_public_content, a.note, a.updated_at, u.email, u.fullname, u.role
-           FROM equipment_module_user_access a
-           LEFT JOIN users u ON u.id = a.user_id
-           ORDER BY a.updated_at DESC, a.user_id DESC`
-        )
-        .all();
       res.json({
         ok: true,
         data: {
           isMasterAdmin: true,
           capabilities: caps,
-          policy: {
-            accessMode,
-            publicFields,
-            incidentEmailsNew,
-            incidentEmailsResolved,
-            publicIncidentReports,
-          },
+          policy: policyPayload,
           viewerFieldPolicy: {
             defs: viewerFieldDefs(),
             visibleFields,
@@ -701,7 +722,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.put('/module/admin/policy', authMiddleware, requireModuleMaster, express.json(), (req, res) => {
+  router.put('/module/admin/policy', authMiddleware, requireModuleManagerOrMaster, express.json(), (req, res) => {
     try {
       const b = req.body || {};
       const mode = String(b.accessMode || '').trim();
@@ -809,7 +830,7 @@ module.exports = function createEquipmentRouter(deps) {
     try {
       const caps = moduleAdminCaps(req);
       if (!caps.isMaster && !caps.canConfigureViewerFields) {
-        return res.status(403).json({ message: 'Chỉ Module Manager trở lên mới chỉnh được quyền xem của Viewer.' });
+        return res.status(403).json({ message: 'Chỉ Equipment Manager trở lên mới chỉnh được quyền xem của Viewer.' });
       }
       const defs = viewerFieldDefs();
       const allowed = new Set(defs.map((d) => d.key));
@@ -835,7 +856,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.put('/module/admin/user/:userId', authMiddleware, requireModuleMaster, express.json(), (req, res) => {
+  router.put('/module/admin/user/:userId', authMiddleware, requireModuleManagerOrMaster, express.json(), (req, res) => {
     try {
       const userId = parseInt(req.params.userId, 10);
       if (!Number.isFinite(userId) || userId <= 0) {
@@ -881,7 +902,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.delete('/module/admin/user/:userId', authMiddleware, requireModuleMaster, (req, res) => {
+  router.delete('/module/admin/user/:userId', authMiddleware, requireModuleManagerOrMaster, (req, res) => {
     try {
       const userId = parseInt(req.params.userId, 10);
       if (!Number.isFinite(userId) || userId <= 0) {
@@ -1296,7 +1317,7 @@ module.exports = function createEquipmentRouter(deps) {
   router.get('/export/ids', authMiddleware, requireModuleViewer, (req, res) => {
     try {
       if (!canModuleManagerOrMaster(req)) {
-        return res.status(403).json({ message: 'Chỉ Module Manager trở lên mới xuất dữ liệu.' });
+        return res.status(403).json({ message: 'Chỉ Equipment Manager trở lên mới xuất dữ liệu.' });
       }
       const status = req.query.status ? String(req.query.status).trim() : '';
       const department_id = req.query.department_id != null ? String(req.query.department_id).trim() : '';
@@ -1329,7 +1350,7 @@ module.exports = function createEquipmentRouter(deps) {
   router.post('/export/selected', authMiddleware, requireModuleViewer, express.json(), async (req, res) => {
     try {
       if (!canModuleManagerOrMaster(req)) {
-        return res.status(403).json({ message: 'Chỉ Module Manager trở lên mới xuất dữ liệu.' });
+        return res.status(403).json({ message: 'Chỉ Equipment Manager trở lên mới xuất dữ liệu.' });
       }
       const b = req.body || {};
       const rawIds = Array.isArray(b.ids) ? b.ids : [];

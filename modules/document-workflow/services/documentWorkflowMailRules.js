@@ -63,20 +63,20 @@ const EMAIL_EVENT_CATALOG = [
     key: 'proposal_created',
     title: 'Hồ sơ mới (bước 1)',
     when: 'Người đề xuất tạo hồ sơ mới.',
-    recipientsNote: 'Module Manager (role module_manager). Có thể bật thêm Master Admin.',
+    recipientsNote: 'Workflow Manager (role module_manager). Có thể bật thêm Master Admin.',
   },
   {
     key: 'assignment',
     title: 'Phân công soạn thảo (bước 2)',
     when: 'Lãnh đạo đơn vị phân công người soạn thảo.',
     recipientsNote:
-      'Người được phân công (soạn thảo); CC: Module Manager và tùy chọn Master Admin.',
+      'Người được phân công (soạn thảo); CC: Workflow Manager và tùy chọn Master Admin.',
   },
   {
     key: 'draft_step3_complete',
     title: 'Hoàn tất dự thảo bước 3',
     when: 'Người soạn thảo nộp dự thảo và chuyển bước 4.',
-    recipientsNote: 'Module Manager (theo dõi tiến độ).',
+    recipientsNote: 'Workflow Manager (theo dõi tiến độ).',
   },
   {
     key: 'review_rejected',
@@ -89,25 +89,25 @@ const EMAIL_EVENT_CATALOG = [
     title: 'Đạt thẩm định → bước 5',
     when: 'Người thẩm định duyệt, chuyển sang lấy ý kiến góp ý.',
     recipientsNote:
-      'Theo cấu hình “Chế độ người nhận bước 5” (Module Manager + người soạn thảo, hoặc mở rộng Drafter/Leader/Reviewer). Có thể tắt từng nhóm.',
+      'Theo cấu hình “Chế độ người nhận bước 5” (Workflow Manager + người soạn thảo, hoặc mở rộng Drafter/Leader/Reviewer). Có thể tắt từng nhóm.',
   },
   {
     key: 'feedback_added',
     title: 'Có góp ý mới (bước 5)',
     when: 'Thêm nội dung góp ý, chuyển bước 6.',
-    recipientsNote: 'Module Manager.',
+    recipientsNote: 'Workflow Manager.',
   },
   {
     key: 'finalize_step6',
     title: 'Hoàn thiện sau góp ý (bước 6)',
     when: 'Người soạn thảo hoàn thiện dự thảo và file đính kèm.',
-    recipientsNote: 'Module Manager.',
+    recipientsNote: 'Workflow Manager.',
   },
   {
     key: 'submit_step7',
     title: 'Trình ký (bước 7)',
     when: 'Nộp bộ hồ sơ trình ký.',
-    recipientsNote: 'Module Manager.',
+    recipientsNote: 'Workflow Manager.',
   },
   {
     key: 'published',
@@ -119,7 +119,7 @@ const EMAIL_EVENT_CATALOG = [
     key: 'archived',
     title: 'Lưu trữ / hậu kiểm (bước 9)',
     when: 'Đánh dấu lưu trữ sau khi hoàn tất quy trình.',
-    recipientsNote: 'Module Manager.',
+    recipientsNote: 'Workflow Manager.',
   },
 ];
 

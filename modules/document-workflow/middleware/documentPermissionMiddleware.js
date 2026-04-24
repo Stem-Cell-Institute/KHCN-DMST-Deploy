@@ -182,7 +182,7 @@ function createDocumentPermissionMiddleware(db) {
 
   function requireModuleAdmin(req, res, next) {
     if (!(isMasterAdmin(req) || isModuleManager(req))) {
-      return res.status(403).json({ message: 'Chỉ Master Admin hoặc Module Manager mới có quyền truy cập.' });
+      return res.status(403).json({ message: 'Chỉ Master Admin hoặc Workflow Manager mới có quyền truy cập.' });
     }
     return next();
   }

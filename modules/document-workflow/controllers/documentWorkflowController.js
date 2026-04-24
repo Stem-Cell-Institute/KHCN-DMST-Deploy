@@ -380,7 +380,7 @@ ${htmlLink}
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
       if (!ensureWorkflowActive(record, res)) return;
       if (!canManageDocument(req)) {
-        return res.status(403).json({ message: 'Chỉ Module Manager hoặc Master Admin được sửa hồ sơ trực tiếp.' });
+        return res.status(403).json({ message: 'Chỉ Workflow Manager hoặc Master Admin được sửa hồ sơ trực tiếp.' });
       }
       const body = req.body || {};
       const docTypeRaw = body.docType || body.doc_type;
@@ -426,7 +426,7 @@ ${htmlLink}
       const record = documentModel.findById(documentId);
       if (!record) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
       if (!canManageDocument(req)) {
-        return res.status(403).json({ message: 'Chỉ Module Manager hoặc Master Admin được hủy quy trình.' });
+        return res.status(403).json({ message: 'Chỉ Workflow Manager hoặc Master Admin được hủy quy trình.' });
       }
       const status = String(record.status || '').trim().toLowerCase();
       if (status === 'archived') {

@@ -7,10 +7,10 @@ import { Button, Card } from "@/components/ui";
 
 const CHANNEL_LABELS: Record<string, string> = {
   enabled: "Gửi mail tình huống này",
-  module_managers: "Module Manager (role module_manager)",
+  module_managers: "Workflow Manager (role module_manager)",
   master_admins: "Master Admin / Admin (role master_admin hoặc admin)",
   assigned_drafter: "Người được phân công soạn thảo",
-  cc_module_managers: "CC: Module Manager",
+  cc_module_managers: "CC: Workflow Manager",
   cc_master_admins: "CC: Master Admin",
   broad_role_users:
     "Thêm user role Drafter / Leader / Reviewer (chỉ khi cấu hình bước 5 = mở rộng)",

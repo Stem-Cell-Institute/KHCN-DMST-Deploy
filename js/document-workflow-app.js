@@ -593,7 +593,7 @@
   function applyFormVisibility(doc) {
     const caps = computeCaps(doc);
     const map = [
-      ["#wf-form-abort", "abort", "Chỉ Module Manager trở lên được dừng quy trình."],
+      ["#wf-form-abort", "abort", "Chỉ Workflow Manager trở lên được dừng quy trình."],
       ["#wf-form-assign", "assign", "Bước 2 chỉ dành cho Leader/Admin khi hồ sơ ở bước 1-2."],
       ["#wf-form-draft", "draft", "Bước 3 chỉ cho người soạn thảo được phân công (hoặc Leader/Admin)."],
       ["#wf-form-review", "review", "Bước 4 chỉ dành cho Reviewer/Admin khi hồ sơ đang ở bước 4."],

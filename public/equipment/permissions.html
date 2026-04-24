@@ -43,7 +43,7 @@
       <section id="section-module-policy" class="eq-form nav-hidden" style="max-width:none;">
         <h2 style="font-size:1.06rem;margin:0 0 12px;">1) Chính sách truy cập module</h2>
         <p style="margin:0 0 12px;color:var(--eq-muted);font-size:0.9rem;">
-          Master Admin quyết định module mở cho mọi tài khoản STIMS, chỉ nội viện (@sci.edu.vn), hoặc chỉ allowlist.
+          Master Admin hoặc Equipment Manager quyết định module mở cho mọi tài khoản STIMS, chỉ nội viện (@sci.edu.vn), hoặc chỉ allowlist.
         </p>
           <div class="eq-form-grid">
             <div class="eq-form-row">
@@ -73,7 +73,7 @@
 
       <div id="section-module-user-assign" class="nav-hidden">
       <section class="eq-form" style="max-width:none;margin-top:18px;">
-        <h2 style="font-size:1.06rem;margin:0 0 12px;">2) Gán user vào module (Master Admin)</h2>
+        <h2 style="font-size:1.06rem;margin:0 0 12px;">2) Gán user vào module (Master Admin / Equipment Manager)</h2>
           <div class="eq-form-grid">
             <div class="eq-form-row">
             <label for="user-search">Chọn user trong STIMS</label>
@@ -85,7 +85,7 @@
             <label for="module-role">Vai trò trong module</label>
             <select id="module-role">
               <option value="viewer">Viewer</option>
-              <option value="manager">Module Manager</option>
+              <option value="manager">Equipment Manager</option>
             </select>
             </div>
             <div class="eq-form-row">
@@ -103,8 +103,8 @@
             </div>
           </div>
           <div class="eq-form-grid">
-          <label class="eq-checkbox-label"><input id="cap-departments" type="checkbox" /> <span>Module Manager được thêm/sửa/xoá phòng thí nghiệm</span></label>
-          <label class="eq-checkbox-label"><input id="cap-public-content" type="checkbox" /> <span>Module Manager được điều chỉnh nội dung công khai hồ sơ</span></label>
+          <label class="eq-checkbox-label"><input id="cap-departments" type="checkbox" /> <span>Equipment Manager được thêm/sửa/xoá phòng thí nghiệm</span></label>
+          <label class="eq-checkbox-label"><input id="cap-public-content" type="checkbox" /> <span>Equipment Manager được điều chỉnh nội dung công khai hồ sơ</span></label>
             </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
           <button type="button" class="eq-btn" id="btn-save-user-access">Lưu quyền user</button>
@@ -170,7 +170,7 @@
       <section id="section-viewer-fields" class="eq-form nav-hidden" style="max-width:none;margin-top:18px;">
         <h2 style="font-size:1.06rem;margin:0 0 12px;">5) Trường thông tin thiết bị Viewer được phép xem</h2>
         <p style="margin:0 0 12px;color:var(--eq-muted);font-size:0.9rem;">
-          Module Manager có thể bật/tắt từng trường để giới hạn thông tin hiển thị cho user cấp Viewer.
+          Equipment Manager có thể bật/tắt từng trường để giới hạn thông tin hiển thị cho user cấp Viewer.
         </p>
         <div class="eq-table-wrap">
           <table class="eq-table">
@@ -290,13 +290,15 @@
   function applyPermissionsSectionsVisibility() {
     var master = state.isMasterAdmin === true;
     var caps = state.capabilities || {};
+    var showPolicy = master || !!caps.canManagePolicy;
+    var showUserAssign = master || !!caps.canManageUserAccess;
     var showDept = master || !!caps.canManageDepartments;
     var showViewerFields = master || !!caps.canConfigureViewerFields;
-    setSectionVisible('section-module-policy', master);
-    setSectionVisible('section-module-user-assign', master);
+    setSectionVisible('section-module-policy', showPolicy);
+    setSectionVisible('section-module-user-assign', showUserAssign);
     setSectionVisible('section-module-departments', showDept);
     setSectionVisible('section-viewer-fields', showViewerFields);
-    setSectionVisible('section-no-delegated-tools', !master && !showDept && !showViewerFields);
+    setSectionVisible('section-no-delegated-tools', !master && !showPolicy && !showUserAssign && !showDept && !showViewerFields);
     var t = document.getElementById('perm-page-title');
     if (t) {
       t.textContent = master ? 'Công cụ Master Admin - Module Thiết bị' : 'Quản trị module Thiết bị';
@@ -341,8 +343,8 @@
 
   function moduleRoleLabel(role) {
     var r = String(role || 'viewer').toLowerCase();
-    if (r === 'manager') return 'Module Manager';
-    if (r === 'editor' || r === 'admin') return 'Module Manager';
+    if (r === 'manager') return 'Equipment Manager';
+    if (r === 'editor' || r === 'admin') return 'Equipment Manager';
     return 'Viewer';
   }
 
@@ -521,36 +523,19 @@
       var d = r.data && r.data.data ? r.data.data : {};
       state.isMasterAdmin = d.isMasterAdmin === true;
       state.capabilities = d.capabilities || {};
-      if (state.isMasterAdmin) {
-        state.policy = d.policy || {
-          accessMode: 'public',
-          publicFields: [],
-          incidentEmailsNew: [],
-          incidentEmailsResolved: [],
-          publicIncidentReports: true,
-        };
-        state.users = d.users || [];
-        state.assignments = d.assignments || [];
-        buildPublicFields();
-        applyPolicyToUi();
-        renderUserOptions();
-        renderAssignments();
-      } else {
-        state.policy = {
-          accessMode: 'public',
-          publicFields: [],
-          incidentEmailsNew: [],
-          incidentEmailsResolved: [],
-          publicIncidentReports: true,
-        };
-        state.users = [];
-        state.assignments = [];
-        var tbAcc = document.getElementById('tb-access');
-        if (tbAcc) tbAcc.innerHTML = '';
-        setSelectedUser(null);
-        var uSug = document.getElementById('user-suggestions');
-        if (uSug) uSug.innerHTML = '';
-      }
+      state.policy = d.policy || {
+        accessMode: 'public',
+        publicFields: [],
+        incidentEmailsNew: [],
+        incidentEmailsResolved: [],
+        publicIncidentReports: true,
+      };
+      state.users = d.users || [];
+      state.assignments = d.assignments || [];
+      buildPublicFields();
+      applyPolicyToUi();
+      renderUserOptions();
+      renderAssignments();
       state.viewerFieldPolicy = d.viewerFieldPolicy || { defs: viewerFieldDefsFallback.slice(), visibleFields: viewerFieldDefsFallback.map(function (x) { return x.key; }) };
       state.departments = d.departments || [];
       renderDepartments();

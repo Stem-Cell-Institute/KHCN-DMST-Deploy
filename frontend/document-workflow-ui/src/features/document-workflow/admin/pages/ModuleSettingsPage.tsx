@@ -83,7 +83,7 @@ export function ModuleSettingsPage() {
               className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
             >
               <option value="module_manager_assigned">
-                Module Manager + Người soạn thảo được phân công
+                Workflow Manager + Người soạn thảo được phân công
               </option>
               <option value="broad_roles">
                 Toàn bộ role Drafter + Leader + Reviewer + Người soạn thảo

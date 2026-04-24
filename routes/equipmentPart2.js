@@ -202,6 +202,21 @@ function registerEquipmentPart2(router, deps) {
   const emailsResolvedFn = typeof incidentEmailsResolved === 'function' ? incidentEmailsResolved : () => [];
   const publicGateFn = typeof publicIncidentAllowedForEquipment === 'function' ? publicIncidentAllowedForEquipment : () => false;
 
+  function canManageEquipmentIncidents(req) {
+    if (canManageEquipment(req)) return true;
+    if (!req || !req.user || !req.user.id) return false;
+    try {
+      const row = db
+        .prepare(`SELECT module_role FROM equipment_module_user_access WHERE user_id = ?`)
+        .get(req.user.id);
+      if (!row) return false;
+      const moduleRole = String(row.module_role || '').trim().toLowerCase();
+      return moduleRole === 'manager' || moduleRole === 'editor' || moduleRole === 'admin';
+    } catch (_) {
+      return false;
+    }
+  }
+
   const storageReplace = multer.diskStorage({
     destination: (req, file, cb) => {
       const id = parseEquipmentId(req.params.id);
@@ -1050,7 +1065,7 @@ function registerEquipmentPart2(router, deps) {
   });
 
   router.patch('/:id/incidents/:incidentId/assign', authMiddleware, moduleViewerMw, express.json(), (req, res) => {
-    if (!canManageEquipment(req)) return res.status(403).json({ message: 'Không có quyền' });
+    if (!canManageEquipmentIncidents(req)) return res.status(403).json({ message: 'Không có quyền' });
     try {
       const eqId = parseEquipmentId(req.params.id);
       const incId = parseIncidentId(req.params.incidentId);
@@ -1075,7 +1090,7 @@ function registerEquipmentPart2(router, deps) {
   });
 
   router.patch('/:id/incidents/:incidentId/resolve', authMiddleware, moduleViewerMw, resolveBodyMiddleware, async (req, res) => {
-    if (!canManageEquipment(req)) return res.status(403).json({ message: 'Không có quyền' });
+    if (!canManageEquipmentIncidents(req)) return res.status(403).json({ message: 'Không có quyền' });
     try {
       const eqId = parseEquipmentId(req.params.id);
       const incId = parseIncidentId(req.params.incidentId);

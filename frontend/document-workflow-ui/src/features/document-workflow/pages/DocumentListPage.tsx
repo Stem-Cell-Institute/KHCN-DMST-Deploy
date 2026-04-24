@@ -207,7 +207,7 @@ export function DocumentListPage() {
       <FormDialog
         open={!!editing}
         title="Sửa thông tin hồ sơ"
-        description="Quyền dành cho Module Manager/Master Admin."
+        description="Quyền dành cho Workflow Manager/Master Admin."
         onClose={() => setEditing(null)}
       >
         {editing ? (

@@ -23,7 +23,7 @@ function apiErr(e: unknown, fallback: string) {
     if (e.response?.status === 401)
       return "Phiên đăng nhập hết hạn hoặc chưa đăng nhập. Vui lòng đăng nhập lại.";
     if (e.response?.status === 403)
-      return "Không đủ quyền (cần Module Manager hoặc Master Admin).";
+      return "Không đủ quyền (cần Workflow Manager hoặc Master Admin).";
     if (e.code === "ECONNABORTED") return "Hết thời gian chờ máy chủ.";
     if (e.message) return e.message;
   }

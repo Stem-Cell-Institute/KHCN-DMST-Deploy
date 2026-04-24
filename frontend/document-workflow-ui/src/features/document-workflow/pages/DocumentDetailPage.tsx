@@ -188,7 +188,7 @@ export function DocumentDetailPage() {
       <FormDialog
         open={editing && !isReadOnlyView}
         title="Chỉnh sửa thông tin hồ sơ"
-        description="Module Manager/Master Admin có thể cập nhật trực tiếp hồ sơ."
+        description="Workflow Manager/Master Admin có thể cập nhật trực tiếp hồ sơ."
         onClose={() => setEditing(false)}
       >
         {doc ? (
