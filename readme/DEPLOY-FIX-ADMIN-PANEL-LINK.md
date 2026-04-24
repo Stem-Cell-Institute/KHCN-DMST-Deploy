@@ -34,8 +34,10 @@ Kết quả: cùng một bundle hoạt động ổn định cho cả 2 kiểu ma
 | Sửa | `frontend/document-workflow-ui/src/features/document-workflow/admin/pages/AdminLayout.tsx` | Nút "Danh sách hồ sơ (React)" dùng `<a href>` |
 | Thêm | `frontend/document-workflow-ui/src/lib/url.ts` | Helper `buildAppUrl(path)` + `getRuntimeRouterBasename()` |
 | Sửa | `frontend/document-workflow-ui/src/main.tsx` | Router dùng runtime basename auto-detect |
+| Sửa | `frontend/document-workflow-ui/src/features/document-workflow/admin/components/AdminGuard.tsx` | Không redirect khi lỗi kỹ thuật (hiển thị cảnh báo tại chỗ), chỉ coi là "không có quyền" khi API trả 401/403 |
+| Sửa | `server.js` | Tự rebuild `dist/` khi phát hiện source React mới hơn bundle (tránh lỗi "pull code mà quên xoá dist") |
 
-**Không sửa**: `server.js`, routes backend, DB migrations, nginx config (trừ khi mục 4 ở phần kiểm tra phát hiện lệch).
+**Không sửa**: DB migrations, routes backend logic, nginx config (trừ khi mục 4 ở phần kiểm tra phát hiện lệch). `server.js` chỉ thêm block auto-rebuild khi stale, không đổi hành vi route/API hiện tại.
 
 Commit/PR tương ứng sẽ xuất hiện trên nhánh `main` trước khi IT pull (người bàn giao sẽ push sau khi cả bạn review xong).
 
@@ -53,26 +55,20 @@ cd /opt/khcn-dmst                # ← sửa đúng path server nếu khác
 git fetch --all
 git pull --ff-only origin main   # ← hoặc nhánh đang deploy
 
-# 2) Xoá bundle React cũ để bắt buộc build lại (quan trọng!)
-#    Nếu không xoá, ADMIN_UI_AUTO_BUILD sẽ bỏ qua vì thấy dist/index.html còn đó.
-rm -rf frontend/document-workflow-ui/dist
-
-# 3) Build lại React bundle (khuyến nghị chạy tay cho chắc, log rõ ràng)
-cd frontend/document-workflow-ui
-npm ci                           # hoặc: npm install
-npm run build
-cd ../..
-
-# 4) Cài lại/cập nhật dependencies backend (chỉ khi package.json gốc có đổi — lần này KHÔNG đổi, có thể bỏ qua)
-# npm ci --omit=dev
-
-# 5) Restart Node server (chọn 1 trong các dòng dưới theo setup thực tế)
+# 2) Restart Node server (chọn 1 trong các dòng dưới theo setup thực tế)
+#    Server sẽ tự phát hiện source mới hơn dist và chạy lại npm install + npm run build
+#    trước khi listen. Lần khởi động đầu có thể mất ~30–60s vì build tsx.
 pm2 restart sci-ace              # nếu dùng pm2 (tên process thực tế có thể khác, kiểm tra: pm2 ls)
 # systemctl restart sci-ace      # nếu dùng systemd unit
 # hoặc dừng-chạy lại thủ công: pkill -f "node server.js" && nohup node server.js > server.log 2>&1 &
+
+# 3) (Chỉ khi cần) Build tay:
+# rm -rf frontend/document-workflow-ui/dist
+# cd frontend/document-workflow-ui && npm ci && npm run build && cd ../..
+# pm2 restart sci-ace
 ```
 
-**Biến môi trường**: không cần thay đổi. `ADMIN_UI_AUTO_BUILD` giữ mặc định (bật). Tuy vậy bước 3 đã build tay nên đã có `dist/`, server chỉ cần serve, không auto-build.
+**Biến môi trường**: không cần thay đổi. `ADMIN_UI_AUTO_BUILD` giữ mặc định (bật). Từ commit này, server sẽ so mtime `src/` với `dist/index.html`; nếu source mới hơn thì tự rebuild (log: `[ADMIN UI] Stale build detected: ...`). Nếu muốn tắt auto-rebuild (vd build CI riêng), đặt `ADMIN_UI_AUTO_BUILD=0`.
 
 **Lưu ý về Cloudflare / CDN (nếu có đặt trước nginx)**: cần **Purge Cache** cho các path:
 - `/admin`
