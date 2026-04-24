@@ -14431,8 +14431,49 @@ try {
     mailSend: documentWorkflowMailSend,
     baseUrl: process.env.BASE_URL || '',
   });
+  // Alias tương thích ngược cho bundle React cũ (trước khi đổi prefix /api/admin -> /api/docflow-admin).
+  // Chỉ bắc cầu những path KHÔNG đụng với các handler /api/admin/* có sẵn của server.js (đặc biệt
+  // KHÔNG đụng /api/admin/users — handler cũ trả schema khác, sẽ bị phá nếu alias).
+  //
+  // Middleware này rewrite req.url trước khi chạm internalWorkflowRouter, nên phải đứng TRƯỚC
+  // `app.use('/api', internalWorkflowRouter)` bên dưới.
+  const DOCFLOW_ADMIN_LEGACY_PREFIXES = [
+    '/api/admin/module/',
+    '/api/admin/module-permissions',
+    '/api/admin/module-settings',
+    '/api/admin/audit-logs',
+    '/api/admin/dashboard',
+    '/api/admin/units',
+    '/api/admin/units/',
+    '/api/admin/email-notifications',
+    '/api/admin/document-types',
+    '/api/admin/document-types/',
+  ];
+  let warnedDocflowStaleBundle = false;
+  app.use((req, _res, next) => {
+    try {
+      const p = req.path || '';
+      if (!DOCFLOW_ADMIN_LEGACY_PREFIXES.some((prefix) => p === prefix.replace(/\/$/, '') || p.startsWith(prefix))) {
+        return next();
+      }
+      if (!warnedDocflowStaleBundle) {
+        warnedDocflowStaleBundle = true;
+        console.warn(
+          '[DOCFLOW] Client gọi /api/admin/* (bundle React cũ) — đã alias sang /api/docflow-admin/*.\n' +
+            '          Triển khai bundle mới: git pull + restart Node (server sẽ auto rebuild dist).'
+        );
+      }
+      // /api/admin/<rest> -> /api/docflow-admin/<rest>
+      req.url = req.url.replace(/^\/api\/admin(\/|$)/, '/api/docflow-admin$1');
+    } catch (_) {
+      /* noop */
+    }
+    return next();
+  });
+
   app.use('/api', internalWorkflowRouter);
   console.log('[DOCFLOW] Đã mount /api/documents, /api/attachments, /api/units, /api/dashboard/stats, /api/docflow-admin/*');
+  console.log('[DOCFLOW] Alias sẵn sàng cho bundle cũ: /api/admin/{module|module-*|dashboard|units|audit-logs|email-notifications|document-types} -> /api/docflow-admin/*');
 } catch (e) {
   console.warn('[DOCFLOW] Không mount internal documents workflow:', e.message);
 }
