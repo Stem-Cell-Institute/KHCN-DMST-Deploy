@@ -18140,13 +18140,13 @@ const adminUiDistCandidates = [
 const adminUiAutoBuildDisabled =
   String(process.env.ADMIN_UI_AUTO_BUILD || '').toLowerCase() === '0' ||
   String(process.env.ADMIN_UI_AUTO_BUILD || '').toLowerCase() === 'false';
-function tryAutoBuildAdminUi() {
+function tryAutoBuildAdminUi(triggerReason) {
   const frontendDir = path.join(__dirname, 'frontend', 'document-workflow-ui');
   const frontendPkg = path.join(frontendDir, 'package.json');
   if (adminUiAutoBuildDisabled) return { attempted: false, ok: false, reason: 'disabled-by-env' };
   if (!fs.existsSync(frontendPkg)) return { attempted: false, ok: false, reason: 'missing-frontend-package' };
 
-  console.log('[ADMIN UI] dist missing -> attempting auto build (npm install + npm run build)');
+  console.log(`[ADMIN UI] ${triggerReason || 'dist missing'} -> attempting auto build (npm install + npm run build)`);
   const installResult = spawnSync('npm', ['install'], {
     cwd: frontendDir,
     stdio: 'inherit',
@@ -18169,9 +18169,69 @@ function tryAutoBuildAdminUi() {
   return { attempted: true, ok: true, reason: 'build-succeeded' };
 }
 
+/**
+ * So sánh mtime của thư mục source React với dist/index.html để nhận biết khi
+ * người vận hành đã `git pull` code mới nhưng chưa rebuild bundle. Nếu phát hiện
+ * source mới hơn dist thì tự động rebuild khi khởi động (trừ khi tắt bằng env).
+ */
+function adminUiSourceNewerThanDist() {
+  try {
+    const srcDir = path.join(__dirname, 'frontend', 'document-workflow-ui', 'src');
+    const indexHtmlInRepo = path.join(__dirname, 'frontend', 'document-workflow-ui', 'index.html');
+    const packageJson = path.join(__dirname, 'frontend', 'document-workflow-ui', 'package.json');
+    const existingDist = adminUiDistCandidates.find((dir) => fs.existsSync(path.join(dir, 'index.html')));
+    if (!existingDist) return { newer: true, reason: 'dist-missing' };
+    if (!fs.existsSync(srcDir)) return { newer: false, reason: 'src-missing' };
+    const distMtime = fs.statSync(path.join(existingDist, 'index.html')).mtimeMs;
+    let latestSourceMtime = 0;
+    let latestSourceFile = '';
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === 'node_modules' || entry.name === 'dist') continue;
+          walk(full);
+        } else {
+          const m = fs.statSync(full).mtimeMs;
+          if (m > latestSourceMtime) {
+            latestSourceMtime = m;
+            latestSourceFile = full;
+          }
+        }
+      }
+    };
+    walk(srcDir);
+    for (const aux of [indexHtmlInRepo, packageJson]) {
+      if (fs.existsSync(aux)) {
+        const m = fs.statSync(aux).mtimeMs;
+        if (m > latestSourceMtime) {
+          latestSourceMtime = m;
+          latestSourceFile = aux;
+        }
+      }
+    }
+    if (latestSourceMtime > distMtime + 1000) {
+      return {
+        newer: true,
+        reason: `source newer than dist (source=${latestSourceFile} mtime=${new Date(latestSourceMtime).toISOString()}, dist=${new Date(distMtime).toISOString()})`,
+      };
+    }
+    return { newer: false, reason: 'dist up-to-date' };
+  } catch (e) {
+    return { newer: false, reason: 'stat-failed: ' + (e && e.message) };
+  }
+}
+
 let adminUiAutoBuildState = { attempted: false, ok: false, reason: 'not-needed' };
-if (!adminUiDistCandidates.some((dir) => fs.existsSync(path.join(dir, 'index.html')))) {
-  adminUiAutoBuildState = tryAutoBuildAdminUi();
+const adminUiDistPresent = adminUiDistCandidates.some((dir) => fs.existsSync(path.join(dir, 'index.html')));
+if (!adminUiDistPresent) {
+  adminUiAutoBuildState = tryAutoBuildAdminUi('dist missing');
+} else {
+  const staleCheck = adminUiSourceNewerThanDist();
+  if (staleCheck.newer) {
+    console.log('[ADMIN UI] Stale build detected: ' + staleCheck.reason);
+    adminUiAutoBuildState = tryAutoBuildAdminUi('stale dist: ' + staleCheck.reason);
+  }
 }
 const adminUiDistDir = adminUiDistCandidates.find((dir) => fs.existsSync(path.join(dir, 'index.html'))) || null;
 const adminUiIndexFile = adminUiDistDir ? path.join(adminUiDistDir, 'index.html') : '';
