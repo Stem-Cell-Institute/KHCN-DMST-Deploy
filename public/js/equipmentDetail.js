@@ -253,7 +253,9 @@
           return;
         }
         var data = r.data.data || {};
-        var role = String((data.assignment && data.assignment.module_role) || 'viewer').toLowerCase();
+        var role = String((data.assignment && data.assignment.module_role) || 'viewer')
+          .trim()
+          .toLowerCase();
         canSeeAdvancedTabs = !!data.isMasterAdmin || role === 'manager' || role === 'editor' || role === 'admin';
         canManageIncidents = canManage || canSeeAdvancedTabs;
       })

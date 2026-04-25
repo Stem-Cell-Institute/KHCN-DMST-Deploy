@@ -288,6 +288,24 @@ function createDocumentWorkflowAdminController(deps) {
       });
     },
 
+    getRoleMigrationReport(req, res) {
+      let raw = null;
+      try {
+        raw = settingStore.get('workflow_role_migration_report_v1', null);
+      } catch (_) {
+        raw = null;
+      }
+      if (!raw) {
+        return res.json({ ok: true, data: null });
+      }
+      try {
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        return res.json({ ok: true, data: parsed || null });
+      } catch (_) {
+        return res.json({ ok: true, data: null });
+      }
+    },
+
     updateModuleSettings(req, res) {
       const b = req.body || {};
       const old = settingStore.getAll();

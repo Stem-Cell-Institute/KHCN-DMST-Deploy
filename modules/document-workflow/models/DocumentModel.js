@@ -3,6 +3,64 @@ class DocumentModel {
     this.db = db;
   }
 
+  static parseRoleTokens(value) {
+    return String(value || '')
+      .split(/[,\s;|]+/)
+      .map((x) => String(x || '').trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  static uniqTokens(list) {
+    return Array.from(new Set((list || []).map((x) => String(x || '').trim().toLowerCase()).filter(Boolean)));
+  }
+
+  static systemRoleSet() {
+    return new Set([
+      'user',
+      'researcher',
+      'admin',
+      'manager',
+      'phong_khcn',
+      'vien_truong',
+      'thu_ky',
+      'chu_tich',
+      'thanh_vien',
+      'totruong_tham_dinh_tc',
+      'thanh_vien_tham_dinh_tc',
+      'crd_user',
+      'ke_toan',
+      'pho_vien_truong',
+    ]);
+  }
+
+  static pickSystemRole(tokens, fallbackRole) {
+    const roleSet = DocumentModel.systemRoleSet();
+    const normalizedFallback = String(fallbackRole || '').trim().toLowerCase();
+    const tokenList = DocumentModel.uniqTokens(tokens);
+    const inToken = tokenList.filter((r) => roleSet.has(r));
+    if (normalizedFallback && roleSet.has(normalizedFallback) && inToken.includes(normalizedFallback)) {
+      return normalizedFallback;
+    }
+    if (inToken.includes('admin')) return 'admin';
+    if (inToken.includes('researcher')) return 'researcher';
+    if (inToken.length) return inToken[0];
+    if (normalizedFallback && roleSet.has(normalizedFallback)) return normalizedFallback;
+    return 'researcher';
+  }
+
+  static extractWorkflowRoles(tokens) {
+    const roleSet = DocumentModel.systemRoleSet();
+    const workflowAllowed = new Set([
+      'master_admin',
+      'module_manager',
+      'proposer',
+      'leader',
+      'reviewer',
+      'drafter',
+    ]);
+    return DocumentModel.uniqTokens(tokens).filter((r) => !roleSet.has(r) && workflowAllowed.has(r));
+  }
+
   ensureSchema() {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS units (
@@ -114,6 +172,13 @@ class DocumentModel {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS user_roles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role TEXT NOT NULL,
+        UNIQUE(user_id, role)
+      );
+
     `);
 
     const existingCols = new Set(
@@ -189,6 +254,9 @@ class DocumentModel {
         this.db.prepare(sql).run();
       } catch (_) {}
     }
+    try {
+      this.db.prepare(`CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id)`).run();
+    } catch (_) {}
 
     this.db
       .prepare(`INSERT OR IGNORE INTO module_settings(setting_key, setting_value) VALUES ('default_assignment_days', '14')`)
@@ -223,6 +291,7 @@ class DocumentModel {
          VALUES ('step5_recipient_mode', 'module_manager_assigned')`
       )
       .run();
+    this.migrateLegacyRoleCsvToUserRoles();
 
     const defaultTypes = [
       ['quy_che', 'Quy chế', 1],
@@ -258,6 +327,95 @@ class DocumentModel {
         payload.assignmentDeadline || null
       );
     return this.findById(result.lastInsertRowid);
+  }
+
+  migrateLegacyRoleCsvToUserRoles() {
+    let users = [];
+    try {
+      users = this.db.prepare(`SELECT id, role FROM users`).all();
+    } catch (_) {
+      users = [];
+    }
+    if (!users.length) return;
+    const upsertRole = this.db.prepare(`INSERT OR IGNORE INTO user_roles(user_id, role) VALUES (?, ?)`);
+    const updateSystemRole = this.db.prepare(`UPDATE users SET role = ? WHERE id = ?`);
+    const report = {
+      totalUsersScanned: Number(users.length || 0),
+      usersTouched: 0,
+      workflowRoleRowsInserted: 0,
+      normalizedSystemRoleRows: 0,
+    };
+    const tx = this.db.transaction((rows) => {
+      for (const row of rows) {
+        const tokens = DocumentModel.parseRoleTokens(row && row.role);
+        if (!tokens.length) continue;
+        const workflowRoles = DocumentModel.extractWorkflowRoles(tokens);
+        const systemRole = DocumentModel.pickSystemRole(tokens, row && row.role);
+        let touched = false;
+        if (workflowRoles.length || String(row.role || '').includes(',') || /\s/.test(String(row.role || ''))) {
+          updateSystemRole.run(systemRole, row.id);
+          report.normalizedSystemRoleRows += 1;
+          touched = true;
+        }
+        for (const wr of workflowRoles) {
+          const r = upsertRole.run(row.id, wr);
+          if (Number(r && r.changes) > 0) report.workflowRoleRowsInserted += 1;
+          touched = true;
+        }
+        if (touched) report.usersTouched += 1;
+      }
+    });
+    try {
+      tx(users);
+    } catch (_) {}
+    if (report.usersTouched > 0) {
+      const stamped = {
+        ...report,
+        migratedAt: new Date().toISOString(),
+      };
+      try {
+        this.db
+          .prepare(
+            `INSERT INTO module_settings(setting_key, setting_value, updated_at)
+             VALUES ('workflow_role_migration_report_v1', ?, datetime('now'))
+             ON CONFLICT(setting_key) DO UPDATE SET
+               setting_value=excluded.setting_value,
+               updated_at=datetime('now')`
+          )
+          .run(JSON.stringify(stamped));
+      } catch (_) {}
+      try {
+        console.log('[DOCFLOW role-migration v1]', JSON.stringify(stamped));
+      } catch (_) {}
+    }
+  }
+
+  getMergedRoleCsv(userId, baseRole) {
+    const base = DocumentModel.parseRoleTokens(baseRole);
+    let extra = [];
+    try {
+      const rows = this.db.prepare(`SELECT role FROM user_roles WHERE user_id = ?`).all(userId);
+      extra = (rows || []).map((r) => String(r && r.role ? r.role : '').trim().toLowerCase()).filter(Boolean);
+    } catch (_) {
+      extra = [];
+    }
+    return DocumentModel.uniqTokens(base.concat(extra)).join(',');
+  }
+
+  syncUserWorkflowRoles(userId, rolesCsv) {
+    const allTokens = DocumentModel.parseRoleTokens(rolesCsv);
+    const workflowRoles = DocumentModel.extractWorkflowRoles(allTokens);
+    const del = this.db.prepare(`DELETE FROM user_roles WHERE user_id = ?`);
+    const ins = this.db.prepare(`INSERT OR IGNORE INTO user_roles(user_id, role) VALUES (?, ?)`);
+    const tx = this.db.transaction((uid, list) => {
+      del.run(uid);
+      for (const role of list) {
+        ins.run(uid, role);
+      }
+    });
+    try {
+      tx(userId, workflowRoles);
+    } catch (_) {}
   }
 
   findById(id) {
@@ -536,38 +694,47 @@ class DocumentModel {
   }
 
   listUsers() {
-    return this.db
+    const rows = this.db
       .prepare(
         `SELECT id, email, fullname, role, department_id, COALESCE(is_banned,0) AS is_banned, COALESCE(is_active, CASE WHEN COALESCE(is_banned,0)=1 THEN 0 ELSE 1 END) AS is_active
          FROM users
          ORDER BY id DESC`
       )
       .all();
+    return (rows || []).map((r) => ({ ...r, role: this.getMergedRoleCsv(r.id, r.role) }));
   }
 
   getUserById(userId) {
-    return (
+    const row =
       this.db
         .prepare(
           `SELECT id, email, fullname, role, department_id, COALESCE(is_banned,0) AS is_banned, COALESCE(is_active, CASE WHEN COALESCE(is_banned,0)=1 THEN 0 ELSE 1 END) AS is_active
            FROM users WHERE id = ?`
         )
-        .get(userId) || null
-    );
+        .get(userId) || null;
+    if (!row) return null;
+    return { ...row, role: this.getMergedRoleCsv(row.id, row.role) };
   }
 
   getUserByEmail(email) {
-    return (
+    const row =
       this.db
         .prepare(
           `SELECT id, email, fullname, role, department_id, COALESCE(is_banned,0) AS is_banned, COALESCE(is_active, CASE WHEN COALESCE(is_banned,0)=1 THEN 0 ELSE 1 END) AS is_active
            FROM users WHERE lower(trim(email)) = lower(trim(?))`
         )
-        .get(String(email || '').trim()) || null
-    );
+        .get(String(email || '').trim()) || null;
+    if (!row) return null;
+    return { ...row, role: this.getMergedRoleCsv(row.id, row.role) };
   }
 
   upsertUser(payload) {
+    const oldRow = payload.id
+      ? this.db.prepare(`SELECT id, role FROM users WHERE id = ?`).get(payload.id)
+      : null;
+    const roleInput = payload.role != null ? String(payload.role) : '';
+    const tokens = DocumentModel.parseRoleTokens(roleInput);
+    const systemRole = DocumentModel.pickSystemRole(tokens, oldRow && oldRow.role ? oldRow.role : payload.role);
     if (payload.id) {
       this.db
         .prepare(
@@ -578,12 +745,13 @@ class DocumentModel {
         .run(
           payload.email,
           payload.fullname || null,
-          payload.role || 'user',
+          systemRole,
           payload.department_id || null,
           payload.is_banned ? 1 : 0,
           payload.is_active === false ? 0 : 1,
           payload.id
         );
+      this.syncUserWorkflowRoles(payload.id, roleInput);
       return this.getUserById(payload.id);
     }
     const ins = this.db
@@ -595,7 +763,7 @@ class DocumentModel {
         payload.email,
         payload.password,
         payload.fullname || null,
-        payload.role || 'user',
+        systemRole,
         payload.department_id || null,
         payload.is_banned ? 1 : 0
       );
@@ -604,6 +772,7 @@ class DocumentModel {
         .prepare(`UPDATE users SET is_active = ? WHERE id = ?`)
         .run(payload.is_active === false ? 0 : 1, ins.lastInsertRowid);
     } catch (_) {}
+    this.syncUserWorkflowRoles(ins.lastInsertRowid, roleInput);
     return this.getUserById(ins.lastInsertRowid);
   }
 
@@ -622,7 +791,7 @@ class DocumentModel {
   }
 
   listModuleManagersAndRoles() {
-    return this.db
+    const rows = this.db
       .prepare(
         `SELECT id, email, fullname, role, department_id
          FROM users
@@ -630,6 +799,7 @@ class DocumentModel {
          ORDER BY fullname COLLATE NOCASE, email COLLATE NOCASE`
       )
       .all();
+    return (rows || []).map((r) => ({ ...r, role: this.getMergedRoleCsv(r.id, r.role) }));
   }
 
   listUnits() {

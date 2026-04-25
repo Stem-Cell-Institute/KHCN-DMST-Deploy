@@ -98,6 +98,13 @@ export async function fetchModuleSettings() {
   };
 }
 
+export async function fetchRoleMigrationReport() {
+  const res = await api.get<{ ok: boolean; data: Record<string, unknown> | null }>(
+    "/api/docflow-admin/role-migration-report"
+  );
+  return res.data.data;
+}
+
 export async function saveModuleSettings(payload: Record<string, unknown>) {
   const res = await api.put("/api/docflow-admin/module-settings", payload);
   return res.data;

@@ -1,8 +1,9 @@
 import axios from "axios";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   deleteAdminUser,
   fetchAdminMe,
+  fetchRoleMigrationReport,
   fetchModuleSettings,
   fetchAdminUsers,
   resetAdminUserPassword,
@@ -53,6 +54,14 @@ type UserRow = {
   is_active?: number;
 };
 
+type RoleMigrationReport = {
+  totalUsersScanned?: number;
+  usersTouched?: number;
+  workflowRoleRowsInserted?: number;
+  normalizedSystemRoleRows?: number;
+  migratedAt?: string;
+};
+
 function parseRoleList(value: unknown): string[] {
   return String(value || "")
     .split(/[,\s;|]+/)
@@ -91,8 +100,12 @@ export function UserManagementPage() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [editing, setEditing] = useState<UserRow | null>(null);
   const [page, setPage] = useState(1);
+  const [roleFilter, setRoleFilter] = useState<"all" | "assigned" | "unassigned">("all");
+  const [scrollToEditor, setScrollToEditor] = useState(false);
   const [internalDomainEnabled, setInternalDomainEnabled] = useState(false);
   const [internalDomainSuffix, setInternalDomainSuffix] = useState("@sci.edu.vn");
+  const [roleMigrationReport, setRoleMigrationReport] = useState<RoleMigrationReport | null>(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
   const [confirm, setConfirm] = useState<{
     kind: "delete" | "master";
     user: UserRow;
@@ -120,6 +133,12 @@ export function UserManagementPage() {
       setInternalDomainEnabled(flags.enabled);
       setInternalDomainSuffix(flags.suffix);
     } catch {}
+    try {
+      const report = await fetchRoleMigrationReport();
+      setRoleMigrationReport((report as RoleMigrationReport | null) || null);
+    } catch {
+      setRoleMigrationReport(null);
+    }
   }
 
   useEffect(() => {
@@ -129,10 +148,17 @@ export function UserManagementPage() {
   }, []);
 
   const safeUsers = Array.isArray(users) ? users : [];
-  const totalPages = Math.max(1, Math.ceil(safeUsers.length / PAGE_SIZE));
+  const filteredUsers = useMemo(() => {
+    if (roleFilter === "all") return safeUsers;
+    return safeUsers.filter((u) => {
+      const hasAnyRole = parseRoleList(u.role).length > 0;
+      return roleFilter === "assigned" ? hasAnyRole : !hasAnyRole;
+    });
+  }, [safeUsers, roleFilter]);
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
   const pageRows = useMemo(
-    () => safeUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [safeUsers, page]
+    () => filteredUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredUsers, page]
   );
   const emailSuggestions = useMemo(
     () =>
@@ -141,17 +167,67 @@ export function UserManagementPage() {
       ).sort(),
     [safeUsers]
   );
+  useEffect(() => {
+    setPage(1);
+  }, [roleFilter]);
+  useEffect(() => {
+    if (!editing || !scrollToEditor) return;
+    const id = window.requestAnimationFrame(() => {
+      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setScrollToEditor(false);
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [editing, scrollToEditor]);
 
   return (
     <div className="space-y-4">
       <AdminSectionCard className="p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-800">Quản lý người dùng</h2>
-          <Button onClick={() => setEditing({ id: 0, email: "", role: "user", is_banned: 0 })}>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold text-slate-800">Quản lý người dùng</h2>
+            <label className="block w-full text-sm md:w-80">
+              Lọc phân vai Workflow documentation
+              <Select
+                value={roleFilter}
+                onChange={(e) =>
+                  setRoleFilter(e.target.value as "all" | "assigned" | "unassigned")
+                }
+                className="mt-1"
+              >
+                <option value="all">Tất cả người dùng</option>
+                <option value="assigned">Đã được phân vai (ít nhất 1 vai trò)</option>
+                <option value="unassigned">Chưa được phân vai</option>
+              </Select>
+            </label>
+            <p className="text-sm text-slate-500">
+              Hiển thị {filteredUsers.length}/{safeUsers.length} người dùng
+            </p>
+          </div>
+          <Button
+            onClick={() => {
+              setEditing({ id: 0, email: "", role: "user", is_banned: 0 });
+              setScrollToEditor(true);
+            }}
+          >
             Thêm người dùng
           </Button>
         </div>
       </AdminSectionCard>
+
+      {roleMigrationReport ? (
+        <AdminSectionCard className="p-4">
+          <h3 className="text-base font-semibold text-slate-800">Báo cáo migration role CSV</h3>
+          <div className="mt-2 grid gap-2 text-sm text-slate-700 md:grid-cols-2">
+            <div>Tổng user quét: {Number(roleMigrationReport.totalUsersScanned || 0)}</div>
+            <div>User bị ảnh hưởng: {Number(roleMigrationReport.usersTouched || 0)}</div>
+            <div>Role workflow đã tách: {Number(roleMigrationReport.workflowRoleRowsInserted || 0)}</div>
+            <div>Role hệ thống đã chuẩn hóa: {Number(roleMigrationReport.normalizedSystemRoleRows || 0)}</div>
+            <div className="md:col-span-2">
+              Thời điểm chạy: {String(roleMigrationReport.migratedAt || "N/A")}
+            </div>
+          </div>
+        </AdminSectionCard>
+      ) : null}
 
       <AdminSectionCard>
         <DataTable
@@ -206,7 +282,7 @@ export function UserManagementPage() {
       </AdminSectionCard>
 
       {editing ? (
-        <AdminSectionCard className="p-4">
+        <AdminSectionCard className="p-4" ref={editorRef}>
           <form
             className="grid gap-3 md:grid-cols-2"
             onSubmit={async (e) => {

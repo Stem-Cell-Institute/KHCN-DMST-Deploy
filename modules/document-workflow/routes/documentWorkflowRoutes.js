@@ -118,6 +118,11 @@ function createDocumentWorkflowRoutes(deps) {
   router.delete('/docflow-admin/units/:unitId', permission.requireModuleAdmin, adminController.deleteUnit);
 
   router.get('/docflow-admin/module-settings', permission.requireModuleAdmin, adminController.getModuleSettings);
+  router.get(
+    '/docflow-admin/role-migration-report',
+    permission.requireMasterAdmin,
+    adminController.getRoleMigrationReport
+  );
   router.put('/docflow-admin/module-settings', permission.requireModuleAdmin, jsonBody, adminController.updateModuleSettings);
   router.post('/docflow-admin/document-types', permission.requireModuleAdmin, jsonBody, adminController.upsertDocumentType);
   router.put('/docflow-admin/document-types/:id', permission.requireModuleAdmin, jsonBody, adminController.upsertDocumentType);

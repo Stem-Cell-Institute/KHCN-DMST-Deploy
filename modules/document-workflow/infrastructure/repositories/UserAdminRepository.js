@@ -66,12 +66,21 @@ class UserAdminRepository {
     if (!target) return [];
     try {
       const rows = this.db
-        .prepare(`SELECT email, role FROM users WHERE trim(COALESCE(email,'')) <> ''`)
+        .prepare(
+          `SELECT u.email, u.role AS base_role, GROUP_CONCAT(ur.role, ',') AS extra_roles
+           FROM users u
+           LEFT JOIN user_roles ur ON ur.user_id = u.id
+           WHERE trim(COALESCE(u.email,'')) <> ''
+           GROUP BY u.id, u.email, u.role`
+        )
         .all();
       return Array.from(
         new Set(
           (rows || [])
-            .filter((row) => splitRoleTokens(row.role).includes(target))
+            .filter((row) => {
+              const merged = splitRoleTokens(row.base_role).concat(splitRoleTokens(row.extra_roles));
+              return Array.from(new Set(merged)).includes(target);
+            })
             .map((row) => String(row.email || '').trim())
             .filter(Boolean)
         )

@@ -217,6 +217,10 @@ function registerEquipmentPart2(router, deps) {
     }
   }
 
+  function canManageEquipmentByModule(req) {
+    return canManageEquipmentIncidents(req);
+  }
+
   const storageReplace = multer.diskStorage({
     destination: (req, file, cb) => {
       const id = parseEquipmentId(req.params.id);
@@ -647,7 +651,7 @@ function registerEquipmentPart2(router, deps) {
   });
 
   router.get('/stats/summary', authMiddleware, moduleViewerMw, (req, res) => {
-    if (!canManageEquipment(req)) {
+    if (!canManageEquipmentByModule(req)) {
       return res.status(403).json({ message: 'Không có quyền xem thống kê' });
     }
     try {
@@ -667,7 +671,7 @@ function registerEquipmentPart2(router, deps) {
   });
 
   router.get('/stats/upcoming-maintenance', authMiddleware, moduleViewerMw, (req, res) => {
-    if (!canManageEquipment(req)) {
+    if (!canManageEquipmentByModule(req)) {
       return res.status(403).json({ message: 'Không có quyền' });
     }
     const days = Math.min(365, Math.max(1, parseInt(req.query.days, 10) || 30));
@@ -725,7 +729,7 @@ function registerEquipmentPart2(router, deps) {
   });
 
   router.get('/stats/export', authMiddleware, moduleViewerMw, async (req, res) => {
-    if (!canManageEquipment(req)) {
+    if (!canManageEquipmentByModule(req)) {
       return res.status(403).json({ message: 'Không có quyền xuất' });
     }
     try {
@@ -845,7 +849,7 @@ function registerEquipmentPart2(router, deps) {
   });
 
   router.post('/:id/maintenance', authMiddleware, moduleViewerMw, express.json(), (req, res) => {
-    if (!canManageEquipment(req)) return res.status(403).json({ message: 'Không có quyền' });
+    if (!canManageEquipmentByModule(req)) return res.status(403).json({ message: 'Không có quyền' });
     try {
       const id = parseEquipmentId(req.params.id);
       if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
@@ -886,7 +890,7 @@ function registerEquipmentPart2(router, deps) {
   });
 
   router.put('/:id/maintenance/:maintenanceId', authMiddleware, moduleViewerMw, express.json(), (req, res) => {
-    if (!canManageEquipment(req)) return res.status(403).json({ message: 'Không có quyền' });
+    if (!canManageEquipmentByModule(req)) return res.status(403).json({ message: 'Không có quyền' });
     try {
       const eqId = parseEquipmentId(req.params.id);
       const mid = parseMaintId(req.params.maintenanceId);
@@ -1235,7 +1239,7 @@ function registerEquipmentPart2(router, deps) {
     authMiddleware,
     moduleViewerMw,
     (req, res, next) => {
-      if (!canManageEquipment(req)) return res.status(403).json({ message: 'Không có quyền' });
+      if (!canManageEquipmentByModule(req)) return res.status(403).json({ message: 'Không có quyền' });
       if (!parseEquipmentId(req.params.id) || !parseEquipmentId(req.params.docId)) {
         return res.status(400).json({ message: 'ID không hợp lệ' });
       }

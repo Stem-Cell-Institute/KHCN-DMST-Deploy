@@ -470,7 +470,12 @@ module.exports = function createEquipmentRouter(deps) {
         )
         .get(req.user.id);
       if (!row) return out;
-      const isManager = String(row.module_role || '') === 'manager';
+      // Backward compatibility: historical values "editor"/"admin" are treated
+      // as module manager in multiple frontend screens.
+      const moduleRole = String(row.module_role || '')
+        .trim()
+        .toLowerCase();
+      const isManager = moduleRole === 'manager' || moduleRole === 'editor' || moduleRole === 'admin';
       out.canManagePolicy = isManager;
       out.canManageUserAccess = isManager;
       out.canManageDepartments = isManager || Number(row.can_manage_departments) === 1;
@@ -485,6 +490,17 @@ module.exports = function createEquipmentRouter(deps) {
   function canModuleManagerOrMaster(req) {
     const caps = moduleAdminCaps(req);
     return !!(caps && (caps.isMaster || caps.canConfigureViewerFields));
+  }
+
+  function canManageEquipmentByModule(req) {
+    return canManageEquipment(req) || canModuleManagerOrMaster(req);
+  }
+
+  function requireManageModule(req, res, next) {
+    if (!canManageEquipmentByModule(req)) {
+      return res.status(403).json({ message: 'Chỉ Equipment Manager / Admin / Manager / Phòng KHCN mới có quyền thao tác này.' });
+    }
+    next();
   }
 
   function requireModuleMaster(req, res, next) {
@@ -1564,7 +1580,7 @@ module.exports = function createEquipmentRouter(deps) {
            WHERE v.equipment_id = ? ORDER BY v.created_at DESC`
         )
         .all(id);
-      const statusLogs = canManageEquipment(req) || !isResearcher(req)
+      const statusLogs = canManageEquipmentByModule(req) || !isResearcher(req)
         ? db
             .prepare(
               `SELECT l.*, u.fullname AS changed_by_name FROM equipment_status_logs l
@@ -1573,7 +1589,7 @@ module.exports = function createEquipmentRouter(deps) {
             )
             .all(id)
         : [];
-      const docLogs = canManageEquipment(req)
+      const docLogs = canManageEquipmentByModule(req)
         ? db
             .prepare(
               `SELECT l.*, u.fullname AS performed_by_name FROM equipment_document_logs l
@@ -1586,7 +1602,7 @@ module.exports = function createEquipmentRouter(deps) {
       let incidents = [];
       const viewerVisible = new Set(parseViewerVisibleFields());
       const moduleCaps = moduleAdminCaps(req);
-      const canManageIncidents = canManageEquipment(req) || !!(moduleCaps && moduleCaps.canConfigureViewerFields);
+      const canManageIncidents = canManageEquipmentByModule(req);
       try {
         maintenance = db
           .prepare(
@@ -1612,7 +1628,7 @@ module.exports = function createEquipmentRouter(deps) {
       } catch (_) {}
 
       const eqOut = { ...eq };
-      if (!canManageEquipment(req)) {
+      if (!canManageEquipmentByModule(req)) {
         const defs = viewerFieldDefs();
         defs.forEach((d) => {
           if (!viewerVisible.has(d.key)) eqOut[d.key] = null;
@@ -1623,16 +1639,16 @@ module.exports = function createEquipmentRouter(deps) {
         ok: true,
         equipment: eqOut,
         documents: filterDocumentsForRequest(req, documents, eq, db),
-        documentsAll: canManageEquipment(req) ? documents : undefined,
+        documentsAll: canManageEquipmentByModule(req) ? documents : undefined,
         videos: filterVideosForRequest(req, videos, eq, db),
         statusLogs,
         documentLogs: docLogs,
         maintenance,
         incidents,
         maintenanceBadge: maintenanceBadgeForRow(eq),
-        canManage: canManageEquipment(req),
+        canManage: canManageEquipmentByModule(req),
         canManageIncidents,
-        canUploadDocuments: canUploadEquipmentMedia(req, eq),
+        canUploadDocuments: canManageEquipmentByModule(req),
         isAdmin: String(req.user.role || '').toLowerCase() === 'admin',
       });
     } catch (e) {
@@ -1641,7 +1657,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.post('/', authMiddleware, requireModuleViewer, requireManage, express.json(), (req, res) => {
+  router.post('/', authMiddleware, requireModuleViewer, requireManageModule, express.json(), (req, res) => {
     try {
       const b = req.body || {};
       const name = String(b.name || '').trim();
@@ -1716,7 +1732,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.put('/:id', authMiddleware, requireModuleViewer, requireManage, express.json(), (req, res) => {
+  router.put('/:id', authMiddleware, requireModuleViewer, requireManageModule, express.json(), (req, res) => {
     try {
       const id = parseEquipmentId(req.params.id);
       if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
@@ -1798,7 +1814,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.patch('/:id/status', authMiddleware, requireModuleViewer, requireManage, express.json(), (req, res) => {
+  router.patch('/:id/status', authMiddleware, requireModuleViewer, requireManageModule, express.json(), (req, res) => {
     try {
       const id = parseEquipmentId(req.params.id);
       if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
@@ -1822,7 +1838,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.delete('/:id', authMiddleware, requireModuleViewer, requireManage, (req, res) => {
+  router.delete('/:id', authMiddleware, requireModuleViewer, requireManageModule, (req, res) => {
     try {
       const id = parseEquipmentId(req.params.id);
       if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
@@ -1913,7 +1929,7 @@ module.exports = function createEquipmentRouter(deps) {
     });
   });
 
-  router.put('/:id/documents/:docId', authMiddleware, requireModuleViewer, requireManage, express.json(), (req, res) => {
+  router.put('/:id/documents/:docId', authMiddleware, requireModuleViewer, requireManageModule, express.json(), (req, res) => {
     try {
       const id = parseEquipmentId(req.params.id);
       const docId = parseEquipmentId(req.params.docId);
@@ -1952,7 +1968,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.patch('/:id/documents/:docId/disable', authMiddleware, requireModuleViewer, requireManage, express.json(), (req, res) => {
+  router.patch('/:id/documents/:docId/disable', authMiddleware, requireModuleViewer, requireManageModule, express.json(), (req, res) => {
     try {
       const id = parseEquipmentId(req.params.id);
       const docId = parseEquipmentId(req.params.docId);
@@ -2068,7 +2084,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.put('/:id/videos/:videoId', authMiddleware, requireModuleViewer, requireManage, express.json(), (req, res) => {
+  router.put('/:id/videos/:videoId', authMiddleware, requireModuleViewer, requireManageModule, express.json(), (req, res) => {
     try {
       const id = parseEquipmentId(req.params.id);
       const vid = parseEquipmentId(req.params.videoId);
@@ -2105,7 +2121,7 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
-  router.delete('/:id/videos/:videoId', authMiddleware, requireModuleViewer, requireManage, (req, res) => {
+  router.delete('/:id/videos/:videoId', authMiddleware, requireModuleViewer, requireManageModule, (req, res) => {
     try {
       const id = parseEquipmentId(req.params.id);
       const vid = parseEquipmentId(req.params.videoId);
