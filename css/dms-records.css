@@ -1566,32 +1566,52 @@ a.dms-btn {
 }
 
 .dms-btn-modal-secondary {
-  background: #f1f5f9 !important;
-  color: var(--dms-text-secondary) !important;
-  border: 1px solid var(--dms-border) !important;
-  box-shadow: none !important;
+  background: #fff7ed !important;
+  color: #9a3412 !important;
+  border: 1px solid #fdba74 !important;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.14) !important;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
 }
 .dms-btn-modal-secondary:hover {
-  background: #e2e8f0 !important;
+  background: #ffedd5 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(249, 115, 22, 0.22) !important;
 }
 .dms-btn-modal-secondary:focus-visible {
-  outline: 2px solid var(--dms-accent) !important;
+  outline: 2px solid #fb923c !important;
   outline-offset: 2px;
 }
 
 .dms-btn-modal-primary {
-  background: linear-gradient(135deg, #4f46e5, #4338ca) !important;
+  background: linear-gradient(135deg, #4f46e5, #312e81) !important;
   color: #fff !important;
-  box-shadow: 0 4px 14px rgba(67, 56, 202, 0.35) !important;
+  box-shadow: 0 6px 18px rgba(67, 56, 202, 0.42) !important;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+  animation: dmsSaveCtaPulse 2.1s ease-in-out infinite;
 }
 .dms-btn-modal-primary:hover {
-  filter: brightness(1.05);
-  box-shadow: 0 6px 20px rgba(67, 56, 202, 0.4) !important;
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(67, 56, 202, 0.48) !important;
 }
 .dms-btn-modal-primary:focus-visible {
   outline: 2px solid #fff !important;
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--dms-accent-ring) !important;
+}
+
+.dms-btn-modal-primary:active,
+.dms-btn-modal-secondary:active {
+  transform: translateY(0);
+}
+
+@keyframes dmsSaveCtaPulse {
+  0%, 100% {
+    box-shadow: 0 6px 18px rgba(67, 56, 202, 0.42);
+  }
+  50% {
+    box-shadow: 0 8px 24px rgba(67, 56, 202, 0.55);
+  }
 }
 
 .dms-nope {
@@ -2231,26 +2251,83 @@ a.dms-btn-table--muted {
 }
 
 .dms-attach-panel {
-  border: 1px solid var(--dms-border-soft);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  background: #fbfcff;
+  border: 1px solid #93c5fd;
+  border-radius: 12px;
+  padding: 14px;
+  background: linear-gradient(180deg, #f1f6ff 0%, #e8f1ff 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72), 0 10px 24px rgba(30, 64, 175, 0.1);
 }
 
 .dms-attach-main-input {
   margin-bottom: 10px;
+  background: #fff;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.dms-attach-file-label {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin: 2px 0 8px;
+}
+
+.dms-attach-file-label.is-selected {
+  color: #065f46;
+  background: #d1fae5;
+  border-color: #86efac;
 }
 
 .dms-attach-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin: 8px 0 8px;
+  padding: 10px;
+  background: #eef4ff;
+  border: 1px dashed #bfd3ff;
+  border-radius: 10px;
+}
+
+.dms-attach-upload-row {
+  margin: 10px 0 12px;
+  padding: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #ffffff;
+  display: flex;
+  justify-content: center;
 }
 
 .dms-attach-add-btn,
 .dms-attach-upload-btn {
   min-width: 170px;
+}
+
+.dms-attach-upload-btn.is-ready {
+  animation: dmsUploadReadyPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dmsUploadReadyPulse {
+  0% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.26);
+  }
+  50% {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.06);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
 }
 
 .dms-attach-add-btn {
@@ -2273,10 +2350,30 @@ a.dms-btn-table--muted {
 .dms-attach-extra-files {
   display: grid;
   gap: 8px;
-  margin-bottom: 8px;
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #f8fbff;
 }
 
 .dms-attach-extra-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--dms-border-soft);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.dms-attach-extra-row.is-selected {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.dms-attach-extra-controls {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
@@ -2284,13 +2381,22 @@ a.dms-btn-table--muted {
 }
 
 .dms-attach-existing {
-  margin-top: 10px;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #f8fbff;
 }
 
 .dms-attach-existing-title {
-  font-weight: 700;
-  color: var(--dms-text);
-  margin-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 800;
+  color: #1e3a8a;
+  margin-bottom: 10px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #dbeafe;
 }
 
 .dms-attach-item {
@@ -2303,12 +2409,22 @@ a.dms-btn-table--muted {
   border-radius: 10px;
   padding: 8px 10px;
   margin-bottom: 6px;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
 }
 
 .dms-attach-item-name {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.dms-attach-item-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .dms-attach-delete {
@@ -2318,6 +2434,55 @@ a.dms-btn-table--muted {
 .dms-attach-empty {
   font-size: 0.875rem;
   color: var(--dms-muted);
+}
+
+#f-upload-guide {
+  margin: 8px 0 10px !important;
+  padding: 8px 10px;
+  border-left: 3px solid #60a5fa;
+  background: #eff6ff;
+  border-radius: 8px;
+}
+
+#f-file-help {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #eefbf3;
+  border: 1px solid #bbf7d0;
+}
+
+.dms-save-feedback {
+  display: none;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #86efac;
+  background: #ecfdf5;
+  color: #166534;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.dms-save-feedback.is-on {
+  display: block;
+}
+
+.dms-form-saved-flash {
+  animation: dmsFormSavedFlash 1.2s ease;
+}
+
+@keyframes dmsFormSavedFlash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.32);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
 }
 
 #f-readonly-downloads {

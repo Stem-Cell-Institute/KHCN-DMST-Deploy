@@ -32,6 +32,31 @@
     return document.getElementById(id);
   }
 
+  function showSaveSuccessUi(message) {
+    var actions = document.querySelector('#form-manual .dms-add-actions');
+    if (!actions) return;
+    var box = el('f-save-feedback');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'f-save-feedback';
+      box.className = 'dms-save-feedback';
+      actions.parentElement.insertBefore(box, actions);
+    }
+    box.textContent = message || 'Đã lưu thành công.';
+    box.classList.add('is-on');
+    var form = el('form-manual');
+    if (form) {
+      form.classList.add('dms-form-saved-flash');
+      setTimeout(function () {
+        form.classList.remove('dms-form-saved-flash');
+      }, 1400);
+    }
+    clearTimeout(showSaveSuccessUi._timer);
+    showSaveSuccessUi._timer = setTimeout(function () {
+      if (box) box.classList.remove('is-on');
+    }, 2600);
+  }
+
   function syncVnDateHint(inputId, hintId) {
     var inp = el(inputId);
     var h = el(hintId);
@@ -63,6 +88,7 @@
   }
 
   var state = { categories: [], types: [], templates: [], tags: [], editId: null, readOnly: false };
+  var DMS_NO_FILE = '__no_file__';
 
   function ensureMultiFileUi() {
     var baseInput = el('f-file');
@@ -98,10 +124,23 @@
       actions.id = 'f-actions-row';
       actions.className = 'dms-attach-actions';
       var addBtnNode = el('f-add-file');
-      var uploadBtnNode = el('f-upload-files');
       if (addBtnNode) actions.appendChild(addBtnNode);
-      if (uploadBtnNode) actions.appendChild(uploadBtnNode);
       wrap.insertBefore(actions, el('f-extra-files'));
+    }
+    if (!el('f-main-file-label')) {
+      var mainLabel = document.createElement('div');
+      mainLabel.id = 'f-main-file-label';
+      mainLabel.className = 'dms-attach-file-label';
+      mainLabel.textContent = 'Upload file 1';
+      wrap.insertBefore(mainLabel, baseInput);
+    }
+    if (!el('f-upload-submit-row')) {
+      var uploadRow = document.createElement('div');
+      uploadRow.id = 'f-upload-submit-row';
+      uploadRow.className = 'dms-attach-upload-row';
+      var uploadBtnNode2 = el('f-upload-files');
+      if (uploadBtnNode2) uploadRow.appendChild(uploadBtnNode2);
+      wrap.insertBefore(uploadRow, el('f-existing-files'));
     }
     if (!el('f-existing-files')) {
       var list = document.createElement('div');
@@ -114,12 +153,14 @@
     if (addBtnFinal) {
       addBtnFinal.classList.add('dms-btn', 'dms-attach-add-btn');
       addBtnFinal.classList.remove('dms-btn-ghost');
-      addBtnFinal.textContent = '+ Thêm file';
+      addBtnFinal.textContent = '+ Thêm file bổ sung';
     }
     var uploadBtnFinal = el('f-upload-files');
     if (uploadBtnFinal) {
       uploadBtnFinal.classList.add('dms-btn', 'dms-btn-primary', 'dms-attach-upload-btn');
+      uploadBtnFinal.textContent = 'Tải file đã chọn lên server';
     }
+    refreshUploadActionState();
   }
 
   function renderQuickDownloadLinks(doc) {
@@ -327,10 +368,98 @@
     el('form-manual').reset();
     if (el('f-extra-files')) el('f-extra-files').innerHTML = '';
     if (el('f-existing-files')) el('f-existing-files').innerHTML = '';
+    if (el('f-main-file')) el('f-main-file').innerHTML = '';
     fillTagChecks();
     fillTemplateSelect();
     syncVnDateHint('f-issue', 'f-issue-hint');
     syncVnDateHint('f-valid', 'f-valid-hint');
+    refreshUploadActionState();
+  }
+
+  function renderPrimaryStoredFile(doc, docId) {
+    var host = el('f-existing-files');
+    if (!host || !host.parentElement) return;
+    var box = el('f-main-file');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'f-main-file';
+      box.className = 'dms-add-note dms-attach-existing';
+      host.parentElement.insertBefore(box, host);
+    }
+    var hasServerFile = !!(doc && doc.file_path && String(doc.file_path).trim() && doc.file_path !== DMS_NO_FILE);
+    if (!hasServerFile || !docId) {
+      box.innerHTML = '';
+      return;
+    }
+    var fileName = String(doc.original_name || 'tai-lieu.pdf');
+    var downloadUrl = apiBase + '/api/dms/documents/' + Number(docId) + '/file';
+    var deleteBtn = '';
+    if (!state.readOnly) {
+      deleteBtn =
+        '<button type="button" class="dms-btn dms-btn-danger" id="f-delete-main-file">Xóa PDF đã upload</button>';
+    }
+    box.innerHTML =
+      '<div class="dms-attach-existing-title">File PDF chính đã lưu</div>' +
+      '<div class="dms-attach-item">' +
+      '<span class="dms-attach-item-name">' +
+      escapeHtml(fileName) +
+      '</span>' +
+      '<div class="dms-attach-item-actions">' +
+      '<a class="dms-btn dms-btn-primary" target="_blank" rel="noopener noreferrer" href="' +
+      downloadUrl +
+      '">Tải file PDF</a>' +
+      deleteBtn +
+      '</div>' +
+      '</div>';
+    var del = el('f-delete-main-file');
+    if (del) {
+      del.addEventListener('click', function () {
+        if (!state.editId || state.readOnly) return;
+        if (!confirm('Xóa file PDF đã upload của tài liệu này?')) return;
+        del.disabled = true;
+        fetch(apiBase + '/api/dms/documents/' + Number(docId) + '/file', {
+          method: 'DELETE',
+          headers: { Accept: 'application/json', Authorization: 'Bearer ' + getToken() },
+        })
+          .then(async function (r) {
+            var j = await r.json().catch(function () {
+              return {};
+            });
+            if (!r.ok) throw new Error(j.message || 'Không xóa được PDF');
+            return api('/documents/' + Number(docId));
+          })
+          .then(function (refreshed) {
+            var d = (refreshed && refreshed.document) || {};
+            renderPrimaryStoredFile(d, docId);
+            renderExistingAttachments(d.attachments || [], docId);
+            updateFileHelpText(d);
+          })
+          .catch(function (e) {
+            alert(e.message || String(e));
+            del.disabled = false;
+          });
+      });
+    }
+  }
+
+  function refreshFileInputHierarchy() {
+    var mainLabel = el('f-main-file-label');
+    if (mainLabel) {
+      var hasMain = !!(el('f-file') && el('f-file').files && el('f-file').files[0]);
+      mainLabel.textContent = hasMain ? 'Upload file 1 (đã chọn)' : 'Upload file 1';
+      mainLabel.classList.toggle('is-selected', hasMain);
+    }
+    var box = el('f-extra-files');
+    if (!box) return;
+    var idx = 2;
+    box.querySelectorAll('.dms-attach-extra-row').forEach(function (row) {
+      var label = row.querySelector('.dms-attach-file-label');
+      if (label) label.textContent = 'File ' + idx;
+      var input = row.querySelector('.f-extra-file');
+      var hasFile = !!(input && input.files && input.files[0]);
+      row.classList.toggle('is-selected', hasFile);
+      idx += 1;
+    });
   }
 
   function addExtraFileInput() {
@@ -339,15 +468,33 @@
     var row = document.createElement('div');
     row.className = 'dms-attach-extra-row';
     row.innerHTML =
+      '<div class="dms-attach-file-label">File</div>' +
+      '<div class="dms-attach-extra-controls">' +
       '<input type="file" class="f-extra-file dms-attach-extra-input">' +
-      '<button type="button" class="dms-btn dms-btn-ghost f-extra-file-remove">Xóa dòng</button>';
+      '<button type="button" class="dms-btn dms-btn-ghost f-extra-file-remove">Xóa dòng</button>' +
+      '</div>';
     box.appendChild(row);
     var rm = row.querySelector('.f-extra-file-remove');
     if (rm) {
       rm.addEventListener('click', function () {
         row.remove();
+        refreshUploadActionState();
+        refreshFileInputHierarchy();
       });
     }
+    var input = row.querySelector('.f-extra-file');
+    if (input) {
+      input.addEventListener('change', function () {
+        refreshUploadActionState();
+        refreshFileInputHierarchy();
+      });
+      input.addEventListener('input', function () {
+        refreshUploadActionState();
+        refreshFileInputHierarchy();
+      });
+    }
+    refreshUploadActionState();
+    refreshFileInputHierarchy();
   }
 
   function collectExtraFiles() {
@@ -358,6 +505,33 @@
       if (inp.files && inp.files[0]) files.push(inp.files[0]);
     });
     return files;
+  }
+
+  function hasAnySelectedUploadFile() {
+    var main = el('f-file');
+    var hasMain = !!(main && main.files && main.files[0]);
+    return hasMain || collectExtraFiles().length > 0;
+  }
+
+  function refreshUploadActionState() {
+    var uploadBtn = el('f-upload-files');
+    if (!uploadBtn) return;
+    var hasSelection = hasAnySelectedUploadFile();
+    var canUpload = !state.readOnly && !!state.editId && hasAnySelectedUploadFile();
+    uploadBtn.disabled = !canUpload;
+    uploadBtn.classList.toggle('is-ready', canUpload);
+    if (state.readOnly) {
+      uploadBtn.title = 'Chế độ chỉ xem: không thể tải file.';
+    } else if (!state.editId) {
+      uploadBtn.title = hasSelection
+        ? 'Tạo mới hồ sơ: bấm Lưu để lưu toàn bộ file đã chọn.'
+        : 'Tạo mới hồ sơ: chọn file rồi bấm Lưu để lưu file lên server.';
+    } else {
+      uploadBtn.title = canUpload
+        ? 'Đã có file được chọn. Bấm để tải ngay lên server.'
+        : 'Hãy chọn file trước (Upload file 1 hoặc thêm file bổ sung).';
+    }
+    refreshFileInputHierarchy();
   }
 
   async function uploadExtraFilesOnly() {
@@ -397,8 +571,12 @@
       if (el('f-file')) el('f-file').value = '';
       if (el('f-extra-files')) el('f-extra-files').innerHTML = '';
       var refreshed = await api('/documents/' + state.editId);
-      renderExistingAttachments((refreshed.document && refreshed.document.attachments) || [], state.editId);
-      alert('Đã upload ' + (j.uploaded || allFiles.length) + ' file bổ sung.');
+      var rd = (refreshed && refreshed.document) || {};
+      renderPrimaryStoredFile(rd, state.editId);
+      renderExistingAttachments(rd.attachments || [], state.editId);
+      updateFileHelpText(rd);
+      refreshUploadActionState();
+      alert('Đã tải file lên server.');
     } catch (e) {
       alert(e.message || String(e));
     } finally {
@@ -416,26 +594,32 @@
       root.innerHTML = '<div class="dms-attach-empty">Chưa có file bổ sung.</div>';
       return;
     }
+    var canDelete = !state.readOnly && !!state.editId;
     root.innerHTML =
       '<div class="dms-attach-existing-title">File đã upload</div>' +
       list
         .map(function (a) {
+          var fileUrl =
+            apiBase + '/api/dms/documents/' + docId + '/attachments/' + a.id + '/file';
           return (
             '<div class="dms-attach-item">' +
-            '<a class="dms-link dms-attach-item-name" target="_blank" rel="noopener" href="' +
-            apiBase +
-            '/api/dms/documents/' +
-            docId +
-            '/attachments/' +
-            a.id +
-            '/file">' +
+            '<span class="dms-attach-item-name" title="' +
             escapeHtml(a.original_name || ('file_' + a.id)) +
-            '</a>' +
-            (state.readOnly
-              ? ''
-              : '<button type="button" class="dms-btn dms-btn-ghost dms-attach-delete" data-attachment-id="' +
+            '">' +
+            escapeHtml(a.original_name || ('file_' + a.id)) +
+            '</span>' +
+            '<div class="dms-attach-item-actions">' +
+            '<a class="dms-btn dms-btn-primary dms-attach-open" target="_blank" rel="noopener" href="' +
+            fileUrl +
+            '">Tải</a>' +
+            (canDelete
+              ? '<button type="button" class="dms-btn dms-btn-danger dms-attach-delete" data-attachment-id="' +
                 a.id +
-                '">Xóa</button>') +
+                '">Xóa</button>'
+              : '<button type="button" class="dms-btn dms-btn-danger dms-attach-delete" data-attachment-id="' +
+                a.id +
+                '" disabled title="Chế độ chỉ xem">Xóa</button>') +
+            '</div>' +
             '</div>'
           );
         })
@@ -458,7 +642,10 @@
             return api('/documents/' + docId);
           })
           .then(function (refreshed) {
-            renderExistingAttachments((refreshed.document && refreshed.document.attachments) || [], docId);
+            var d = (refreshed && refreshed.document) || {};
+            renderPrimaryStoredFile(d, docId);
+            renderExistingAttachments(d.attachments || [], docId);
+            updateFileHelpText(d);
           })
           .catch(function (e) {
             alert(e.message || String(e));
@@ -466,6 +653,22 @@
           });
       });
     });
+  }
+
+  function updateFileHelpText(doc) {
+    var help = el('f-file-help');
+    if (!help) return;
+    var hasPrimaryPdf = !!(doc && doc.file_path && String(doc.file_path).trim() && doc.file_path !== DMS_NO_FILE);
+    var attachments = (doc && Array.isArray(doc.attachments) ? doc.attachments : []).filter(function (a) {
+      return !!a;
+    });
+    var hasAnyAttachment = attachments.length > 0;
+    if (hasPrimaryPdf || hasAnyAttachment) {
+      var countText = hasAnyAttachment ? ' (' + attachments.length + ' file đính kèm)' : '';
+      help.textContent = 'Đã có file PDF trên máy chủ' + countText + '. Có thể tải từ danh sách "File đã upload".';
+      return;
+    }
+    help.textContent = 'Hiện chưa có file nào trên máy chủ — chọn file để đính kèm hoặc giữ link scan.';
   }
 
   async function submitManual(ev) {
@@ -531,7 +734,12 @@
         if (el('f-file')) el('f-file').value = '';
         if (el('f-extra-files')) el('f-extra-files').innerHTML = '';
         var refreshed = await api('/documents/' + editId);
-        renderExistingAttachments((refreshed.document && refreshed.document.attachments) || [], editId);
+        var d2 = (refreshed && refreshed.document) || {};
+        renderPrimaryStoredFile(d2, editId);
+        renderExistingAttachments(d2.attachments || [], editId);
+        updateFileHelpText(d2);
+        refreshUploadActionState();
+        showSaveSuccessUi('Đã lưu cập nhật thành công.');
         return;
       }
 
@@ -557,17 +765,20 @@
       if (el('f-template').value) fd.append('template_id', el('f-template').value);
       fd.append('tag_ids', JSON.stringify(tagIds));
       var f = el('f-file').files[0];
+      var extraCreateFiles = collectExtraFiles();
       if (f) fd.append('file', f);
-      else {
-        if (!el('f-title').value.trim()) {
-          alert('Nhập tiêu đề hoặc chọn file đính kèm.');
-          return;
-        }
+      extraCreateFiles.forEach(function (x) {
+        fd.append('files', x);
+      });
+      if (!f && !extraCreateFiles.length && !el('f-title').value.trim()) {
+        alert('Nhập tiêu đề hoặc chọn file đính kèm.');
+        return;
       }
       var r = await fetch(apiBase + '/api/dms/documents', { method: 'POST', headers: authHeaders(), body: fd });
       var j = await r.json();
       if (!r.ok) throw new Error(j.message || 'Lỗi');
       resetManualFormForNextEntry();
+      showSaveSuccessUi('Đã lưu hồ sơ mới thành công.');
       alert('Đã lưu tài liệu. Biểu mẫu đã được làm mới để bạn tiếp tục nhập.');
     } catch (e) {
       alert(e.message || String(e));
@@ -760,12 +971,11 @@
           ? String(d.destruction_eligible_date).slice(0, 10)
           : '';
         fillTagChecks(d.tags || []);
+        renderPrimaryStoredFile(d, state.editId);
         renderExistingAttachments(d.attachments || [], state.editId);
         el('f-file').removeAttribute('required');
-        el('f-file-help').textContent =
-          d.file_path === '__no_file__'
-            ? 'Hiện chưa có PDF trên máy chủ — chọn file để đính kèm (cần API bổ sung) hoặc giữ link scan.'
-            : 'Để giữ file hiện tại, không chọn file mới.';
+        updateFileHelpText(d);
+        refreshUploadActionState();
         showTab('manual');
         document.querySelectorAll('[data-add-tab-btn="import"]').forEach(function (b) {
           b.style.display = 'none';
@@ -794,6 +1004,11 @@
           alert(e.message || String(e));
         });
       });
+    }
+    var mainFileInput = el('f-file');
+    if (mainFileInput) {
+      mainFileInput.addEventListener('change', refreshUploadActionState);
+      mainFileInput.addEventListener('input', refreshUploadActionState);
     }
     el('f-issue').addEventListener('change', function () {
       syncVnDateHint('f-issue', 'f-issue-hint');

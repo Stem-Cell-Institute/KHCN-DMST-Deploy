@@ -175,6 +175,40 @@ function addDaysStr(days) {
   return d.toISOString().slice(0, 10);
 }
 
+function decodeMojibakeUtf8(name) {
+  const raw = String(name || '');
+  if (!raw) return '';
+  // Typical mojibake pattern when UTF-8 bytes were read as Latin-1.
+  if (/[ÃÂÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞß]|�/.test(raw)) {
+    try {
+      return Buffer.from(raw, 'latin1').toString('utf8');
+    } catch (_) {
+      return raw;
+    }
+  }
+  return raw;
+}
+
+function normalizeUploadFilename(name, fallback) {
+  const base = decodeMojibakeUtf8(name || '');
+  const cleaned = String(base || '')
+    .normalize('NFC')
+    .replace(/[\r\n]/g, ' ')
+    .replace(/[\\/]/g, '_')
+    .trim();
+  return cleaned || String(fallback || 'file');
+}
+
+function setAttachmentDownloadName(res, fileName, fallback) {
+  const utf8Name = normalizeUploadFilename(fileName, fallback || 'file');
+  const asciiName = utf8Name
+    .replace(/[^\x20-\x7E]/g, '_')
+    .replace(/["\\]/g, '_')
+    .trim() || String(fallback || 'file');
+  const encoded = encodeURIComponent(utf8Name);
+  res.setHeader('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encoded}`);
+}
+
 module.exports = function createDmsRecordsRouter({
   db,
   adminOnly,
@@ -205,7 +239,8 @@ module.exports = function createDmsRecordsRouter({
       cb(null, dmsDir);
     },
     filename: function (_req, file, cb) {
-      const ext = path.extname(file.originalname || '') || '';
+      const normalizedOriginal = normalizeUploadFilename(file.originalname, 'upload.bin');
+      const ext = path.extname(normalizedOriginal) || '';
       const base = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       cb(null, base + ext);
     },
@@ -1075,7 +1110,7 @@ module.exports = function createDmsRecordsRouter({
           ? doc.file_path
           : path.join(dmsDir, path.basename(doc.file_path));
         if (!doc.file_path || doc.file_path === DMS_NO_FILE || !fs.existsSync(abs)) continue;
-        let base = (doc.original_name || `file_${id}`).replace(/[/\\?%*:|"<>]/g, '_');
+        let base = normalizeUploadFilename(doc.original_name, `file_${id}`).replace(/[?%*:|"<>]/g, '_');
         if (usedNames[base]) {
           const ext = path.extname(base);
           const stem = path.basename(base, ext);
@@ -1372,7 +1407,42 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
             tpl.version AS template_version,
             tpl.status AS template_status,
             tpl.record_kind AS template_record_kind,
-            (SELECT COUNT(*) FROM dms_document_loans L WHERE L.document_id = d.id AND L.returned_at IS NULL) AS open_loan_count
+            (SELECT COUNT(*) FROM dms_document_loans L WHERE L.document_id = d.id AND L.returned_at IS NULL) AS open_loan_count,
+            (
+              SELECT a.id
+              FROM dms_document_attachments a
+              WHERE a.document_id = d.id
+                AND (
+                  lower(COALESCE(a.mime_type, '')) LIKE 'application/pdf%'
+                  OR lower(COALESCE(a.original_name, '')) LIKE '%.pdf'
+                )
+              ORDER BY a.id DESC
+              LIMIT 1
+            ) AS latest_pdf_attachment_id,
+            (
+              SELECT a.original_name
+              FROM dms_document_attachments a
+              WHERE a.document_id = d.id
+                AND (
+                  lower(COALESCE(a.mime_type, '')) LIKE 'application/pdf%'
+                  OR lower(COALESCE(a.original_name, '')) LIKE '%.pdf'
+                )
+              ORDER BY a.id DESC
+              LIMIT 1
+            ) AS latest_pdf_attachment_name,
+            (
+              SELECT a.id
+              FROM dms_document_attachments a
+              WHERE a.document_id = d.id
+                AND (
+                  lower(COALESCE(a.mime_type, '')) LIKE '%msword%'
+                  OR lower(COALESCE(a.mime_type, '')) LIKE '%wordprocessingml%'
+                  OR lower(COALESCE(a.original_name, '')) LIKE '%.doc'
+                  OR lower(COALESCE(a.original_name, '')) LIKE '%.docx'
+                )
+              ORDER BY a.id DESC
+              LIMIT 1
+            ) AS latest_word_attachment_id
            ${docFrom}
            LEFT JOIN users u ON u.id = d.uploaded_by_id
            LEFT JOIN dms_document_types dt ON dt.id = d.document_type_id
@@ -1403,6 +1473,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
 
       const list = rows.map((r) => ({
         ...r,
+        original_name: normalizeUploadFilename(r.original_name, `file_${r.id}`),
         tags: tagMap[r.id] || [],
       }));
 
@@ -1477,7 +1548,12 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
            ORDER BY id DESC`
         )
         .all(id);
-      res.json({ ok: true, document: { ...row, tags, attachments } });
+      const normalizedRow = { ...row, original_name: normalizeUploadFilename(row.original_name, `file_${id}`) };
+      const normalizedAttachments = attachments.map((a) => ({
+        ...a,
+        original_name: normalizeUploadFilename(a.original_name, `attachment_${a.id}`),
+      }));
+      res.json({ ok: true, document: { ...normalizedRow, tags, attachments: normalizedAttachments } });
     } catch (e) {
       res.status(500).json({ ok: false, message: e.message });
     }
@@ -1501,7 +1577,14 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       );
       const ids = [];
       for (const f of files) {
-        const r = ins.run(id, f.filename, f.originalname || null, f.size || null, f.mimetype || null, req.user.id);
+        const r = ins.run(
+          id,
+          f.filename,
+          normalizeUploadFilename(f.originalname, f.filename || 'attachment'),
+          f.size || null,
+          f.mimetype || null,
+          req.user.id
+        );
         ids.push(Number(r.lastInsertRowid));
       }
       res.json({ ok: true, uploaded: ids.length, ids });
@@ -1531,10 +1614,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       const abs = path.isAbsolute(row.file_path) ? row.file_path : path.join(dmsDir, path.basename(row.file_path));
       if (!fs.existsSync(abs)) return res.status(404).send('File missing');
       if (row.mime_type) res.setHeader('Content-Type', row.mime_type);
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${encodeURIComponent(row.original_name || 'attachment')}"`
-      );
+      setAttachmentDownloadName(res, row.original_name, 'attachment');
       return res.sendFile(abs);
     } catch (e) {
       res.status(500).send(e.message);
@@ -1586,13 +1666,38 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       const abs = path.isAbsolute(row.file_path) ? row.file_path : path.join(dmsDir, path.basename(row.file_path));
       if (!fs.existsSync(abs)) return res.status(404).send('File missing');
       if (row.mime_type) res.setHeader('Content-Type', row.mime_type);
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${encodeURIComponent(row.original_name || 'file')}"`
-      );
+      setAttachmentDownloadName(res, row.original_name, 'file');
       return res.sendFile(abs);
     } catch (e) {
       res.status(500).send(e.message);
+    }
+  });
+
+  router.delete('/documents/:id/file', needUpload, (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const doc = db.prepare('SELECT * FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy tài liệu' });
+      const role = getDmsModuleRole(db, req.user);
+      if (!canEditDocument(role, doc, req.user.id)) {
+        return res.status(403).json({ ok: false, message: 'Không có quyền xóa PDF của tài liệu này' });
+      }
+      const abs = resolveDmsStoredFileForUnlink(doc.file_path);
+      const fallbackName =
+        String(doc.external_scan_link || '').trim() ||
+        String(doc.original_name || '').trim() ||
+        '(Chưa có file đính kèm)';
+      db.prepare(
+        `UPDATE dms_documents
+         SET file_path = ?, original_name = ?, file_size = 0, mime_type = NULL, updated_at = datetime('now','localtime')
+         WHERE id = ?`
+      ).run(DMS_NO_FILE, fallbackName, id);
+      try {
+        if (abs) fs.unlinkSync(abs);
+      } catch (_) {}
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
     }
   });
 
@@ -1604,8 +1709,12 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
     }
   }
 
-  router.post('/documents', needUpload, upload.single('file'), (req, res) => {
+  router.post('/documents', needUpload, upload.fields([{ name: 'file', maxCount: 1 }, { name: 'files', maxCount: 20 }]), (req, res) => {
     try {
+      const uploaded = req.files && typeof req.files === 'object' ? req.files : {};
+      const mainFile =
+        uploaded && Array.isArray(uploaded.file) && uploaded.file.length ? uploaded.file[0] : null;
+      const extraFiles = uploaded && Array.isArray(uploaded.files) ? uploaded.files : [];
       const refNumber = String(req.body.ref_number || '').trim() || null;
       const categoryId = req.body.category_id ? Number(req.body.category_id) : null;
       const documentTypeId = req.body.document_type_id ? Number(req.body.document_type_id) : null;
@@ -1638,9 +1747,9 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       const templateId = tplCheck.id;
 
       let title = String(req.body.title || '').trim();
-      if (req.file) {
-        title = title || req.file.originalname;
-        const relPath = req.file.filename;
+      if (mainFile) {
+        title = title || normalizeUploadFilename(mainFile.originalname, 'Tài liệu');
+        const relPath = mainFile.filename;
         const r = db
           .prepare(
             `INSERT INTO dms_documents (
@@ -1661,9 +1770,9 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
             issueDate,
             validUntil,
             relPath,
-            req.file.originalname,
-            req.file.size,
-            req.file.mimetype || null,
+            normalizeUploadFilename(mainFile.originalname, mainFile.filename || 'file'),
+            mainFile.size,
+            mainFile.mimetype || null,
             notes,
             issuingUnit,
             externalScanLink,
@@ -1683,6 +1792,23 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
           newId,
           tagIds.map((x) => Number(x)).filter((n) => Number.isFinite(n))
         );
+        if (extraFiles.length) {
+          const insAttach = db.prepare(
+            `INSERT INTO dms_document_attachments
+              (document_id, file_path, original_name, file_size, mime_type, uploaded_by_id)
+             VALUES (?, ?, ?, ?, ?, ?)`
+          );
+          for (const f of extraFiles) {
+            insAttach.run(
+              newId,
+              f.filename,
+              normalizeUploadFilename(f.originalname, f.filename || 'attachment'),
+              f.size || null,
+              f.mimetype || null,
+              req.user.id
+            );
+          }
+        }
         return res.json({ ok: true, id: newId });
       }
 
@@ -1733,11 +1859,32 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
         newId,
         tagIds.map((x) => Number(x)).filter((n) => Number.isFinite(n))
       );
+      if (extraFiles.length) {
+        const insAttach = db.prepare(
+          `INSERT INTO dms_document_attachments
+            (document_id, file_path, original_name, file_size, mime_type, uploaded_by_id)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        );
+        for (const f of extraFiles) {
+          insAttach.run(
+            newId,
+            f.filename,
+            normalizeUploadFilename(f.originalname, f.filename || 'attachment'),
+            f.size || null,
+            f.mimetype || null,
+            req.user.id
+          );
+        }
+      }
       res.json({ ok: true, id: newId });
     } catch (e) {
-      if (req.file && req.file.path) {
+      const uploaded = req.files && typeof req.files === 'object' ? req.files : {};
+      const all = []
+        .concat((uploaded && Array.isArray(uploaded.file) ? uploaded.file : []) || [])
+        .concat((uploaded && Array.isArray(uploaded.files) ? uploaded.files : []) || []);
+      for (const f of all) {
         try {
-          fs.unlinkSync(req.file.path);
+          if (f && f.path) fs.unlinkSync(f.path);
         } catch (_) {}
       }
       console.error('[dms/documents POST]', e);

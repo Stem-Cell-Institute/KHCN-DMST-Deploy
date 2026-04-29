@@ -445,7 +445,33 @@
   function docExternalLinksHtml(d) {
     var s = d.external_scan_link && String(d.external_scan_link).trim();
     var w = d.external_word_link && String(d.external_word_link).trim();
+    var hasUploadedPdf = !!(d.file_path && String(d.file_path).trim() && d.file_path !== '__no_file__');
+    var attachmentPdfId = Number(d.latest_pdf_attachment_id || 0);
+    var hasAttachmentPdf = Number.isFinite(attachmentPdfId) && attachmentPdfId > 0;
+    var attachmentWordId = Number(d.latest_word_attachment_id || 0);
+    var hasAttachmentWord = Number.isFinite(attachmentWordId) && attachmentWordId > 0;
     var parts = [];
+    if (hasUploadedPdf) {
+      parts.push(
+        '<a class="dms-link dms-doc-ext" href="' +
+          escapeAttr(apiBase + '/api/dms/documents/' + d.id + '/file?token=' + encodeURIComponent(getToken())) +
+          '" target="_blank" rel="noopener noreferrer">PDF đã upload</a>'
+      );
+    } else if (hasAttachmentPdf) {
+      parts.push(
+        '<a class="dms-link dms-doc-ext" href="' +
+          escapeAttr(
+            apiBase +
+              '/api/dms/documents/' +
+              d.id +
+              '/attachments/' +
+              attachmentPdfId +
+              '/file?token=' +
+              encodeURIComponent(getToken())
+          ) +
+          '" target="_blank" rel="noopener noreferrer">PDF server</a>'
+      );
+    }
     if (s) {
       parts.push(
         '<a class="dms-link dms-doc-ext" href="' +
@@ -458,6 +484,21 @@
         '<a class="dms-link dms-doc-ext" href="' +
           escapeAttr(w) +
           '" target="_blank" rel="noopener noreferrer">Word</a>'
+      );
+    }
+    if (hasAttachmentWord) {
+      parts.push(
+        '<a class="dms-link dms-doc-ext" href="' +
+          escapeAttr(
+            apiBase +
+              '/api/dms/documents/' +
+              d.id +
+              '/attachments/' +
+              attachmentWordId +
+              '/file?token=' +
+              encodeURIComponent(getToken())
+          ) +
+          '" target="_blank" rel="noopener noreferrer">Word server</a>'
       );
     }
     if (!parts.length) return '';
@@ -890,6 +931,7 @@
     var q = buildQuery();
     var data = await api('/documents?' + q);
     state.documents = data.documents || [];
+    await enrichServerAttachmentLinks(state.documents);
     state.total = data.total || 0;
     var limit = state.limit || 30;
     var totalPages = Math.max(1, Math.ceil(state.total / limit));
@@ -900,6 +942,41 @@
     renderTable();
     renderTemplateSidebar();
     syncFilterSelectsChrome();
+  }
+
+  async function enrichServerAttachmentLinks(docs) {
+    if (!Array.isArray(docs) || !docs.length) return;
+    var targets = docs.filter(function (d) {
+      return (
+        Number(d.latest_pdf_attachment_id || 0) > 0 &&
+        Number(d.latest_word_attachment_id || 0) <= 0 &&
+        !String(d.external_word_link || '').trim()
+      );
+    });
+    if (!targets.length) return;
+    await Promise.all(
+      targets.map(async function (d) {
+        try {
+          var detail = await api('/documents/' + d.id);
+          var list = (detail && detail.document && Array.isArray(detail.document.attachments) && detail.document.attachments) || [];
+          var latestWordId = 0;
+          for (var i = 0; i < list.length; i += 1) {
+            var a = list[i] || {};
+            var mime = String(a.mime_type || '').toLowerCase();
+            var name = String(a.original_name || '').toLowerCase();
+            var isWord =
+              mime.indexOf('msword') >= 0 ||
+              mime.indexOf('wordprocessingml') >= 0 ||
+              /\.docx?$/.test(name);
+            if (isWord) {
+              latestWordId = Number(a.id || 0);
+              break;
+            }
+          }
+          if (latestWordId > 0) d.latest_word_attachment_id = latestWordId;
+        } catch (_) {}
+      })
+    );
   }
 
   function renderTemplateSidebar() {
