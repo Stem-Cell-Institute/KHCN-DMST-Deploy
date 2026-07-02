@@ -146,6 +146,39 @@ function maintenanceBadgeForRow(eq) {
   return null;
 }
 
+/** Số hiện tại (không tăng) dùng cho xem trước — dựa trên dữ liệu hiện có, có thể lệch nhẹ so với lúc tạo thật. */
+function peekNextEquipmentSeq(db, dc, y) {
+  const prefix = `${dc}-${y}-`;
+  const seqRow = db.prepare('SELECT seq FROM equipment_code_sequences WHERE dept_code = ? AND year = ?').get(dc, y);
+  if (seqRow) return Number(seqRow.seq) + 1;
+  const row = db.prepare(`SELECT equipment_code FROM equipments WHERE equipment_code LIKE ? ORDER BY equipment_code DESC LIMIT 1`).get(`${prefix}%`);
+  let n = 1;
+  if (row && row.equipment_code && String(row.equipment_code).startsWith(prefix)) {
+    const tail = String(row.equipment_code).slice(prefix.length);
+    const num = parseInt(tail, 10);
+    if (Number.isFinite(num)) n = num + 1;
+  }
+  return n;
+}
+
+/**
+ * Cấp số thứ tự mới cho mã thiết bị, dùng bộ đếm bền (equipment_code_sequences) — chỉ tăng, không
+ * bao giờ tính lại theo dữ liệu hiện có. Nhờ đó nếu thiết bị giữ số lớn nhất bị xóa (mềm hoặc vĩnh
+ * viễn), số đó không bị cấp lại cho thiết bị khác (tránh trùng mã / lẫn hồ sơ QR cũ).
+ */
+function nextEquipmentSeq(db, dc, y) {
+  let seqRow = db.prepare('SELECT seq FROM equipment_code_sequences WHERE dept_code = ? AND year = ?').get(dc, y);
+  if (!seqRow) {
+    const prefix = `${dc}-${y}-`;
+    const maxRow = db
+      .prepare(`SELECT MAX(CAST(SUBSTR(equipment_code, -4) AS INTEGER)) AS maxSeq FROM equipments WHERE equipment_code LIKE ?`)
+      .get(`${prefix}%`);
+    db.prepare('INSERT INTO equipment_code_sequences (dept_code, year, seq) VALUES (?, ?, ?)').run(dc, y, (maxRow && maxRow.maxSeq) || 0);
+  }
+  db.prepare('UPDATE equipment_code_sequences SET seq = seq + 1 WHERE dept_code = ? AND year = ?').run(dc, y);
+  return db.prepare('SELECT seq FROM equipment_code_sequences WHERE dept_code = ? AND year = ?').get(dc, y).seq;
+}
+
 function generateEquipmentCode(db, deptCode, year) {
   const dc = String(deptCode || 'SCI')
     .trim()
@@ -154,13 +187,7 @@ function generateEquipmentCode(db, deptCode, year) {
     .slice(0, 16) || 'SCI';
   const y = Number.isFinite(year) ? year : new Date().getFullYear();
   const prefix = `${dc}-${y}-`;
-  const row = db.prepare(`SELECT equipment_code FROM equipments WHERE equipment_code LIKE ? ORDER BY equipment_code DESC LIMIT 1`).get(`${prefix}%`);
-  let n = 1;
-  if (row && row.equipment_code && String(row.equipment_code).startsWith(prefix)) {
-    const tail = String(row.equipment_code).slice(prefix.length);
-    const num = parseInt(tail, 10);
-    if (Number.isFinite(num)) n = num + 1;
-  }
+  const n = nextEquipmentSeq(db, dc, y);
   return prefix + String(n).padStart(4, '0');
 }
 
@@ -338,15 +365,7 @@ function registerEquipmentPart2(router, deps) {
         return res.status(400).json({ message: 'Thiếu department_code hoặc year' });
       }
       const prefix = `${dept}-${year}-`;
-      const row = db
-        .prepare(`SELECT equipment_code FROM equipments WHERE equipment_code LIKE ? ORDER BY equipment_code DESC LIMIT 1`)
-        .get(prefix + '%');
-      let n = 1;
-      if (row && row.equipment_code && String(row.equipment_code).startsWith(prefix)) {
-        const tail = String(row.equipment_code).slice(prefix.length);
-        const num = parseInt(tail, 10);
-        if (Number.isFinite(num)) n = num + 1;
-      }
+      const n = peekNextEquipmentSeq(db, dept, year);
       const code = prefix + String(n).padStart(4, '0');
       res.json({ ok: true, equipment_code: code });
     } catch (e) {
@@ -354,9 +373,13 @@ function registerEquipmentPart2(router, deps) {
     }
   });
 
-  function equipmentDetailLink(eqId) {
+  // Thư mục /uploads không được truy cập trực tiếp (chặn ở tầng reverse proxy để không lộ file qua
+  // link trần, bắt buộc đi qua route xác thực /attachment/:kind/:seq) — nên email KHÔNG được link
+  // thẳng tới /uploads/..., chỉ dẫn người nhận về trang chi tiết (đăng nhập rồi mới xem được tệp).
+  function equipmentDetailLink(eqId, tab) {
     const base = (process.env.BASE_URL || '').replace(/\/$/, '');
-    return `${base || ''}/public/equipment/detail.html?id=${eqId}`;
+    const tabQs = tab ? `&tab=${encodeURIComponent(tab)}` : '';
+    return `${base || ''}/public/equipment/detail.html?id=${eqId}${tabQs}`;
   }
 
   function sendNewIncidentEmail(eq, incId, payload) {
@@ -370,13 +393,8 @@ function registerEquipmentPart2(router, deps) {
     const reporter = p.reporterDisplay ? String(p.reporterDisplay) : p.source === 'public' ? 'Người dùng ẩn danh (QR công khai)' : 'Người dùng hệ thống';
     const reporterEmail = p.reporterEmail ? String(p.reporterEmail) : 'Không cung cấp';
     const reporterPhone = p.reporterPhone ? String(p.reporterPhone) : 'Không cung cấp';
-    const detailUrl = equipmentDetailLink(eq.id);
-    const imageUrls = Array.isArray(p.imagePaths)
-      ? p.imagePaths
-          .filter(Boolean)
-          .map((x) => String(x).replace(/\\/g, '/'))
-          .map((x) => (x.startsWith('http://') || x.startsWith('https://') ? x : `${(process.env.BASE_URL || '').replace(/\/$/, '')}/uploads/${x}`))
-      : [];
+    const detailUrl = equipmentDetailLink(eq.id, 'incident');
+    const imageCount = Array.isArray(p.imagePaths) ? p.imagePaths.filter(Boolean).length : 0;
     const esc = (s) =>
       String(s == null ? '' : s)
         .replace(/&/g, '&amp;')
@@ -393,8 +411,8 @@ function registerEquipmentPart2(router, deps) {
       `- Email liên hệ: ${reporterEmail}\n` +
       `- Số điện thoại: ${reporterPhone}\n\n` +
       `Nội dung sự cố:\n${snippet || '(Không có mô tả)'}\n\n` +
-      (imageUrls.length
-        ? `Hình ảnh đính kèm:\n${imageUrls.map((u, i) => `${i + 1}. ${u}`).join('\n')}\n\n`
+      (imageCount
+        ? `Có ${imageCount} hình ảnh đính kèm — đăng nhập vào trang chi tiết bên dưới (tab Sự cố) để xem.\n\n`
         : '') +
       `Vui lòng truy cập liên kết sau để xem chi tiết và xử lý:\n${detailUrl}\n\n` +
       `Trân trọng,\nHệ thống STIMS`;
@@ -413,10 +431,8 @@ function registerEquipmentPart2(router, deps) {
       `<div style="white-space:pre-wrap;border:1px solid #e5e7eb;padding:10px;border-radius:8px;background:#f8fafc;">${esc(
         snippet || '(Không có mô tả)'
       )}</div>` +
-      (imageUrls.length
-        ? `<p><strong>Hình ảnh đính kèm:</strong></p><ol>${imageUrls
-            .map((u) => `<li><a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u)}</a></li>`)
-            .join('')}</ol>`
+      (imageCount
+        ? `<p><strong>${esc(imageCount)} hình ảnh đính kèm</strong> — đăng nhập vào trang chi tiết bên dưới (tab Sự cố) để xem.</p>`
         : '') +
       `<p>Vui lòng truy cập liên kết sau để xem chi tiết và xử lý:</p>` +
       `<p><a href="${esc(detailUrl)}">Mở trang thiết bị</a></p>` +
@@ -434,13 +450,10 @@ function registerEquipmentPart2(router, deps) {
     const sn = String(p.resolution_note || '').trim().slice(0, 2000);
     const resolver = p.resolved_by ? String(p.resolved_by) : 'Không xác định';
     const resolvedAt = p.resolved_at ? String(p.resolved_at) : 'Vừa cập nhật';
-    const detailUrl = equipmentDetailLink(eq.id);
-    const attachmentUrls = Array.isArray(p.resolution_attachment_paths)
-      ? p.resolution_attachment_paths
-          .filter(Boolean)
-          .map((x) => String(x).replace(/\\/g, '/'))
-          .map((x) => (x.startsWith('http://') || x.startsWith('https://') ? x : `${(process.env.BASE_URL || '').replace(/\/$/, '')}/uploads/${x}`))
-      : [];
+    const detailUrl = equipmentDetailLink(eq.id, 'incident');
+    const attachmentCount = Array.isArray(p.resolution_attachment_paths)
+      ? p.resolution_attachment_paths.filter(Boolean).length
+      : 0;
     const esc = (s) =>
       String(s == null ? '' : s)
         .replace(/&/g, '&amp;')
@@ -462,8 +475,8 @@ function registerEquipmentPart2(router, deps) {
       `- Nhà thầu / công ty: ${p.vendor_note ? String(p.vendor_note) : 'Không cập nhật'}\n` +
       `- Hóa đơn / chứng từ: ${p.invoice_ref ? String(p.invoice_ref) : 'Không cập nhật'}\n` +
       `- Tờ trình / đề xuất: ${p.proposal_ref ? String(p.proposal_ref) : 'Không cập nhật'}\n\n` +
-      (attachmentUrls.length
-        ? `Đính kèm xử lý:\n${attachmentUrls.map((u, i) => `${i + 1}. ${u}`).join('\n')}\n\n`
+      (attachmentCount
+        ? `Có ${attachmentCount} tệp đính kèm xử lý — đăng nhập vào trang chi tiết bên dưới (tab Sự cố) để xem.\n\n`
         : '') +
       `Vui lòng truy cập liên kết sau để xem chi tiết hồ sơ thiết bị:\n${detailUrl}\n\n` +
       `Trân trọng,\nHệ thống STIMS`;
@@ -489,10 +502,8 @@ function registerEquipmentPart2(router, deps) {
       `<li><strong>Hóa đơn / chứng từ:</strong> ${esc(p.invoice_ref || 'Không cập nhật')}</li>` +
       `<li><strong>Tờ trình / đề xuất:</strong> ${esc(p.proposal_ref || 'Không cập nhật')}</li>` +
       `</ul>` +
-      (attachmentUrls.length
-        ? `<p><strong>Đính kèm xử lý:</strong></p><ol>${attachmentUrls
-            .map((u) => `<li><a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u)}</a></li>`)
-            .join('')}</ol>`
+      (attachmentCount
+        ? `<p><strong>${esc(attachmentCount)} tệp đính kèm xử lý</strong> — đăng nhập vào trang chi tiết bên dưới (tab Sự cố) để xem.</p>`
         : '') +
       `<p>Vui lòng truy cập liên kết sau để xem chi tiết hồ sơ thiết bị:</p>` +
       `<p><a href="${esc(detailUrl)}">Mở trang thiết bị</a></p>` +
@@ -655,13 +666,13 @@ function registerEquipmentPart2(router, deps) {
       return res.status(403).json({ message: 'Không có quyền xem thống kê' });
     }
     try {
-      const total = db.prepare(`SELECT COUNT(*) AS c FROM equipments WHERE status != 'retired'`).get().c;
+      const total = db.prepare(`SELECT COUNT(*) AS c FROM equipments WHERE status != 'retired' AND deleted_at IS NULL`).get().c;
       const byStatus = db
-        .prepare(`SELECT status, COUNT(*) AS c FROM equipments GROUP BY status`)
+        .prepare(`SELECT status, COUNT(*) AS c FROM equipments WHERE deleted_at IS NULL GROUP BY status`)
         .all();
       const byDept = db
         .prepare(
-          `SELECT COALESCE(department_id,'(Không gán)') AS department_id, COUNT(*) AS c FROM equipments WHERE status != 'retired' GROUP BY department_id`
+          `SELECT COALESCE(department_id,'(Không gán)') AS department_id, COUNT(*) AS c FROM equipments WHERE status != 'retired' AND deleted_at IS NULL GROUP BY department_id`
         )
         .all();
       res.json({ ok: true, total, byStatus, byDept });
@@ -679,7 +690,7 @@ function registerEquipmentPart2(router, deps) {
       const rows = db
         .prepare(
           `SELECT id, equipment_code, name, department_id, next_maintenance_date, calibration_due_date, status
-           FROM equipments WHERE status NOT IN ('retired')`
+           FROM equipments WHERE status NOT IN ('retired') AND deleted_at IS NULL`
         )
         .all();
       const now = Date.now();
@@ -717,12 +728,52 @@ function registerEquipmentPart2(router, deps) {
           `SELECT i.id, i.equipment_id, i.status, i.severity, i.report_date, e.equipment_code, e.name
            FROM equipment_incidents i
            JOIN equipments e ON e.id = i.equipment_id
-           WHERE i.status NOT IN ('resolved','closed')
+           WHERE i.status NOT IN ('resolved','closed') AND e.deleted_at IS NULL
            ORDER BY i.id DESC
            LIMIT 200`
         )
         .all();
       res.json({ ok: true, data: rows });
+    } catch (e) {
+      res.status(500).json({ message: e.message || 'Lỗi' });
+    }
+  });
+
+  /** Báo cáo tổng hợp thiết bị có lịch sử sự cố: số lần sự cố, đã xử lý, còn mở, số lần được kích
+   * hoạt lại sau hỏng/bảo trì — để tra cứu nhanh "thiết bị nào hay hỏng" thay vì mở từng hồ sơ. */
+  router.get('/stats/incident-history', authMiddleware, moduleViewerMw, (req, res) => {
+    if (!canManageEquipmentByModule(req)) {
+      return res.status(403).json({ message: 'Không có quyền' });
+    }
+    try {
+      const rows = db
+        .prepare(
+          `SELECT e.id, e.equipment_code, e.name, e.department_id, e.status,
+                  COUNT(i.id) AS incident_total,
+                  SUM(CASE WHEN i.status NOT IN ('resolved','closed') THEN 1 ELSE 0 END) AS incident_open,
+                  SUM(CASE WHEN i.status IN ('resolved','closed') THEN 1 ELSE 0 END) AS incident_resolved,
+                  MAX(i.report_date) AS last_incident_at
+           FROM equipments e
+           JOIN equipment_incidents i ON i.equipment_id = e.id
+           WHERE e.deleted_at IS NULL
+           GROUP BY e.id
+           ORDER BY incident_total DESC, last_incident_at DESC
+           LIMIT 200`
+        )
+        .all();
+      const reactivated = {};
+      db.prepare(
+        `SELECT equipment_id, COUNT(*) AS reactivated_count
+         FROM equipment_status_logs
+         WHERE new_status = 'active' AND old_status IN ('broken','maintenance')
+         GROUP BY equipment_id`
+      )
+        .all()
+        .forEach((r) => {
+          reactivated[r.equipment_id] = r.reactivated_count;
+        });
+      const data = rows.map((r) => ({ ...r, reactivated_count: reactivated[r.id] || 0 }));
+      res.json({ ok: true, data });
     } catch (e) {
       res.status(500).json({ message: e.message || 'Lỗi' });
     }
@@ -742,6 +793,7 @@ function registerEquipmentPart2(router, deps) {
                   e.usage_count_note, e.land_attached_note, e.asset_note,
                   u.fullname AS manager_name
            FROM equipments e LEFT JOIN users u ON u.id = e.manager_id
+           WHERE e.deleted_at IS NULL
            ORDER BY e.id ASC`
         )
         .all();
@@ -902,10 +954,13 @@ function registerEquipmentPart2(router, deps) {
       const result_note = b.result_note != null ? String(b.result_note).slice(0, 4000) : m.result_note;
       const cost = b.cost != null ? Number(b.cost) : m.cost;
       const next_due_date = b.next_due_date != null ? String(b.next_due_date).slice(0, 10) : null;
-      const performed_by = b.performed_by != null ? parseInt(b.performed_by, 10) : req.user.id;
+      let performed_by = b.performed_by != null ? parseInt(b.performed_by, 10) : req.user.id;
+      if (!Number.isFinite(performed_by) || !db.prepare('SELECT 1 FROM users WHERE id = ?').get(performed_by)) {
+        performed_by = req.user.id;
+      }
       db.prepare(
         `UPDATE equipment_maintenance SET completed_date = ?, result_note = ?, cost = ?, next_due_date = ?, performed_by = ? WHERE id = ?`
-      ).run(completed_date, result_note, cost, next_due_date, Number.isFinite(performed_by) ? performed_by : req.user.id, mid);
+      ).run(completed_date, result_note, cost, next_due_date, performed_by, mid);
       const eq = db.prepare('SELECT * FROM equipments WHERE id = ?').get(eqId);
       if (completed_date) {
         db.prepare(`UPDATE equipments SET last_maintenance_date = ?, updated_at = datetime('now') WHERE id = ?`).run(completed_date, eqId);
@@ -933,6 +988,107 @@ function registerEquipmentPart2(router, deps) {
         eq2.equipment_code,
         `/public/equipment/detail.html?id=${eqId}`
       );
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ message: e.message || 'Lỗi' });
+    }
+  });
+
+  /** Mượn / trả thiết bị */
+  router.get('/:id/loans', authMiddleware, moduleViewerMw, (req, res) => {
+    try {
+      const id = parseEquipmentId(req.params.id);
+      if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
+      const eq = db.prepare('SELECT * FROM equipments WHERE id = ?').get(id);
+      const chk = canViewEquipmentDetail(req, eq, db);
+      if (!chk.ok) return res.status(chk.status).json({ message: 'Không có quyền' });
+      const rows = db
+        .prepare(
+          `SELECT l.*, u.fullname AS borrower_fullname, cu.fullname AS created_by_name, ru.fullname AS returned_by_name
+           FROM equipment_loans l
+           LEFT JOIN users u ON u.id = l.borrower_id
+           LEFT JOIN users cu ON cu.id = l.created_by
+           LEFT JOIN users ru ON ru.id = l.returned_by
+           WHERE l.equipment_id = ? ORDER BY l.id DESC`
+        )
+        .all(id);
+      res.json({ ok: true, data: rows });
+    } catch (e) {
+      res.status(500).json({ message: e.message || 'Lỗi' });
+    }
+  });
+
+  router.post('/:id/loans', authMiddleware, moduleViewerMw, express.json(), (req, res) => {
+    if (!canManageEquipmentByModule(req)) return res.status(403).json({ message: 'Không có quyền' });
+    try {
+      const id = parseEquipmentId(req.params.id);
+      if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
+      const eq = db.prepare('SELECT * FROM equipments WHERE id = ?').get(id);
+      if (!eq || eq.deleted_at) return res.status(404).json({ message: 'Không tìm thấy' });
+      const openLoan = db
+        .prepare('SELECT id FROM equipment_loans WHERE equipment_id = ? AND returned_at IS NULL')
+        .get(id);
+      if (openLoan) {
+        return res.status(409).json({ message: 'Thiết bị đang được mượn, cần ghi nhận trả trước khi mượn tiếp.' });
+      }
+      const b = req.body || {};
+      let borrower_id = b.borrower_id != null ? parseInt(b.borrower_id, 10) : null;
+      if (!Number.isFinite(borrower_id) || !db.prepare('SELECT 1 FROM users WHERE id = ?').get(borrower_id)) {
+        borrower_id = null;
+      }
+      const borrower_name = String(b.borrower_name || '').trim().slice(0, 200) || null;
+      if (!borrower_id && !borrower_name) {
+        return res.status(400).json({ message: 'Cần chọn người mượn hoặc nhập tên người mượn.' });
+      }
+      const purpose = b.purpose != null ? String(b.purpose).trim().slice(0, 1000) : null;
+      const expected_return_at = b.expected_return_at != null ? String(b.expected_return_at).slice(0, 10) : null;
+      const ins = db
+        .prepare(
+          `INSERT INTO equipment_loans (equipment_id, borrower_id, borrower_name, purpose, expected_return_at, created_by)
+           VALUES (?,?,?,?,?,?)`
+        )
+        .run(id, borrower_id, borrower_name, purpose, expected_return_at, req.user.id);
+      db.prepare(`UPDATE equipments SET updated_at = datetime('now') WHERE id = ?`).run(id);
+      notifyEquipmentStakeholders(
+        db,
+        eq,
+        'equip_loan_out',
+        'Thiết bị được mượn',
+        (borrower_name || 'Người mượn #' + borrower_id) + (expected_return_at ? ' — hẹn trả ' + expected_return_at : ''),
+        `/public/equipment/detail.html?id=${id}`
+      );
+      res.status(201).json({ ok: true, id: ins.lastInsertRowid });
+    } catch (e) {
+      res.status(500).json({ message: e.message || 'Lỗi' });
+    }
+  });
+
+  router.put('/:id/loans/:loanId/return', authMiddleware, moduleViewerMw, express.json(), (req, res) => {
+    if (!canManageEquipmentByModule(req)) return res.status(403).json({ message: 'Không có quyền' });
+    try {
+      const eqId = parseEquipmentId(req.params.id);
+      const loanId = parseEquipmentId(req.params.loanId);
+      if (!eqId || !loanId) return res.status(400).json({ message: 'ID không hợp lệ' });
+      const loan = db.prepare('SELECT * FROM equipment_loans WHERE id = ? AND equipment_id = ?').get(loanId, eqId);
+      if (!loan) return res.status(404).json({ message: 'Không tìm thấy lượt mượn' });
+      if (loan.returned_at) return res.status(400).json({ message: 'Lượt mượn này đã được ghi nhận trả.' });
+      const b = req.body || {};
+      const return_note = b.return_note != null ? String(b.return_note).trim().slice(0, 1000) : null;
+      db.prepare(
+        `UPDATE equipment_loans SET returned_at = datetime('now'), return_note = ?, returned_by = ? WHERE id = ?`
+      ).run(return_note, req.user.id, loanId);
+      const eq = db.prepare('SELECT * FROM equipments WHERE id = ?').get(eqId);
+      if (eq) {
+        db.prepare(`UPDATE equipments SET updated_at = datetime('now') WHERE id = ?`).run(eqId);
+        notifyEquipmentStakeholders(
+          db,
+          eq,
+          'equip_loan_return',
+          'Thiết bị đã được trả',
+          loan.borrower_name || ('Người mượn #' + loan.borrower_id),
+          `/public/equipment/detail.html?id=${eqId}`
+        );
+      }
       res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ message: e.message || 'Lỗi' });

@@ -98,7 +98,9 @@ export function DocumentDetailPage() {
                 <Badge tone={doc.status === "archived" ? "success" : "default"}>
                   {doc.status}
                 </Badge>
-                {isReadOnlyView ? <Badge tone="warning">Chỉ xem</Badge> : null}
+                {isReadOnlyView ? (
+                  <Badge tone="warning">Chỉ xem / Theo dõi tiến trình</Badge>
+                ) : null}
                 {canManageDocs && !isReadOnlyView ? (
                   <div className="ml-auto flex gap-2">
                     <Button variant="outline" onClick={() => setEditing(true)}>

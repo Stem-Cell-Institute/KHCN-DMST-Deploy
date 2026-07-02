@@ -1043,8 +1043,9 @@ module.exports = function createEquipmentRouter(deps) {
       const status = req.query.status ? String(req.query.status).trim() : '';
       const department_id = req.query.department_id != null ? String(req.query.department_id).trim() : '';
       const asset_group = req.query.asset_group != null ? String(req.query.asset_group).trim() : '';
+      const has_incident = req.query.has_incident ? String(req.query.has_incident).trim().toLowerCase() : '';
 
-      const where = ['1=1'];
+      const where = ['e.deleted_at IS NULL'];
       const params = [];
       if (status && ['active', 'maintenance', 'broken', 'retired'].includes(status)) {
         where.push('e.status = ?');
@@ -1057,6 +1058,13 @@ module.exports = function createEquipmentRouter(deps) {
       if (asset_group) {
         where.push('lower(COALESCE(e.asset_group, \'\')) LIKE ?');
         params.push('%' + asset_group.toLowerCase().replace(/[%_]/g, '') + '%');
+      }
+      if (has_incident === 'any') {
+        where.push('EXISTS (SELECT 1 FROM equipment_incidents i WHERE i.equipment_id = e.id)');
+      } else if (has_incident === 'open') {
+        where.push(
+          "EXISTS (SELECT 1 FROM equipment_incidents i WHERE i.equipment_id = e.id AND i.status NOT IN ('resolved','closed'))"
+        );
       }
 
       const role = String(req.user.role || '').toLowerCase();
@@ -1096,9 +1104,27 @@ module.exports = function createEquipmentRouter(deps) {
         )
         .all(...params, limit, offset);
 
+      const incidentSummaryMap = {};
+      const rowIds = rows.map((r) => r.id);
+      if (rowIds.length) {
+        const ph = rowIds.map(() => '?').join(',');
+        db.prepare(
+          `SELECT equipment_id,
+                  COUNT(*) AS total,
+                  SUM(CASE WHEN status NOT IN ('resolved','closed') THEN 1 ELSE 0 END) AS open,
+                  MAX(report_date) AS last_at
+           FROM equipment_incidents WHERE equipment_id IN (${ph}) GROUP BY equipment_id`
+        )
+          .all(...rowIds)
+          .forEach((r) => {
+            incidentSummaryMap[r.equipment_id] = { total: r.total, open: r.open, lastAt: r.last_at };
+          });
+      }
+
       const data = rows.map((r) => {
         const b = maintenanceBadgeForRow(r);
-        return { ...r, maintenance_badge: b };
+        const incidentSummary = incidentSummaryMap[r.id] || { total: 0, open: 0, lastAt: null };
+        return { ...r, maintenance_badge: b, incident_summary: incidentSummary };
       });
 
       res.json({
@@ -1122,7 +1148,7 @@ module.exports = function createEquipmentRouter(deps) {
       const asset_group = req.query.asset_group != null ? String(req.query.asset_group).trim() : '';
       const q = String(req.query.q || '').trim().slice(0, 200);
 
-      const where = ['1=1'];
+      const where = ['e.deleted_at IS NULL'];
       const params = [];
       if (status && ['active', 'maintenance', 'broken', 'retired'].includes(status)) {
         where.push('e.status = ?');
@@ -1263,7 +1289,7 @@ module.exports = function createEquipmentRouter(deps) {
         .prepare(
           `SELECT e.id, e.equipment_code, e.name, e.asset_group, e.model, e.serial_number, e.status, e.profile_visibility
            FROM equipments e
-           WHERE (
+           WHERE e.deleted_at IS NULL AND (
             lower(COALESCE(e.equipment_code,'')) LIKE ?
             OR lower(COALESCE(e.name,'')) LIKE ?
             OR lower(COALESCE(e.asset_group,'')) LIKE ?
@@ -1339,7 +1365,7 @@ module.exports = function createEquipmentRouter(deps) {
       const department_id = req.query.department_id != null ? String(req.query.department_id).trim() : '';
       const asset_group = req.query.asset_group != null ? String(req.query.asset_group).trim() : '';
 
-      const where = ['1=1'];
+      const where = ['e.deleted_at IS NULL'];
       const params = [];
       if (status && ['active', 'maintenance', 'broken', 'retired'].includes(status)) {
         where.push('e.status = ?');
@@ -1398,7 +1424,7 @@ module.exports = function createEquipmentRouter(deps) {
              u.fullname AS manager_name
            FROM equipments e
            LEFT JOIN users u ON u.id = e.manager_id
-           WHERE e.id IN (${ph})
+           WHERE e.id IN (${ph}) AND e.deleted_at IS NULL
            ORDER BY e.updated_at DESC, e.id DESC`
         )
         .all(...ids);
@@ -1562,6 +1588,9 @@ module.exports = function createEquipmentRouter(deps) {
       const id = parseEquipmentId(req.params.id);
       if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
       const eq = db.prepare('SELECT * FROM equipments WHERE id = ?').get(id);
+      if (eq && eq.deleted_at && !isMasterAdminReq(req)) {
+        return res.status(404).json({ message: 'Không tìm thấy' });
+      }
       const check = canViewEquipmentDetail(req, eq, db, moduleAccessMode());
       if (!check.ok) {
         return res.status(check.status).json({ message: check.message || 'Không có quyền xem' });
@@ -1600,6 +1629,7 @@ module.exports = function createEquipmentRouter(deps) {
         : [];
       let maintenance = [];
       let incidents = [];
+      let loans = [];
       const viewerVisible = new Set(parseViewerVisibleFields());
       const moduleCaps = moduleAdminCaps(req);
       const canManageIncidents = canManageEquipmentByModule(req);
@@ -1626,6 +1656,18 @@ module.exports = function createEquipmentRouter(deps) {
           )
           .all(id);
       } catch (_) {}
+      try {
+        loans = db
+          .prepare(
+            `SELECT l.*, u.fullname AS borrower_fullname, cu.fullname AS created_by_name, ru.fullname AS returned_by_name
+             FROM equipment_loans l
+             LEFT JOIN users u ON u.id = l.borrower_id
+             LEFT JOIN users cu ON cu.id = l.created_by
+             LEFT JOIN users ru ON ru.id = l.returned_by
+             WHERE l.equipment_id = ? ORDER BY l.id DESC`
+          )
+          .all(id);
+      } catch (_) {}
 
       const eqOut = { ...eq };
       if (!canManageEquipmentByModule(req)) {
@@ -1645,6 +1687,7 @@ module.exports = function createEquipmentRouter(deps) {
         documentLogs: docLogs,
         maintenance,
         incidents,
+        loans,
         maintenanceBadge: maintenanceBadgeForRow(eq),
         canManage: canManageEquipmentByModule(req),
         canManageIncidents,
@@ -1838,12 +1881,76 @@ module.exports = function createEquipmentRouter(deps) {
     }
   });
 
+  /** Xóa mềm: chuyển vào thùng rác, không mất dữ liệu con (tài liệu/video/bảo trì/sự cố). */
   router.delete('/:id', authMiddleware, requireModuleViewer, requireManageModule, (req, res) => {
     try {
       const id = parseEquipmentId(req.params.id);
       if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
       const cur = db.prepare('SELECT * FROM equipments WHERE id = ?').get(id);
-      if (!cur) return res.status(404).json({ message: 'Không tìm thấy' });
+      if (!cur || cur.deleted_at) return res.status(404).json({ message: 'Không tìm thấy' });
+      const r = db
+        .prepare(`UPDATE equipments SET deleted_at = datetime('now'), deleted_by = ? WHERE id = ?`)
+        .run(req.user.id, id);
+      if (!r || Number(r.changes || 0) === 0) return res.status(404).json({ message: 'Không tìm thấy' });
+      res.json({ ok: true, deleted: true });
+    } catch (e) {
+      console.error('[equipment delete]', e);
+      res.status(500).json({ message: e.message || 'Lỗi' });
+    }
+  });
+
+  /** Thùng rác: danh sách thiết bị đã xóa mềm — chỉ Master Admin. */
+  router.get('/trash/list', authMiddleware, requireModuleViewer, (req, res) => {
+    try {
+      if (!isMasterAdminReq(req)) {
+        return res.status(403).json({ message: 'Chỉ Master Admin mới xem được thùng rác.' });
+      }
+      const rows = db
+        .prepare(
+          `SELECT e.*, u.fullname AS deleted_by_name FROM equipments e
+           LEFT JOIN users u ON u.id = e.deleted_by
+           WHERE e.deleted_at IS NOT NULL
+           ORDER BY e.deleted_at DESC`
+        )
+        .all();
+      res.json({ ok: true, data: rows });
+    } catch (e) {
+      console.error('[equipment trash list]', e);
+      res.status(500).json({ message: e.message || 'Lỗi' });
+    }
+  });
+
+  /** Khôi phục thiết bị đã xóa mềm — chỉ Master Admin. */
+  router.post('/:id/restore', authMiddleware, requireModuleViewer, (req, res) => {
+    try {
+      if (!isMasterAdminReq(req)) {
+        return res.status(403).json({ message: 'Chỉ Master Admin mới khôi phục được thiết bị.' });
+      }
+      const id = parseEquipmentId(req.params.id);
+      if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
+      const cur = db.prepare('SELECT * FROM equipments WHERE id = ?').get(id);
+      if (!cur || !cur.deleted_at) return res.status(404).json({ message: 'Không tìm thấy trong thùng rác' });
+      db.prepare(`UPDATE equipments SET deleted_at = NULL, deleted_by = NULL WHERE id = ?`).run(id);
+      const row = db.prepare('SELECT * FROM equipments WHERE id = ?').get(id);
+      res.json({ ok: true, equipment: row });
+    } catch (e) {
+      console.error('[equipment restore]', e);
+      res.status(500).json({ message: e.message || 'Lỗi' });
+    }
+  });
+
+  /** Xóa vĩnh viễn (không thể khôi phục) — chỉ thiết bị đã ở trong thùng rác, chỉ Master Admin. */
+  router.delete('/:id/permanent', authMiddleware, requireModuleViewer, (req, res) => {
+    try {
+      if (!isMasterAdminReq(req)) {
+        return res.status(403).json({ message: 'Chỉ Master Admin mới xóa vĩnh viễn được thiết bị.' });
+      }
+      const id = parseEquipmentId(req.params.id);
+      if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
+      const cur = db.prepare('SELECT * FROM equipments WHERE id = ?').get(id);
+      if (!cur || !cur.deleted_at) {
+        return res.status(400).json({ message: 'Chỉ xóa vĩnh viễn được thiết bị đang ở trong thùng rác.' });
+      }
       const doDelete = db.transaction((equipmentId) => {
         // Rely on ON DELETE CASCADE for dependent tables (documents, videos, incidents, logs...).
         const row = db.prepare(`DELETE FROM equipments WHERE id = ?`).run(equipmentId);
@@ -1851,9 +1958,9 @@ module.exports = function createEquipmentRouter(deps) {
       });
       const deleted = doDelete(id);
       if (!deleted) return res.status(404).json({ message: 'Không tìm thấy' });
-      res.json({ ok: true, deleted: true });
+      res.json({ ok: true, deleted: true, permanent: true });
     } catch (e) {
-      console.error('[equipment delete]', e);
+      console.error('[equipment permanent delete]', e);
       res.status(500).json({ message: e.message || 'Lỗi' });
     }
   });

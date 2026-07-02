@@ -167,6 +167,27 @@
           </div>
       </section>
 
+      <section id="section-trash" class="eq-form nav-hidden" style="max-width:none;margin-top:18px;">
+        <h2 style="font-size:1.06rem;margin:0 0 12px;">4) Thùng rác thiết bị</h2>
+        <p style="margin:0 0 12px;color:var(--eq-muted);font-size:0.9rem;">
+          Thiết bị đã xóa được giữ lại đây (kèm toàn bộ tài liệu/lịch sử) cho đến khi khôi phục hoặc xóa vĩnh viễn.
+        </p>
+        <div class="eq-table-wrap">
+          <table class="eq-table">
+            <thead>
+              <tr>
+                <th>Mã thiết bị</th>
+                <th>Tên</th>
+                <th>Người xóa</th>
+                <th>Thời điểm xóa</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="tb-trash"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section id="section-viewer-fields" class="eq-form nav-hidden" style="max-width:none;margin-top:18px;">
         <h2 style="font-size:1.06rem;margin:0 0 12px;">5) Trường thông tin thiết bị Viewer được phép xem</h2>
         <p style="margin:0 0 12px;color:var(--eq-muted);font-size:0.9rem;">
@@ -297,8 +318,10 @@
     setSectionVisible('section-module-policy', showPolicy);
     setSectionVisible('section-module-user-assign', showUserAssign);
     setSectionVisible('section-module-departments', showDept);
+    setSectionVisible('section-trash', master);
     setSectionVisible('section-viewer-fields', showViewerFields);
     setSectionVisible('section-no-delegated-tools', !master && !showPolicy && !showUserAssign && !showDept && !showViewerFields);
+    if (master) loadTrash();
     var t = document.getElementById('perm-page-title');
     if (t) {
       t.textContent = master ? 'Công cụ Master Admin - Module Thiết bị' : 'Quản trị module Thiết bị';
@@ -443,6 +466,72 @@
     }).join('');
   }
 
+
+  function renderTrash(rows) {
+    var tb = document.getElementById('tb-trash');
+    if (!tb) return;
+    if (!rows || !rows.length) {
+      tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--eq-muted);">Thùng rác trống.</td></tr>';
+      return;
+    }
+    tb.innerHTML = rows.map(function (r) {
+      return (
+        '<tr>' +
+        '<td>' + esc(r.equipment_code) + '</td>' +
+        '<td>' + esc(r.name) + '</td>' +
+        '<td>' + esc(r.deleted_by_name || ('#' + r.deleted_by)) + '</td>' +
+        '<td>' + esc(r.deleted_at) + '</td>' +
+        '<td>' +
+        '<button type="button" class="eq-btn eq-btn--ghost" data-act="restore-eq" data-id="' + r.id + '">Khôi phục</button> ' +
+        '<button type="button" class="eq-btn eq-btn--danger" data-act="purge-eq" data-id="' + r.id + '" data-code="' + esc(r.equipment_code) + '">Xóa vĩnh viễn</button>' +
+        '</td>' +
+        '</tr>'
+      );
+    }).join('');
+  }
+
+  function loadTrash() {
+    window.equipmentApi.getJson('/trash/list').then(function (r) {
+      if (r && r.ok && r.data && r.data.data) renderTrash(r.data.data);
+    });
+  }
+
+  var trashTbody = document.getElementById('tb-trash');
+  if (trashTbody) {
+    trashTbody.addEventListener('click', function (ev) {
+      var btn = ev.target.closest('button[data-act]');
+      if (!btn) return;
+      var act = btn.getAttribute('data-act');
+      var id = btn.getAttribute('data-id');
+      if (!id) return;
+      if (act === 'restore-eq') {
+        if (!confirm('Khôi phục thiết bị này?')) return;
+        window.equipmentApi.sendJson('POST', '/' + encodeURIComponent(id) + '/restore', null).then(function (r) {
+          if (!r.ok) {
+            var err = (r.data && r.data.message) || 'Không khôi phục được.';
+            toastErr(err);
+            return;
+          }
+          toastOk('Đã khôi phục thiết bị.');
+          loadTrash();
+        });
+        return;
+      }
+      if (act === 'purge-eq') {
+        var code = btn.getAttribute('data-code') || '';
+        if (!confirm('XÓA VĨNH VIỄN thiết bị ' + code + '? Toàn bộ tài liệu/lịch sử sẽ mất, không thể khôi phục.')) return;
+        window.equipmentApi.sendJson('DELETE', '/' + encodeURIComponent(id) + '/permanent', null).then(function (r) {
+          if (!r.ok) {
+            var err = (r.data && r.data.message) || 'Không xóa được.';
+            toastErr(err);
+            return;
+          }
+          toastOk('Đã xóa vĩnh viễn.');
+          loadTrash();
+        });
+      }
+    });
+  }
 
   function renderViewerFields() {
     var tb = document.getElementById('tb-viewer-fields');

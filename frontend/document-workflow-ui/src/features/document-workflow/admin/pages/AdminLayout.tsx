@@ -64,7 +64,7 @@ export function AdminLayout() {
             href={buildAppUrl("documents")}
             className="mt-3 block rounded-md border border-slate-700 px-3 py-2 text-center text-sm text-slate-200 hover:bg-slate-900"
           >
-            Danh sách hồ sơ (React)
+            Dashboard hồ sơ (Xem/Theo dõi)
           </a>
           <a
             href="/quy-trinh-van-ban-noi-bo.html"

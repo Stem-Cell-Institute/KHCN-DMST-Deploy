@@ -153,7 +153,7 @@
             try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch(e) { return {}; }
         }
 
-        var LEVEL_LABELS = { national: 'Cấp Nhà nước', ministry: 'Cấp Bộ', university: 'Cấp ĐHQG', institute: 'Cấp Viện' };
+        var LEVEL_LABELS = { national: 'Cấp Nhà nước', ministry: 'Cấp Bộ', university: 'Cấp ĐHQG', school: 'Cấp Trường ĐH KHTN', institute: 'Cấp Viện' };
         function formatDate(s) {
             if (!s) return '—';
             var d = new Date(s);

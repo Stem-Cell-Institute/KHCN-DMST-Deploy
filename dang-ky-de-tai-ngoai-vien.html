@@ -117,6 +117,7 @@
                                     <select id="add-level" title="Cấp đề tài">
                                         <option value="ministry">Cấp Bộ</option>
                                         <option value="university">Cấp ĐHQG</option>
+                                        <option value="school">Cấp Trường ĐH KHTN</option>
                                         <option value="national">Cấp Nhà nước</option>
                                     </select>
                                 </div>
@@ -378,7 +379,7 @@
             return m ? decodeURIComponent(m[1]) : '';
         })();
         var levelSelect = document.getElementById('add-level');
-        if (levelSelect && ['national','ministry','university'].indexOf(levelParam) >= 0) {
+        if (levelSelect && ['national','ministry','university','school'].indexOf(levelParam) >= 0) {
             levelSelect.value = levelParam;
         }
 

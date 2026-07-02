@@ -478,6 +478,18 @@ db.exec(`
     uploaded_at TEXT NOT NULL,
     uploaded_by_id INTEGER
   );
+  CREATE TABLE IF NOT EXISTS cap_vien_code_sequences (
+    year INTEGER PRIMARY KEY,
+    seq INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE TABLE IF NOT EXISTS council_role_grants (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    granted_by_id INTEGER,
+    granted_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, role)
+  );
 `);
 try { db.prepare('ALTER TABLE cap_vien_submissions ADD COLUMN reviewNote TEXT').run(); } catch (e) { /* đã tồn tại */ }
 try { db.prepare('ALTER TABLE cap_vien_submissions ADD COLUMN reviewedAt TEXT').run(); } catch (e) { /* đã tồn tại */ }
@@ -2324,17 +2336,33 @@ function syncMissionsFromCapVien() {
   const hidden = new Set(
     db.prepare("SELECT source_type || ':' || source_id AS k FROM missions_hidden").all().map(r => r.k)
   );
+  // Ánh xạ đầy đủ 10 trạng thái thật của cap_vien_submissions (9-step) sang mã trạng thái nhiệm vụ
+  // KHCN đã có sẵn nhãn tiếng Việt (MISSION_STATUS_SEARCH_LABELS / getStatusText trong quan-ly-de-tai-co-so.html).
+  // Trước đây ASSIGNED và CONTRACTED bị thiếu trong map → rơi về default 'planning' («Lập kế hoạch»),
+  // khiến hồ sơ đã ký hợp đồng (gần cuối quy trình) hiển thị như vừa mới nộp; REJECTED cũng bị gộp
+  // nhầm vào 'planning' thay vì trạng thái từ chối riêng.
   const statusMap = {
-    SUBMITTED: 'planning',
-    NEED_REVISION: 'planning',
-    CONDITIONAL: 'approved',
-    VALIDATED: 'approved',
-    REVIEWED: 'ongoing',
-    IN_MEETING: 'ongoing',
-    APPROVED: 'ongoing',
-    IMPLEMENTATION: 'ongoing',
-    COMPLETED: 'completed',
-    REJECTED: 'planning'
+    SUBMITTED: 'planning',              // Mới nộp hồ sơ
+    NEED_REVISION: 'planning',          // Thư ký yêu cầu bổ sung hồ sơ
+    VALIDATED: 'planning',              // Hồ sơ hợp lệ, chờ phân công phản biện
+    // Dùng 'cho_vien_xet_chon' (không phải 'review') vì sidebar quan-ly-de-tai-co-so.html gộp
+    // 'review' vào nhóm "Nghiệm thu" (nghiệm thu cuối) — trong khi 3 trạng thái này thực chất là
+    // "đang chờ Hội đồng Viện xét/họp", đúng nghĩa nhóm "Chờ xét duyệt".
+    ASSIGNED: 'cho_vien_xet_chon',      // Đã phân công phản biện — đang thẩm định
+    REVIEWED: 'cho_vien_xet_chon',      // Phản biện xong, chờ họp Hội đồng KHCN
+    IN_MEETING: 'cho_vien_xet_chon',    // Đang họp Hội đồng KHCN
+    CONDITIONAL: 'da_phe_duyet',        // Hội đồng thông qua (có điều kiện), chờ cấp QĐ chính thức
+    APPROVED: 'cho_ky_hop_dong',        // Đã có Quyết định phê duyệt, chờ ký hợp đồng
+    CONTRACTED: 'dang_thuc_hien',       // Đã ký hợp đồng — đang triển khai thực hiện
+    REJECTED: 'khong_duoc_phe_duyet',   // Bị từ chối / dừng quy trình
+  };
+  const progressMap = {
+    planning: 10,
+    cho_vien_xet_chon: 40,
+    da_phe_duyet: 55,
+    cho_ky_hop_dong: 70,
+    dang_thuc_hien: 85,
+    khong_duoc_phe_duyet: 0,
   };
   const now = new Date().toISOString().slice(0, 10);
   for (const r of rows) {
@@ -2348,7 +2376,7 @@ function syncMissionsFromCapVien() {
     const end = new Date(startDate);
     end.setFullYear(end.getFullYear() + 2);
     const endDate = end.toISOString().slice(0, 10);
-    const progress = status === 'completed' ? 100 : (status === 'planning' ? 5 : 35);
+    const progress = progressMap[status] != null ? progressMap[status] : 10;
     const existing = db.prepare('SELECT id FROM missions WHERE source_type = ? AND source_id = ?').get('cap_vien', r.id);
     if (existing) {
       db.prepare(
@@ -3295,18 +3323,16 @@ function getSmtpFrom() {
 }
 
 function getCouncilEmails() {
-  const stmt = db.prepare("SELECT email FROM users WHERE role IN ('chu_tich','thu_ky','thanh_vien','admin')");
-  return stmt.all().map(r => r.email);
+  return emailsWithAnyRole(['chu_tich', 'thu_ky', 'thanh_vien', 'admin']);
 }
 
 function getBudgetTeamEmails() {
-  const stmt = db.prepare("SELECT email FROM users WHERE role IN ('totruong_tham_dinh_tc','thanh_vien_tham_dinh_tc')");
-  return stmt.all().map(r => r.email).filter(Boolean);
+  return emailsWithAnyRole(['totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc']);
 }
 
 function getChairmanEmail() {
-  const row = db.prepare("SELECT email FROM users WHERE role = 'chu_tich' LIMIT 1").get();
-  return row ? row.email : null;
+  const emails = emailsWithAnyRole(['chu_tich']);
+  return emails.length ? emails[0] : null;
 }
 
 const CHAIRMAN_EMAIL_CONTROL_KEY = 'chairman_email_controls';
@@ -3389,8 +3415,8 @@ function isCouncilMemberEmailEnabled(notificationKey) {
 
 function getCouncilMemberEmailsExcludeChair() {
   try {
-    return db.prepare("SELECT email FROM users WHERE role IN ('thu_ky','thanh_vien')").all()
-      .map(r => String(r.email || '').trim().toLowerCase())
+    return emailsWithAnyRole(['thu_ky', 'thanh_vien'])
+      .map((e) => String(e || '').trim().toLowerCase())
       .filter(Boolean);
   } catch (e) {
     return [];
@@ -3417,7 +3443,7 @@ function applyChairmanControlToRecipients(emails, notificationKey) {
 
 function computeNhanhFromLevel(level) {
   const lev = (level || '').toLowerCase();
-  if (['ministry', 'university'].includes(lev)) return 'A';
+  if (['ministry', 'university', 'school'].includes(lev)) return 'A';
   if (['national'].includes(lev)) return 'B';
   return 'B';
 }
@@ -4900,6 +4926,95 @@ function isCrdOnlyUserRole(role) {
   return String(role || '').toLowerCase() === CRD_ONLY_USER_ROLE;
 }
 
+// Vai trò HĐKHCN (chu_tich/thu_ky/thanh_vien/totruong_tham_dinh_tc/thanh_vien_tham_dinh_tc) có thể
+// được cấp THÊM cho một user qua bảng council_role_grants, tách biệt khỏi users.role (vai trò hệ
+// thống, vd vien_truong/phong_khcn/admin) — để 1 người vừa giữ vai trò hệ thống vừa tham gia HĐKHCN
+// mà không bị ghi đè mất vai trò nào. Xem module-hoi-dong-khcn admin panel.
+const COUNCIL_ROLE_TOKENS = ['chu_tich', 'thu_ky', 'thanh_vien', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
+
+function getCouncilRoleGrants(userId) {
+  if (!userId) return [];
+  try {
+    return db
+      .prepare('SELECT role FROM council_role_grants WHERE user_id = ?')
+      .all(userId)
+      .map((r) => String((r && r.role) || '').trim().toLowerCase())
+      .filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+}
+
+/** Set các role "hiệu lực" của 1 user object {id, role}: role hệ thống + mọi council_role_grants. */
+function userEffectiveRoleSet(user) {
+  if (!user) return new Set();
+  const base = String(user.role || '').trim().toLowerCase();
+  const set = new Set(base ? [base] : []);
+  getCouncilRoleGrants(user.id).forEach((r) => set.add(r));
+  return set;
+}
+
+/** Như trên nhưng nhận req (req.user) — cache trên req để khỏi query lại nhiều lần / request. */
+function effectiveRoleSet(req) {
+  if (!req || !req.user) return new Set();
+  if (req._effectiveRoleSet) return req._effectiveRoleSet;
+  const set = userEffectiveRoleSet(req.user);
+  req._effectiveRoleSet = set;
+  return set;
+}
+
+function roleIs(req, token) {
+  return effectiveRoleSet(req).has(String(token || '').trim().toLowerCase());
+}
+
+function roleIsAny(req, tokens) {
+  const set = effectiveRoleSet(req);
+  return (tokens || []).some((t) => set.has(String(t || '').trim().toLowerCase()));
+}
+
+function userHasAnyRole(user, tokens) {
+  const set = userEffectiveRoleSet(user);
+  return (tokens || []).some((t) => set.has(String(t || '').trim().toLowerCase()));
+}
+
+/** email của mọi user có 1 trong các role (role hệ thống HOẶC council_role_grants), không trùng lặp. */
+function emailsWithAnyRole(tokens) {
+  const wanted = new Set((tokens || []).map((t) => String(t || '').trim().toLowerCase()).filter(Boolean));
+  if (!wanted.size) return [];
+  try {
+    const placeholders = Array.from(wanted).map(() => '?').join(',');
+    const rows = db
+      .prepare(
+        `SELECT DISTINCT u.email AS email FROM users u
+         LEFT JOIN council_role_grants g ON g.user_id = u.id
+         WHERE u.role IN (${placeholders}) OR g.role IN (${placeholders})`
+      )
+      .all(...Array.from(wanted), ...Array.from(wanted));
+    return rows.map((r) => r.email).filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+}
+
+/** id/email/fullname/role của mọi user có 1 trong các role (role hệ thống HOẶC council_role_grants). */
+function usersWithAnyRole(tokens) {
+  const wanted = new Set((tokens || []).map((t) => String(t || '').trim().toLowerCase()).filter(Boolean));
+  if (!wanted.size) return [];
+  try {
+    const placeholders = Array.from(wanted).map(() => '?').join(',');
+    return db
+      .prepare(
+        `SELECT DISTINCT u.id, u.email, u.fullname, u.role FROM users u
+         LEFT JOIN council_role_grants g ON g.user_id = u.id
+         WHERE u.role IN (${placeholders}) OR g.role IN (${placeholders})
+         ORDER BY u.role, u.fullname, u.email`
+      )
+      .all(...Array.from(wanted), ...Array.from(wanted));
+  } catch (e) {
+    return [];
+  }
+}
+
 /** Pathname không gồm query (vd /api/crd/state). */
 function isApiPathAllowedForCrdOnlyUser(urlPath) {
   const p = (urlPath || '').split('?')[0];
@@ -4993,16 +5108,14 @@ function authUnlessDashboardPermCheck(req, res, next) {
 }
 
 function thuyKyOrAdmin(req, res, next) {
-  const role = (req.user.role || '').toLowerCase();
-  if (role !== 'admin' && role !== 'thu_ky') {
+  if (!roleIsAny(req, ['admin', 'thu_ky'])) {
     return res.status(403).json({ message: 'Chỉ Thư ký Hội đồng hoặc Admin mới có quyền này' });
   }
   next();
 }
 
 function chuTichOrAdmin(req, res, next) {
-  const role = (req.user.role || '').toLowerCase();
-  if (role !== 'admin' && role !== 'chu_tich') {
+  if (!roleIsAny(req, ['admin', 'chu_tich'])) {
     return res.status(403).json({ message: 'Chỉ Chủ tịch Hội đồng KHCN hoặc Admin mới có quyền này' });
   }
   next();
@@ -5044,8 +5157,7 @@ function adminOrMasterAdminApi(req, res, next) {
 }
 
 function adminOrPhongKhcn(req, res, next) {
-  const role = (req.user.role || '').toLowerCase();
-  if (role !== 'admin' && role !== 'phong_khcn' && role !== 'thu_ky') {
+  if (!roleIsAny(req, ['admin', 'phong_khcn', 'thu_ky'])) {
     return res.status(403).json({ message: 'Chỉ Admin hoặc Phòng KHCN mới có quyền này' });
   }
   next();
@@ -5148,16 +5260,7 @@ function canUserAccessMissionHoSoNgoai(req, missionRow) {
 /** Quyền xem chi tiết đề tài: nhóm xử lý nghiệp vụ + admin; user thường chỉ xem đề tài mình phụ trách. */
 function canUserAccessMissionDetail(req, missionRow) {
   if (!missionRow || !req || !req.user) return false;
-  const role = (req.user.role || '').toLowerCase();
-  if (
-    role === 'admin' ||
-    role === 'phong_khcn' ||
-    role === 'thu_ky' ||
-    role === 'chu_tich' ||
-    role === 'thanh_vien' ||
-    role === 'totruong_tham_dinh_tc' ||
-    role === 'thanh_vien_tham_dinh_tc'
-  ) {
+  if (roleIsAny(req, ['admin', 'phong_khcn', 'thu_ky', 'chu_tich', 'thanh_vien', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'])) {
     return true;
   }
   return missionPrincipalMatchesUser(missionRow.principal, req.user);
@@ -5520,7 +5623,7 @@ app.post('/api/submissions', authMiddleware, upload.fields([
 app.get('/api/submissions', authMiddleware, (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache');
   const role = req.user.role;
-  const isCouncilOrAdmin = role === 'admin' || ['chu_tich', 'thu_ky', 'thanh_vien'].includes(role);
+  const isCouncilOrAdmin = roleIsAny(req, ['admin', 'chu_tich', 'thu_ky', 'thanh_vien']);
   if (isCouncilOrAdmin) {
     const rows = db.prepare(`
       SELECT s.id, s.title, s.submittedBy, s.submittedById, s.createdAt, u.fullname AS submittedByName
@@ -5540,12 +5643,9 @@ app.get('/api/submissions', authMiddleware, (req, res) => {
 
 // Danh sách thành viên Hội đồng (Chủ tịch, Thư ký, Thành viên, Admin) — dùng cho form phân công GĐ4. Admin hiển thị vai trò "Ủy viên Hội đồng".
 app.get('/api/users/council', authMiddleware, (req, res) => {
-  const role = req.user.role;
-  const isCouncilOrAdmin = role === 'admin' || ['chu_tich', 'thu_ky', 'thanh_vien'].includes(role);
+  const isCouncilOrAdmin = roleIsAny(req, ['admin', 'chu_tich', 'thu_ky', 'thanh_vien']);
   if (!isCouncilOrAdmin) return res.status(403).json({ message: 'Chỉ thành viên Hội đồng hoặc Admin mới xem được danh sách này' });
-  const rows = db.prepare(
-    "SELECT id, email, fullname, role FROM users WHERE role IN ('chu_tich','thu_ky','thanh_vien','admin') ORDER BY role, fullname, email"
-  ).all();
+  const rows = usersWithAnyRole(['chu_tich', 'thu_ky', 'thanh_vien', 'admin']);
   const council = rows.map(r => ({
     id: r.id,
     email: r.email,
@@ -5586,7 +5686,7 @@ app.get('/api/submissions/:id', authMiddleware, (req, res) => {
     return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   }
   const role = req.user.role;
-  const isCouncilOrAdmin = role === 'admin' || ['chu_tich', 'thu_ky', 'thanh_vien'].includes(role);
+  const isCouncilOrAdmin = roleIsAny(req, ['admin', 'chu_tich', 'thu_ky', 'thanh_vien']);
   const isOwner = row.submittedById === req.user.id;
   if (!isCouncilOrAdmin && !isOwner) {
     return res.status(403).json({ message: 'Bạn không có quyền xem hồ sơ này' });
@@ -5749,7 +5849,7 @@ app.post('/api/submissions/:id/conditional-submit', authMiddleware, upload.singl
 // Chấp thuận có điều kiện: Chủ tịch thông qua sau khi NCV đã nộp SCI-ACE-04
 app.put('/api/submissions/:id/conditional-approve', authMiddleware, (req, res) => {
   const role = req.user.role;
-  if (role !== 'admin' && role !== 'chu_tich') {
+  if (!roleIsAny(req, ['admin', 'chu_tich'])) {
     return res.status(403).json({ message: 'Chỉ Chủ tịch Hội đồng hoặc Admin mới được thông qua' });
   }
   const id = parseInt(req.params.id, 10);
@@ -5773,7 +5873,7 @@ app.put('/api/submissions/:id/conditional-approve', authMiddleware, (req, res) =
 // Chấp thuận có điều kiện: Chủ tịch không thông qua → gửi email NCV + Hội đồng, xóa bản nộp để NCV nộp lại
 app.put('/api/submissions/:id/conditional-reject', authMiddleware, (req, res) => {
   const role = req.user.role;
-  if (role !== 'admin' && role !== 'chu_tich') {
+  if (!roleIsAny(req, ['admin', 'chu_tich'])) {
     return res.status(403).json({ message: 'Chỉ Chủ tịch Hội đồng hoặc Admin mới được thực hiện thao tác này' });
   }
   const id = parseInt(req.params.id, 10);
@@ -5812,7 +5912,7 @@ app.put('/api/submissions/:id/conditional-reject', authMiddleware, (req, res) =>
 // GĐ5 (Họp Hội đồng): Thư ký upload biên bản + chọn kết luận (Chấp thuận / Có điều kiện / Không chấp thuận)
 app.put('/api/submissions/:id/meeting-result', authMiddleware, upload.single('file'), (req, res) => {
   const role = req.user.role;
-  if (role !== 'admin' && role !== 'thu_ky') {
+  if (!roleIsAny(req, ['admin', 'thu_ky'])) {
     return res.status(403).json({ message: 'Chỉ Thư ký Hội đồng hoặc Admin mới được thực hiện thao tác này' });
   }
   const id = parseInt(req.params.id, 10);
@@ -5878,7 +5978,7 @@ app.put('/api/submissions/:id/issue-decision', authMiddleware, upload.fields([
   { name: 'decision_en', maxCount: 1 }
 ]), (req, res) => {
   const role = req.user.role;
-  if (role !== 'admin' && role !== 'thu_ky') {
+  if (!roleIsAny(req, ['admin', 'thu_ky'])) {
     return res.status(403).json({ message: 'Chỉ Thư ký Hội đồng hoặc Admin mới được cấp Quyết định' });
   }
   const id = parseInt(req.params.id, 10);
@@ -6022,7 +6122,7 @@ app.get('/api/submissions/:id/file/:fieldName', authMiddleware, (req, res) => {
   const sub = db.prepare('SELECT id, submittedById FROM submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
-  const isCouncilOrAdmin = role === 'admin' || ['chu_tich', 'thu_ky', 'thanh_vien'].includes(role);
+  const isCouncilOrAdmin = roleIsAny(req, ['admin', 'chu_tich', 'thu_ky', 'thanh_vien']);
   const isOwner = sub.submittedById === req.user.id;
   if (!isCouncilOrAdmin && !isOwner) {
     return res.status(403).json({ message: 'Bạn không có quyền tải file này' });
@@ -6036,7 +6136,7 @@ app.get('/api/submissions/:id/file/:fieldName', authMiddleware, (req, res) => {
 app.put('/api/submissions/:id/review', authMiddleware, (req, res) => {
   console.log('[API] PUT /api/submissions/' + req.params.id + '/review');
   const role = req.user.role;
-  if (role !== 'admin' && role !== 'thu_ky') {
+  if (!roleIsAny(req, ['admin', 'thu_ky'])) {
     return res.status(403).json({ message: 'Chỉ Thư ký Hội đồng hoặc Admin mới được thực hiện thao tác này' });
   }
   const id = parseInt(req.params.id, 10);
@@ -6065,7 +6165,7 @@ app.put('/api/submissions/:id/review', authMiddleware, (req, res) => {
 app.put('/api/submissions/:id/assign-reviewers', authMiddleware, (req, res) => {
   console.log('[API] PUT /api/submissions/' + req.params.id + '/assign-reviewers');
   const role = req.user.role;
-  if (role !== 'admin' && role !== 'chu_tich') {
+  if (!roleIsAny(req, ['admin', 'chu_tich'])) {
     return res.status(403).json({ message: 'Chỉ Chủ tịch Hội đồng hoặc Admin mới được phân công phản biện' });
   }
   const id = parseInt(req.params.id, 10);
@@ -6082,7 +6182,7 @@ app.put('/api/submissions/:id/assign-reviewers', authMiddleware, (req, res) => {
   if (uniqueIds.length < 2) {
     return res.status(400).json({ message: 'Vui lòng chọn ít nhất 2 phản biện (thành viên Hội đồng)' });
   }
-  const councilIds = db.prepare("SELECT id FROM users WHERE role IN ('chu_tich','thu_ky','thanh_vien','admin')").all().map(r => r.id);
+  const councilIds = usersWithAnyRole(['chu_tich', 'thu_ky', 'thanh_vien', 'admin']).map((r) => r.id);
   const invalid = uniqueIds.filter(uid => !councilIds.includes(uid));
   if (invalid.length > 0) {
     return res.status(400).json({ message: 'Tất cả phản biện phải là thành viên Hội đồng (Chủ tịch, Thư ký, Thành viên) hoặc Admin' });
@@ -6130,7 +6230,7 @@ app.get('/api/submissions/:id/review-files', authMiddleware, (req, res) => {
   const sub = db.prepare('SELECT id, status, assignedReviewerIds FROM submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
-  const isCouncilOrAdmin = role === 'admin' || ['chu_tich', 'thu_ky', 'thanh_vien'].includes(role);
+  const isCouncilOrAdmin = roleIsAny(req, ['admin', 'chu_tich', 'thu_ky', 'thanh_vien']);
   let reviewerIdsCheck = [];
   try { reviewerIdsCheck = sub.assignedReviewerIds ? JSON.parse(sub.assignedReviewerIds) : []; } catch (e) {}
   const isAssignedReviewer = reviewerIdsCheck.includes(req.user.id);
@@ -6170,7 +6270,7 @@ app.get('/api/submissions/:id/review-file/:slot', authMiddleware, (req, res) => 
   let reviewerIds = [];
   try { reviewerIds = sub.assignedReviewerIds ? JSON.parse(sub.assignedReviewerIds) : []; } catch (e) {}
   const role = req.user.role;
-  const isCouncilOrAdmin = role === 'admin' || ['chu_tich', 'thu_ky', 'thanh_vien'].includes(role);
+  const isCouncilOrAdmin = roleIsAny(req, ['admin', 'chu_tich', 'thu_ky', 'thanh_vien']);
   const isReviewerForSlot = reviewerIds[slot - 1] === req.user.id;
   if (!isCouncilOrAdmin && !isReviewerForSlot) return res.status(403).json({ message: 'Không có quyền tải file này' });
   const row = db.prepare(
@@ -6264,7 +6364,7 @@ app.get('/api/submissions/:id/download', authMiddleware, (req, res) => {
   const sub = db.prepare('SELECT id, submittedById FROM submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
-  const isCouncilOrAdmin = role === 'admin' || ['chu_tich', 'thu_ky', 'thanh_vien'].includes(role);
+  const isCouncilOrAdmin = roleIsAny(req, ['admin', 'chu_tich', 'thu_ky', 'thanh_vien']);
   const isOwner = sub.submittedById === req.user.id;
   if (!isCouncilOrAdmin && !isOwner) {
     return res.status(403).json({ message: 'Bạn không có quyền tải hồ sơ này' });
@@ -6331,8 +6431,17 @@ app.post('/api/cap-vien/submissions', authMiddleware, uploadCapVien.fields([
 
   const run = db.transaction(() => {
     const year = new Date().getFullYear();
-    const countRow = db.prepare('SELECT COUNT(*) AS n FROM cap_vien_submissions WHERE createdAt >= ? AND createdAt < ?').get(year + '-01-01', (year + 1) + '-01-01');
-    const seq = (countRow && countRow.n != null ? countRow.n : 0) + 1;
+    let seqRow = db.prepare('SELECT seq FROM cap_vien_code_sequences WHERE year = ?').get(year);
+    if (!seqRow) {
+      // Khởi tạo bộ đếm từ mã lớn nhất đang có trong năm, tránh cấp lại số cũ sau khi hồ sơ bị xóa.
+      const maxRow = db.prepare(
+        "SELECT MAX(CAST(SUBSTR(code, -3) AS INTEGER)) AS maxSeq FROM cap_vien_submissions WHERE code LIKE '%-' || ? || '-%'"
+      ).get(String(year));
+      db.prepare('INSERT INTO cap_vien_code_sequences (year, seq) VALUES (?, ?)').run(year, (maxRow && maxRow.maxSeq) || 0);
+    }
+    // Bộ đếm chỉ tăng, không bao giờ giảm theo COUNT(*) — nhờ đó mã không bị trùng khi có hồ sơ bị xóa ở giữa.
+    db.prepare('UPDATE cap_vien_code_sequences SET seq = seq + 1 WHERE year = ?').run(year);
+    const seq = db.prepare('SELECT seq FROM cap_vien_code_sequences WHERE year = ?').get(year).seq;
     const baseCode = 'DTSCI-' + year + '-' + String(seq).padStart(3, '0');
     const optsWithAffect = db.prepare('SELECT code FROM cap_vien_submission_options WHERE affects_code = 1').all();
     const affectCodes = optsWithAffect.map(r => (r.code || '').toUpperCase()).filter(Boolean);
@@ -6703,23 +6812,16 @@ app.put('/api/admin/cap-vien/submissions/:id/code', authMiddleware, adminOnly, (
   return res.json({ message: 'Đã cập nhật mã đề tài', code: newCode });
 });
 
-/** Xem mọi hồ sơ cấp Viện (danh sách + chi tiết + tải): Admin, Viện trưởng, P.KHCN, Hội đồng. Chủ nhiệm chỉ hồ sơ của mình. */
-function capVienRoleSeesAllSubmissions(roleRaw) {
-  const r = String(roleRaw || '').toLowerCase();
-  return (
-    r === 'admin' ||
-    r === 'vien_truong' ||
-    r === 'phong_khcn' ||
-    r === 'chu_tich' ||
-    r === 'thu_ky' ||
-    r === 'thanh_vien'
-  );
+/** Xem mọi hồ sơ cấp Viện (danh sách + chi tiết + tải): Admin, Viện trưởng, P.KHCN, Hội đồng (kể cả
+ * role được cấp qua council_role_grants). Chủ nhiệm chỉ hồ sơ của mình. */
+function capVienRoleSeesAllSubmissions(req) {
+  return roleIsAny(req, ['admin', 'vien_truong', 'phong_khcn', 'chu_tich', 'thu_ky', 'thanh_vien']);
 }
 
 app.get('/api/cap-vien/submissions', authMiddleware, (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache');
   const role = req.user.role;
-  const isCouncilOrAdmin = capVienRoleSeesAllSubmissions(role);
+  const isCouncilOrAdmin = capVienRoleSeesAllSubmissions(req);
   if (isCouncilOrAdmin) {
     const rows = db.prepare('SELECT id, title, submittedBy, submittedById, status, createdAt, code FROM cap_vien_submissions ORDER BY createdAt DESC').all();
     rows.forEach(r => {
@@ -6738,7 +6840,7 @@ app.get('/api/cap-vien/submissions/:id', authMiddleware, (req, res) => {
   const row = db.prepare(`SELECT id, title, submittedBy, submittedById, status, createdAt, code, options_checked, reviewNote, reviewedAt, reviewedById, assignedReviewerIds, assignedAt, assignedById, budget_4a_status, CASE WHEN COALESCE(budget_4a_round, 0) < 1 THEN 1 ELSE budget_4a_round END AS budget_4a_round, budget_4a_revision_note, budget_4a_revision_requested_at, budget_4a_revision_requested_by, budget_4a_approved_at, budget_4a_approved_by, step_4_reviewer1_done, step_4_reviewer2_done, step5_hd_meeting_location, step5_hd_meeting_attendance, step5_hd_meeting_documents, step5_hd_meeting_vote_result, step5_hd_meeting_decision, step5_hd_meeting_event_time, step5_hd_meeting_updated_at, step5_hd_meeting_updated_by, step5_council_revision_status, COALESCE(step5_council_revision_round, 0) AS step5_council_revision_round, step5_council_revision_note, step5_council_revision_requested_at, step5_council_revision_requested_by, step6_so_qd, step6_kinh_phi, step6_thoi_gian, step6_phi_quan_ly, step6_meta_updated_at, step6_meta_updated_by, step7_so_hd, step7_hieu_luc, step7_meta_updated_at, step7_meta_updated_by, step8_ma_dao_duc, step8_hieu_luc, step8_so_quyet_dinh, step8_meta_updated_at, step8_meta_updated_by, COALESCE(step8_completed, 0) AS step8_completed, COALESCE(step8_waived, 0) AS step8_waived, COALESCE(step8a_completed, 0) AS step8a_completed, COALESCE(step8a_waived, 0) AS step8a_waived FROM cap_vien_submissions WHERE id = ?`).get(id);
   if (!row) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
-  const isCouncilOrAdmin = capVienRoleSeesAllSubmissions(role);
+  const isCouncilOrAdmin = capVienRoleSeesAllSubmissions(req);
   const isOwner = row.submittedById === req.user.id;
   if (!isCouncilOrAdmin && !isOwner) {
     return res.status(403).json({ message: 'Bạn không có quyền xem hồ sơ này' });
@@ -6840,9 +6942,8 @@ function capVienStep6DecisionAllowedStatus(st) {
   return ['CONDITIONAL', 'APPROVED', 'CONTRACTED', 'IMPLEMENTATION', 'COMPLETED'].includes(s);
 }
 
-function capVienStep6CanEdit(roleRaw) {
-  const r = (roleRaw || '').toLowerCase();
-  return r === 'admin' || r === 'phong_khcn' || r === 'thu_ky';
+function capVienStep6CanEdit(req) {
+  return roleIsAny(req, ['admin', 'phong_khcn', 'thu_ky']);
 }
 
 function capVienStep6HistoryRoleDb(roleRaw) {
@@ -6855,7 +6956,7 @@ function capVienStep6HistoryRoleDb(roleRaw) {
 /** Bước 6 — Phòng KHCN / Thư ký HĐKHCN / Admin: lưu Số QĐ, kinh phí, thời gian, phí QL (chỉnh sửa được nhiều lần) */
 app.put('/api/cap-vien/submissions/:id/steps/6/decision-meta', authMiddleware, (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (!capVienStep6CanEdit(role)) {
+  if (!capVienStep6CanEdit(req)) {
     return res.status(403).json({ message: 'Chỉ Phòng KHCN, Thư ký HĐKHCN hoặc Admin mới được cập nhật thông tin Quyết định.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -6889,7 +6990,7 @@ function capVienStep7ContractMetaAllowedStatus(statusRaw) {
 /** Bước 7 — Phòng KHCN / Thư ký HĐKHCN / Admin: lưu Số HĐ, Hiệu lực hợp đồng */
 app.put('/api/cap-vien/submissions/:id/steps/7/contract-meta', authMiddleware, (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (!capVienStep6CanEdit(role)) {
+  if (!capVienStep6CanEdit(req)) {
     return res.status(403).json({ message: 'Chỉ Phòng KHCN, Thư ký HĐKHCN hoặc Admin mới được cập nhật thông tin Hợp đồng.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -6924,7 +7025,7 @@ app.post('/api/cap-vien/submissions/:id/steps/6/upload-decision', authMiddleware
   });
 }, (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (!capVienStep6CanEdit(role)) {
+  if (!capVienStep6CanEdit(req)) {
     return res.status(403).json({ message: 'Chỉ Phòng KHCN, Thư ký HĐKHCN hoặc Admin mới được upload Quyết định.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -6976,7 +7077,7 @@ app.post('/api/cap-vien/submissions/:id/steps/6/upload-decision', authMiddleware
 /** Bước 7 — Phòng KHCN / Thư ký HĐKHCN / Admin: upload / thay thế Hợp đồng KHCN */
 app.post('/api/cap-vien/submissions/:id/steps/7/upload-contract', authMiddleware, uploadCapVien.single('step7_hop_dong_khcn'), (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (!capVienStep6CanEdit(role)) {
+  if (!capVienStep6CanEdit(req)) {
     return res.status(403).json({ message: 'Chỉ Phòng KHCN, Thư ký HĐKHCN hoặc Admin mới được upload Hợp đồng KHCN.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -7027,7 +7128,7 @@ function capVienStep8EthicsAllowedRow(sub) {
 /** Bước 8 — Phòng KHCN / Thư ký / Admin: lưu Mã đạo đức, Hiệu lực, Số/ký hiệu Quyết định */
 app.put('/api/cap-vien/submissions/:id/steps/8/ethics-meta', authMiddleware, (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (!capVienStep6CanEdit(role)) {
+  if (!capVienStep6CanEdit(req)) {
     return res.status(403).json({ message: 'Chỉ Phòng KHCN, Thư ký HĐKHCN hoặc Admin mới được cập nhật thông tin đạo đức.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -7055,7 +7156,7 @@ app.put('/api/cap-vien/submissions/:id/steps/8/ethics-meta', authMiddleware, (re
 /** Bước 8 — upload Quyết định đạo đức (1 file) */
 app.post('/api/cap-vien/submissions/:id/steps/8/upload-ethics-decision', authMiddleware, uploadCapVien.single('step8_ethics_quyet_dinh'), (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (!capVienStep6CanEdit(role)) {
+  if (!capVienStep6CanEdit(req)) {
     return res.status(403).json({ message: 'Chỉ Phòng KHCN, Thư ký HĐKHCN hoặc Admin mới được upload Quyết định đạo đức.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -7099,8 +7200,7 @@ app.post('/api/cap-vien/submissions/:id/steps/8/upload-ethics-decision', authMid
 function capVienPeriodicReportUploadAllowed(sub, user) {
   const st = (sub.status || '').toUpperCase();
   if (!['IMPLEMENTATION', 'COMPLETED'].includes(st)) return false;
-  const r = String(user.role || '').toLowerCase();
-  if (r === 'admin' || r === 'phong_khcn' || r === 'thu_ky') return true;
+  if (userHasAnyRole(user, ['admin', 'phong_khcn', 'thu_ky'])) return true;
   return sub.submittedById === user.id;
 }
 
@@ -7445,7 +7545,7 @@ app.put('/api/cap-vien/submissions/:id/steps/:step/deadline', authMiddleware, (r
 // Bước 5 — Thư ký HĐKHCN / Admin: cập nhật thông tin họp Hội đồng KHCN (hiển thị trên timeline)
 app.put('/api/cap-vien/submissions/:id/steps/5/hd-meeting', authMiddleware, (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (role !== 'admin' && role !== 'thu_ky') {
+  if (!roleIsAny(req, ['admin', 'thu_ky'])) {
     return res.status(403).json({ message: 'Chỉ Thư ký HĐKHCN hoặc Admin mới được cập nhật thông tin họp.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -7496,7 +7596,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/upload-minutes', authMiddleware,
   });
 }, (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (role !== 'admin' && role !== 'thu_ky') {
+  if (!roleIsAny(req, ['admin', 'thu_ky'])) {
     return res.status(403).json({ message: 'Chỉ Thư ký HĐKHCN hoặc Admin mới được nộp biên bản họp.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -7555,7 +7655,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/upload-step5-extras', authMiddle
   });
 }, (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (role !== 'admin' && role !== 'thu_ky') {
+  if (!roleIsAny(req, ['admin', 'thu_ky'])) {
     return res.status(403).json({ message: 'Chỉ Thư ký HĐKHCN hoặc Admin mới được nộp tài liệu kèm.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -7613,7 +7713,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/upload-step5-extras', authMiddle
 // Bước 5 — Thư ký / Admin: yêu cầu Chủ nhiệm chỉnh sửa theo góp ý Hội đồng (mở vòng lặp)
 app.post('/api/cap-vien/submissions/:id/steps/5/council-request-revision', authMiddleware, (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (role !== 'admin' && role !== 'thu_ky') {
+  if (!roleIsAny(req, ['admin', 'thu_ky'])) {
     return res.status(403).json({ message: 'Chỉ Thư ký HĐKHCN hoặc Admin mới gửi yêu cầu chỉnh sửa này.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -7728,8 +7828,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/council-revision-upload', authMi
 
 // Bước 5 — Chủ tịch HĐKHCN / Thư ký / Admin: thông qua bản chỉnh sửa hoặc yêu cầu chỉnh sửa tiếp
 app.post('/api/cap-vien/submissions/:id/steps/5/council-revision-chair', authMiddleware, (req, res) => {
-  const role = (req.user.role || '').toLowerCase();
-  if (!['admin', 'chu_tich', 'thu_ky'].includes(role)) {
+  if (!roleIsAny(req, ['admin', 'chu_tich', 'thu_ky'])) {
     return res.status(403).json({ message: 'Chỉ Chủ tịch HĐKHCN, Thư ký hoặc Admin mới thực hiện bước này.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -7745,7 +7844,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/council-revision-chair', authMid
     return res.status(400).json({ message: 'action phải là approve hoặc request_more' });
   }
   const performedAt = new Date().toISOString();
-  const roleDb = role === 'admin' ? 'admin' : (role === 'thu_ky' ? 'secretary' : 'chu_tich');
+  const roleDb = roleIs(req, 'admin') ? 'admin' : (roleIs(req, 'thu_ky') ? 'secretary' : 'chu_tich');
   const chairOrActorName = req.user.fullname || req.user.email;
   const researcherCh = sub.submittedById ? db.prepare('SELECT email, fullname FROM users WHERE id = ?').get(sub.submittedById) : null;
   if (action === 'approve') {
@@ -7796,7 +7895,7 @@ app.post('/api/cap-vien/submissions/:id/steps/5/council-revision-chair', authMid
 // Bước 5 — Thư ký / Admin: ghi nhận Hội đồng KHCN thông qua → chuyển trạng thái sang Bước 6 (CONDITIONAL)
 app.post('/api/cap-vien/submissions/:id/steps/5/council-pass', authMiddleware, (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (role !== 'admin' && role !== 'thu_ky') {
+  if (!roleIsAny(req, ['admin', 'thu_ky'])) {
     return res.status(403).json({ message: 'Chỉ Thư ký HĐKHCN hoặc Admin mới ghi nhận thông qua Hội đồng.' });
   }
   const id = parseInt(req.params.id, 10);
@@ -7829,12 +7928,9 @@ app.post('/api/cap-vien/submissions/:id/steps/5/council-pass', authMiddleware, (
 
 // Danh sách thành viên Hội đồng KHCN (Chủ tịch, Thư ký, Thành viên) — để Chủ tịch phân công phản biện
 app.get('/api/cap-vien/council', authMiddleware, (req, res) => {
-  const role = req.user.role;
-  const isCouncilOrAdmin = role === 'admin' || ['chu_tich', 'thu_ky', 'thanh_vien'].includes(role);
+  const isCouncilOrAdmin = roleIsAny(req, ['admin', 'chu_tich', 'thu_ky', 'thanh_vien']);
   if (!isCouncilOrAdmin) return res.status(403).json({ message: 'Chỉ thành viên Hội đồng hoặc Admin mới xem được danh sách' });
-  const rows = db.prepare(
-    "SELECT id, email, fullname, role FROM users WHERE role IN ('chu_tich','thu_ky','thanh_vien','admin') ORDER BY role, fullname, email"
-  ).all();
+  const rows = usersWithAnyRole(['chu_tich', 'thu_ky', 'thanh_vien', 'admin']);
   const council = rows.map(r => ({
     id: r.id,
     email: r.email,
@@ -7853,7 +7949,7 @@ app.post('/api/cap-vien/submissions/:id/steps/:step', authMiddleware, (req, res)
   const sub = db.prepare('SELECT id, title, status, submittedBy FROM cap_vien_submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
-  const isSecretaryOrAdmin = role === 'admin' || role === 'thu_ky';
+  const isSecretaryOrAdmin = roleIsAny(req, ['admin', 'thu_ky']);
   if (step === '2') {
     const body = req.body || {};
     const payload = body.payload || {};
@@ -7921,7 +8017,7 @@ app.post('/api/cap-vien/submissions/:id/steps/:step', authMiddleware, (req, res)
     return res.status(400).json({ message: 'Hành động không hợp lệ. Dùng action: approve, request_revision hoặc revert (chỉ Admin)' });
   }
   if (step === '3') {
-    const isChairmanOrAdmin = role === 'admin' || role === 'chu_tich';
+    const isChairmanOrAdmin = roleIsAny(req, ['admin', 'chu_tich']);
     if (!isChairmanOrAdmin) {
       return res.status(403).json({ message: 'Chỉ Chủ tịch HĐKHCN hoặc Admin mới được phân công phản biện' });
     }
@@ -7943,7 +8039,7 @@ app.post('/api/cap-vien/submissions/:id/steps/:step', authMiddleware, (req, res)
     if (reviewerIds.length < 2) {
       return res.status(400).json({ message: 'Vui lòng chọn đủ 2 phản biện từ danh sách thành viên Hội đồng' });
     }
-    const councilIds = db.prepare("SELECT id FROM users WHERE role IN ('chu_tich','thu_ky','thanh_vien','admin')").all().map(r => r.id);
+    const councilIds = usersWithAnyRole(['chu_tich', 'thu_ky', 'thanh_vien', 'admin']).map((r) => r.id);
     const invalid = reviewerIds.filter(rid => !councilIds.includes(rid));
     if (invalid.length > 0) {
       return res.status(400).json({ message: 'Tất cả phản biện phải là thành viên Hội đồng (Chủ tịch, Thư ký, Thành viên HĐKHCN)' });
@@ -7964,7 +8060,7 @@ app.post('/api/cap-vien/submissions/:id/steps/:step', authMiddleware, (req, res)
   }
   if (step === '6') {
     const roleLower = (role || '').toLowerCase();
-    if (!capVienStep6CanEdit(roleLower)) {
+    if (!capVienStep6CanEdit(req)) {
       return res.status(403).json({ message: 'Chỉ Phòng KHCN, Thư ký HĐKHCN hoặc Admin mới ghi nhận hoàn thành Bước 6 (Quyết định).' });
     }
     const body = req.body || {};
@@ -8009,7 +8105,7 @@ app.post('/api/cap-vien/submissions/:id/steps/:step', authMiddleware, (req, res)
   }
   if (step === '7') {
     const roleLower = (role || '').toLowerCase();
-    if (!capVienStep6CanEdit(roleLower)) {
+    if (!capVienStep6CanEdit(req)) {
       return res.status(403).json({ message: 'Chỉ Phòng KHCN, Thư ký HĐKHCN hoặc Admin mới ghi nhận hoàn thành Bước 7 (Hợp đồng KHCN).' });
     }
     const body = req.body || {};
@@ -8092,7 +8188,7 @@ app.post('/api/cap-vien/submissions/:id/steps/:step', authMiddleware, (req, res)
     if (action !== 'complete') {
       return res.status(400).json({ message: 'Hành động không hợp lệ. Dùng: complete, admin_bypass, admin_waive (Admin).' });
     }
-    if (!capVienStep6CanEdit(roleLower)) {
+    if (!capVienStep6CanEdit(req)) {
       return res.status(403).json({ message: 'Chỉ Phòng KHCN, Thư ký HĐKHCN hoặc Admin mới ghi nhận hoàn thành Bước 8 (Đạo đức).' });
     }
     if (sub8.step8_waived === 1 || sub8.step8_waived === true) {
@@ -8247,7 +8343,7 @@ app.post('/api/cap-vien/submissions/:id/steps/4a/upload', authMiddleware, upload
   const sub = db.prepare('SELECT id, title, status, submittedById, CASE WHEN COALESCE(budget_4a_round, 0) < 1 THEN 1 ELSE budget_4a_round END AS budget_4a_round FROM cap_vien_submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
-  const isCouncilOrAdmin = role === 'admin' || ['chu_tich', 'thu_ky', 'thanh_vien', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'].includes(role);
+  const isCouncilOrAdmin = roleIsAny(req, ['admin', 'chu_tich', 'thu_ky', 'thanh_vien', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc']);
   if (!isCouncilOrAdmin) {
     return res.status(403).json({ message: 'Chỉ thành viên Hội đồng, Tổ thẩm định tài chính hoặc Admin mới được nộp phiếu thẩm định dự toán' });
   }
@@ -8289,7 +8385,7 @@ app.post('/api/cap-vien/submissions/:id/steps/4a/request-revision', authMiddlewa
   const sub = db.prepare('SELECT id, title, status, submittedById, CASE WHEN COALESCE(budget_4a_round, 0) < 1 THEN 1 ELSE budget_4a_round END AS budget_4a_round FROM cap_vien_submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
-  const isBudgetTeam = role === 'admin' || ['totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'].includes(role);
+  const isBudgetTeam = roleIsAny(req, ['admin', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc']);
   if (!isBudgetTeam) return res.status(403).json({ message: 'Chỉ Tổ thẩm định tài chính hoặc Admin mới được yêu cầu bổ sung dự toán' });
   const note = (req.body.note || req.body.comment || '').trim();
   if (!note) return res.status(400).json({ message: 'Vui lòng nhập nội dung yêu cầu bổ sung/chỉnh sửa' });
@@ -8387,7 +8483,7 @@ app.post('/api/cap-vien/submissions/:id/steps/4a/approve', authMiddleware, (req,
   const sub = db.prepare('SELECT id, title, status, submittedById, CASE WHEN COALESCE(budget_4a_round, 0) < 1 THEN 1 ELSE budget_4a_round END AS budget_4a_round FROM cap_vien_submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
-  const isBudgetTeam = role === 'admin' || ['totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'].includes(role);
+  const isBudgetTeam = roleIsAny(req, ['admin', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc']);
   if (!isBudgetTeam) return res.status(403).json({ message: 'Chỉ Tổ thẩm định tài chính hoặc Admin mới được phê duyệt dự toán' });
   const roundNow = sub.budget_4a_round || 1;
   const cntBudget = db.prepare("SELECT COUNT(1) AS c FROM cap_vien_submission_files WHERE submissionId = ? AND revisionRound IN (?, ?) AND fieldName IN ('budget_phieu_tham_dinh','budget_to_trinh')").get(id, roundNow, roundNow === 1 ? 0 : -1);
@@ -8724,7 +8820,7 @@ app.get('/api/cap-vien/submissions/:id/download', authMiddleware, (req, res) => 
   const sub = db.prepare('SELECT id, submittedById FROM cap_vien_submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
-  const isCouncilOrAdmin = capVienRoleSeesAllSubmissions(role);
+  const isCouncilOrAdmin = capVienRoleSeesAllSubmissions(req);
   const isOwner = sub.submittedById === req.user.id;
   if (!isCouncilOrAdmin && !isOwner) {
     return res.status(403).json({ message: 'Bạn không có quyền tải hồ sơ này' });
@@ -8753,7 +8849,7 @@ app.get('/api/cap-vien/submissions/:id/files/:fileId/download', authMiddleware, 
   const sub = db.prepare('SELECT id, submittedById FROM cap_vien_submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
-  const isCouncilOrAdmin = capVienRoleSeesAllSubmissions(role);
+  const isCouncilOrAdmin = capVienRoleSeesAllSubmissions(req);
   const isOwner = sub.submittedById === req.user.id;
   if (!isCouncilOrAdmin && !isOwner) return res.status(403).json({ message: 'Bạn không có quyền tải file này' });
   const file = db.prepare('SELECT id, path, originalName FROM cap_vien_submission_files WHERE id = ? AND submissionId = ?').get(fileId, id);
@@ -9211,7 +9307,7 @@ app.get('/api/missions/stats', authMiddleware, (req, res) => {
   const all = db.prepare('SELECT id, level, status, end_date, budget, start_date FROM missions').all();
   const now = new Date().toISOString().slice(0, 10);
   const thisMonthStart = now.slice(0, 7) + '-01';
-  const byLevel = { national: 0, ministry: 0, university: 0, institute: 0 };
+  const byLevel = { national: 0, ministry: 0, university: 0, school: 0, institute: 0 };
   const byStatus = { planning: 0, approved: 0, ongoing: 0, review: 0, completed: 0, overdue: 0, cho_phe_duyet_ngoai: 0, da_phe_duyet: 0, dang_thuc_hien: 0, nghiem_thu_trung_gian: 0, nghiem_thu_tong_ket: 0, hoan_thanh: 0, khong_duoc_phe_duyet: 0, cho_vien_xet_chon: 0, cho_bo_tham_dinh: 0, cho_ngoai_xet_chon: 0, cho_ky_hop_dong: 0, xin_dieu_chinh: 0, cho_nghiem_thu_co_so: 0, cho_nghiem_thu_bo_nn: 0, hoan_thien_sau_nghiem_thu: 0, thanh_ly_hop_dong: 0 };
   let totalBudget = 0;
   let overdue = 0;
@@ -9259,6 +9355,7 @@ const MISSION_LEVEL_SEARCH_LABELS = {
   national: 'Cấp Nhà nước cap quoc gia',
   ministry: 'Cấp Bộ bo',
   university: 'Cấp ĐHQG dai hoc quoc gia',
+  school: 'Cấp Trường ĐH KHTN truong dai hoc khoa hoc tu nhien',
   institute: 'Cấp Viện vien co so',
 };
 
@@ -9434,8 +9531,8 @@ app.post('/api/missions', authMiddleware, (req, res) => {
   const user = req.user;
   const body = req.body || {};
   const level = (body.level || '').trim().toLowerCase();
-  if (!['national', 'ministry', 'university'].includes(level)) {
-    return res.status(400).json({ message: 'API này chỉ dùng cho Cấp Bộ, Cấp ĐHQG, Cấp Nhà nước. Cấp Viện vui lòng nộp tại trang Đề tài cấp Viện.' });
+  if (!['national', 'ministry', 'university', 'school'].includes(level)) {
+    return res.status(400).json({ message: 'API này chỉ dùng cho Cấp Bộ, Cấp ĐHQG, Cấp Trường ĐH KHTN, Cấp Nhà nước. Cấp Viện vui lòng nộp tại trang Đề tài cấp Viện.' });
   }
   const title = (body.title || '').trim();
   if (!title) return res.status(400).json({ message: 'Tên đề tài không được để trống.' });
@@ -9476,7 +9573,7 @@ app.post('/api/missions', authMiddleware, (req, res) => {
   }
 });
 
-const LEVEL_LABELS_EMAIL = { national: 'Cấp Nhà nước', ministry: 'Cấp Bộ', university: 'Cấp ĐHQG', institute: 'Cấp Viện' };
+const LEVEL_LABELS_EMAIL = { national: 'Cấp Nhà nước', ministry: 'Cấp Bộ', university: 'Cấp ĐHQG', school: 'Cấp Trường ĐH KHTN', institute: 'Cấp Viện' };
 
 function sendMissionProposalToCouncil(mission, submitterEmail) {
   const toList = getNotificationEmails();
@@ -9987,8 +10084,7 @@ app.patch('/api/missions/:id/buoc4a/chinh-lich', authMiddleware, thuyKyOrAdmin, 
 
 // Sub-bước ② — Kết quả họp HĐ (CT HĐ hoặc Phòng KHCN)
 function chuTichOrThuyKyOrAdmin(req, res, next) {
-  const role = (req.user.role || '').toLowerCase();
-  if (!['admin', 'chu_tich', 'thu_ky'].includes(role)) return res.status(403).json({ message: 'Chỉ CT HĐ KHCN hoặc Phòng KHCN mới có quyền này' });
+  if (!roleIsAny(req, ['admin', 'chu_tich', 'thu_ky'])) return res.status(403).json({ message: 'Chỉ CT HĐ KHCN hoặc Phòng KHCN mới có quyền này' });
   next();
 }
 app.post('/api/missions/:id/buoc4a/ket-qua-hop', authMiddleware, chuTichOrThuyKyOrAdmin, (req, res) => {
@@ -10259,7 +10355,7 @@ app.post('/api/missions/:id/buoc6/ky-hop-dong', authMiddleware, thuyKyOrAdmin, (
 // Danh sách đề tài chờ CT HĐ xét duyệt (Bước 3)
 app.get('/api/missions/cho-ct-hd-xet-duyet', authMiddleware, (req, res) => {
   const role = (req.user.role || '').toLowerCase();
-  if (role !== 'admin' && role !== 'chu_tich') {
+  if (!roleIsAny(req, ['admin', 'chu_tich'])) {
     return res.status(403).json({ message: 'Chỉ Chủ tịch Hội đồng KHCN hoặc Admin mới xem được' });
   }
   const rows = db.prepare('SELECT id, code, title, principal, level, buoc3_ngay_gui, buoc3_trang_thai FROM missions WHERE status = ? AND (buoc3_trang_thai = ? OR buoc3_trang_thai IS NULL) ORDER BY buoc3_ngay_gui DESC').all('cho_ct_hd_xet_duyet', 'cho_xet_duyet');
@@ -10299,7 +10395,7 @@ app.put('/api/admin/missions/:id', authMiddleware, adminOrPhongKhcnMissionEditor
   if (principal_hoc_vi !== undefined) { try { updates.push('principal_hoc_vi = ?'); params.push(principal_hoc_vi != null ? String(principal_hoc_vi).trim() : null); } catch (e) {} }
   if (principal_don_vi !== undefined) { try { updates.push('principal_don_vi = ?'); params.push(principal_don_vi != null ? String(principal_don_vi).trim() : null); } catch (e) {} }
   if (principal_orcid !== undefined) { try { updates.push('principal_orcid = ?'); params.push(principal_orcid != null ? String(principal_orcid).trim() : null); } catch (e) {} }
-  if (level != null && ['national', 'ministry', 'university', 'institute'].includes(level)) { updates.push('level = ?'); params.push(level); }
+  if (level != null && ['national', 'ministry', 'university', 'school', 'institute'].includes(level)) { updates.push('level = ?'); params.push(level); }
   if (status != null) {
     const resolved = resolveMissionStatusInput(status);
     if (resolved) {
@@ -10376,7 +10472,7 @@ function csvEscape(s) {
 // Export template CSV: dùng sep=, để Excel mở ra mỗi cột 1 ô (không dồn vào 1 ô)
 app.get('/api/missions/export-template', (req, res) => {
   const header = 'code,title,principal,level,status,start_date,end_date,progress,budget';
-  const note = 'GHI CHÚ (dòng này bỏ qua khi import): Mỗi dòng = 1 nhiệm vụ. Cấp: national|ministry|university|institute. Trạng thái: planning|cho_vien_xet_chon|cho_bo_tham_dinh|cho_ngoai_xet_chon|cho_phe_duyet_ngoai|da_phe_duyet|cho_ky_hop_dong|dang_thuc_hien|xin_dieu_chinh|cho_nghiem_thu_co_so|nghiem_thu_trung_gian|cho_nghiem_thu_bo_nn|nghiem_thu_tong_ket|hoan_thien_sau_nghiem_thu|thanh_ly_hop_dong|hoan_thanh|khong_duoc_phe_duyet. Ngày: YYYY-MM-DD';
+  const note = 'GHI CHÚ (dòng này bỏ qua khi import): Mỗi dòng = 1 nhiệm vụ. Cấp: national|ministry|university|school|institute. Trạng thái: planning|cho_vien_xet_chon|cho_bo_tham_dinh|cho_ngoai_xet_chon|cho_phe_duyet_ngoai|da_phe_duyet|cho_ky_hop_dong|dang_thuc_hien|xin_dieu_chinh|cho_nghiem_thu_co_so|nghiem_thu_trung_gian|cho_nghiem_thu_bo_nn|nghiem_thu_tong_ket|hoan_thien_sau_nghiem_thu|thanh_ly_hop_dong|hoan_thanh|khong_duoc_phe_duyet. Ngày: YYYY-MM-DD';
   const sample1 = 'DT-2025-001,Nghiên cứu ứng dụng tế bào gốc trong điều trị,TS. Nguyễn Văn A,institute,ongoing,2025-01-15,2027-12-31,35,500000000';
   const sample2 = 'DT-2025-002,Phát triển công nghệ nuôi cấy tế bào gốc,PGS.TS. Trần Thị B,ministry,approved,2025-03-01,2026-12-31,0,2500000000';
   const sample3 = 'DT-2024-010,Xây dựng ngân hàng tế bào gốc tiêu chuẩn GMP,TS. Lê Văn C,institute,review,2024-06-01,2025-05-31,90,1500000000';
@@ -10869,7 +10965,7 @@ app.post('/api/admin/missions/import', authMiddleware, adminOnly, upload.single(
 
   let inserted = 0;
   let updated = 0;
-  const levels = ['national', 'ministry', 'university', 'institute'];
+  const levels = ['national', 'ministry', 'university', 'school', 'institute'];
   const statuses = ['planning', 'approved', 'ongoing', 'review', 'completed', 'overdue'];
   for (let i = 0; i < dataRows.length; i++) {
     const cells = dataRows[i];
@@ -10923,8 +11019,8 @@ app.post('/api/admin/missions/manual', authMiddleware, adminOnly, (req, res) => 
 
   if (!code) return res.status(400).json({ message: 'Thiếu mã đề tài (code).' });
   if (!title) return res.status(400).json({ message: 'Thiếu tên đề tài (title).' });
-  if (!['national', 'ministry', 'university', 'institute'].includes(level)) {
-    return res.status(400).json({ message: 'Cấp đề tài không hợp lệ. Hãy chọn: national | ministry | university | institute.' });
+  if (!['national', 'ministry', 'university', 'school', 'institute'].includes(level)) {
+    return res.status(400).json({ message: 'Cấp đề tài không hợp lệ. Hãy chọn: national | ministry | university | school | institute.' });
   }
   if (!statusResolved) {
     return res.status(400).json({ message: 'Trạng thái không hợp lệ (quá dài hoặc ký tự không được phép).' });
@@ -12993,11 +13089,67 @@ app.put('/api/admin/users/role', authMiddleware, adminOnly, (req, res) => {
   return res.json({ message: 'Đã cập nhật vai trò' });
 });
 
+// Admin: xem vai trò HĐKHCN "phụ" (council_role_grants) — KHÔNG đụng users.role. Dùng khi 1 người
+// vừa cần giữ vai trò hệ thống (vd Viện trưởng, Phòng KHCN) vừa tham gia Hội đồng KHCN (vd Chủ tịch HĐ).
+app.get('/api/admin/council-role-grants', authMiddleware, adminOnly, (req, res) => {
+  try {
+    const rows = db
+      .prepare(
+        `SELECT g.id, g.user_id, g.role, g.granted_at, u.email, u.fullname, u.role AS system_role
+         FROM council_role_grants g JOIN users u ON u.id = g.user_id
+         ORDER BY u.fullname, u.email, g.role`
+      )
+      .all();
+    return res.json({ ok: true, data: rows });
+  } catch (e) {
+    return res.status(500).json({ message: e.message || 'Không tải được danh sách.' });
+  }
+});
+
+// Admin: thay toàn bộ tập vai trò HĐKHCN phụ của 1 user (body: { roles: string[] }).
+// Chỉ Master Admin — cùng mức bảo vệ như /api/admin/users/role đối với council role.
+app.put('/api/admin/council-role-grants/:userId', authMiddleware, adminOnly, (req, res) => {
+  if (!reqIsMasterAdmin(req)) {
+    return res.status(403).json({ message: 'Chỉ Master Admin mới được cấp vai trò Hội đồng KHCN.' });
+  }
+  const userId = parseInt(req.params.userId, 10);
+  if (!userId) return res.status(400).json({ message: 'userId không hợp lệ' });
+  const user = db.prepare('SELECT id, email, role FROM users WHERE id = ?').get(userId);
+  if (!user) return res.status(404).json({ message: 'Không tìm thấy tài khoản' });
+  const em = String(user.email || '').trim().toLowerCase();
+  if (!em.endsWith(ALLOWED_EMAIL_DOMAIN)) {
+    return res.status(400).json({ message: 'Chỉ tài khoản có đuôi @sci.edu.vn mới được gán vai trò Hội đồng KHCN' });
+  }
+  const requested = Array.isArray(req.body && req.body.roles) ? req.body.roles : [];
+  const roles = Array.from(
+    new Set(requested.map((r) => String(r || '').trim().toLowerCase()).filter(Boolean))
+  );
+  const invalid = roles.filter((r) => !COUNCIL_ROLE_TOKENS.includes(r));
+  if (invalid.length) {
+    return res.status(400).json({ message: 'Vai trò không hợp lệ: ' + invalid.join(', ') });
+  }
+  const tx = db.transaction(() => {
+    db.prepare('DELETE FROM council_role_grants WHERE user_id = ?').run(userId);
+    const ins = db.prepare(
+      'INSERT INTO council_role_grants (user_id, role, granted_by_id) VALUES (?, ?, ?)'
+    );
+    roles.forEach((r) => ins.run(userId, r, req.user.id || null));
+  });
+  tx();
+  return res.json({ ok: true, roles });
+});
+
 // Admin: danh sách Tổ thẩm định tài chính (Tổ trưởng, Thành viên)
 app.get('/api/admin/budget-appraisal-team', authMiddleware, adminOnly, (req, res) => {
-  const rows = db.prepare(
-    "SELECT id, email, fullname, academicTitle, role, createdAt FROM users WHERE role IN ('totruong_tham_dinh_tc','thanh_vien_tham_dinh_tc') ORDER BY role, fullname, email"
-  ).all();
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT u.id, u.email, u.fullname, u.academicTitle, u.role, u.createdAt FROM users u
+       LEFT JOIN council_role_grants g ON g.user_id = u.id
+       WHERE u.role IN ('totruong_tham_dinh_tc','thanh_vien_tham_dinh_tc')
+          OR g.role IN ('totruong_tham_dinh_tc','thanh_vien_tham_dinh_tc')
+       ORDER BY u.role, u.fullname, u.email`
+    )
+    .all();
   return res.json({ members: rows });
 });
 
@@ -14176,6 +14328,8 @@ try {
     'ALTER TABLE equipment_documents ADD COLUMN is_current INTEGER NOT NULL DEFAULT 1',
     'ALTER TABLE equipment_documents ADD COLUMN supersedes_id INTEGER REFERENCES equipment_documents(id)',
     "ALTER TABLE equipment_videos ADD COLUMN thumbnail_url TEXT",
+    'ALTER TABLE equipments ADD COLUMN deleted_at TEXT',
+    'ALTER TABLE equipments ADD COLUMN deleted_by INTEGER REFERENCES users(id)',
   ];
   for (const sql of alters) {
     try {
@@ -14183,6 +14337,33 @@ try {
     } catch (e) {
       /* đã có cột */
     }
+  }
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS equipment_code_sequences (
+        dept_code TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        seq INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (dept_code, year)
+      );
+      CREATE TABLE IF NOT EXISTS equipment_loans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        equipment_id INTEGER NOT NULL REFERENCES equipments(id) ON DELETE CASCADE,
+        borrower_id INTEGER REFERENCES users(id),
+        borrower_name TEXT,
+        purpose TEXT,
+        borrowed_at TEXT DEFAULT (datetime('now')),
+        expected_return_at TEXT,
+        returned_at TEXT,
+        return_note TEXT,
+        created_by INTEGER REFERENCES users(id),
+        returned_by INTEGER REFERENCES users(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_equipment_loans_equipment ON equipment_loans(equipment_id);
+      CREATE INDEX IF NOT EXISTS idx_equipment_loans_open ON equipment_loans(equipment_id, returned_at);
+    `);
+  } catch (e) {
+    console.warn('[equipment extra tables]', e.message);
   }
 })();
 
@@ -16072,7 +16253,7 @@ app.get('/api/cooperation/sidebar-badges', authMiddleware, (req, res) => {
       cho_phong_duyet: cho_phong,
       cho_vt_duyet: cho_vt,
       tat_ca_tong,
-      su_kien_sap_dien_ra: safeCount("SELECT COUNT(*) AS c FROM cooperation_su_kien WHERE status='sap_dien_ra'"),
+      su_kien_tong: safeCount("SELECT COUNT(*) AS c FROM cooperation_su_kien"),
       hnht_cho_phong,
       hnht_sap_dien_ra,
       hnht_minh_chung_qua_han,
@@ -16090,7 +16271,7 @@ app.get('/api/cooperation/sidebar-badges', authMiddleware, (req, res) => {
       cho_phong_duyet: 0,
       cho_vt_duyet: 0,
       tat_ca_tong: 0,
-      su_kien_sap_dien_ra: 0,
+      su_kien_tong: 0,
       hnht_cho_phong: 0,
       hnht_sap_dien_ra: 0,
       hnht_minh_chung_qua_han: 0,
@@ -17746,8 +17927,9 @@ app.post('/api/events/:id/files', authMiddleware, coopPhongOrAdmin, (req, res) =
     const out = [];
     for (const f of req.files || []) {
       const rel = path.join('uploads', 'events', String(id), f.filename).replace(/\\/g, '/');
-      const ins = db.prepare('INSERT INTO event_files (event_id, loai_file, ten_file, duong_dan, mo_ta, nguoi_upload) VALUES (?, ?, ?, ?, ?, ?)').run(id, loai, f.originalname || f.filename, rel, moTa, req.user.fullname || req.user.email || '');
-      out.push({ id: Number(ins.lastInsertRowid), ten_file: f.originalname || f.filename, duong_dan: rel, loai_file: loai });
+      const tenFile = fixFilenameEncoding(f.originalname) || f.filename;
+      const ins = db.prepare('INSERT INTO event_files (event_id, loai_file, ten_file, duong_dan, mo_ta, nguoi_upload) VALUES (?, ?, ?, ?, ?, ?)').run(id, loai, tenFile, rel, moTa, req.user.fullname || req.user.email || '');
+      out.push({ id: Number(ins.lastInsertRowid), ten_file: tenFile, duong_dan: rel, loai_file: loai });
     }
     return res.json({ ok: true, files: out });
   });

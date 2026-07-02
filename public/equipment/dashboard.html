@@ -61,6 +61,14 @@
           <tbody id="tb-inc"></tbody>
         </table>
       </div>
+      <h2 style="font-size:1rem;margin:22px 0 10px;">Thiết bị có lịch sử sự cố</h2>
+      <p style="margin:0 0 10px;color:var(--eq-muted);font-size:0.85rem;">Sắp xếp theo số lần sự cố nhiều nhất — tra cứu nhanh thiết bị hay hỏng, đã xử lý bao nhiêu lần, đã kích hoạt lại bao nhiêu lần.</p>
+      <div class="eq-table-wrap">
+        <table class="eq-table">
+          <thead><tr><th>Mã</th><th>Tên</th><th>Trạng thái hiện tại</th><th>Tổng sự cố</th><th>Đang mở</th><th>Đã xử lý</th><th>Đã kích hoạt lại</th><th>Sự cố gần nhất</th></tr></thead>
+          <tbody id="tb-inc-history"></tbody>
+        </table>
+      </div>
     </main>
   </div>
   <script src="/public/js/equipmentApi.js"></script>
@@ -72,6 +80,13 @@
   <script>
 (function () {
   var ch1, ch2;
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
   function pickPayload(resp) {
     if (!resp || typeof resp !== 'object') return {};
     if (resp.data && typeof resp.data === 'object') {
@@ -93,11 +108,13 @@
       window.equipmentApi.getJson('/stats/summary'),
       window.equipmentApi.getJson('/stats/upcoming-maintenance?days=30'),
       window.equipmentApi.getJson('/stats/open-incidents'),
+      window.equipmentApi.getJson('/stats/incident-history'),
     ]).then(function (arr) {
       document.getElementById('sk').style.display = 'none';
       var s = arr[0],
         u = arr[1],
-        i = arr[2];
+        i = arr[2],
+        ih = arr[3];
       if (s.status === 403 || s.status === 401) {
         window.location.href = '/dang-nhap.html?returnUrl=' + encodeURIComponent('public/equipment/dashboard.html');
         return;
@@ -109,6 +126,7 @@
       var sum = pickPayload(s);
       var upcomingRows = pickRows(u);
       var incidentRows = pickRows(i);
+      var incidentHistoryRows = pickRows(ih);
       document.getElementById('kpis').style.display = 'grid';
       var by = Array.isArray(sum.byStatus) ? sum.byStatus : [];
       var active = 0,
@@ -186,13 +204,13 @@
         };
         tr.innerHTML =
           '<td>' +
-          r.equipment_code +
+          esc(r.equipment_code) +
           '</td><td>' +
-          r.name +
+          esc(r.name) +
           '</td><td>' +
-          (r._due || '') +
+          esc(r._due || '') +
           '</td><td>' +
-          r._daysLeft +
+          esc(r._daysLeft) +
           '</td>';
         tu.appendChild(tr);
       });
@@ -207,17 +225,43 @@
         };
         tr.innerHTML =
           '<td>' +
-          r.id +
+          esc(r.id) +
           '</td><td>' +
-          r.equipment_code +
+          esc(r.equipment_code) +
           ' — ' +
-          r.name +
+          esc(r.name) +
           '</td><td>' +
-          r.severity +
+          esc(r.severity) +
           '</td><td>' +
-          r.status +
+          esc(r.status) +
           '</td>';
         ti.appendChild(tr);
+      });
+
+      var tih = document.getElementById('tb-inc-history');
+      tih.innerHTML = '';
+      if (!incidentHistoryRows.length) {
+        tih.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--eq-muted);">Chưa có thiết bị nào từng có sự cố.</td></tr>';
+      }
+      incidentHistoryRows.forEach(function (r) {
+        var tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.onclick = function () {
+          location.href = '/public/equipment/detail.html?id=' + r.id + '&tab=incident';
+        };
+        var openBadge = Number(r.incident_open) > 0
+          ? '<span class="eq-badge eq-badge--broken">' + esc(r.incident_open) + '</span>'
+          : '0';
+        tr.innerHTML =
+          '<td>' + esc(r.equipment_code) + '</td>' +
+          '<td>' + esc(r.name) + '</td>' +
+          '<td>' + esc(r.status) + '</td>' +
+          '<td>' + esc(r.incident_total) + '</td>' +
+          '<td>' + openBadge + '</td>' +
+          '<td>' + esc(r.incident_resolved) + '</td>' +
+          '<td>' + esc(r.reactivated_count) + '</td>' +
+          '<td>' + esc((r.last_incident_at || '').slice(0, 10)) + '</td>';
+        tih.appendChild(tr);
       });
     });
   }

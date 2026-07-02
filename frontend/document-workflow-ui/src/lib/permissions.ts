@@ -37,8 +37,8 @@ export function stepPermission(me: MeUser | null, doc: DocumentRecord, step: Wor
       return { canAct: isLeader, reason: "Chỉ Lãnh đạo Viện thao tác bước 2." };
     case 3:
       return {
-        canAct: isAssignedDrafter,
-        reason: "Chỉ Người soạn thảo được giao thao tác bước 3.",
+        canAct: isAssignedDrafter || isSuperManager,
+        reason: "Chỉ Người soạn thảo được giao hoặc Admin/Manager thao tác bước 3.",
       };
     case 4:
       return { canAct: isReviewer, reason: "Chỉ Reviewer thao tác bước 4." };

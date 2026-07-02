@@ -35,16 +35,20 @@ class DocumentModel {
 
   static pickSystemRole(tokens, fallbackRole) {
     const roleSet = DocumentModel.systemRoleSet();
-    const normalizedFallback = String(fallbackRole || '').trim().toLowerCase();
     const tokenList = DocumentModel.uniqTokens(tokens);
     const inToken = tokenList.filter((r) => roleSet.has(r));
-    if (normalizedFallback && roleSet.has(normalizedFallback) && inToken.includes(normalizedFallback)) {
-      return normalizedFallback;
+    // fallbackRole có thể là chuỗi nhiều token (vd "crd_user,drafter" khi role hệ thống + role
+    // quy trình đã bị trộn) — phải tách token rồi mới so khớp, không so cả chuỗi như 1 khóa.
+    const fallbackTokens = DocumentModel.parseRoleTokens(fallbackRole).filter((r) => roleSet.has(r));
+    if (fallbackTokens.length && inToken.includes(fallbackTokens[0])) {
+      return fallbackTokens[0];
     }
     if (inToken.includes('admin')) return 'admin';
     if (inToken.includes('researcher')) return 'researcher';
     if (inToken.length) return inToken[0];
-    if (normalizedFallback && roleSet.has(normalizedFallback)) return normalizedFallback;
+    // Không có token hệ thống nào trong lựa chọn mới (vd chỉ chọn role quy trình như drafter) →
+    // giữ nguyên role hệ thống cũ, không mặc định 'researcher' đè lên role của module khác.
+    if (fallbackTokens.length) return fallbackTokens[0];
     return 'researcher';
   }
 

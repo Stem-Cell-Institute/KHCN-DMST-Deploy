@@ -25,7 +25,6 @@
         .admin-sections { display: flex; flex-direction: column; gap: 0; }
         .admin-sections #section-accounts { order: 1; }
         .admin-sections #section-hdkhcn { order: 2; }
-        .admin-sections #section-budget { order: 3; }
         .admin-sections #section-admin-team { order: 4; }
         .admin-sections #section-categories { order: 5; }
         .admin-sections #section-missions { order: 6; }
@@ -35,6 +34,7 @@
         @media (max-width: 960px) {
             .admin-layout { flex-direction: column; }
             .admin-sidebar { position: relative; top: 0; width: 100%; flex: none; }
+            .admin-role-dual-grid { grid-template-columns: 1fr !important; }
         }
         .accounts-table-wrap { overflow-x: auto; }
         .badge-ban { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
@@ -76,7 +76,6 @@
         .section-block:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
         .section-block h2 { margin-bottom: 1rem; }
         .section-hdkhcn .method-card { border-left-color: #1565c0; }
-        .section-budget .method-card { border-left-color: #2e7d32; }
         .section-admin .method-card { border-left-color: #6a1b9a; }
         .section-members .method-card { border-left-color: #0d47a1; }
         .section-categories .method-card { border-left-color: #0d47a1; }
@@ -212,8 +211,7 @@
                     <nav class="admin-sidebar-nav">
                         <a href="/admin/ticker" id="nav-ticker-admin" style="display:none;">📢 Ticker Thông Báo</a>
                         <a href="quan-tri-tai-khoan.html">Quản lý tài khoản</a>
-                        <a href="#section-hdkhcn">Hội đồng KHCN</a>
-                        <a href="#section-budget">Tổ thẩm định tài chính</a>
+                        <a href="#section-hdkhcn">Vai trò Hội đồng KHCN &amp; Thẩm định TC</a>
                         <a href="#section-admin-team">Tổ Admin hệ thống</a>
                         <a href="#section-categories">Hạng mục đề tài cấp Viện</a>
                         <a href="#section-missions">Nhiệm vụ KHCN</a>
@@ -227,115 +225,102 @@
                     <div class="admin-page-inner">
                         <div class="admin-sections">
 
-            <!-- PHẦN 1: HỘI ĐỒNG KHCN -->
+            <!-- PHẦN 1: VAI TRÒ HỘI ĐỒNG KHCN & THẨM ĐỊNH TÀI CHÍNH (gộp Vai trò đơn + Vai trò kép) -->
             <section id="section-hdkhcn" class="section-block section-hdkhcn">
-            <h2 class="page-title">👥 Phần 1: Hội đồng Khoa học và Công nghệ (HĐKHCN)</h2>
+            <h2 class="page-title">👥 Phần 1: Vai trò Hội đồng KHCN &amp; Tổ thẩm định tài chính</h2>
             <div class="method-card">
-                <h3>Phương thức cấp vai trò HĐKHCN</h3>
+                <h3>2 cách cấp vai trò — chọn đúng cách theo tình huống</h3>
                 <ol class="method-steps">
-                    <li>Vai trò HĐKHCN chỉ gồm: <strong>Chủ tịch HĐKHCN</strong>, <strong>Thư ký HĐKHCN</strong>, <strong>Thành viên HĐKHCN</strong>.</li>
-                    <li>Chỉ tài khoản có đuôi <strong>@sci.edu.vn</strong> mới được gán vai trò Chủ tịch, Thư ký hoặc Thành viên HĐKHCN.</li>
-                    <li>Chỉ <strong>Master Admin</strong> được cấp / sửa / xóa thành viên Hội đồng KHCN.</li>
+                    <li><strong>Vai trò đơn</strong> (cột trái): dùng khi tạo tài khoản mới, hoặc người đó chỉ cần đúng 1 vai trò. Cách này <strong>ghi đè</strong> vai trò hệ thống hiện tại của tài khoản.</li>
+                    <li><strong>Vai trò kép</strong> (cột phải): dùng khi người đó <strong>đã có vai trò hệ thống khác</strong> (VD: Viện trưởng, Phòng KHCN&amp;QHĐN) và cần <strong>thêm</strong> vai trò Hội đồng/Thẩm định mà không mất vai trò cũ. Vai trò kép lưu ở bảng riêng, cộng thêm chứ không ghi đè.</li>
+                    <li>Vai trò gồm: HĐKHCN (Chủ tịch, Thư ký, Thành viên) và Tổ thẩm định TC (Tổ trưởng, Thành viên). Chỉ tài khoản <strong>@sci.edu.vn</strong>, chỉ <strong>Master Admin</strong> được cấp/sửa.</li>
                 </ol>
             </div>
-            <div id="msg" class="msg"></div>
-            <div class="card add-role-card">
-                <h3>Thêm / Cấp vai trò thành viên HĐKHCN</h3>
-                <form id="form-add-role" class="add-role-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="add-fullname">Họ và tên</label>
-                            <input type="text" id="add-fullname" name="fullname" placeholder="VD: Nguyễn Văn A">
-                        </div>
-                        <div class="form-group">
-                            <label for="add-email">Email</label>
-                            <input type="email" id="add-email" name="email" placeholder="user@sci.edu.vn" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="add-role">Vai trò</label>
-                            <select id="add-role" name="role">
-                                <option value="thanh_vien">Thành viên HĐKHCN</option>
-                                <option value="thu_ky">Thư ký HĐKHCN</option>
-                                <option value="chu_tich">Chủ tịch HĐKHCN</option>
-                            </select>
-                        </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start;" class="admin-role-dual-grid">
+                <div>
+                    <div id="msg" class="msg"></div>
+                    <div class="card add-role-card">
+                        <h3>Vai trò đơn (tài khoản mới / ghi đè)</h3>
+                        <form id="form-add-role" class="add-role-form">
+                            <div class="form-group">
+                                <label for="add-fullname">Họ và tên</label>
+                                <input type="text" id="add-fullname" name="fullname" placeholder="VD: Nguyễn Văn A">
+                            </div>
+                            <div class="form-group">
+                                <label for="add-email">Email</label>
+                                <input type="email" id="add-email" name="email" placeholder="user@sci.edu.vn" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="add-academic">Học hàm học vị (chỉ cần cho Tổ thẩm định TC)</label>
+                                <input type="text" id="add-academic" name="academicTitle" placeholder="VD: PGS.TS, TS, ThS">
+                            </div>
+                            <div class="form-group">
+                                <label for="add-role">Vai trò</label>
+                                <select id="add-role" name="role">
+                                    <option value="thanh_vien">Thành viên HĐKHCN</option>
+                                    <option value="thu_ky">Thư ký HĐKHCN</option>
+                                    <option value="chu_tich">Chủ tịch HĐKHCN</option>
+                                    <option value="totruong_tham_dinh_tc">Tổ trưởng Tổ thẩm định TC</option>
+                                    <option value="thanh_vien_tham_dinh_tc">Thành viên Tổ thẩm định TC</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="add-password">Mật khẩu (chỉ khi thêm tài khoản mới)</label>
+                                <input type="text" id="add-password" name="password" placeholder="Để trống = chưa kích hoạt (user tự đặt qua Đăng ký); ≥6 ký tự = kích hoạt ngay" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
+                            </div>
+                            <div class="form-group form-group-btn">
+                                <button type="submit" class="btn-submit-role" id="btn-add-role">Thêm / Cấp vai trò</button>
+                                <button type="button" class="btn-send-email" id="btn-send-email">Gửi email thông báo</button>
+                            </div>
+                        </form>
                     </div>
-                    <div class="form-row">
+                </div>
+                <div>
+                    <div id="msg-module-admin" class="msg"></div>
+                    <div class="card add-role-card" id="madmin-add-role-card">
+                        <h3>Vai trò kép (không mất vai trò hệ thống)</h3>
                         <div class="form-group">
-                            <label for="add-password">Mật khẩu (chỉ khi thêm tài khoản mới)</label>
-                            <input type="text" id="add-password" name="password" placeholder="Để trống = chưa kích hoạt (user tự đặt qua Đăng ký); ≥6 ký tự = kích hoạt ngay" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
+                            <label for="madmin-email">Email tài khoản</label>
+                            <input type="email" id="madmin-email" placeholder="user@sci.edu.vn" list="madmin-email-list" autocomplete="off">
+                            <datalist id="madmin-email-list"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="madmin-current-role">Vai trò hệ thống hiện tại (không đổi)</label>
+                            <input type="text" id="madmin-current-role" disabled placeholder="Nhập/chọn email để xem">
+                        </div>
+                        <div class="form-group">
+                            <label>Vai trò HĐKHCN/Thẩm định phụ (chọn 0-nhiều, thay thế toàn bộ lựa chọn cũ)</label>
+                            <div id="madmin-role-checks" style="display:flex;flex-wrap:wrap;gap:14px;margin-top:6px;"></div>
                         </div>
                         <div class="form-group form-group-btn">
-                            <button type="submit" class="btn-submit-role" id="btn-add-role">Thêm / Cấp vai trò</button>
-                            <button type="button" class="btn-send-email" id="btn-send-email">Gửi email thông báo</button>
+                            <button type="button" class="btn-submit-role" id="btn-madmin-save">Lưu vai trò phụ</button>
                         </div>
                     </div>
-                </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Danh sách thành viên Hội đồng KHCN (vai trò đơn)</h3>
+                <div id="council-table-wrap">
+                    <div class="empty-state">Đang tải...</div>
+                </div>
             </div>
             <div class="card">
-                <h3>Danh sách thành viên Hội đồng KHCN</h3>
-                <div id="council-table-wrap">
+                <h3>Danh sách thành viên Tổ thẩm định tài chính (vai trò đơn)</h3>
+                <div id="budget-team-table-wrap">
+                    <div class="empty-state">Đang tải...</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Danh sách vai trò kép đã cấp</h3>
+                <div id="madmin-table-wrap">
                     <div class="empty-state">Đang tải...</div>
                 </div>
             </div>
             <div class="card">
                 <h3>Danh sách nghiên cứu viên</h3>
                 <div id="researchers-table-wrap">
-                    <div class="empty-state">Đang tải...</div>
-                </div>
-            </div>
-            </section>
-
-            <!-- PHẦN 2: TỔ THẨM ĐỊNH TÀI CHÍNH -->
-            <section id="section-budget" class="section-block section-budget">
-            <h2 class="page-title">💰 Phần 2: Tổ thẩm định tài chính</h2>
-            <div class="method-card">
-                <h3>Phương thức cấp vai trò Tổ thẩm định TC</h3>
-                <ol class="method-steps">
-                    <li>Thêm thành viên Tổ thẩm định tài chính: nhập <strong>Email</strong>, <strong>Họ và tên</strong>, <strong>Học hàm học vị</strong> (VD: PGS.TS, TS, ThS...), chọn <strong>Vai trò</strong> (Tổ trưởng hoặc Thành viên).</li>
-                    <li>Vai trò: <strong>Tổ trưởng Tổ thẩm định TC</strong>, <strong>Thành viên Tổ thẩm định TC</strong>.</li>
-                    <li>Thành viên Tổ thẩm định TC có quyền nộp phiếu thẩm định dự toán (Bước 4A) trong quy trình đề tài cấp Viện.</li>
-                </ol>
-            </div>
-            <div id="msg-budget" class="msg"></div>
-            <div class="card add-role-card">
-                <h3>Thêm / Cấp vai trò thành viên Tổ thẩm định tài chính</h3>
-                <form id="form-add-budget-member" class="add-role-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="add-budget-fullname">Họ và tên</label>
-                            <input type="text" id="add-budget-fullname" name="fullname" placeholder="VD: Nguyễn Văn A">
-                        </div>
-                        <div class="form-group">
-                            <label for="add-budget-email">Email</label>
-                            <input type="email" id="add-budget-email" name="email" placeholder="user@sci.edu.vn" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="add-budget-academic">Học hàm học vị</label>
-                            <input type="text" id="add-budget-academic" name="academicTitle" placeholder="VD: PGS.TS, TS, ThS">
-                        </div>
-                        <div class="form-group">
-                            <label for="add-budget-role">Vai trò</label>
-                            <select id="add-budget-role" name="role">
-                                <option value="totruong_tham_dinh_tc">Tổ trưởng Tổ thẩm định TC</option>
-                                <option value="thanh_vien_tham_dinh_tc">Thành viên Tổ thẩm định TC</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="add-budget-password">Mật khẩu (chỉ khi thêm tài khoản mới)</label>
-                            <input type="text" id="add-budget-password" name="password" placeholder="Để trống = chưa kích hoạt; ≥6 ký tự = kích hoạt ngay" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
-                        </div>
-                        <div class="form-group form-group-btn">
-                            <button type="submit" class="btn-submit-role" id="btn-add-budget">Thêm / Cấp vai trò</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="card">
-                <h3>Danh sách thành viên Tổ thẩm định tài chính</h3>
-                <div id="budget-team-table-wrap">
                     <div class="empty-state">Đang tải...</div>
                 </div>
             </div>
@@ -834,6 +819,162 @@
             return (email || '').toLowerCase().endsWith(ALLOWED_DOMAIN);
         }
 
+        // ===== QUẢN TRỊ MODULE: vai trò HĐKHCN "phụ" (council_role_grants) — cộng thêm, không đụng users.role =====
+        const MADMIN_ROLE_TOKENS = ['chu_tich', 'thu_ky', 'thanh_vien', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
+        let madminUsersCache = [];
+        let madminGrantsCache = [];
+
+        function madminEsc(val) {
+            if (val == null) return '';
+            return String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function madminRoleLabel(r) {
+            return roleLabels[r] || r || '';
+        }
+
+        function madminRenderChecks(selectedRoles) {
+            const wrap = document.getElementById('madmin-role-checks');
+            if (!wrap) return;
+            const sel = new Set(selectedRoles || []);
+            wrap.innerHTML = MADMIN_ROLE_TOKENS.map(function (r) {
+                const checked = sel.has(r) ? ' checked' : '';
+                return '<label style="display:flex;align-items:center;gap:6px;font-weight:normal;">'
+                    + '<input type="checkbox" class="madmin-role-cb" value="' + r + '"' + checked + '> '
+                    + madminEsc(madminRoleLabel(r)) + '</label>';
+            }).join('');
+        }
+
+        async function madminLoadUsers() {
+            try {
+                const res = await fetch(apiBase + '/api/admin/users', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json().catch(function () { return {}; });
+                madminUsersCache = data.users || data || [];
+                const list = document.getElementById('madmin-email-list');
+                if (list) {
+                    list.innerHTML = madminUsersCache
+                        .filter(function (u) { return canAssignCouncilRole(u.email); })
+                        .map(function (u) { return '<option value="' + madminEsc(u.email) + '">' + madminEsc(u.fullname || '') + '</option>'; })
+                        .join('');
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        async function madminLoadGrants() {
+            try {
+                const res = await fetch(apiBase + '/api/admin/council-role-grants', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json().catch(function () { return {}; });
+                madminGrantsCache = data.data || [];
+            } catch (e) {
+                madminGrantsCache = [];
+            }
+        }
+
+        function madminGrantsForUserId(userId) {
+            return madminGrantsCache.filter(function (g) { return Number(g.user_id) === Number(userId); }).map(function (g) { return g.role; });
+        }
+
+        async function madminOnEmailChange() {
+            const emailInput = document.getElementById('madmin-email');
+            const currentRoleInput = document.getElementById('madmin-current-role');
+            const email = (emailInput.value || '').trim().toLowerCase();
+            const u = madminUsersCache.find(function (x) { return (x.email || '').toLowerCase() === email; });
+            if (!u) {
+                if (currentRoleInput) currentRoleInput.value = '';
+                madminRenderChecks([]);
+                return;
+            }
+            if (currentRoleInput) currentRoleInput.value = madminRoleLabel((u.role || '').toLowerCase()) + ' (vai trò hệ thống)';
+            await madminLoadGrants();
+            madminRenderChecks(madminGrantsForUserId(u.id));
+        }
+
+        async function madminSave() {
+            const msg = document.getElementById('msg-module-admin');
+            const emailInput = document.getElementById('madmin-email');
+            const email = (emailInput.value || '').trim().toLowerCase();
+            const u = madminUsersCache.find(function (x) { return (x.email || '').toLowerCase() === email; });
+            if (!u) {
+                if (msg) { msg.textContent = 'Không tìm thấy tài khoản với email này (kiểm tra đã đúng email trong hệ thống chưa).'; msg.className = 'msg error'; }
+                return;
+            }
+            if (!canAssignCouncilRole(u.email)) {
+                if (msg) { msg.textContent = 'Chỉ tài khoản @sci.edu.vn mới được gán vai trò HĐKHCN.'; msg.className = 'msg error'; }
+                return;
+            }
+            const roles = Array.from(document.querySelectorAll('.madmin-role-cb:checked')).map(function (cb) { return cb.value; });
+            try {
+                const res = await fetch(apiBase + '/api/admin/council-role-grants/' + u.id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ roles: roles })
+                });
+                const data = await res.json().catch(function () { return {}; });
+                if (!res.ok) {
+                    if (msg) { msg.textContent = data.message || 'Lỗi khi lưu vai trò phụ.'; msg.className = 'msg error'; }
+                    return;
+                }
+                if (msg) { msg.textContent = 'Đã lưu vai trò HĐKHCN phụ cho ' + email + '.'; msg.className = 'msg success'; }
+                await madminLoadGrants();
+                madminRenderTable();
+            } catch (e) {
+                if (msg) { msg.textContent = 'Lỗi kết nối.'; msg.className = 'msg error'; }
+            }
+        }
+
+        function madminRenderTable() {
+            const wrap = document.getElementById('madmin-table-wrap');
+            if (!wrap) return;
+            if (!madminGrantsCache.length) {
+                wrap.innerHTML = '<div class="empty-state">Chưa có vai trò HĐKHCN phụ nào được cấp.</div>';
+                return;
+            }
+            const byUser = {};
+            madminGrantsCache.forEach(function (g) {
+                if (!byUser[g.user_id]) byUser[g.user_id] = { email: g.email, fullname: g.fullname, system_role: g.system_role, roles: [] };
+                byUser[g.user_id].roles.push(g.role);
+            });
+            let html = '<table><thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò hệ thống</th><th>Vai trò HĐKHCN phụ</th><th>Thao tác</th></tr></thead><tbody>';
+            Object.keys(byUser).forEach(function (uid) {
+                const row = byUser[uid];
+                html += '<tr><td>' + madminEsc(row.email) + '</td><td>' + madminEsc(row.fullname || '') + '</td><td>'
+                    + madminEsc(madminRoleLabel((row.system_role || '').toLowerCase())) + '</td><td>'
+                    + madminEsc(row.roles.map(madminRoleLabel).join(', ')) + '</td>'
+                    + '<td><button type="button" class="btn-send-email madmin-clear-btn" data-uid="' + uid + '" data-email="' + madminEsc(row.email) + '">Gỡ hết</button></td></tr>';
+            });
+            html += '</tbody></table>';
+            wrap.innerHTML = html;
+            wrap.querySelectorAll('.madmin-clear-btn').forEach(function (btn) {
+                btn.addEventListener('click', async function () {
+                    if (!confirm('Gỡ toàn bộ vai trò HĐKHCN phụ của ' + btn.getAttribute('data-email') + '?')) return;
+                    await fetch(apiBase + '/api/admin/council-role-grants/' + btn.getAttribute('data-uid'), {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ roles: [] })
+                    });
+                    await madminLoadGrants();
+                    madminRenderTable();
+                });
+            });
+        }
+
+        async function initModuleAdminSection() {
+            if (!isAdmin) return;
+            madminRenderChecks([]);
+            await madminLoadUsers();
+            await madminLoadGrants();
+            madminRenderTable();
+            const emailInput = document.getElementById('madmin-email');
+            if (emailInput) emailInput.addEventListener('change', madminOnEmailChange);
+            const saveBtn = document.getElementById('btn-madmin-save');
+            if (saveBtn) saveBtn.addEventListener('click', madminSave);
+            if (!isMasterAdmin) {
+                const card = document.getElementById('madmin-add-role-card');
+                if (card) card.querySelectorAll('input, button').forEach(function (el) { el.disabled = true; });
+            }
+        }
+        initModuleAdminSection();
+
         async function loadUsers() {
             const councilWrap = document.getElementById('council-table-wrap');
             const researchersWrap = document.getElementById('researchers-table-wrap');
@@ -986,7 +1127,7 @@
             }
         }
         async function deleteBudgetMember(email) {
-            const msgEl = document.getElementById('msg-budget');
+            const msgEl = document.getElementById('msg');
             if (msgEl) { msgEl.style.display = 'block'; msgEl.textContent = 'Đang xóa...'; msgEl.className = 'msg'; }
             try {
                 const res = await fetch(apiBase + '/api/admin/budget-appraisal-team/' + encodeURIComponent(email), {
@@ -1010,7 +1151,7 @@
             }
         }
         async function saveBudgetMember(email, fullname, academicTitle, role) {
-            const msgEl = document.getElementById('msg-budget');
+            const msgEl = document.getElementById('msg');
             if (msgEl) { msgEl.style.display = 'block'; msgEl.textContent = 'Đang lưu...'; msgEl.className = 'msg'; }
             try {
                 const res = await fetch(apiBase + '/api/admin/budget-appraisal-team', {
@@ -2055,23 +2196,25 @@
             });
 
             var lastTempPassword = null;
+            const BUDGET_TEAM_ROLES = ['totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
             document.getElementById('form-add-role').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 const msgEl = document.getElementById('msg');
                 const btn = document.getElementById('btn-add-role');
                 const email = document.getElementById('add-email').value.trim();
                 const fullname = document.getElementById('add-fullname').value.trim();
+                const academicTitle = document.getElementById('add-academic').value.trim();
                 const role = document.getElementById('add-role').value;
                 const passwordTrim = (document.getElementById('add-password').value || '').trim();
                 if (!email) { msgEl.textContent = 'Vui lòng nhập email.'; msgEl.className = 'msg error'; return; }
-                if (!isMasterAdmin) { msgEl.textContent = 'Chỉ Master Admin mới được cấp vai trò thành viên Hội đồng KHCN.'; msgEl.className = 'msg error'; return; }
+                if (!isMasterAdmin) { msgEl.textContent = 'Chỉ Master Admin mới được cấp vai trò HĐKHCN / Tổ thẩm định TC.'; msgEl.className = 'msg error'; return; }
                 msgEl.className = 'msg'; msgEl.textContent = '';
                 btn.disabled = true;
                 try {
                     const res = await fetch(apiBase + '/api/admin/users', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                        body: JSON.stringify({ email, fullname, role, password: passwordTrim || undefined })
+                        body: JSON.stringify({ email, fullname, role, academicTitle: academicTitle || undefined, password: passwordTrim || undefined })
                     });
                     const data = await res.json().catch(() => ({}));
                     if (res.ok) {
@@ -2086,8 +2229,10 @@
                         }
                         document.getElementById('add-email').value = '';
                         document.getElementById('add-fullname').value = '';
+                        document.getElementById('add-academic').value = '';
                         document.getElementById('add-password').value = '';
                         loadUsers();
+                        if (BUDGET_TEAM_ROLES.indexOf(role) >= 0) loadBudgetTeam();
                     } else {
                         msgEl.textContent = data.message || 'Thao tác thất bại.';
                         msgEl.className = 'msg error';
@@ -2095,49 +2240,6 @@
                 } catch (err) {
                     msgEl.textContent = 'Lỗi kết nối.';
                     msgEl.className = 'msg error';
-                }
-                btn.disabled = false;
-            });
-
-            document.getElementById('form-add-budget-member').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const msgEl = document.getElementById('msg-budget');
-                const btn = document.getElementById('btn-add-budget');
-                const email = document.getElementById('add-budget-email').value.trim();
-                const fullname = document.getElementById('add-budget-fullname').value.trim();
-                const academicTitle = document.getElementById('add-budget-academic').value.trim();
-                const role = document.getElementById('add-budget-role').value;
-                const passwordTrim = (document.getElementById('add-budget-password').value || '').trim();
-                if (!email) { msgEl.textContent = 'Vui lòng nhập email.'; msgEl.className = 'msg error'; msgEl.style.display = 'block'; return; }
-                msgEl.className = 'msg'; msgEl.textContent = '';
-                btn.disabled = true;
-                try {
-                    const res = await fetch(apiBase + '/api/admin/users', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                        body: JSON.stringify({ email, fullname, role, academicTitle: academicTitle || undefined, password: passwordTrim || undefined })
-                    });
-                    const data = await res.json().catch(() => ({}));
-                    msgEl.style.display = 'block';
-                    if (res.ok) {
-                        msgEl.textContent = data.message || 'Đã thêm thành viên Tổ thẩm định tài chính.';
-                        msgEl.className = 'msg success';
-                        if (data.activated === false) {
-                            msgEl.textContent = data.message || 'Đã thêm tài khoản chưa kích hoạt — user vào trang Đăng ký để đặt mật khẩu.';
-                        }
-                        document.getElementById('add-budget-email').value = '';
-                        document.getElementById('add-budget-fullname').value = '';
-                        document.getElementById('add-budget-academic').value = '';
-                        document.getElementById('add-budget-password').value = '';
-                        loadBudgetTeam();
-                    } else {
-                        msgEl.textContent = data.message || 'Thao tác thất bại.';
-                        msgEl.className = 'msg error';
-                    }
-                } catch (err) {
-                    msgEl.textContent = 'Lỗi kết nối.';
-                    msgEl.className = 'msg error';
-                    msgEl.style.display = 'block';
                 }
                 btn.disabled = false;
             });

@@ -357,6 +357,10 @@
           <div><b>Đơn vị chủ trì:</b> ${escapeHtml(doc.assigned_unit_id || "")}</div>
           <div><b>Người soạn thảo:</b> ${escapeHtml(doc.assigned_to_id || "")}</div>
         </div>
+        <div class="wf-row wf-row-1">
+          <div><b>Lý do ban hành:</b> ${escapeHtml(doc.reason || "Chưa nhập")}</div>
+          <div><b>Nội dung đề xuất sơ bộ:</b> ${escapeHtml(doc.proposal_summary || "Chưa nhập")}</div>
+        </div>
       </section>
 
       <section class="wf-block">
@@ -897,12 +901,15 @@
         if (!title) throw new Error("Thiếu tiêu đề.");
         const docType = normalizeDocType(fd.get("doc_type")) || "quy_che";
         setFormLoading(el.createForm, true, "Đang tạo...");
-        await doJson("POST", "/api/documents", {
+        const created = await doJson("POST", "/api/documents", {
           title,
           doc_type: docType,
           reason: String(fd.get("reason") || "").trim(),
           proposalSummary: String(fd.get("proposalSummary") || "").trim(),
         });
+        if (created && created.data && created.data.id) {
+          state.selectedId = Number(created.data.id);
+        }
         el.createForm.reset();
         await loadDocuments();
         await loadStats();

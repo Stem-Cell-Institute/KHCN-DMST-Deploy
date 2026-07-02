@@ -124,6 +124,11 @@
     });
 
     load();
+    // Tự làm mới số lượng thông báo chưa đọc theo chu kỳ, tránh badge bị "đứng" cả phiên làm việc.
+    var pollTimer = setInterval(load, 60000);
+    window.addEventListener('beforeunload', function () {
+      clearInterval(pollTimer);
+    });
   }
 
   if (document.readyState === 'loading') {

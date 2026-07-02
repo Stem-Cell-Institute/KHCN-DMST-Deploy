@@ -47,6 +47,16 @@
         </div>
       </div>
       <div id="msg"></div>
+      <div id="import-errors" style="display:none;margin:0 0 16px;padding:12px 14px;border:1px solid #f3c2c2;background:#fff5f5;border-radius:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <strong id="import-errors-title" style="color:#b42318;"></strong>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="eq-btn eq-btn--ghost eq-btn-sm" id="btn-download-import-errors">Tải danh sách lỗi (.txt)</button>
+            <button type="button" class="eq-btn eq-btn--ghost eq-btn-sm" id="btn-close-import-errors">Đóng</button>
+          </div>
+        </div>
+        <ul id="import-errors-list" style="max-height:220px;overflow:auto;margin:10px 0 0;padding-left:20px;font-size:13px;color:#7a271a;"></ul>
+      </div>
       <div class="eq-overview" id="eq-overview">
         <article class="eq-overview-card">
           <span class="eq-overview-card__label">Tổng thiết bị (kết quả lọc)</span>
@@ -88,9 +98,16 @@
         <label>Tìm nhanh
           <input type="search" id="f-q" placeholder="Tên, mã, serial…" />
         </label>
+        <label>Sự cố
+          <select id="f-incident">
+            <option value="">Tất cả</option>
+            <option value="any">Đã từng có sự cố</option>
+            <option value="open">Đang có sự cố mở</option>
+          </select>
+        </label>
         <button type="button" class="eq-btn eq-btn--ghost" id="btn-filter">Lọc / Tải lại</button>
         <button type="button" class="eq-btn eq-btn--primary" id="btn-import-excel" style="display:none;">Import Excel</button>
-        <a href="/public/equipment/import-template.html" class="eq-btn eq-btn--ghost" id="btn-import-template" target="_blank" style="display:none;">File Mâu</a>
+        <a href="/public/equipment/import-template.html" class="eq-btn eq-btn--ghost" id="btn-import-template" target="_blank" style="display:none;">File Mẫu</a>
         <button type="button" class="eq-btn eq-btn--ghost" id="btn-select-all-filtered" style="display:none;">Chọn tất cả kết quả lọc</button>
         <button type="button" class="eq-btn" id="btn-export-selected" style="display:none;">Xuất Excel đã chọn</button>
         <span id="selected-count" style="display:none;color:var(--eq-muted);font-size:.88rem;">Đã chọn: 0</span>
@@ -106,6 +123,7 @@
               <th>Tên</th>
               <th>Model</th>
               <th>Trạng thái</th>
+              <th>Sự cố</th>
               <th>Hiển thị / QR</th>
               <th id="th-master-delete" class="nav-hidden">Thao tác</th>
             </tr>
@@ -136,6 +154,13 @@
   var canBulkExport = false;
   var selectedIds = {};
   var currentRows = [];
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
   function badgeClass(st) {
     var m = { active: 'eq-badge--active', maintenance: 'eq-badge--maintenance', broken: 'eq-badge--broken', retired: 'eq-badge--retired' };
     return 'eq-badge ' + (m[st] || 'eq-badge--retired');
@@ -148,6 +173,40 @@
     if (!text) { el.innerHTML = ''; return; }
     el.innerHTML = '<div class="eq-msg ' + (err ? 'eq-msg--err' : 'eq-msg--ok') + '">' + text + '</div>';
   }
+  var lastImportErrors = [];
+  function showImportErrors(title, list) {
+    lastImportErrors = list || [];
+    var panel = document.getElementById('import-errors');
+    var titleEl = document.getElementById('import-errors-title');
+    var listEl = document.getElementById('import-errors-list');
+    if (!panel || !titleEl || !listEl) return;
+    if (!lastImportErrors.length) { panel.style.display = 'none'; return; }
+    titleEl.textContent = title + ' (' + lastImportErrors.length + ')';
+    listEl.innerHTML = lastImportErrors.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+    panel.style.display = 'block';
+  }
+  function hideImportErrors() {
+    lastImportErrors = [];
+    var panel = document.getElementById('import-errors');
+    if (panel) panel.style.display = 'none';
+  }
+  (function initImportErrorsPanel() {
+    var closeBtn = document.getElementById('btn-close-import-errors');
+    if (closeBtn) closeBtn.addEventListener('click', hideImportErrors);
+    var dlBtn = document.getElementById('btn-download-import-errors');
+    if (dlBtn) dlBtn.addEventListener('click', function () {
+      if (!lastImportErrors.length) return;
+      var blob = new Blob([lastImportErrors.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'loi-import-thiet-bi-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  })();
   function syncMasterAdminFlag() {
     if (!window.equipmentApi || !window.equipmentApi.getJson) return Promise.resolve();
     return window.equipmentApi.getJson('/module/me').then(function (r) {
@@ -268,6 +327,7 @@
     var dept = document.getElementById('f-dept').value.trim();
     var type = document.getElementById('f-type').value.trim();
     var q = document.getElementById('f-q').value.trim();
+    var inc = document.getElementById('f-incident') ? document.getElementById('f-incident').value : '';
     loadOverview(st, dept, type, q);
     showMsg('');
     var sk = document.getElementById('eq-skeleton');
@@ -296,6 +356,7 @@
     if (st) qs += '&status=' + encodeURIComponent(st);
     if (dept) qs += '&department_id=' + encodeURIComponent(dept);
     if (type) qs += '&asset_group=' + encodeURIComponent(type);
+    if (inc) qs += '&has_incident=' + encodeURIComponent(inc);
     window.equipmentApi.getJson(qs).then(function (r) {
       if (sk) sk.classList.add('skeleton-hidden');
       if (r.status === 401) {
@@ -314,7 +375,7 @@
     tbody.innerHTML = '';
     currentRows = rows || [];
     var hasActionCol = isMasterAdmin || canEditEquipment;
-    var colSpan = (canBulkExport ? 1 : 0) + (hasActionCol ? 7 : 6);
+    var colSpan = (canBulkExport ? 1 : 0) + (hasActionCol ? 8 : 7);
     var pageNum = Number((meta && meta.page) || 1);
     var limitNum = Number((meta && meta.limit) || 20);
     var baseIndex = (pageNum - 1) * limitNum;
@@ -342,9 +403,18 @@
         '<div class="eq-row-qr-wrap">' +
           '<span class="' + visCls + '">' + (e.profile_visibility || '—') + '</span>' +
           '<a class="eq-row-qr-link" href="' + qrUrl + '" target="_blank" onclick="event.stopPropagation()">' +
-            '<img class="eq-row-qr" src="' + qrUrl + '" alt="QR ' + (e.equipment_code || '') + '" loading="lazy"/>' +
+            '<img class="eq-row-qr" src="' + qrUrl + '" alt="QR ' + esc(e.equipment_code || '') + '" loading="lazy"/>' +
           '</a>' +
         '</div>';
+      var incSum = e.incident_summary || { total: 0, open: 0 };
+      var incCell;
+      if (incSum.open > 0) {
+        incCell = '<span class="eq-badge eq-badge--broken" title="Có sự cố đang xử lý">' + esc(incSum.open) + ' đang mở</span>';
+      } else if (incSum.total > 0) {
+        incCell = '<span class="eq-badge eq-badge--maintenance" title="Toàn bộ sự cố đã xử lý">' + esc(incSum.total) + ' đã xử lý</span>';
+      } else {
+        incCell = '<span style="color:var(--eq-muted);">—</span>';
+      }
       var tr = document.createElement('tr');
       tr.style.cursor = 'pointer';
       tr.onclick = function () { goDetail(e.id); };
@@ -353,10 +423,11 @@
           ? '<td><input type="checkbox" class="eq-row-select" data-row-id="' + rid + '"' + (checked ? ' checked' : '') + ' onclick="event.stopPropagation()"/></td>'
           : '') +
         '<td>' + stt + '</td>' +
-        '<td>' + (e.equipment_code || '') + '</td>' +
-        '<td>' + (e.name || '') + '</td>' +
-        '<td>' + (e.model || '—') + '</td>' +
-        '<td><span class="' + badgeClass(e.status) + '">' + (e.status || '') + '</span></td>' +
+        '<td>' + esc(e.equipment_code || '') + '</td>' +
+        '<td>' + esc(e.name || '') + '</td>' +
+        '<td>' + esc(e.model || '—') + '</td>' +
+        '<td><span class="' + badgeClass(e.status) + '">' + esc(e.status || '') + '</span></td>' +
+        '<td>' + incCell + '</td>' +
         '<td>' + qrCell + '</td>' +
         (hasActionCol
           ? '<td style="white-space:nowrap;">' +
@@ -369,7 +440,7 @@
               ? '<button type="button" class="eq-btn eq-btn--danger eq-btn-sm" data-del-id="' +
                 e.id +
                 '" data-del-code="' +
-                (e.equipment_code || '') +
+                esc(e.equipment_code || '') +
                 '">Xóa</button>'
               : '') +
             '</td>'
@@ -554,10 +625,17 @@
     }
     var file = e.target.files[0];
     if (!file) return;
-    
+
+    var MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_IMPORT_FILE_BYTES) {
+      showMsg('File quá lớn (' + (file.size / 1024 / 1024).toFixed(1) + 'MB). Giới hạn tối đa 10MB/lần import.', true);
+      e.target.value = '';
+      return;
+    }
+
     var fileName = file.name.toLowerCase();
     if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls') && !fileName.endsWith('.csv')) {
-      showMsg('Vui lòng chon file Excel (.xlsx, .xls) hoac CSV (.csv)', true);
+      showMsg('Vui lòng chọn file Excel (.xlsx, .xls) hoặc CSV (.csv)', true);
       return;
     }
     var isExcelBinary = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
@@ -577,7 +655,7 @@
         var jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
         
         if (jsonData.length === 0) {
-          showMsg('File trông, không có dâ liêu', true);
+          showMsg('File trống, không có dữ liệu', true);
           return;
         }
         
@@ -586,7 +664,7 @@
         
       } catch (error) {
         console.error('Excel read error:', error);
-        showMsg('Lôc dôc file Excel: ' + error.message, true);
+        showMsg('Lỗi đọc file Excel: ' + error.message, true);
       }
     };
     
@@ -595,7 +673,7 @@
   
   function processExcelData(jsonData) {
     if (jsonData.length < 2) {
-      showMsg('File phai có tiêuêu và ít nhât 1 dòng dâ liêu', true);
+      showMsg('File phải có tiêu đề và ít nhất 1 dòng dữ liệu', true);
       return;
     }
     
@@ -738,7 +816,7 @@
     }
 
     if (missingColumns.length > 0) {
-      showMsg('Thiêu các côt bât buôc: ' + missingColumns.join(', '), true);
+      showMsg('Thiếu các cột bắt buộc: ' + missingColumns.join(', '), true);
       return;
     }
     
@@ -793,7 +871,7 @@
       if (hasData) {
         // Validate required fields
         if (!equipment.name) {
-          errors.push('Dòng ' + (i + 1) + ': Thiêu thông tin bât buôc');
+          errors.push('Dòng ' + (i + 1) + ': Thiếu thông tin bắt buộc');
           continue;
         }
         
@@ -853,9 +931,11 @@
     }
     
     if (errors.length > 0) {
-      showMsg('Có ' + errors.length + ' lôi: ' + errors.slice(0, 3).join('; '), true);
+      showImportErrors('Bỏ qua ' + errors.length + ' dòng lỗi khi đọc file', errors);
+    } else {
+      hideImportErrors();
     }
-    
+
     if (equipmentData.length > 0) {
       try {
         var groupCounts = {};
@@ -870,7 +950,7 @@
       } catch (_) {}
       importEquipmentData(equipmentData);
     } else {
-      showMsg('Không có dâ liêu hôn lê de import', true);
+      showMsg('Không có dữ liệu hợp lệ để import', true);
     }
   }
   
@@ -891,27 +971,36 @@
   }
   
   function importEquipmentData(equipmentData) {
-    showMsg('Dang import ' + equipmentData.length + ' thiêt bi...', false);
-    
+    showMsg('Đang import ' + equipmentData.length + ' thiết bị...', false);
+
+    // Giữ lại lỗi đọc file (nếu có) từ processExcelData, cộng dồn thêm lỗi từ API khi import.
+    var rowErrorDetails = lastImportErrors.slice();
+
     // Import in batches
     var batchSize = 10;
     var currentBatch = 0;
     var totalImported = 0;
     var totalErrors = 0;
-    
+
     function importBatch() {
       var start = currentBatch * batchSize;
       var end = Math.min(start + batchSize, equipmentData.length);
       var batch = equipmentData.slice(start, end);
-      
+
       if (batch.length === 0) {
-        showMsg('Hoàn thành import: ' + totalImported + ' thành công, ' + totalErrors + ' lôi', totalErrors === 0);
+        showMsg('Hoàn thành import: ' + totalImported + ' thành công, ' + totalErrors + ' lỗi', totalErrors === 0);
+        if (rowErrorDetails.length) {
+          showImportErrors('Chi tiết lỗi import', rowErrorDetails);
+        } else {
+          hideImportErrors();
+        }
         load(); // Refresh the list
         return;
       }
-      
+
       // Send batch to API
       var promises = batch.map(function(equipment) {
+        var label = equipment.equipment_code || equipment.name || '(không rõ)';
         return window.equipmentApi.sendJson('POST', '/', equipment)
           .then(function(response) {
             if (response.ok) {
@@ -919,27 +1008,30 @@
               return { success: true, equipment: equipment };
             } else {
               totalErrors++;
-              return { success: false, equipment: equipment, error: response.data?.message || 'Lôi không xác dinh' };
+              var reason = (response.data && response.data.message) || 'Lỗi không xác định';
+              rowErrorDetails.push(label + ': ' + reason);
+              return { success: false, equipment: equipment, error: reason };
             }
           })
           .catch(function(error) {
             totalErrors++;
+            rowErrorDetails.push(label + ': ' + error.message);
             return { success: false, equipment: equipment, error: error.message };
           });
       });
-      
+
       Promise.all(promises).then(function() {
         currentBatch++;
-        
+
         // Update progress
         var progress = Math.round((currentBatch * batchSize) / equipmentData.length * 100);
-        showMsg('Importing... ' + progress + '% (' + totalImported + ' thành công, ' + totalErrors + ' lôi)', false);
-        
+        showMsg('Đang import... ' + progress + '% (' + totalImported + ' thành công, ' + totalErrors + ' lỗi)', false);
+
         // Continue with next batch
         setTimeout(importBatch, 500);
       });
     }
-    
+
     importBatch();
   }
   

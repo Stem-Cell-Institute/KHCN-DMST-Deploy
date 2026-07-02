@@ -126,10 +126,13 @@ function createWorkflowNotificationHandler(deps) {
         if (ev.master_admins) emails.push(...userRepository.getMasterAdminEmails());
         const to = dedupeEmails(emails);
         if (!to.length) return null;
+        const details = [`Loại văn bản: ${docTypeLabel(record.doc_type)}`];
+        if (record.reason) details.push(`Lý do ban hành: ${record.reason}`);
+        if (record.proposal_summary) details.push(`Nội dung đề xuất sơ bộ: ${record.proposal_summary}`);
         const email = composeFormalEmail({
           greeting: 'Kính gửi Thầy/Cô,',
           paragraphs: [`Hồ sơ "${record.title || ''}" vừa được tạo thành công ở bước 1 của quy trình.`],
-          details: [`Loại văn bản: ${docTypeLabel(record.doc_type)}`],
+          details,
           link: documentLink(record.id),
           linkLabel: 'Xem chi tiết hồ sơ tại đường link sau:',
         });

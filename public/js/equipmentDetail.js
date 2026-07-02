@@ -29,6 +29,25 @@
       .replace(/"/g, '&quot;');
   }
 
+  /** fetch() thô (dùng khi cần gửi FormData/upload file) nhưng KHÔNG BAO GIỜ reject — mất mạng cũng
+   * trả về { ok:false, data:{message} } thay vì để promise bị reject không ai bắt (nút bị "treo"). */
+  function fetchJsonSafe(url, opts) {
+    return fetch(url, opts)
+      .then(function (x) {
+        return x
+          .json()
+          .catch(function () {
+            return {};
+          })
+          .then(function (j) {
+            return { ok: x.ok, status: x.status, data: j };
+          });
+      })
+      .catch(function (err) {
+        return { ok: false, status: 0, data: { message: 'Lỗi kết nối mạng: ' + (err && err.message ? err.message : 'không kết nối được máy chủ.') } };
+      });
+  }
+
   function fmtMoney(v) {
     if (v == null || v === '') return '—';
     var n = Number(v);
@@ -134,7 +153,7 @@
       '<table class="eq-table"><tbody>' +
       rows
         .map(function (r) {
-          return '<tr><th style="width:230px;">' + esc(r[0]) + '</th><td>' + (r[1] == null || r[1] === '' ? '—' : r[1]) + '</td></tr>';
+          return '<tr><th style="width:230px;">' + esc(r[0]) + '</th><td>' + (r[1] == null || r[1] === '' ? '—' : esc(r[1])) + '</td></tr>';
         })
         .join('') +
       '</tbody></table>';
@@ -219,8 +238,8 @@
   document.getElementById('qr-thumb').src = '/api/equipment/' + id + '/qr';
   document.getElementById('qr-thumb').style.display = 'inline-block';
 
-  var panels = ['info', 'docs', 'videos', 'logs', 'maint', 'incident'];
-  var restrictedViewerTabs = ['docs', 'videos', 'maint', 'incident', 'logs'];
+  var panels = ['info', 'docs', 'videos', 'logs', 'maint', 'loan', 'incident'];
+  var restrictedViewerTabs = ['docs', 'videos', 'maint', 'loan', 'incident', 'logs'];
 
   function activateTab(tabName) {
     if (!tabName) return;
@@ -413,25 +432,19 @@
           fd.append('file', f);
           fd.append('title', f.name.replace(/\.pdf$/i, ''));
           var t = localStorage.getItem('token');
-          fetch('/api/equipment/' + id + '/documents/' + docId + '/replace', {
+          fetchJsonSafe('/api/equipment/' + id + '/documents/' + docId + '/replace', {
             method: 'POST',
             headers: t ? { Authorization: 'Bearer ' + t } : {},
             body: fd,
             credentials: 'same-origin',
-          })
-            .then(function (x) {
-              return x.json().then(function (j) {
-                return { ok: x.ok, data: j };
-              });
-            })
-            .then(function (r) {
-              if (!r.ok) {
-                if (window.stimsToast) window.stimsToast((r.data && r.data.message) || 'Lỗi thay thế', false);
-              } else {
-                if (window.stimsToast) window.stimsToast('Đã thay thế phiên bản PDF', true);
-                load();
-              }
-            });
+          }).then(function (r) {
+            if (!r.ok) {
+              if (window.stimsToast) window.stimsToast((r.data && r.data.message) || 'Lỗi thay thế', false);
+            } else {
+              if (window.stimsToast) window.stimsToast('Đã thay thế phiên bản PDF', true);
+              load();
+            }
+          });
         };
         inp.click();
       };
@@ -474,16 +487,11 @@
     tv.querySelectorAll('[data-del-vid]').forEach(function (b) {
       b.onclick = function () {
         if (!confirm('Xóa video này?')) return;
-        fetch('/api/equipment/' + id + '/videos/' + b.getAttribute('data-del-vid'), {
+        fetchJsonSafe('/api/equipment/' + id + '/videos/' + b.getAttribute('data-del-vid'), {
           method: 'DELETE',
           headers: window.equipmentApi.authHeaders(false),
           credentials: 'same-origin',
         })
-          .then(function (x) {
-            return x.json().then(function (j) {
-              return { ok: x.ok, data: j };
-            });
-          })
           .then(function (x) {
             if (!x.ok) {
               if (window.stimsToast) window.stimsToast((x.data && x.data.message) || 'Lỗi', false);
@@ -519,6 +527,57 @@
         esc(m.next_due_date || '') +
         '</td>';
       tb.appendChild(tr);
+    });
+  }
+
+  function renderLoan(list) {
+    var tb = document.getElementById('tbody-loan');
+    var cur = document.getElementById('loan-current');
+    var rows = list || [];
+    var openLoan = rows.find(function (l) { return !l.returned_at; });
+    if (cur) {
+      if (openLoan) {
+        cur.innerHTML =
+          '<div style="padding:10px 14px;border-radius:8px;background:#fff7e6;border:1px solid #ffd591;">' +
+          '<strong>Đang được mượn</strong> bởi ' + esc(openLoan.borrower_name || openLoan.borrower_fullname || ('#' + openLoan.borrower_id)) +
+          (openLoan.expected_return_at ? ' — hẹn trả ' + esc(openLoan.expected_return_at) : '') +
+          '</div>';
+      } else {
+        cur.innerHTML = '<div style="padding:10px 14px;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;"><strong>Sẵn sàng</strong> — không có ai đang mượn.</div>';
+      }
+    }
+    var loanOutForm = document.getElementById('form-loan-out');
+    if (loanOutForm) {
+      loanOutForm.querySelectorAll('input, button').forEach(function (el) { el.disabled = !!openLoan; });
+    }
+    if (!tb) return;
+    tb.innerHTML = '';
+    rows.forEach(function (l) {
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + esc(l.borrower_name || l.borrower_fullname || (l.borrower_id ? '#' + l.borrower_id : '')) + '</td>' +
+        '<td>' + esc(l.purpose || '') + '</td>' +
+        '<td>' + esc(l.borrowed_at || '') + '</td>' +
+        '<td>' + esc(l.expected_return_at || '') + '</td>' +
+        '<td>' + esc(l.returned_at || '') + '</td>' +
+        '<td>' + (!l.returned_at ? '<button type="button" class="eq-btn eq-btn--ghost eq-btn-sm" data-return-loan="' + l.id + '">Ghi nhận trả</button>' : '') + '</td>';
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll('[data-return-loan]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var loanId = btn.getAttribute('data-return-loan');
+        var note = prompt('Ghi chú khi trả (tuỳ chọn):', '') || '';
+        window.equipmentApi
+          .sendJson('PUT', '/' + id + '/loans/' + loanId + '/return', { return_note: note })
+          .then(function (r) {
+            if (!r.ok) {
+              if (window.stimsToast) window.stimsToast((r.data && r.data.message) || 'Lỗi', false);
+              return;
+            }
+            if (window.stimsToast) window.stimsToast('Đã ghi nhận trả thiết bị.', true);
+            load();
+          });
+      });
     });
   }
 
@@ -801,11 +860,14 @@
       });
 
       renderMaint(r.data.maintenance);
+      renderLoan(r.data.loans);
       renderIncidents(r.data.incidents);
       updateIncidentTabAlert(r.data.incidents);
 
       var mm = document.getElementById('maint-manage');
       if (mm) mm.style.display = canManage && canSeeAdvancedTabs ? 'block' : 'none';
+      var lm = document.getElementById('loan-manage');
+      if (lm) lm.style.display = canManage && canSeeAdvancedTabs ? 'block' : 'none';
       var ia = document.getElementById('incident-admin');
       if (ia) ia.style.display = canManageIncidents && canSeeAdvancedTabs ? 'block' : 'none';
 
@@ -829,16 +891,11 @@
   var bsd = document.getElementById('btn-softdel');
   if (bsd) bsd.onclick = function () {
     if (!confirm('Đánh dấu thanh lý (retired)?')) return;
-    fetch('/api/equipment/' + id, {
+    fetchJsonSafe('/api/equipment/' + id, {
       method: 'DELETE',
       headers: window.equipmentApi.authHeaders(true),
       credentials: 'same-origin',
     })
-      .then(function (x) {
-        return x.json().then(function (j) {
-          return { ok: x.ok, data: j };
-        });
-      })
       .then(function (r) {
         if (!r.ok) {
           if (window.stimsToast) window.stimsToast((r.data && r.data.message) || 'Lỗi', false);
@@ -876,17 +933,12 @@
     fd.append('access_level', f.access_level.value);
     fd.append('notes', f.notes.value);
     var t = localStorage.getItem('token');
-    fetch('/api/equipment/' + id + '/documents', {
+    fetchJsonSafe('/api/equipment/' + id + '/documents', {
       method: 'POST',
       headers: t ? { Authorization: 'Bearer ' + t } : {},
       body: fd,
       credentials: 'same-origin',
     })
-      .then(function (x) {
-        return x.json().then(function (j) {
-          return { ok: x.ok, data: j };
-        });
-      })
       .then(function (r) {
         if (!r.ok) {
           if (window.stimsToast) window.stimsToast((r.data && r.data.message) || 'Upload lỗi', false);
@@ -991,6 +1043,34 @@
       });
   };
 
+  var flo = document.getElementById('form-loan-out');
+  if (flo) flo.onsubmit = function (ev) {
+    ev.preventDefault();
+    if (!canManage) return;
+    var f = ev.target;
+    var borrowerName = f.borrower_name.value.trim();
+    if (!borrowerName) {
+      if (window.stimsToast) window.stimsToast('Nhập tên người mượn', false);
+      return;
+    }
+    window.equipmentApi
+      .sendJson('POST', '/' + id + '/loans', {
+        borrower_id: f.borrower_id.value ? Number(f.borrower_id.value) : null,
+        borrower_name: borrowerName,
+        purpose: f.purpose.value || null,
+        expected_return_at: f.expected_return_at.value || null,
+      })
+      .then(function (r) {
+        if (!r.ok) {
+          if (window.stimsToast) window.stimsToast((r.data && r.data.message) || 'Lỗi', false);
+        } else {
+          if (window.stimsToast) window.stimsToast('Đã ghi nhận mượn thiết bị', true);
+          f.reset();
+          load();
+        }
+      });
+  };
+
   var boi = document.getElementById('btn-open-incident');
   if (boi) boi.onclick = function () {
     document.getElementById('modal-incident').hidden = false;
@@ -1033,17 +1113,12 @@
       fd.append('photos', files[i]);
     }
     var t = localStorage.getItem('token');
-    fetch('/api/equipment/' + id + '/incidents', {
+    fetchJsonSafe('/api/equipment/' + id + '/incidents', {
       method: 'POST',
       headers: t ? { Authorization: 'Bearer ' + t } : {},
       body: fd,
       credentials: 'same-origin',
     })
-      .then(function (x) {
-        return x.json().then(function (j) {
-          return { ok: x.ok, data: j };
-        });
-      })
       .then(function (r) {
         if (!r.ok) {
           if (window.stimsToast) window.stimsToast((r.data && r.data.message) || 'Lỗi gửi sự cố', false);
@@ -1117,17 +1192,12 @@
     }
     var hdr = window.equipmentApi.authHeaders(false);
     delete hdr['Content-Type'];
-    fetch('/api/equipment/' + id + '/incidents/' + incId + '/resolve', {
+    fetchJsonSafe('/api/equipment/' + id + '/incidents/' + incId + '/resolve', {
       method: 'PATCH',
       headers: hdr,
       credentials: 'same-origin',
       body: fd,
     })
-      .then(function (x) {
-        return x.json().then(function (j) {
-          return { ok: x.ok, data: j };
-        });
-      })
       .then(function (r) {
         if (!r.ok) {
           if (window.stimsToast) window.stimsToast((r.data && r.data.message) || 'Lỗi', false);

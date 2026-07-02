@@ -20,7 +20,9 @@ function parseRoles(value) {
     .filter(Boolean);
 }
 
-const DEV_MASTER_ADMIN_EMAIL = 'ntsinh0409@gmail.com';
+const DEV_MASTER_ADMIN_EMAIL = String(process.env.DOCFLOW_MASTER_ADMIN_EMAIL || '')
+  .trim()
+  .toLowerCase();
 
 function createDocumentPermissionMiddleware(db) {
   const knownTables = new Map();

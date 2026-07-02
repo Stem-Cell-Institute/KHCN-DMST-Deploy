@@ -52,6 +52,7 @@
         <button type="button" class="eq-tab" data-tab="docs">Tài liệu PDF</button>
         <button type="button" class="eq-tab" data-tab="videos">Video</button>
         <button type="button" class="eq-tab" data-tab="maint">Bảo trì</button>
+        <button type="button" class="eq-tab" data-tab="loan">Mượn/Trả</button>
         <button type="button" class="eq-tab" data-tab="incident">Sự cố</button>
         <button type="button" class="eq-tab" data-tab="logs">Lịch sử</button>
       </div>
@@ -184,6 +185,29 @@
               <tr><th>ID</th><th>Ngày</th><th>Loại</th><th>Người TH</th><th>Chi phí</th><th>Kết quả</th><th>Lần tới</th></tr>
             </thead>
             <tbody id="tbody-maint"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="panel-loan" class="eq-panel" hidden>
+        <div id="loan-current" style="margin-bottom:14px;"></div>
+        <div id="loan-manage" style="display:none;">
+          <form id="form-loan-out" class="eq-form" style="margin-bottom:18px;">
+            <h3 style="font-size:1rem;margin-bottom:10px;">Ghi nhận mượn thiết bị</h3>
+            <div class="eq-form-row"><label>Người mượn (ID user, nếu có)</label><input type="number" name="borrower_id" placeholder="Để trống nếu người ngoài hệ thống" /></div>
+            <div class="eq-form-row"><label>Tên người mượn *</label><input name="borrower_name" required /></div>
+            <div class="eq-form-row"><label>Mục đích</label><input name="purpose" /></div>
+            <div class="eq-form-row"><label>Hẹn trả</label><input type="date" name="expected_return_at" /></div>
+            <button type="submit" class="eq-btn">Ghi nhận mượn</button>
+          </form>
+        </div>
+        <h3 style="margin:20px 0 10px;font-size:0.95rem;">Lịch sử mượn/trả</h3>
+        <div class="eq-table-wrap">
+          <table class="eq-table">
+            <thead>
+              <tr><th>Người mượn</th><th>Mục đích</th><th>Ngày mượn</th><th>Hẹn trả</th><th>Ngày trả</th><th>Hành động</th></tr>
+            </thead>
+            <tbody id="tbody-loan"></tbody>
           </table>
         </div>
       </div>
