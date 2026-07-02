@@ -3135,6 +3135,24 @@ try {
 } catch (e) {
   /* đã có */
 }
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN digitized_code TEXT').run();
+} catch (e) {
+  /* đã có */
+}
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN digitized_at TEXT').run();
+} catch (e) {
+  /* đã có */
+}
+try {
+  db.prepare('ALTER TABLE dms_documents ADD COLUMN digitized_by_id INTEGER REFERENCES users(id)').run();
+} catch (e) {
+  /* đã có */
+}
+db.exec(
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_dms_documents_digitized_code ON dms_documents(digitized_code) WHERE digitized_code IS NOT NULL`
+);
 db.exec(`
   CREATE TABLE IF NOT EXISTS dms_templates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

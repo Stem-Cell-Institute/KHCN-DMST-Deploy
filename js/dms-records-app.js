@@ -411,6 +411,12 @@
     return '';
   }
 
+  function digitizedBadgeHtml(d) {
+    if (d.digitized_at) return '<span class="dms-badge dms-badge--ok">Đã số hoá</span> ';
+    if (d.digitized_code) return '<span class="dms-badge dms-badge--amber">Chờ lưu kho</span> ';
+    return '';
+  }
+
   function docIsPublic(d) {
     return Number(d.is_public) === 1 || d.is_public === true;
   }
@@ -738,6 +744,7 @@
           loc +
           '</div><div class="dms-kho-badges">' +
           loanB +
+          digitizedBadgeHtml(d) +
           destructionBadgeHtml(d) +
           '</div></td>' +
           renderPublicCell(d) +
@@ -1269,6 +1276,102 @@
           escapeHtml(d.parent_case_ref || '—') +
           '</dd></dl>' +
           '<p class="dms-modal-note">Chỉ tài khoản được phép tải lên / quản lý mới sửa được các trường này.</p>';
+      }
+      return;
+    }
+
+    if (state.physModal.tab === 'digitize') {
+      var labelUrl =
+        apiBase + '/api/dms/documents/' + id + '/label.html?token=' + encodeURIComponent(getToken());
+      var doneInfo = d.digitized_at
+        ? '<div class="dms-modal-warn" style="background:#ecfdf5;color:#065f46;border-color:#a7f3d0">Đã số hoá xong lúc ' +
+          fmtDate(d.digitized_at) +
+          (d.digitized_by_name ? ' bởi ' + escapeHtml(d.digitized_by_name) : '') +
+          '</div>'
+        : '<p class="dms-modal-note">Chưa đánh dấu hoàn thành số hoá.</p>';
+      box.innerHTML =
+        '<p class="dms-modal-note">Tạo mã số hoá duy nhất cho tài liệu, in nhãn để ghi mã này lên bản giấy, sau đó xác nhận hoàn thành trước khi đem lưu trữ.</p>' +
+        '<dl class="dms-modal-dl">' +
+        '<dt>Mã số hoá</dt><dd style="font-weight:700">' +
+        escapeHtml(d.digitized_code || '— chưa tạo —') +
+        '</dd></dl>' +
+        doneInfo +
+        (canUp
+          ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' +
+            '<button type="button" class="dms-btn" id="dig-gen">' +
+            (d.digitized_code ? 'In lại nhãn' : 'Tạo mã & in nhãn') +
+            '</button>' +
+            (!d.digitized_at
+              ? '<button type="button" class="dms-btn dms-btn-primary" id="dig-complete">Xác nhận đã ghi mã lên bản giấy &amp; lưu kho</button>'
+              : '<button type="button" class="dms-btn" id="dig-undo">Hoàn tác</button>') +
+            '</div>'
+          : '');
+      if (canUp) {
+        var genBtn = el('dig-gen');
+        if (genBtn) {
+          genBtn.addEventListener('click', function () {
+            api('/documents/' + id + '/digitize-code', {
+              method: 'POST',
+              headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+              body: JSON.stringify({}),
+            })
+              .then(function () {
+                window.open(labelUrl, '_blank');
+                return api('/documents/' + id + '/physical-bundle');
+              })
+              .then(function (j) {
+                state.physModal.bundle = j;
+                physRenderBody();
+                loadDocuments();
+              })
+              .catch(function (e) {
+                alert(e.message);
+              });
+          });
+        }
+        var completeBtn = el('dig-complete');
+        if (completeBtn) {
+          completeBtn.addEventListener('click', function () {
+            api('/documents/' + id + '/digitize-complete', {
+              method: 'POST',
+              headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+              body: JSON.stringify({}),
+            })
+              .then(function () {
+                return api('/documents/' + id + '/physical-bundle');
+              })
+              .then(function (j) {
+                state.physModal.bundle = j;
+                physRenderBody();
+                loadDocuments();
+              })
+              .catch(function (e) {
+                alert(e.message);
+              });
+          });
+        }
+        var undoBtn = el('dig-undo');
+        if (undoBtn) {
+          undoBtn.addEventListener('click', function () {
+            if (!confirm('Hoàn tác đánh dấu đã số hoá xong?')) return;
+            api('/documents/' + id + '/digitize-undo', {
+              method: 'POST',
+              headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+              body: JSON.stringify({}),
+            })
+              .then(function () {
+                return api('/documents/' + id + '/physical-bundle');
+              })
+              .then(function (j) {
+                state.physModal.bundle = j;
+                physRenderBody();
+                loadDocuments();
+              })
+              .catch(function (e) {
+                alert(e.message);
+              });
+          });
+        }
       }
       return;
     }

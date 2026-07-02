@@ -2657,6 +2657,11 @@ a.dms-btn-table--muted {
   color: var(--dms-red);
 }
 
+.dms-badge--ok {
+  background: #d1fae5;
+  color: #065f46;
+}
+
 .dms-row-flash {
   outline: 3px solid var(--dms-accent);
   outline-offset: -2px;

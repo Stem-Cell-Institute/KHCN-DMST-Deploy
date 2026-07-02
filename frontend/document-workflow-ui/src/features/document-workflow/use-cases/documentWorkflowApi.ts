@@ -28,7 +28,10 @@ export interface ListFilters {
 }
 
 export async function fetchMe() {
-  const res = await api.get<MeUser>("/api/me");
+  // /api/documents/me (không phải /api/me dùng chung toàn hệ thống) — trả về role đã ghép
+  // giữa role hệ thống và các role quy trình (proposer/drafter/leader/reviewer/...) trong
+  // bảng user_roles, nếu không stepPermission() sẽ luôn thấy role rỗng cho các role này.
+  const res = await api.get<MeUser>("/api/documents/me");
   return res.data;
 }
 

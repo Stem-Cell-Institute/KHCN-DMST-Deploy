@@ -36,9 +36,10 @@ export function stepPermission(me: MeUser | null, doc: DocumentRecord, step: Wor
     case 2:
       return { canAct: isLeader, reason: "Chỉ Lãnh đạo Viện thao tác bước 2." };
     case 3:
+      // isSuperManager đã return true ở guard đầu hàm nên không cần lặp lại điều kiện ở đây.
       return {
-        canAct: isAssignedDrafter || isSuperManager,
-        reason: "Chỉ Người soạn thảo được giao hoặc Admin/Manager thao tác bước 3.",
+        canAct: isAssignedDrafter,
+        reason: "Chỉ Người soạn thảo được giao thao tác bước 3.",
       };
     case 4:
       return { canAct: isReviewer, reason: "Chỉ Reviewer thao tác bước 4." };

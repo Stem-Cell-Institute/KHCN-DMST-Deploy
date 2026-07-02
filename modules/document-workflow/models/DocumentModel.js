@@ -354,7 +354,10 @@ class DocumentModel {
         const tokens = DocumentModel.parseRoleTokens(row && row.role);
         if (!tokens.length) continue;
         const workflowRoles = DocumentModel.extractWorkflowRoles(tokens);
-        const systemRole = DocumentModel.pickSystemRole(tokens, row && row.role);
+        // fallback = null (không phải row.role): tokens đã được tách từ chính row.role, nên truyền
+        // lại row.role làm fallback khiến nhánh ưu tiên đầu của pickSystemRole luôn thắng và trả về
+        // token đầu tiên theo thứ tự xuất hiện thay vì áp đúng thứ tự ưu tiên admin > researcher.
+        const systemRole = DocumentModel.pickSystemRole(tokens, null);
         let touched = false;
         if (workflowRoles.length || String(row.role || '').includes(',') || /\s/.test(String(row.role || ''))) {
           updateSystemRole.run(systemRole, row.id);

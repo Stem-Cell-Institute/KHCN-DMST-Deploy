@@ -169,6 +169,33 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function generateDigitizedCode(db) {
+  const prefix = `TL-${new Date().getFullYear()}-`;
+  const row = db
+    .prepare(
+      `SELECT digitized_code FROM dms_documents WHERE digitized_code LIKE ? ORDER BY digitized_code DESC LIMIT 1`
+    )
+    .get(`${prefix}%`);
+  const m = row && row.digitized_code ? /(\d+)$/.exec(row.digitized_code) : null;
+  const seq = m ? parseInt(m[1], 10) + 1 : 1;
+  return `${prefix}${String(seq).padStart(4, '0')}`;
+}
+
+function assignDigitizedCode(db, id) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = generateDigitizedCode(db);
+    try {
+      db.prepare(
+        `UPDATE dms_documents SET digitized_code = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+      ).run(code, id);
+      return code;
+    } catch (_) {
+      /* trùng mã hiếm gặp, thử lại */
+    }
+  }
+  throw new Error('Không tạo được mã số hoá, thử lại');
+}
+
 function addDaysStr(days) {
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -1132,10 +1159,13 @@ module.exports = function createDmsRecordsRouter({
       const id = Number(req.params.id);
       const row = db
         .prepare(
-          `SELECT id, title, ref_number, physical_location, physical_copy_type FROM dms_documents WHERE id = ?`
+          `SELECT id, title, ref_number, physical_location, physical_copy_type, digitized_code, uploaded_by_id FROM dms_documents WHERE id = ?`
         )
         .get(id);
       if (!row) return res.status(404).send('Không tìm thấy');
+      if (!row.digitized_code && canEditDocument(req.dmsRole, row, req.user.id)) {
+        row.digitized_code = assignDigitizedCode(db, id);
+      }
       const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
       const host = req.get('host') || '';
       const listUrl = `${proto}://${host}/tai-lieu-hanh-chinh.html?highlightDoc=${encodeURIComponent(String(id))}`;
@@ -1160,11 +1190,13 @@ body{font-family:system-ui,sans-serif;padding:16px;max-width:420px;}
 .box{border:2px solid #333;padding:12px;display:inline-block;}
 h1{font-size:15px;margin:0 0 8px;font-weight:600;}
 .mono{font-family:ui-monospace,monospace;font-size:12px;line-height:1.4;}
+.code{font-size:16px;font-weight:700;letter-spacing:0.5px;margin:6px 0;}
 </style></head><body>
 <p><button type="button" onclick="window.print()">In nhãn</button></p>
 <div class="box">
   ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR" width="160" height="160"><br>` : '<p class="mono">(Cài qrcode trên máy chủ để có QR)</p>'}
   <h1>${esc(row.title || 'Tài liệu')}</h1>
+  ${row.digitized_code ? `<div class="code">Mã số hoá: ${esc(row.digitized_code)}</div>` : ''}
   <div class="mono">ID hệ thống: ${id}</div>
   ${row.ref_number ? `<div class="mono">Số hiệu: ${esc(row.ref_number)}</div>` : ''}
   ${row.physical_location ? `<div class="mono">Vị trí kho: ${esc(row.physical_location)}</div>` : ''}
@@ -1194,7 +1226,64 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
         )
         .all(id);
       const activeLoan = loans.find((l) => !l.returned_at) || null;
+      if (doc.digitized_by_id) {
+        const u = db.prepare('SELECT fullname FROM users WHERE id = ?').get(doc.digitized_by_id);
+        doc.digitized_by_name = u ? u.fullname : null;
+      }
       res.json({ ok: true, document: doc, loans, handovers, activeLoan });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/documents/:id/digitize-code', needUpload, express.json(), (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const doc = db.prepare('SELECT id, uploaded_by_id, digitized_code FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const role = getDmsModuleRole(db, req.user);
+      if (!canEditDocument(role, doc, req.user.id)) {
+        return res.status(403).json({ ok: false, message: 'Không có quyền sửa tài liệu này' });
+      }
+      const code = doc.digitized_code || assignDigitizedCode(db, id);
+      res.json({ ok: true, code });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/documents/:id/digitize-complete', needUpload, express.json(), (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const doc = db.prepare('SELECT id, uploaded_by_id, digitized_code FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const role = getDmsModuleRole(db, req.user);
+      if (!canEditDocument(role, doc, req.user.id)) {
+        return res.status(403).json({ ok: false, message: 'Không có quyền sửa tài liệu này' });
+      }
+      const code = doc.digitized_code || assignDigitizedCode(db, id);
+      db.prepare(
+        `UPDATE dms_documents SET digitized_at = datetime('now','localtime'), digitized_by_id = ?, updated_at = datetime('now','localtime') WHERE id = ?`
+      ).run(req.user.id, id);
+      res.json({ ok: true, code });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  router.post('/documents/:id/digitize-undo', needUpload, express.json(), (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const doc = db.prepare('SELECT id, uploaded_by_id FROM dms_documents WHERE id = ?').get(id);
+      if (!doc) return res.status(404).json({ ok: false, message: 'Không tìm thấy' });
+      const role = getDmsModuleRole(db, req.user);
+      if (!canEditDocument(role, doc, req.user.id)) {
+        return res.status(403).json({ ok: false, message: 'Không có quyền sửa tài liệu này' });
+      }
+      db.prepare(
+        `UPDATE dms_documents SET digitized_at = NULL, digitized_by_id = NULL, updated_at = datetime('now','localtime') WHERE id = ?`
+      ).run(id);
+      res.json({ ok: true });
     } catch (e) {
       res.status(500).json({ ok: false, message: e.message });
     }

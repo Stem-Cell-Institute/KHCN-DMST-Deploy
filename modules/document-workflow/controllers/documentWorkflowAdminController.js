@@ -206,6 +206,7 @@ function createDocumentWorkflowAdminController(deps) {
         role: nextRoles,
         department_id: oldUser.department_id,
         is_banned: Number(oldUser.is_banned) === 1,
+        is_active: Number(oldUser.is_active) !== 0,
       });
       audit(req, {
         action: 'role_updated',

@@ -874,7 +874,9 @@
       showToast("Bạn chưa đăng nhập. Vui lòng đăng nhập trước.", "error");
     }
     try {
-      state.me = await api("/api/me");
+      // /api/documents/me (không phải /api/me dùng chung) — trả role đã ghép với user_roles
+      // (proposer/drafter/leader/reviewer/...), nếu không mọi kiểm tra quyền theo bước sẽ sai.
+      state.me = await api("/api/documents/me");
     } catch (_) {}
     renderGreeting();
     try {

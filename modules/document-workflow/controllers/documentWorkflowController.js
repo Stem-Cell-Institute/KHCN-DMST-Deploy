@@ -285,6 +285,25 @@ ${htmlLink}
     return ids;
   }
 
+  function getMe(req, res) {
+    try {
+      // Dùng userRepository.getUserById (role hệ thống ghép với các role quy trình trong
+      // bảng user_roles) thay vì req.user thô từ JWT — JWT chỉ mang role hệ thống tại thời
+      // điểm đăng nhập nên thiếu proposer/drafter/leader/reviewer mới được cấp sau đó.
+      const row = userRepository ? userRepository.getUserById(req.user.id) : documentModel.getUserById(req.user.id);
+      if (!row) return res.status(404).json({ message: 'Không tìm thấy.' });
+      return res.json({
+        id: row.id,
+        email: row.email,
+        fullname: row.fullname,
+        role: row.role,
+        unit: row.department_id || undefined,
+      });
+    } catch (e) {
+      return res.status(500).json({ message: e.message || 'Không tải được thông tin người dùng.' });
+    }
+  }
+
   function getUnits(req, res) {
     try {
       const rows = unitRepository
@@ -650,6 +669,7 @@ ${htmlLink}
   }
 
   return {
+    getMe,
     getUnits,
     getAssignableUsers,
     getDashboardStats,

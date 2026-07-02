@@ -69,6 +69,9 @@ function createDocumentWorkflowRoutes(deps) {
 
   router.use(authMiddleware);
 
+  // "Ai đang đăng nhập" riêng cho SPA quy trình văn bản — trả về role đã ghép (hệ thống +
+  // user_roles), khác /api/me dùng chung toàn hệ thống (chỉ trả role hệ thống thô từ JWT).
+  router.get('/documents/me', controller.getMe);
   router.get('/units', controller.getUnits);
   router.get('/users/assignable', permission.requireRoles(['leader']), controller.getAssignableUsers);
   router.post('/units', permission.requireModuleAdmin, jsonBody, adminController.createUnit);
