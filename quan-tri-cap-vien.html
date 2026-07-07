@@ -23,14 +23,6 @@
         .admin-main { flex: 1; min-width: 0; }
         .admin-page-inner { max-width: 100%; }
         .admin-sections { display: flex; flex-direction: column; gap: 0; }
-        .admin-sections #section-accounts { order: 1; }
-        .admin-sections #section-hdkhcn { order: 2; }
-        .admin-sections #section-admin-team { order: 4; }
-        .admin-sections #section-categories { order: 5; }
-        .admin-sections #section-missions { order: 6; }
-        .admin-sections #section-homepage { order: 7; }
-        .admin-sections #section-notify-recipients { order: 8; }
-        .admin-sections #section-audit { order: 9; }
         @media (max-width: 960px) {
             .admin-layout { flex-direction: column; }
             .admin-sidebar { position: relative; top: 0; width: 100%; flex: none; }
@@ -318,17 +310,11 @@
                     <div class="empty-state">Đang tải...</div>
                 </div>
             </div>
-            <div class="card">
-                <h3>Danh sách nghiên cứu viên</h3>
-                <div id="researchers-table-wrap">
-                    <div class="empty-state">Đang tải...</div>
-                </div>
-            </div>
             </section>
 
-            <!-- PHẦN 3: TỔ ADMIN QUẢN TRỊ HỆ THỐNG -->
+            <!-- PHẦN 2: TỔ ADMIN QUẢN TRỊ HỆ THỐNG -->
             <section id="section-admin-team" class="section-block section-admin">
-            <h2 class="page-title">⚙️ Phần 3: Tổ Admin quản trị hệ thống</h2>
+            <h2 class="page-title">⚙️ Phần 2: Tổ Admin quản trị hệ thống</h2>
             <div class="method-card">
                 <h3>Phân cấp &amp; phương thức thêm Admin</h3>
                 <ol class="method-steps">
@@ -375,20 +361,27 @@
             </div>
             </section>
 
-            <!-- PHẦN 4: QUẢN LÝ TÀI KHOẢN — trang riêng -->
+            <!-- PHẦN 3: QUẢN LÝ TÀI KHOẢN — trang riêng -->
             <section id="section-accounts" class="section-block section-members accounts-section">
             <div class="card">
-                <h2 class="page-title" style="margin-top:0;">Quản lý tài khoản</h2>
+                <h2 class="page-title" style="margin-top:0;">Phần 3: Quản lý tài khoản</h2>
                 <p class="note" style="margin-top:0;">Danh sách toàn hệ thống, lọc theo <strong>nội / ngoại viện</strong> và <strong>năm tạo</strong>, làm nổi bật tài khoản mới — đã chuyển sang <strong>trang riêng</strong> để dễ thao tác khi dữ liệu nhiều.</p>
                 <p style="margin:0;">
                     <a href="quan-tri-tai-khoan.html" class="btn-submit-role" style="display:inline-block;text-decoration:none;">Mở trang Quản lý tài khoản →</a>
                 </p>
             </div>
+            <div class="card">
+                <h3>Danh sách nghiên cứu viên</h3>
+                <p class="note" style="margin-top:0;">Xem nhanh tại đây; để lọc theo nội/ngoại viện, năm tạo hoặc sửa thông tin, dùng trang Quản lý tài khoản ở trên.</p>
+                <div id="researchers-table-wrap">
+                    <div class="empty-state">Đang tải...</div>
+                </div>
+            </div>
             </section>
 
-            <!-- PHẦN 5: HẠNG MỤC ĐỀ TÀI CẤP VIỆN -->
+            <!-- PHẦN 4: HẠNG MỤC ĐỀ TÀI CẤP VIỆN -->
             <section id="section-categories" class="section-block section-categories">
-            <h2 class="page-title">📂 Phần 5: Hạng mục đề tài cấp Viện</h2>
+            <h2 class="page-title">📂 Phần 4: Hạng mục đề tài cấp Viện</h2>
             <div class="method-card">
                 <h3>Quản trị danh mục hạng mục</h3>
                 <ol class="method-steps">
@@ -449,9 +442,9 @@
             </div>
             </section>
 
-            <!-- PHẦN 6: QUẢN TRỊ NHIỆM VỤ KHCN -->
+            <!-- PHẦN 5: QUẢN TRỊ NHIỆM VỤ KHCN -->
             <section id="section-missions" class="section-block section-missions">
-            <h2 class="page-title">📊 Phần 6: Quản trị nhiệm vụ KHCN</h2>
+            <h2 class="page-title">📊 Phần 5: Quản trị nhiệm vụ KHCN</h2>
             <div class="method-card">
                 <h3>Đồng bộ và quản lý nhiệm vụ</h3>
                 <ol class="method-steps">
@@ -1116,11 +1109,15 @@
                         const fullname = (m.fullname || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
                         const academic = (m.academicTitle || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
                         const role = m.role || 'thanh_vien_tham_dinh_tc';
+                        const disabledAttr = isMasterAdmin ? '' : ' disabled';
+                        const actionCell = isMasterAdmin
+                            ? '<div class="btn-row"><button type="button" class="btn-sm btn-edit-budget" data-email="' + email + '" style="background:#6c757d">Sửa</button><button type="button" class="btn-sm btn-save-budget" data-email="' + email + '">Lưu</button><button type="button" class="btn-sm btn-delete-budget btn-delete" data-email="' + email + '">Xóa</button></div>'
+                            : '<span style="color:#777;font-size:0.85rem;">Chỉ Master Admin</span>';
                         return '<tr data-email="' + email + '"><td>' + email + '</td>' +
-                            '<td><input type="text" class="budget-edit-fullname" value="' + fullname + '" placeholder="Họ tên" style="width:100%;padding:4px 8px;border:1px solid #ddd;border-radius:4px"></td>' +
-                            '<td><input type="text" class="budget-edit-academic" value="' + academic + '" placeholder="PGS.TS, TS..." style="width:100%;padding:4px 8px;border:1px solid #ddd;border-radius:4px"></td>' +
-                            '<td><select class="budget-edit-role" style="padding:4px 8px"><option value="totruong_tham_dinh_tc"' + (role === 'totruong_tham_dinh_tc' ? ' selected' : '') + '>Tổ trưởng</option><option value="thanh_vien_tham_dinh_tc"' + (role === 'thanh_vien_tham_dinh_tc' ? ' selected' : '') + '>Thành viên</option></select></td>' +
-                            '<td><div class="btn-row"><button type="button" class="btn-sm btn-edit-budget" data-email="' + email + '" style="background:#6c757d">Sửa</button><button type="button" class="btn-sm btn-save-budget" data-email="' + email + '">Lưu</button><button type="button" class="btn-sm btn-delete-budget btn-delete" data-email="' + email + '">Xóa</button></div></td></tr>';
+                            '<td><input type="text" class="budget-edit-fullname" value="' + fullname + '" placeholder="Họ tên"' + disabledAttr + ' style="width:100%;padding:4px 8px;border:1px solid #ddd;border-radius:4px"></td>' +
+                            '<td><input type="text" class="budget-edit-academic" value="' + academic + '" placeholder="PGS.TS, TS..."' + disabledAttr + ' style="width:100%;padding:4px 8px;border:1px solid #ddd;border-radius:4px"></td>' +
+                            '<td><select class="budget-edit-role"' + disabledAttr + ' style="padding:4px 8px"><option value="totruong_tham_dinh_tc"' + (role === 'totruong_tham_dinh_tc' ? ' selected' : '') + '>Tổ trưởng</option><option value="thanh_vien_tham_dinh_tc"' + (role === 'thanh_vien_tham_dinh_tc' ? ' selected' : '') + '>Thành viên</option></select></td>' +
+                            '<td>' + actionCell + '</td></tr>';
                     }).join('') + '</tbody></table>';
             } catch (err) {
                 wrap.innerHTML = '<div class="empty-state">Không thể tải danh sách. Vui lòng chạy backend.</div>';
@@ -2007,6 +2004,7 @@
                     }
                     loadUsers();
                     loadAdminUsers();
+                    loadBudgetTeam();
                 })
                 .catch(function() {
                     var masterOnly = document.getElementById('admin-team-master-only');

@@ -366,7 +366,6 @@
                 if (!confirm('Bất hoạt Bước 8?\n\nĐề tài này sẽ không cần thực hiện đăng ký đạo đức (không áp dụng bước). Chỉ Admin.')) return;
                 callStepAPI(8, 'admin_waive', {});
             },
-            '9-cap-nhat-tien-do': function() { var pct = prompt('Tiến độ % (0-100):'); var note = prompt('Ghi chú:'); if (pct != null) callStepAPI(9, 'update_progress', { percent: pct, note: note }); },
             '10-nop-bao-cao': function() { showPeriodicReportUploadDialog(); },
             '11-de-xuat-dieu-chinh': function() { var loai = prompt('Loại điều chỉnh (nhân sự/kế hoạch/dự toán/gia hạn):'); var nd = prompt('Nội dung:'); if (loai && nd) callStepAPI(11, 'request', { type: loai, content: nd }); },
             '12-nop-nghiem-thu': function() { alert('Mở form nộp hồ sơ nghiệm thu.'); },
@@ -402,6 +401,146 @@
         }).catch(function(err) {
             alert('Đã ghi nhận (demo). Khi backend chạy, hành động sẽ được lưu thật.');
         });
+    }
+
+    // Bước 9 — mốc hoạt động do Chủ nhiệm/Admin tự khai báo (thêm/sửa/xóa), gọi qua callStepAPI(9, ...).
+    function execStep9MilestoneAction(action, btn) {
+        if (action === 'add') {
+            var titleEl = document.getElementById('step9-new-title');
+            var title = ((titleEl && titleEl.value) || '').trim();
+            if (!title) { alert('Vui lòng nhập tên mốc hoạt động.'); return; }
+            var dateEl = document.getElementById('step9-new-date');
+            var noteEl = document.getElementById('step9-new-note');
+            callStepAPI(9, 'add_milestone', {
+                title: title,
+                eventDate: (dateEl && dateEl.value) || null,
+                note: ((noteEl && noteEl.value) || '').trim() || null
+            });
+            return;
+        }
+        var mid = parseInt(btn.getAttribute('data-mid'), 10);
+        if (!mid) return;
+        if (action === 'save') {
+            var row = btn.closest('[data-milestone-id]');
+            if (!row) return;
+            var titleInput = row.querySelector('.milestone-title-input');
+            var title2 = ((titleInput && titleInput.value) || '').trim();
+            if (!title2) { alert('Tên mốc hoạt động không được để trống.'); return; }
+            var dateInput = row.querySelector('.milestone-date-input');
+            var noteInput = row.querySelector('.milestone-note-input');
+            var statusInput = row.querySelector('.milestone-status-input');
+            callStepAPI(9, 'update_milestone', {
+                milestoneId: mid,
+                title: title2,
+                eventDate: (dateInput && dateInput.value) || null,
+                note: ((noteInput && noteInput.value) || '').trim() || null,
+                status: (statusInput && statusInput.value) || 'planned'
+            });
+            return;
+        }
+        if (action === 'delete') {
+            if (!confirm('Xóa mốc hoạt động này?')) return;
+            callStepAPI(9, 'delete_milestone', { milestoneId: mid });
+        }
+    }
+
+    // Bước 9 — Hoá chất, vật tư: danh mục dự toán + cấp phát theo đợt, route riêng /step9-supply/action.
+    function callSupplyAPI(action, payload) {
+        fetch(apiBase + '/api/cap-vien/submissions/' + id + '/step9-supply/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: action, payload: payload || {} })
+        }).then(function(r) {
+            return r.json().then(function(d) { return { ok: r.ok, data: d }; });
+        }).then(function(res) {
+            if (res.ok) {
+                alert(res.data.message || 'Đã cập nhật thành công.');
+                reloadKeepingTimelineStep('9');
+            } else {
+                alert(res.data.message || 'Thất bại.');
+            }
+        }).catch(function() {
+            alert('Lỗi kết nối máy chủ.');
+        });
+    }
+
+    function execStep9SupplyAction(action, btn) {
+        if (action === 'add_item') {
+            var nameEl = document.getElementById('step9-supply-new-name');
+            var name = ((nameEl && nameEl.value) || '').trim();
+            if (!name) { alert('Vui lòng nhập tên hoá chất/vật tư.'); return; }
+            var unitEl = document.getElementById('step9-supply-new-unit');
+            var qtyEl = document.getElementById('step9-supply-new-qty');
+            var amountEl = document.getElementById('step9-supply-new-amount');
+            var noteEl = document.getElementById('step9-supply-new-note');
+            callSupplyAPI('add_item', {
+                name: name,
+                unit: (unitEl && unitEl.value) || '',
+                approvedQty: (qtyEl && qtyEl.value) || 0,
+                approvedAmount: (amountEl && amountEl.value) ? amountEl.value : null,
+                note: ((noteEl && noteEl.value) || '').trim() || null
+            });
+            return;
+        }
+        if (action === 'lock_catalog') {
+            if (!confirm('Khoá danh mục hoá chất/vật tư?\n\nSau khi khoá, không thể thêm/sửa/xóa mục nào nữa — số lượng duyệt sẽ là số liệu chính thức để đối sánh cấp phát.')) return;
+            callSupplyAPI('lock_catalog', {});
+            return;
+        }
+        var siid = parseInt(btn.getAttribute('data-siid'), 10);
+        if ((action === 'update_item' || action === 'delete_item' || action === 'request_issuance') && !siid) return;
+        if (action === 'update_item') {
+            var row = btn.closest('[data-supply-item-id]');
+            if (!row) return;
+            var name2 = ((row.querySelector('.supply-name-input') || {}).value || '').trim();
+            if (!name2) { alert('Tên hoá chất/vật tư không được để trống.'); return; }
+            callSupplyAPI('update_item', {
+                itemId: siid,
+                name: name2,
+                unit: (row.querySelector('.supply-unit-input') || {}).value || '',
+                approvedQty: (row.querySelector('.supply-qty-input') || {}).value || 0,
+                approvedAmount: (row.querySelector('.supply-amount-input') || {}).value ? row.querySelector('.supply-amount-input').value : null,
+                note: ((row.querySelector('.supply-note-input') || {}).value || '').trim() || null
+            });
+            return;
+        }
+        if (action === 'delete_item') {
+            if (!confirm('Xóa hoá chất/vật tư này khỏi danh mục?')) return;
+            callSupplyAPI('delete_item', { itemId: siid });
+            return;
+        }
+        if (action === 'request_issuance') {
+            var itemRow = btn.closest('tr');
+            var qtyInput = itemRow ? itemRow.querySelector('.issue-qty-input') : null;
+            var qty = (qtyInput && qtyInput.value) || '';
+            if (!qty || Number(qty) <= 0) { alert('Vui lòng nhập số lượng đề nghị cấp.'); return; }
+            var dateInput = itemRow ? itemRow.querySelector('.issue-date-input') : null;
+            var noteInput = itemRow ? itemRow.querySelector('.issue-note-input') : null;
+            callSupplyAPI('request_issuance', {
+                itemId: siid,
+                qty: qty,
+                issuedDate: (dateInput && dateInput.value) || null,
+                note: ((noteInput && noteInput.value) || '').trim() || null
+            });
+            return;
+        }
+        var issid = parseInt(btn.getAttribute('data-issid'), 10);
+        if (!issid) return;
+        if (action === 'confirm_issuance') {
+            if (!confirm('Xác nhận đã cấp đợt này?')) return;
+            callSupplyAPI('confirm_issuance', { issuanceId: issid });
+            return;
+        }
+        if (action === 'reject_issuance') {
+            var reason = prompt('Lý do từ chối cấp phát:');
+            if (!reason || !reason.trim()) return;
+            callSupplyAPI('reject_issuance', { issuanceId: issid, note: reason.trim() });
+            return;
+        }
+        if (action === 'delete_issuance') {
+            if (!confirm('Xóa đề nghị cấp phát này?')) return;
+            callSupplyAPI('delete_issuance', { issuanceId: issid });
+        }
     }
 
     function callStep4aAPI(action, formData) {
@@ -2386,10 +2525,193 @@
         html += '<div class="phase-header"><h3>⚙️ GIAI ĐOẠN 3: THỰC HIỆN VÀ BÁO CÁO</h3></div>';
 
         (function(){ var s=getStepState(9,stepsDone); html+='<div class="stage-card '+stageClass(s)+'" data-step="9"><div class="stage-header" onclick="toggleStage(this)"><div class="stage-left"><div class="stage-icon">'+stageIcon(s)+'</div><div class="stage-info"><h3>Bước 9: Thực hiện đề tài</h3><div class="stage-subtitle"><span>👥 Nhóm nghiên cứu</span><span class="stage-duration">' + formatStepActualDuration('9', null) + '</span></div></div></div><div class="stage-status"><span class="stage-badge '+stageBadge(s)+'">'+stageBadgeTxt(s)+'</span><span class="expand-icon">▼</span></div></div>'; })();
-        html += '<div class="stage-content"><div class="alert-box alert-info"><span style="font-size:20px">ℹ️</span><div><strong>Tiến độ hiện tại:</strong> —<br><strong>Hoạt động chính:</strong> —<br><strong>Kế hoạch tiếp theo:</strong> —</div></div>';
-        html += '<div class="stage-timeline"><div class="timeline-event success"><div class="event-header"><div class="event-title">🛒 Mua sắm thiết bị</div><div class="event-time">—</div></div><div class="event-content">—</div></div><div class="timeline-event success"><div class="event-header"><div class="event-title">🧬 Tách chiết tế bào gốc</div><div class="event-time">—</div></div><div class="event-content">—</div></div><div class="timeline-event"><div class="event-header"><div class="event-title">🔬 Thử nghiệm / Tuyển bệnh nhân</div><div class="event-time">—</div></div><div class="event-content">—</div></div></div>';
-        html += '<div class="files-section"><div class="files-title">📎 Lab notebook & Dữ liệu:</div><div class="file-list"><div class="file-item"><div class="file-info"><span class="file-icon">📊</span><div class="file-details"><div class="file-name">Lab_notebook.pdf</div><div class="file-meta">—</div></div></div><button class="btn-download-file">📥 Tải về</button></div></div></div>';
-        html += actionButtons(9, [{ label: '📊 Cập nhật tiến độ', action: 'cap-nhat-tien-do' }]) + '</div></div>';
+        (function() {
+            var user9 = {}; try { user9 = JSON.parse(localStorage.getItem('user') || '{}'); } catch(e) {}
+            var isOwner9 = (data.submittedById != null && user9.id != null) && Number(data.submittedById) === Number(user9.id);
+            var isAdmin9 = (user9.role || '').toLowerCase() === 'admin';
+            var canManage9 = isOwner9 || isAdmin9;
+            var milestones9 = data.step9Milestones || [];
+            var statusIcon9 = { planned: '⏳', in_progress: '🔧', done: '✅' };
+            var statusLabel9 = { planned: 'Dự kiến', in_progress: 'Đang làm', done: 'Hoàn thành' };
+            var fmtEventDate9 = function(s) {
+                var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || ''));
+                return m ? (m[3] + '/' + m[2] + '/' + m[1]) : '—';
+            };
+            // escapeHtml() không escape dấu " (an toàn cho text node, nhưng không an toàn khi chèn vào value="...").
+            var escAttr9 = function(s) { return escapeHtml(s).replace(/"/g, '&quot;'); };
+            var doneCount9 = milestones9.filter(function(m) { return m.status === 'done'; }).length;
+            var progressText9 = milestones9.length
+                ? (Math.round(doneCount9 / milestones9.length * 100) + '% (' + doneCount9 + '/' + milestones9.length + ' mốc hoàn thành)')
+                : 'Chưa có mốc hoạt động nào';
+            var inProgress9 = milestones9.filter(function(m) { return m.status === 'in_progress'; });
+            var mainActivityText9 = inProgress9.length ? escapeHtml(inProgress9[inProgress9.length - 1].title) : '—';
+            var planned9 = milestones9.filter(function(m) { return m.status === 'planned' && m.eventDate; })
+                .sort(function(a, b) { return String(a.eventDate).localeCompare(String(b.eventDate)); });
+            var nextPlanText9 = planned9.length ? (escapeHtml(planned9[0].title) + ' (dự kiến ' + fmtEventDate9(planned9[0].eventDate) + ')') : '—';
+
+            html += '<div class="stage-content"><div class="alert-box alert-info"><span style="font-size:20px">ℹ️</span><div><strong>Tiến độ hiện tại:</strong> ' + progressText9 + '<br><strong>Hoạt động chính:</strong> ' + mainActivityText9 + '<br><strong>Kế hoạch tiếp theo:</strong> ' + nextPlanText9 + '</div></div>';
+
+            html += '<div class="stage-timeline">';
+            if (!milestones9.length) {
+                html += '<div class="timeline-event"><div class="event-header"><div class="event-title">Chưa có mốc hoạt động</div></div><div class="event-content">' +
+                    (canManage9 ? 'Dùng form bên dưới để khai báo mốc hoạt động của đề tài.' : 'Chủ nhiệm chưa khai báo mốc hoạt động nào.') + '</div></div>';
+            }
+            milestones9.forEach(function(m) {
+                var evCls9 = m.status === 'done' ? 'timeline-event success' : 'timeline-event';
+                if (canManage9) {
+                    html += '<div class="' + evCls9 + '" data-milestone-id="' + m.id + '">' +
+                        '<div class="event-header">' +
+                        '<input type="text" class="milestone-title-input" value="' + escAttr9(m.title) + '" placeholder="Tên mốc hoạt động" style="font-weight:600;flex:1;border:1px solid #ddd;border-radius:6px;padding:4px 8px;margin-right:8px">' +
+                        '<input type="date" class="milestone-date-input" value="' + escAttr9(m.eventDate || '') + '" style="border:1px solid #ddd;border-radius:6px;padding:4px 8px">' +
+                        '</div><div class="event-content">' +
+                        '<textarea class="milestone-note-input" placeholder="Ghi chú/kết quả" style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;min-height:44px">' + escapeHtml(m.note || '') + '</textarea>' +
+                        '<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+                        '<select class="milestone-status-input" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px">' +
+                        ['planned', 'in_progress', 'done'].map(function(s) { return '<option value="' + s + '"' + (m.status === s ? ' selected' : '') + '>' + statusLabel9[s] + '</option>'; }).join('') +
+                        '</select>' +
+                        '<button type="button" class="btn-action btn-sm" data-milestone-action="save" data-mid="' + m.id + '">💾 Lưu</button>' +
+                        '<button type="button" class="btn-action btn-sm" data-milestone-action="delete" data-mid="' + m.id + '" style="background:#dc3545;color:#fff">🗑 Xóa</button>' +
+                        '</div></div></div>';
+                } else {
+                    html += '<div class="' + evCls9 + '"><div class="event-header"><div class="event-title">' + (statusIcon9[m.status] || '') + ' ' + escapeHtml(m.title) + '</div><div class="event-time">' + fmtEventDate9(m.eventDate) + '</div></div><div class="event-content">' + (m.note ? escapeHtml(m.note) : '—') + '</div></div>';
+                }
+            });
+            html += '</div>';
+
+            html += '<div class="files-section"><div class="files-title">📎 Lab notebook & Dữ liệu:</div><div class="file-list"><div class="file-item"><div class="file-info"><span class="file-icon">📊</span><div class="file-details"><div class="file-name">Lab_notebook.pdf</div><div class="file-meta">—</div></div></div><button class="btn-download-file">📥 Tải về</button></div></div></div>';
+
+            if (canManage9) {
+                html += '<div class="step9-add-milestone-form" style="margin-top:14px;padding:14px;background:#f8f9fa;border-radius:12px;border:1px solid #dee2e6">' +
+                    '<div style="font-weight:600;margin-bottom:8px">➕ Thêm mốc hoạt động</div>' +
+                    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+                    '<input type="text" id="step9-new-title" placeholder="Tên mốc hoạt động (vd: Mua sắm thiết bị)" style="flex:1;min-width:220px;padding:6px 8px;border:1px solid #ddd;border-radius:6px">' +
+                    '<input type="date" id="step9-new-date" style="padding:6px 8px;border:1px solid #ddd;border-radius:6px">' +
+                    '</div>' +
+                    '<textarea id="step9-new-note" placeholder="Ghi chú (tùy chọn)" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;min-height:44px;margin-bottom:8px"></textarea>' +
+                    '<button type="button" class="btn-action" data-milestone-action="add">➕ Thêm mốc</button>' +
+                    '</div>';
+            }
+
+            // ===== Hoá chất, vật tư: danh mục dự toán (khoá bởi Admin/Phòng KHCN) + cấp phát theo đợt =====
+            var isPhongKhcnOrAdmin9 = isAdmin9 || (user9.role || '').toLowerCase() === 'phong_khcn' || (user9.role || '').toLowerCase() === 'thu_ky';
+            var supplyItems9 = data.step9SupplyItems || [];
+            var supplyLocked9 = !!data.step9_supply_locked_at;
+            var supplyStatusLabel9 = { requested: 'Chờ xác nhận', confirmed: 'Đã cấp', rejected: 'Từ chối' };
+
+            html += '<div style="margin-top:20px;padding-top:16px;border-top:1px dashed #cbd5e1">';
+            html += '<h4 style="margin:0 0 8px;font-size:1rem;color:#0d47a1">🧪 Hoá chất, vật tư</h4>';
+            html += '<p style="margin:0 0 10px;font-size:0.88rem;color:#64748b">' +
+                (supplyLocked9
+                    ? 'Danh mục đã khoá lúc ' + fmtDateTime(data.step9_supply_locked_at) + (data.step9SupplyLockedByName ? ' bởi ' + escapeHtml(data.step9SupplyLockedByName) : '') + ' — số lượng duyệt là số liệu chính thức để đối sánh cấp phát.'
+                    : 'Danh mục đang khai báo (chưa khoá) — Chủ nhiệm/Admin có thể sửa tự do. Sau khi khoá, số lượng duyệt sẽ cố định để đối sánh với các đợt cấp phát.') +
+                '</p>';
+
+            // Đối chiếu với hồ sơ Bước 4A đã duyệt — để Admin/Phòng KHCN có căn cứ kiểm tra trước khi khoá,
+            // vì hệ thống không tự parse số liệu từ file Excel/Word thẩm định.
+            if (!supplyLocked9 && (canManage9 || isPhongKhcnOrAdmin9)) {
+                var budget4aRoundForSupply9 = displayRound(data.budget_4a_round || 1);
+                var budgetRefFiles9 = (data.files || []).filter(function(f) {
+                    var r = displayRound((f.revisionRound != null) ? Number(f.revisionRound) : 1);
+                    if (r !== budget4aRoundForSupply9) return false;
+                    return f.fieldName === 'budget_phieu_tham_dinh' || f.fieldName === 'budget_to_trinh' || (f.fieldName || '').indexOf('budget_revised_attachment_') === 0;
+                });
+                html += '<div style="margin-bottom:14px;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px">' +
+                    '<div style="font-weight:600;font-size:0.88rem;color:#78350f;margin-bottom:6px">📎 Đối chiếu với hồ sơ dự toán Bước 4A đã duyệt (vòng ' + budget4aRoundForSupply9 + ')</div>';
+                if (!budgetRefFiles9.length) {
+                    html += '<div style="font-size:0.85rem;color:#92400e">Chưa thấy file thẩm định dự toán ở vòng này — kiểm tra lại tại mục Bước 4A phía trên.</div>';
+                } else {
+                    html += '<div class="file-list">' + budgetRefFiles9.map(function(f) {
+                        return '<div class="file-item"><div class="file-info"><span class="file-icon">📋</span><div class="file-details"><div class="file-name">' + escapeHtml(f.originalName || 'file') + '</div></div></div><button type="button" class="btn-download-file" data-fid="' + (f.id || '') + '">📥 Tải về</button></div>';
+                    }).join('') + '</div>';
+                }
+                html += '</div>';
+            }
+
+            if (!supplyItems9.length) {
+                html += '<p style="color:#94a3b8;font-size:0.9rem">Chưa có hoá chất/vật tư nào được khai báo.</p>';
+            } else {
+                html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.9rem"><thead><tr style="background:#f1f5f9">' +
+                    '<th style="padding:6px 8px;text-align:left">Tên</th><th style="padding:6px 8px;text-align:left">Đơn vị</th><th style="padding:6px 8px;text-align:right">SL duyệt</th><th style="padding:6px 8px;text-align:right">Kinh phí duyệt</th>' +
+                    (supplyLocked9 ? '<th style="padding:6px 8px;text-align:right">Đã cấp</th><th style="padding:6px 8px;text-align:right">Còn lại</th><th style="padding:6px 8px;text-align:left">Trạng thái</th>' : '') +
+                    '<th style="padding:6px 8px;text-align:left">Ghi chú</th><th style="padding:6px 8px"></th></tr></thead><tbody>';
+                supplyItems9.forEach(function(it) {
+                    var remaining = it.remainingQty;
+                    var itStatus = it.issuedQty <= 0 ? 'Chưa cấp' : (remaining > 1e-9 ? 'Cấp một phần' : 'Đã cấp hết');
+                    if (!supplyLocked9 && canManage9) {
+                        html += '<tr data-supply-item-id="' + it.id + '">' +
+                            '<td style="padding:4px 8px"><input type="text" class="supply-name-input" value="' + escAttr9(it.name) + '" style="width:100%;padding:4px 6px;border:1px solid #ddd;border-radius:4px"></td>' +
+                            '<td style="padding:4px 8px"><input type="text" class="supply-unit-input" value="' + escAttr9(it.unit || '') + '" style="width:80px;padding:4px 6px;border:1px solid #ddd;border-radius:4px"></td>' +
+                            '<td style="padding:4px 8px"><input type="number" step="any" min="0" class="supply-qty-input" value="' + escAttr9(String(it.approvedQty != null ? it.approvedQty : 0)) + '" style="width:90px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;text-align:right"></td>' +
+                            '<td style="padding:4px 8px"><input type="number" step="any" min="0" class="supply-amount-input" value="' + (it.approvedAmount != null ? escAttr9(String(it.approvedAmount)) : '') + '" style="width:110px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;text-align:right"></td>' +
+                            '<td style="padding:4px 8px"><input type="text" class="supply-note-input" value="' + escAttr9(it.note || '') + '" style="width:100%;padding:4px 6px;border:1px solid #ddd;border-radius:4px"></td>' +
+                            '<td style="padding:4px 8px;white-space:nowrap">' +
+                            '<button type="button" class="btn-action btn-sm" data-supply-action="update_item" data-siid="' + it.id + '">💾</button> ' +
+                            '<button type="button" class="btn-action btn-sm" data-supply-action="delete_item" data-siid="' + it.id + '" style="background:#dc3545;color:#fff">🗑</button>' +
+                            '</td></tr>';
+                    } else {
+                        html += '<tr><td style="padding:4px 8px">' + escapeHtml(it.name) + '</td><td style="padding:4px 8px">' + escapeHtml(it.unit || '—') + '</td>' +
+                            '<td style="padding:4px 8px;text-align:right">' + it.approvedQty + '</td><td style="padding:4px 8px;text-align:right">' + (it.approvedAmount != null ? Number(it.approvedAmount).toLocaleString('vi-VN') : '—') + '</td>' +
+                            (supplyLocked9 ? '<td style="padding:4px 8px;text-align:right">' + it.issuedQty + '</td><td style="padding:4px 8px;text-align:right">' + remaining + '</td><td style="padding:4px 8px">' + itStatus + '</td>' : '') +
+                            '<td style="padding:4px 8px">' + (it.note ? escapeHtml(it.note) : '—') + '</td><td></td></tr>';
+                    }
+                    if (supplyLocked9) {
+                        (it.issuances || []).forEach(function(iss) {
+                            html += '<tr style="background:#fafbfc"><td colspan="8" style="padding:4px 8px 4px 24px;font-size:0.85rem;color:#475569">' +
+                                '↳ ' + (iss.qty) + ' ' + escapeHtml(it.unit || '') + (iss.issuedDate ? ' • ngày ' + fmtEventDate9(iss.issuedDate) : '') +
+                                ' • <strong>' + (supplyStatusLabel9[iss.status] || iss.status) + '</strong>' +
+                                (iss.requestedByName ? ' • đề nghị: ' + escapeHtml(iss.requestedByName) : '') +
+                                (iss.decidedByName ? ' • xử lý: ' + escapeHtml(iss.decidedByName) : '') +
+                                (iss.decisionNote ? ' • lý do: ' + escapeHtml(iss.decisionNote) : '') +
+                                (iss.status === 'requested' && isPhongKhcnOrAdmin9 ? ' <button type="button" class="btn-action btn-sm" data-supply-action="confirm_issuance" data-issid="' + iss.id + '">✅ Xác nhận</button> <button type="button" class="btn-action btn-sm" data-supply-action="reject_issuance" data-issid="' + iss.id + '" style="background:#dc3545;color:#fff">❌ Từ chối</button>' : '') +
+                                (iss.status === 'requested' && (isAdmin9 || isOwner9) && !isPhongKhcnOrAdmin9 ? ' <button type="button" class="btn-action btn-sm" data-supply-action="delete_issuance" data-issid="' + iss.id + '" style="background:#6c757d;color:#fff">Xóa đề nghị</button>' : '') +
+                                '</td></tr>';
+                        });
+                        if (canManage9) {
+                            html += '<tr style="background:#fafbfc"><td colspan="8" style="padding:6px 8px 10px 24px">' +
+                                '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+                                '<input type="number" step="any" min="0" class="issue-qty-input" placeholder="Số lượng đề nghị" style="width:130px;padding:4px 6px;border:1px solid #ddd;border-radius:4px">' +
+                                '<input type="date" class="issue-date-input" style="padding:4px 6px;border:1px solid #ddd;border-radius:4px">' +
+                                '<input type="text" class="issue-note-input" placeholder="Ghi chú (tùy chọn)" style="flex:1;min-width:160px;padding:4px 6px;border:1px solid #ddd;border-radius:4px">' +
+                                '<button type="button" class="btn-action btn-sm" data-supply-action="request_issuance" data-siid="' + it.id + '">➕ Đề nghị cấp</button>' +
+                                '</div></td></tr>';
+                        }
+                    }
+                });
+                html += '</tbody></table></div>';
+            }
+
+            if (!supplyLocked9 && canManage9) {
+                html += '<div class="step9-add-supply-form" style="margin-top:12px;padding:14px;background:#f8f9fa;border-radius:12px;border:1px solid #dee2e6">' +
+                    '<div style="font-weight:600;margin-bottom:8px">➕ Thêm hoá chất/vật tư</div>' +
+                    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+                    '<input type="text" id="step9-supply-new-name" placeholder="Tên hoá chất/vật tư" style="flex:1;min-width:180px;padding:6px 8px;border:1px solid #ddd;border-radius:6px">' +
+                    '<input type="text" id="step9-supply-new-unit" placeholder="Đơn vị (kg, lít...)" style="width:130px;padding:6px 8px;border:1px solid #ddd;border-radius:6px">' +
+                    '<input type="number" step="any" min="0" id="step9-supply-new-qty" placeholder="Số lượng duyệt" style="width:140px;padding:6px 8px;border:1px solid #ddd;border-radius:6px">' +
+                    '<input type="number" step="any" min="0" id="step9-supply-new-amount" placeholder="Kinh phí duyệt (đ)" style="width:160px;padding:6px 8px;border:1px solid #ddd;border-radius:6px">' +
+                    '</div>' +
+                    '<input type="text" id="step9-supply-new-note" placeholder="Ghi chú (tùy chọn)" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:8px">' +
+                    '<button type="button" class="btn-action" data-supply-action="add_item">➕ Thêm mục</button>' +
+                    '</div>';
+            }
+
+            if (!supplyLocked9 && isPhongKhcnOrAdmin9) {
+                var canLock9 = supplyItems9.length > 0 && String(data.budget_4a_status || '').toLowerCase() === 'approved';
+                html += '<div style="margin-top:10px">';
+                if (canLock9) {
+                    html += '<label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;color:#334155;margin-bottom:8px;cursor:pointer">' +
+                        '<input type="checkbox" id="step9-supply-lock-confirm" onchange="document.getElementById(\'btn-step9-lock-catalog\').disabled = !this.checked">' +
+                        'Tôi đã đối chiếu số lượng/kinh phí trong bảng với hồ sơ dự toán Bước 4A đã duyệt ở trên, số liệu khớp nhau.' +
+                        '</label>';
+                }
+                html += '<button type="button" id="btn-step9-lock-catalog" class="btn-action" data-supply-action="lock_catalog"' + (canLock9 ? ' disabled' : ' disabled title="Cần Bước 4A đã duyệt và có ít nhất 1 mục"') + '>🔒 Khoá danh mục</button>' +
+                    (canLock9 ? '' : ' <span style="font-size:0.85rem;color:#94a3b8">(cần Bước 4A đã duyệt và có ít nhất 1 mục)</span>') +
+                    '</div>';
+            }
+
+            html += '</div>';
+
+            html += '</div></div>';
+        })();
 
         var prData = data.periodicReport || {};
         var prPeriods = prData.periods || [];
@@ -2687,6 +3009,16 @@
                     var pAct = this.getAttribute('data-periodic-action');
                     if (pAct) {
                         execPeriodicAdminAction(pAct);
+                        return;
+                    }
+                    var mAct = this.getAttribute('data-milestone-action');
+                    if (mAct) {
+                        execStep9MilestoneAction(mAct, this);
+                        return;
+                    }
+                    var sAct = this.getAttribute('data-supply-action');
+                    if (sAct) {
+                        execStep9SupplyAction(sAct, this);
                         return;
                     }
                     var step = this.getAttribute('data-step');

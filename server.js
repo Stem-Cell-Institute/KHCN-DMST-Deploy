@@ -1354,6 +1354,9 @@ try { db.prepare('ALTER TABLE cap_vien_submissions ADD COLUMN step8_completed IN
 try { db.prepare('ALTER TABLE cap_vien_submissions ADD COLUMN step8_waived INTEGER DEFAULT 0').run(); } catch (e) { /* đã tồn tại */ }
 try { db.prepare('ALTER TABLE cap_vien_submissions ADD COLUMN step8a_completed INTEGER DEFAULT 0').run(); } catch (e) { /* đã tồn tại */ }
 try { db.prepare('ALTER TABLE cap_vien_submissions ADD COLUMN step8a_waived INTEGER DEFAULT 0').run(); } catch (e) { /* đã tồn tại */ }
+// Bước 9: danh mục hoá chất/vật tư đã "khoá" (số liệu chính thức để đối sánh dự toán, xem cap_vien_step9_supply_item).
+try { db.prepare('ALTER TABLE cap_vien_submissions ADD COLUMN step9_supply_locked_at TEXT').run(); } catch (e) { /* đã tồn tại */ }
+try { db.prepare('ALTER TABLE cap_vien_submissions ADD COLUMN step9_supply_locked_by INTEGER').run(); } catch (e) { /* đã tồn tại */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS cap_vien_periodic_report_config (
@@ -1417,12 +1420,68 @@ db.exec(`
     performedByRole TEXT,
     FOREIGN KEY (submissionId) REFERENCES cap_vien_submissions(id)
   );
+  -- Bước 9 (Thực hiện đề tài): mốc hoạt động do Chủ nhiệm/Admin tự khai báo (thay vì 3 mốc cố định trước đây).
+  CREATE TABLE IF NOT EXISTS cap_vien_step9_milestone (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    submissionId INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'planned', -- planned | in_progress | done
+    eventDate TEXT,
+    note TEXT,
+    sortOrder INTEGER NOT NULL DEFAULT 0,
+    createdAt TEXT NOT NULL,
+    createdById INTEGER,
+    updatedAt TEXT,
+    updatedById INTEGER,
+    deletedAt TEXT,
+    FOREIGN KEY (submissionId) REFERENCES cap_vien_submissions(id)
+  );
+  -- Danh mục hoá chất/vật tư dự toán (Bước 9). Trước khi cap_vien_submissions.step9_supply_locked_at
+  -- được set, Chủ nhiệm/Admin còn sửa/xóa tự do; sau khi khoá, approvedQty là số liệu chính thức để
+  -- đối sánh với các đợt cấp phát (cap_vien_step9_supply_issuance).
+  CREATE TABLE IF NOT EXISTS cap_vien_step9_supply_item (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    submissionId INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    unit TEXT,
+    approvedQty REAL NOT NULL DEFAULT 0,
+    approvedAmount REAL,
+    note TEXT,
+    createdAt TEXT NOT NULL,
+    createdById INTEGER,
+    updatedAt TEXT,
+    updatedById INTEGER,
+    deletedAt TEXT,
+    FOREIGN KEY (submissionId) REFERENCES cap_vien_submissions(id)
+  );
+  -- Đợt cấp phát cho từng item — 'requested' do Chủ nhiệm/Admin đề nghị, chỉ Admin/Phòng KHCN/Thư ký
+  -- mới chuyển sang 'confirmed' (trừ vào approvedQty) hoặc 'rejected'.
+  CREATE TABLE IF NOT EXISTS cap_vien_step9_supply_issuance (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    itemId INTEGER NOT NULL,
+    submissionId INTEGER NOT NULL,
+    qty REAL NOT NULL,
+    issuedDate TEXT,
+    note TEXT,
+    status TEXT NOT NULL DEFAULT 'requested', -- requested | confirmed | rejected
+    requestedById INTEGER,
+    requestedAt TEXT NOT NULL,
+    decidedById INTEGER,
+    decidedAt TEXT,
+    decisionNote TEXT,
+    FOREIGN KEY (itemId) REFERENCES cap_vien_step9_supply_item(id),
+    FOREIGN KEY (submissionId) REFERENCES cap_vien_submissions(id)
+  );
 `);
 
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_cv_prp_sub ON cap_vien_periodic_report_period(submissionId);
   CREATE INDEX IF NOT EXISTS idx_cv_prp_due ON cap_vien_periodic_report_period(submissionId, dueAt);
   CREATE INDEX IF NOT EXISTS idx_cv_prpal_sub ON cap_vien_periodic_report_admin_log(submissionId);
+  CREATE INDEX IF NOT EXISTS idx_cv_s9m_sub ON cap_vien_step9_milestone(submissionId);
+  CREATE INDEX IF NOT EXISTS idx_cv_s9si_sub ON cap_vien_step9_supply_item(submissionId);
+  CREATE INDEX IF NOT EXISTS idx_cv_s9su_item ON cap_vien_step9_supply_issuance(itemId);
+  CREATE INDEX IF NOT EXISTS idx_cv_s9su_sub ON cap_vien_step9_supply_issuance(submissionId);
 `);
 
 db.exec(`
@@ -4950,6 +5009,10 @@ function isCrdOnlyUserRole(role) {
 // mà không bị ghi đè mất vai trò nào. Xem module-hoi-dong-khcn admin panel.
 const COUNCIL_ROLE_TOKENS = ['chu_tich', 'thu_ky', 'thanh_vien', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
 
+// Vai trò Tổ thẩm định tài chính — cùng mức bảo vệ "chỉ Master Admin" như vai trò HĐKHCN
+// (councilRoles) ở các route cấp/sửa/xóa vai trò bên dưới.
+const BUDGET_TEAM_ROLES = ['totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
+
 function getCouncilRoleGrants(userId) {
   if (!userId) return [];
   try {
@@ -6461,12 +6524,15 @@ app.post('/api/cap-vien/submissions', authMiddleware, uploadCapVien.fields([
     db.prepare('UPDATE cap_vien_code_sequences SET seq = seq + 1 WHERE year = ?').run(year);
     const seq = db.prepare('SELECT seq FROM cap_vien_code_sequences WHERE year = ?').get(year).seq;
     const baseCode = 'DTSCI-' + year + '-' + String(seq).padStart(3, '0');
-    const optsWithAffect = db.prepare('SELECT code FROM cap_vien_submission_options WHERE affects_code = 1').all();
+    // Sắp theo sort_order để thứ tự nhãn trong mã luôn nhất quán (không phụ thuộc thứ tự client gửi lên).
+    const optsWithAffect = db.prepare('SELECT code FROM cap_vien_submission_options WHERE affects_code = 1 ORDER BY sort_order ASC, id ASC').all();
     const affectCodes = optsWithAffect.map(r => (r.code || '').toUpperCase()).filter(Boolean);
-    const checkedAffect = optionsChecked.filter(c => affectCodes.includes((c || '').toUpperCase()));
+    const checkedAffectSet = new Set(optionsChecked.map(c => (c || '').toUpperCase()));
+    // Gộp TẤT CẢ các ô "Ảnh hưởng mã số" đã tick vào mã — trước đây chỉ lấy ô đầu tiên, các ô còn lại bị bỏ sót.
+    const checkedAffect = affectCodes.filter(c => checkedAffectSet.has(c));
     let code = baseCode;
     if (checkedAffect.length > 0) {
-      const suffix = (checkedAffect[0] || '').toUpperCase();
+      const suffix = checkedAffect.join('-');
       code = 'DTSCI-' + suffix + '-' + year + '-' + String(seq).padStart(3, '0');
     }
     const optionsCheckedJson = JSON.stringify(optionsChecked);
@@ -6855,7 +6921,7 @@ app.get('/api/cap-vien/submissions', authMiddleware, (req, res) => {
 app.get('/api/cap-vien/submissions/:id', authMiddleware, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ' });
-  const row = db.prepare(`SELECT id, title, submittedBy, submittedById, status, createdAt, code, options_checked, reviewNote, reviewedAt, reviewedById, assignedReviewerIds, assignedAt, assignedById, budget_4a_status, CASE WHEN COALESCE(budget_4a_round, 0) < 1 THEN 1 ELSE budget_4a_round END AS budget_4a_round, budget_4a_revision_note, budget_4a_revision_requested_at, budget_4a_revision_requested_by, budget_4a_approved_at, budget_4a_approved_by, step_4_reviewer1_done, step_4_reviewer2_done, step5_hd_meeting_location, step5_hd_meeting_attendance, step5_hd_meeting_documents, step5_hd_meeting_vote_result, step5_hd_meeting_decision, step5_hd_meeting_event_time, step5_hd_meeting_updated_at, step5_hd_meeting_updated_by, step5_council_revision_status, COALESCE(step5_council_revision_round, 0) AS step5_council_revision_round, step5_council_revision_note, step5_council_revision_requested_at, step5_council_revision_requested_by, step6_so_qd, step6_kinh_phi, step6_thoi_gian, step6_phi_quan_ly, step6_meta_updated_at, step6_meta_updated_by, step7_so_hd, step7_hieu_luc, step7_meta_updated_at, step7_meta_updated_by, step8_ma_dao_duc, step8_hieu_luc, step8_so_quyet_dinh, step8_meta_updated_at, step8_meta_updated_by, COALESCE(step8_completed, 0) AS step8_completed, COALESCE(step8_waived, 0) AS step8_waived, COALESCE(step8a_completed, 0) AS step8a_completed, COALESCE(step8a_waived, 0) AS step8a_waived FROM cap_vien_submissions WHERE id = ?`).get(id);
+  const row = db.prepare(`SELECT id, title, submittedBy, submittedById, status, createdAt, code, options_checked, reviewNote, reviewedAt, reviewedById, assignedReviewerIds, assignedAt, assignedById, budget_4a_status, CASE WHEN COALESCE(budget_4a_round, 0) < 1 THEN 1 ELSE budget_4a_round END AS budget_4a_round, budget_4a_revision_note, budget_4a_revision_requested_at, budget_4a_revision_requested_by, budget_4a_approved_at, budget_4a_approved_by, step_4_reviewer1_done, step_4_reviewer2_done, step5_hd_meeting_location, step5_hd_meeting_attendance, step5_hd_meeting_documents, step5_hd_meeting_vote_result, step5_hd_meeting_decision, step5_hd_meeting_event_time, step5_hd_meeting_updated_at, step5_hd_meeting_updated_by, step5_council_revision_status, COALESCE(step5_council_revision_round, 0) AS step5_council_revision_round, step5_council_revision_note, step5_council_revision_requested_at, step5_council_revision_requested_by, step6_so_qd, step6_kinh_phi, step6_thoi_gian, step6_phi_quan_ly, step6_meta_updated_at, step6_meta_updated_by, step7_so_hd, step7_hieu_luc, step7_meta_updated_at, step7_meta_updated_by, step8_ma_dao_duc, step8_hieu_luc, step8_so_quyet_dinh, step8_meta_updated_at, step8_meta_updated_by, COALESCE(step8_completed, 0) AS step8_completed, COALESCE(step8_waived, 0) AS step8_waived, COALESCE(step8a_completed, 0) AS step8a_completed, COALESCE(step8a_waived, 0) AS step8a_waived, step9_supply_locked_at, step9_supply_locked_by FROM cap_vien_submissions WHERE id = ?`).get(id);
   if (!row) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
   const isCouncilOrAdmin = capVienRoleSeesAllSubmissions(req);
@@ -6934,6 +7000,30 @@ app.get('/api/cap-vien/submissions/:id', authMiddleware, (req, res) => {
   } catch (e) {
     periodicReport = { config: null, periods: [], primaryFiles: {}, adminLog: [] };
   }
+  const step9Milestones = db.prepare(
+    'SELECT id, title, status, eventDate, note, sortOrder, createdAt, createdById, updatedAt FROM cap_vien_step9_milestone WHERE submissionId = ? AND deletedAt IS NULL ORDER BY sortOrder ASC, id ASC'
+  ).all(id);
+  const step9SupplyItemsRaw = db.prepare(
+    'SELECT id, name, unit, approvedQty, approvedAmount, note, createdAt FROM cap_vien_step9_supply_item WHERE submissionId = ? AND deletedAt IS NULL ORDER BY id ASC'
+  ).all(id);
+  const step9SupplyIssuancesRaw = db.prepare(
+    `SELECT si.id, si.itemId, si.qty, si.issuedDate, si.note, si.status, si.requestedAt, si.decidedAt, si.decisionNote,
+            ru.fullname AS requestedByName, du.fullname AS decidedByName
+     FROM cap_vien_step9_supply_issuance si
+     LEFT JOIN users ru ON ru.id = si.requestedById
+     LEFT JOIN users du ON du.id = si.decidedById
+     WHERE si.submissionId = ? ORDER BY si.id ASC`
+  ).all(id);
+  const step9SupplyItems = step9SupplyItemsRaw.map((it) => {
+    const issuances = step9SupplyIssuancesRaw.filter((s) => s.itemId === it.id);
+    const issuedQty = issuances.filter((s) => s.status === 'confirmed').reduce((sum, s) => sum + (s.qty || 0), 0);
+    return { ...it, issuances, issuedQty, remainingQty: it.approvedQty - issuedQty };
+  });
+  let step9SupplyLockedByName = null;
+  if (row.step9_supply_locked_by != null) {
+    const u9 = db.prepare('SELECT fullname, email FROM users WHERE id = ?').get(row.step9_supply_locked_by);
+    if (u9) step9SupplyLockedByName = u9.fullname || u9.email || null;
+  }
   return res.json({
     ...row,
     code: displayCode,
@@ -6942,6 +7032,7 @@ app.get('/api/cap-vien/submissions/:id', authMiddleware, (req, res) => {
     step6MetaUpdatedByName,
     step7MetaUpdatedByName,
     step8MetaUpdatedByName,
+    step9SupplyLockedByName,
     submittedByName: u ? u.fullname : null,
     reviewedByName: reviewedBy ? reviewedBy.fullname : null,
     assignedByName: assignedBy ? assignedBy.fullname : null,
@@ -6951,7 +7042,9 @@ app.get('/api/cap-vien/submissions/:id', authMiddleware, (req, res) => {
     step2History,
     stepHistory,
     stepActualStats,
-    periodicReport
+    periodicReport,
+    step9Milestones,
+    step9SupplyItems
   });
 });
 
@@ -7964,7 +8057,7 @@ app.post('/api/cap-vien/submissions/:id/steps/:step', authMiddleware, (req, res)
   const id = parseInt(req.params.id, 10);
   const step = req.params.step;
   if (!id) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ' });
-  const sub = db.prepare('SELECT id, title, status, submittedBy FROM cap_vien_submissions WHERE id = ?').get(id);
+  const sub = db.prepare('SELECT id, title, status, submittedBy, submittedById FROM cap_vien_submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   const role = req.user.role;
   const isSecretaryOrAdmin = roleIsAny(req, ['admin', 'thu_ky']);
@@ -8234,7 +8327,245 @@ app.post('/api/cap-vien/submissions/:id/steps/:step', authMiddleware, (req, res)
   if (step === '8a') {
     return res.status(410).json({ message: 'Bước 8A đã được gỡ khỏi quy trình; không còn thao tác tại endpoint này.' });
   }
+  if (step === '9') {
+    const isOwner = sub.submittedById === req.user.id;
+    const isAdmin = (req.user.role || '').toLowerCase() === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Chỉ Chủ nhiệm đề tài hoặc Admin mới được khai báo mốc hoạt động Bước 9.' });
+    }
+    const body = req.body || {};
+    const payload = body.payload || {};
+    const actionRaw = body.action || payload.action || '';
+    const action = String(actionRaw).toLowerCase().trim();
+    const nowIso = new Date().toISOString();
+    const historyRole = isOwner ? 'researcher' : 'admin';
+
+    if (action === 'add_milestone') {
+      const title = String(payload.title || '').trim();
+      if (!title) return res.status(400).json({ message: 'Vui lòng nhập tên mốc hoạt động' });
+      const eventDate = payload.eventDate ? String(payload.eventDate).trim() : null;
+      const note = payload.note ? String(payload.note).trim() : null;
+      const maxRow = db.prepare('SELECT COALESCE(MAX(sortOrder), 0) AS m FROM cap_vien_step9_milestone WHERE submissionId = ? AND deletedAt IS NULL').get(id);
+      const sortOrder = (maxRow.m || 0) + 1;
+      const ins = db.prepare(
+        'INSERT INTO cap_vien_step9_milestone (submissionId, title, status, eventDate, note, sortOrder, createdAt, createdById) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      ).run(id, title, 'planned', eventDate, note, sortOrder, nowIso, req.user.id);
+      insertCapVienHistory(id, '9', 'milestone_add', req.user.id, historyRole, 'Thêm mốc hoạt động: ' + title);
+      return res.json({ message: 'Đã thêm mốc hoạt động.', milestoneId: ins.lastInsertRowid });
+    }
+
+    if (action === 'update_milestone') {
+      const milestoneId = parseInt(payload.milestoneId, 10);
+      if (!milestoneId) return res.status(400).json({ message: 'Thiếu milestoneId' });
+      const m = db.prepare('SELECT id, title FROM cap_vien_step9_milestone WHERE id = ? AND submissionId = ? AND deletedAt IS NULL').get(milestoneId, id);
+      if (!m) return res.status(404).json({ message: 'Không tìm thấy mốc hoạt động' });
+      const allowedStatus = ['planned', 'in_progress', 'done'];
+      const updates = [];
+      const params = [];
+      if (payload.title !== undefined) {
+        const t = String(payload.title || '').trim();
+        if (!t) return res.status(400).json({ message: 'Tên mốc hoạt động không được để trống' });
+        updates.push('title = ?'); params.push(t);
+      }
+      if (payload.eventDate !== undefined) { updates.push('eventDate = ?'); params.push(payload.eventDate ? String(payload.eventDate).trim() : null); }
+      if (payload.note !== undefined) { updates.push('note = ?'); params.push(payload.note ? String(payload.note).trim() : null); }
+      if (payload.status !== undefined) {
+        const st = String(payload.status || '').toLowerCase().trim();
+        if (!allowedStatus.includes(st)) return res.status(400).json({ message: 'Trạng thái không hợp lệ (planned/in_progress/done)' });
+        updates.push('status = ?'); params.push(st);
+      }
+      if (!updates.length) return res.status(400).json({ message: 'Không có trường nào để cập nhật' });
+      updates.push('updatedAt = ?', 'updatedById = ?');
+      params.push(nowIso, req.user.id, milestoneId);
+      db.prepare('UPDATE cap_vien_step9_milestone SET ' + updates.join(', ') + ' WHERE id = ?').run(...params);
+      insertCapVienHistory(id, '9', 'milestone_update', req.user.id, historyRole, 'Cập nhật mốc hoạt động: ' + m.title);
+      return res.json({ message: 'Đã cập nhật mốc hoạt động.' });
+    }
+
+    if (action === 'delete_milestone') {
+      const milestoneId = parseInt(payload.milestoneId, 10);
+      if (!milestoneId) return res.status(400).json({ message: 'Thiếu milestoneId' });
+      const m = db.prepare('SELECT id, title FROM cap_vien_step9_milestone WHERE id = ? AND submissionId = ? AND deletedAt IS NULL').get(milestoneId, id);
+      if (!m) return res.status(404).json({ message: 'Không tìm thấy mốc hoạt động' });
+      db.prepare('UPDATE cap_vien_step9_milestone SET deletedAt = ? WHERE id = ?').run(nowIso, milestoneId);
+      insertCapVienHistory(id, '9', 'milestone_delete', req.user.id, historyRole, 'Xóa mốc hoạt động: ' + m.title);
+      return res.json({ message: 'Đã xóa mốc hoạt động.' });
+    }
+
+    return res.status(400).json({ message: 'Hành động không hợp lệ. Dùng action: add_milestone, update_milestone hoặc delete_milestone' });
+  }
   return res.status(404).json({ message: 'Bước ' + step + ' chưa được triển khai tại backend' });
+});
+
+// Bước 9 — Hoá chất, vật tư: danh mục dự toán (Chủ nhiệm/Admin khai báo, Admin/Phòng KHCN khoá lại làm
+// số liệu chính thức) + cấp phát theo đợt (Chủ nhiệm/Admin đề nghị, Admin/Phòng KHCN xác nhận/từ chối,
+// không cho vượt approvedQty). Route riêng (không dùng chung dispatcher steps/:step ở trên) vì action
+// lock_catalog/confirm_issuance/reject_issuance cần thêm vai trò Phòng KHCN, khác gate owner||admin của
+// milestone.
+app.post('/api/cap-vien/submissions/:id/step9-supply/action', authMiddleware, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ' });
+  const sub = db.prepare('SELECT id, submittedById, budget_4a_status, step9_supply_locked_at FROM cap_vien_submissions WHERE id = ?').get(id);
+  if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
+  const isOwner = sub.submittedById === req.user.id;
+  const isAdmin = (req.user.role || '').toLowerCase() === 'admin';
+  const isPhongKhcnOrAdmin = roleIsAny(req, ['admin', 'phong_khcn', 'thu_ky']);
+  const ownerHistoryRole = isOwner ? 'researcher' : 'admin';
+  const staffHistoryRole = capVienStep6HistoryRoleDb(req.user.role);
+  const body = req.body || {};
+  const payload = body.payload || {};
+  const actionRaw = body.action || payload.action || '';
+  const action = String(actionRaw).toLowerCase().trim();
+  const nowIso = new Date().toISOString();
+  const locked = !!sub.step9_supply_locked_at;
+
+  function getItem(itemId) {
+    return db.prepare('SELECT * FROM cap_vien_step9_supply_item WHERE id = ? AND submissionId = ? AND deletedAt IS NULL').get(itemId, id);
+  }
+  function confirmedQtyForItem(itemId) {
+    const r = db.prepare("SELECT COALESCE(SUM(qty), 0) AS s FROM cap_vien_step9_supply_issuance WHERE itemId = ? AND status = 'confirmed'").get(itemId);
+    return r.s || 0;
+  }
+
+  if (action === 'add_item') {
+    if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Chỉ Chủ nhiệm đề tài hoặc Admin mới được khai báo hoá chất/vật tư.' });
+    if (locked) return res.status(400).json({ message: 'Danh mục đã khoá, không thể thêm mục mới.' });
+    const name = String(payload.name || '').trim();
+    if (!name) return res.status(400).json({ message: 'Vui lòng nhập tên hoá chất/vật tư' });
+    const unit = payload.unit ? String(payload.unit).trim() : null;
+    const approvedQty = Number(payload.approvedQty);
+    if (!isFinite(approvedQty) || approvedQty < 0) return res.status(400).json({ message: 'Số lượng duyệt không hợp lệ' });
+    const approvedAmount = (payload.approvedAmount !== undefined && payload.approvedAmount !== null && payload.approvedAmount !== '') ? Number(payload.approvedAmount) : null;
+    const note = payload.note ? String(payload.note).trim() : null;
+    const ins = db.prepare(
+      'INSERT INTO cap_vien_step9_supply_item (submissionId, name, unit, approvedQty, approvedAmount, note, createdAt, createdById) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(id, name, unit, approvedQty, approvedAmount, note, nowIso, req.user.id);
+    insertCapVienHistory(id, '9', 'supply_add_item', req.user.id, ownerHistoryRole, 'Thêm hoá chất/vật tư: ' + name);
+    return res.json({ message: 'Đã thêm hoá chất/vật tư.', itemId: ins.lastInsertRowid });
+  }
+
+  if (action === 'update_item') {
+    if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Chỉ Chủ nhiệm đề tài hoặc Admin mới được sửa hoá chất/vật tư.' });
+    if (locked) return res.status(400).json({ message: 'Danh mục đã khoá, không thể sửa.' });
+    const itemId = parseInt(payload.itemId, 10);
+    if (!itemId) return res.status(400).json({ message: 'Thiếu itemId' });
+    const item = getItem(itemId);
+    if (!item) return res.status(404).json({ message: 'Không tìm thấy mục' });
+    const updates = [];
+    const params = [];
+    if (payload.name !== undefined) {
+      const n = String(payload.name || '').trim();
+      if (!n) return res.status(400).json({ message: 'Tên không được để trống' });
+      updates.push('name = ?'); params.push(n);
+    }
+    if (payload.unit !== undefined) { updates.push('unit = ?'); params.push(payload.unit ? String(payload.unit).trim() : null); }
+    if (payload.approvedQty !== undefined) {
+      const q = Number(payload.approvedQty);
+      if (!isFinite(q) || q < 0) return res.status(400).json({ message: 'Số lượng duyệt không hợp lệ' });
+      updates.push('approvedQty = ?'); params.push(q);
+    }
+    if (payload.approvedAmount !== undefined) {
+      const a = (payload.approvedAmount !== null && payload.approvedAmount !== '') ? Number(payload.approvedAmount) : null;
+      updates.push('approvedAmount = ?'); params.push(a);
+    }
+    if (payload.note !== undefined) { updates.push('note = ?'); params.push(payload.note ? String(payload.note).trim() : null); }
+    if (!updates.length) return res.status(400).json({ message: 'Không có trường nào để cập nhật' });
+    updates.push('updatedAt = ?', 'updatedById = ?');
+    params.push(nowIso, req.user.id, itemId);
+    db.prepare('UPDATE cap_vien_step9_supply_item SET ' + updates.join(', ') + ' WHERE id = ?').run(...params);
+    return res.json({ message: 'Đã cập nhật.' });
+  }
+
+  if (action === 'delete_item') {
+    if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Chỉ Chủ nhiệm đề tài hoặc Admin mới được xóa hoá chất/vật tư.' });
+    if (locked) return res.status(400).json({ message: 'Danh mục đã khoá, không thể xóa.' });
+    const itemId = parseInt(payload.itemId, 10);
+    if (!itemId) return res.status(400).json({ message: 'Thiếu itemId' });
+    const item = getItem(itemId);
+    if (!item) return res.status(404).json({ message: 'Không tìm thấy mục' });
+    db.prepare('UPDATE cap_vien_step9_supply_item SET deletedAt = ? WHERE id = ?').run(nowIso, itemId);
+    return res.json({ message: 'Đã xóa.' });
+  }
+
+  if (action === 'lock_catalog') {
+    if (!isPhongKhcnOrAdmin) return res.status(403).json({ message: 'Chỉ Admin hoặc Phòng KHCN mới được khoá danh mục.' });
+    if (locked) return res.status(400).json({ message: 'Danh mục đã được khoá trước đó.' });
+    if (String(sub.budget_4a_status || '').toLowerCase() !== 'approved') {
+      return res.status(400).json({ message: 'Chỉ khoá được khi Bước 4A (Thẩm định dự toán) đã được duyệt.' });
+    }
+    const cnt = db.prepare('SELECT COUNT(*) AS c FROM cap_vien_step9_supply_item WHERE submissionId = ? AND deletedAt IS NULL').get(id);
+    if (!cnt.c) return res.status(400).json({ message: 'Danh mục đang trống, chưa có mục nào để khoá.' });
+    db.prepare('UPDATE cap_vien_submissions SET step9_supply_locked_at = ?, step9_supply_locked_by = ? WHERE id = ?').run(nowIso, req.user.id, id);
+    insertCapVienHistory(id, '9', 'supply_lock_catalog', req.user.id, staffHistoryRole, 'Khoá danh mục hoá chất/vật tư (' + cnt.c + ' mục)');
+    return res.json({ message: 'Đã khoá danh mục hoá chất/vật tư.' });
+  }
+
+  if (action === 'request_issuance') {
+    if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Chỉ Chủ nhiệm đề tài hoặc Admin mới được đề nghị cấp phát.' });
+    if (!locked) return res.status(400).json({ message: 'Danh mục chưa khoá, chưa thể đề nghị cấp phát.' });
+    const itemId = parseInt(payload.itemId, 10);
+    if (!itemId) return res.status(400).json({ message: 'Thiếu itemId' });
+    const item = getItem(itemId);
+    if (!item) return res.status(404).json({ message: 'Không tìm thấy mục' });
+    const qty = Number(payload.qty);
+    if (!isFinite(qty) || qty <= 0) return res.status(400).json({ message: 'Số lượng đề nghị không hợp lệ' });
+    const already = confirmedQtyForItem(itemId);
+    if (already + qty > item.approvedQty + 1e-9) {
+      return res.status(400).json({ message: 'Vượt quá số lượng đã duyệt (còn lại ' + (item.approvedQty - already) + ' ' + (item.unit || '') + ').' });
+    }
+    const issuedDate = payload.issuedDate ? String(payload.issuedDate).trim() : null;
+    const note = payload.note ? String(payload.note).trim() : null;
+    const ins = db.prepare(
+      'INSERT INTO cap_vien_step9_supply_issuance (itemId, submissionId, qty, issuedDate, note, status, requestedById, requestedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(itemId, id, qty, issuedDate, note, 'requested', req.user.id, nowIso);
+    insertCapVienHistory(id, '9', 'supply_request_issuance', req.user.id, ownerHistoryRole, 'Đề nghị cấp ' + qty + ' ' + (item.unit || '') + ' ' + item.name);
+    return res.json({ message: 'Đã gửi đề nghị cấp phát, chờ Phòng KHCN xác nhận.', issuanceId: ins.lastInsertRowid });
+  }
+
+  if (action === 'delete_issuance') {
+    const issuanceId = parseInt(payload.issuanceId, 10);
+    if (!issuanceId) return res.status(400).json({ message: 'Thiếu issuanceId' });
+    const iss = db.prepare('SELECT * FROM cap_vien_step9_supply_issuance WHERE id = ? AND submissionId = ?').get(issuanceId, id);
+    if (!iss) return res.status(404).json({ message: 'Không tìm thấy đợt cấp' });
+    if (iss.status !== 'requested') return res.status(400).json({ message: 'Chỉ xóa được đề nghị đang chờ xác nhận.' });
+    if (!isAdmin && iss.requestedById !== req.user.id) return res.status(403).json({ message: 'Chỉ người đề nghị hoặc Admin mới được xóa đề nghị này.' });
+    db.prepare('DELETE FROM cap_vien_step9_supply_issuance WHERE id = ?').run(issuanceId);
+    return res.json({ message: 'Đã xóa đề nghị cấp phát.' });
+  }
+
+  if (action === 'confirm_issuance') {
+    if (!isPhongKhcnOrAdmin) return res.status(403).json({ message: 'Chỉ Admin hoặc Phòng KHCN mới được xác nhận cấp phát.' });
+    const issuanceId = parseInt(payload.issuanceId, 10);
+    if (!issuanceId) return res.status(400).json({ message: 'Thiếu issuanceId' });
+    const iss = db.prepare('SELECT * FROM cap_vien_step9_supply_issuance WHERE id = ? AND submissionId = ?').get(issuanceId, id);
+    if (!iss) return res.status(404).json({ message: 'Không tìm thấy đợt cấp' });
+    if (iss.status !== 'requested') return res.status(400).json({ message: 'Đợt cấp này đã được xử lý.' });
+    const item = getItem(iss.itemId);
+    if (!item) return res.status(404).json({ message: 'Không tìm thấy mục hoá chất/vật tư liên quan' });
+    const already = confirmedQtyForItem(iss.itemId);
+    if (already + iss.qty > item.approvedQty + 1e-9) {
+      return res.status(400).json({ message: 'Không thể xác nhận — tổng đã cấp sẽ vượt số lượng đã duyệt (còn lại ' + (item.approvedQty - already) + ' ' + (item.unit || '') + ').' });
+    }
+    db.prepare('UPDATE cap_vien_step9_supply_issuance SET status = ?, decidedById = ?, decidedAt = ? WHERE id = ?').run('confirmed', req.user.id, nowIso, issuanceId);
+    insertCapVienHistory(id, '9', 'supply_confirm_issuance', req.user.id, staffHistoryRole, 'Xác nhận cấp ' + iss.qty + ' ' + (item.unit || '') + ' ' + item.name);
+    return res.json({ message: 'Đã xác nhận cấp phát.' });
+  }
+
+  if (action === 'reject_issuance') {
+    if (!isPhongKhcnOrAdmin) return res.status(403).json({ message: 'Chỉ Admin hoặc Phòng KHCN mới được từ chối cấp phát.' });
+    const issuanceId = parseInt(payload.issuanceId, 10);
+    if (!issuanceId) return res.status(400).json({ message: 'Thiếu issuanceId' });
+    const note = String(payload.note || '').trim();
+    if (!note) return res.status(400).json({ message: 'Vui lòng nhập lý do từ chối' });
+    const iss = db.prepare('SELECT * FROM cap_vien_step9_supply_issuance WHERE id = ? AND submissionId = ?').get(issuanceId, id);
+    if (!iss) return res.status(404).json({ message: 'Không tìm thấy đợt cấp' });
+    if (iss.status !== 'requested') return res.status(400).json({ message: 'Đợt cấp này đã được xử lý.' });
+    db.prepare('UPDATE cap_vien_step9_supply_issuance SET status = ?, decidedById = ?, decidedAt = ?, decisionNote = ? WHERE id = ?').run('rejected', req.user.id, nowIso, note, issuanceId);
+    insertCapVienHistory(id, '9', 'supply_reject_issuance', req.user.id, staffHistoryRole, 'Từ chối cấp phát: ' + note);
+    return res.json({ message: 'Đã từ chối đề nghị cấp phát.' });
+  }
+
+  return res.status(400).json({ message: 'Hành động không hợp lệ.' });
 });
 
 // Bước 4: Phản biện upload phiếu đánh giá (slot 1 hoặc 2) - upload KHONG tu dong "hoan thanh"
@@ -8982,6 +9313,9 @@ app.post('/api/admin/users', authMiddleware, adminOnly, async (req, res) => {
   }
   if (councilRoles.includes(r) && !reqIsMasterAdmin(req)) {
     return res.status(403).json({ message: 'Chỉ Master Admin mới được cấp vai trò thành viên Hội đồng KHCN.' });
+  }
+  if (BUDGET_TEAM_ROLES.includes(r) && !reqIsMasterAdmin(req)) {
+    return res.status(403).json({ message: 'Chỉ Master Admin mới được cấp vai trò Tổ thẩm định tài chính.' });
   }
   const existing = db.prepare('SELECT id, role FROM users WHERE email = ?').get(em);
   const acadTitle = (academicTitle || '').trim() || null;
@@ -13086,6 +13420,9 @@ app.put('/api/admin/users/role', authMiddleware, adminOnly, (req, res) => {
   if ((councilRoles.includes(prevRole) || councilRoles.includes(newRole)) && !reqIsMasterAdmin(req)) {
     return res.status(403).json({ message: 'Chỉ Master Admin mới được sửa vai trò thành viên Hội đồng KHCN.' });
   }
+  if ((BUDGET_TEAM_ROLES.includes(prevRole) || BUDGET_TEAM_ROLES.includes(newRole)) && !reqIsMasterAdmin(req)) {
+    return res.status(403).json({ message: 'Chỉ Master Admin mới được sửa vai trò Tổ thẩm định tài chính.' });
+  }
   if (newRole === 'admin' && prevRole !== 'admin' && !reqIsMasterAdmin(req)) {
     return res.status(403).json({ message: 'Chỉ Master Admin mới được cấp vai trò Admin.' });
   }
@@ -13171,8 +13508,9 @@ app.get('/api/admin/budget-appraisal-team', authMiddleware, adminOnly, (req, res
   return res.json({ members: rows });
 });
 
-// Admin: cập nhật thành viên Tổ thẩm định tài chính (họ tên, học hàm học vị, vai trò)
-app.put('/api/admin/budget-appraisal-team', authMiddleware, adminOnly, (req, res) => {
+// Admin: cập nhật thành viên Tổ thẩm định tài chính (họ tên, học hàm học vị, vai trò) — chỉ Master Admin,
+// cùng mức bảo vệ như sửa vai trò HĐKHCN.
+app.put('/api/admin/budget-appraisal-team', authMiddleware, adminOnly, masterAdminOnly, (req, res) => {
   const { email, fullname, academicTitle, role } = req.body || {};
   const em = (email || '').trim().toLowerCase();
   if (!em) return res.status(400).json({ message: 'Vui lòng nhập email' });
@@ -13186,8 +13524,8 @@ app.put('/api/admin/budget-appraisal-team', authMiddleware, adminOnly, (req, res
   return res.json({ message: 'Đã cập nhật thông tin thành viên Tổ thẩm định tài chính.' });
 });
 
-// Admin: xóa thành viên khỏi Tổ thẩm định tài chính (chuyển vai trò về Nghiên cứu viên)
-app.delete('/api/admin/budget-appraisal-team/:email', authMiddleware, adminOnly, (req, res) => {
+// Admin: xóa thành viên khỏi Tổ thẩm định tài chính (chuyển vai trò về Nghiên cứu viên) — chỉ Master Admin.
+app.delete('/api/admin/budget-appraisal-team/:email', authMiddleware, adminOnly, masterAdminOnly, (req, res) => {
   const em = decodeURIComponent(req.params.email || '').trim().toLowerCase();
   if (!em) return res.status(400).json({ message: 'Email không hợp lệ' });
   const row = db.prepare('SELECT id, role FROM users WHERE email = ?').get(em);

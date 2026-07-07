@@ -3,7 +3,7 @@
  * Entry point: src/app.js
  *
  * Stack: Node.js + Express + better-sqlite3 (dev) / @neondatabase/serverless (prod)
- * Deploy: Cloudflare Tunnel → khcn-dmst.sci.edu.vn
+ * Deploy: Cloudflare Tunnel → eoffice.sci.edu.vn
  *
  * Để tích hợp vào Cursor:
  *  1. Copy toàn bộ thư mục src/ vào project KHCN của bạn
