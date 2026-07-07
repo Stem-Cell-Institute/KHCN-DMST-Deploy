@@ -1472,6 +1472,24 @@ db.exec(`
     FOREIGN KEY (itemId) REFERENCES cap_vien_step9_supply_item(id),
     FOREIGN KEY (submissionId) REFERENCES cap_vien_submissions(id)
   );
+  -- Bước 11: đề xuất điều chỉnh (nhân sự/kế hoạch/dự toán/gia hạn) — quy trình 2 cấp:
+  -- Chủ nhiệm nộp -> Phòng KHCN xem xét (yêu cầu bổ sung/trình lên/từ chối thẳng) -> Viện trưởng duyệt/không duyệt.
+  CREATE TABLE IF NOT EXISTS cap_vien_step11_adjustment_request (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    submissionId INTEGER NOT NULL,
+    type TEXT NOT NULL, -- nhan_su | ke_hoach | du_toan | gia_han | khac
+    content TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'submitted', -- submitted | khcn_need_revision | khcn_forwarded | approved | rejected
+    requestedById INTEGER,
+    requestedAt TEXT NOT NULL,
+    khcnNote TEXT,
+    khcnDecidedById INTEGER,
+    khcnDecidedAt TEXT,
+    directorNote TEXT,
+    directorDecidedById INTEGER,
+    directorDecidedAt TEXT,
+    FOREIGN KEY (submissionId) REFERENCES cap_vien_submissions(id)
+  );
 `);
 
 db.exec(`
@@ -1482,6 +1500,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_cv_s9si_sub ON cap_vien_step9_supply_item(submissionId);
   CREATE INDEX IF NOT EXISTS idx_cv_s9su_item ON cap_vien_step9_supply_issuance(itemId);
   CREATE INDEX IF NOT EXISTS idx_cv_s9su_sub ON cap_vien_step9_supply_issuance(submissionId);
+  CREATE INDEX IF NOT EXISTS idx_cv_s11ar_sub ON cap_vien_step11_adjustment_request(submissionId);
 `);
 
 db.exec(`
@@ -7024,6 +7043,15 @@ app.get('/api/cap-vien/submissions/:id', authMiddleware, (req, res) => {
     const u9 = db.prepare('SELECT fullname, email FROM users WHERE id = ?').get(row.step9_supply_locked_by);
     if (u9) step9SupplyLockedByName = u9.fullname || u9.email || null;
   }
+  const step11AdjustmentRequests = db.prepare(
+    `SELECT ar.id, ar.type, ar.content, ar.status, ar.requestedAt, ar.khcnNote, ar.khcnDecidedAt, ar.directorNote, ar.directorDecidedAt,
+            reqU.fullname AS requestedByName, khcnU.fullname AS khcnDecidedByName, dirU.fullname AS directorDecidedByName
+     FROM cap_vien_step11_adjustment_request ar
+     LEFT JOIN users reqU ON reqU.id = ar.requestedById
+     LEFT JOIN users khcnU ON khcnU.id = ar.khcnDecidedById
+     LEFT JOIN users dirU ON dirU.id = ar.directorDecidedById
+     WHERE ar.submissionId = ? ORDER BY ar.id DESC`
+  ).all(id);
   return res.json({
     ...row,
     code: displayCode,
@@ -7044,7 +7072,8 @@ app.get('/api/cap-vien/submissions/:id', authMiddleware, (req, res) => {
     stepActualStats,
     periodicReport,
     step9Milestones,
-    step9SupplyItems
+    step9SupplyItems,
+    step11AdjustmentRequests
   });
 });
 
@@ -8500,6 +8529,14 @@ app.post('/api/cap-vien/submissions/:id/step9-supply/action', authMiddleware, (r
     return res.json({ message: 'Đã khoá danh mục hoá chất/vật tư.' });
   }
 
+  if (action === 'unlock_catalog') {
+    if (!isPhongKhcnOrAdmin) return res.status(403).json({ message: 'Chỉ Admin hoặc Phòng KHCN mới được mở khoá danh mục.' });
+    if (!locked) return res.status(400).json({ message: 'Danh mục chưa khoá.' });
+    db.prepare('UPDATE cap_vien_submissions SET step9_supply_locked_at = NULL, step9_supply_locked_by = NULL WHERE id = ?').run(id);
+    insertCapVienHistory(id, '9', 'supply_unlock_catalog', req.user.id, staffHistoryRole, 'Mở khoá danh mục hoá chất/vật tư để Chủ nhiệm cập nhật lại');
+    return res.json({ message: 'Đã mở khoá danh mục hoá chất/vật tư.' });
+  }
+
   if (action === 'request_issuance') {
     if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Chỉ Chủ nhiệm đề tài hoặc Admin mới được đề nghị cấp phát.' });
     if (!locked) return res.status(400).json({ message: 'Danh mục chưa khoá, chưa thể đề nghị cấp phát.' });
@@ -8563,6 +8600,155 @@ app.post('/api/cap-vien/submissions/:id/step9-supply/action', authMiddleware, (r
     db.prepare('UPDATE cap_vien_step9_supply_issuance SET status = ?, decidedById = ?, decidedAt = ?, decisionNote = ? WHERE id = ?').run('rejected', req.user.id, nowIso, note, issuanceId);
     insertCapVienHistory(id, '9', 'supply_reject_issuance', req.user.id, staffHistoryRole, 'Từ chối cấp phát: ' + note);
     return res.json({ message: 'Đã từ chối đề nghị cấp phát.' });
+  }
+
+  return res.status(400).json({ message: 'Hành động không hợp lệ.' });
+});
+
+// Bước 11: đề xuất điều chỉnh (nhân sự/kế hoạch/dự toán/gia hạn) — 2 cấp Phòng KHCN -> Viện trưởng.
+app.post('/api/cap-vien/submissions/:id/step11-adjustment/action', authMiddleware, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ' });
+  const sub = db.prepare('SELECT id, submittedById FROM cap_vien_submissions WHERE id = ?').get(id);
+  if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
+  const isOwner = sub.submittedById === req.user.id;
+  const isAdmin = (req.user.role || '').toLowerCase() === 'admin';
+  const isPhongKhcnOrAdmin = roleIsAny(req, ['admin', 'phong_khcn', 'thu_ky']);
+  const isDirectorOrAdmin = roleIsAny(req, ['admin', 'vien_truong']);
+  const actorRole = (req.user.role || '').toLowerCase() || 'admin';
+  const ownerHistoryRole = isOwner ? 'researcher' : 'admin';
+  const body = req.body || {};
+  const payload = body.payload || {};
+  const actionRaw = body.action || payload.action || '';
+  const action = String(actionRaw).toLowerCase().trim();
+  const nowIso = new Date().toISOString();
+  const ALLOWED_ADJUSTMENT_TYPES = ['nhan_su', 'ke_hoach', 'du_toan', 'gia_han', 'khac'];
+
+  function getOpenAdjustmentRequest() {
+    return db.prepare("SELECT id FROM cap_vien_step11_adjustment_request WHERE submissionId = ? AND status NOT IN ('approved','rejected') ORDER BY id DESC LIMIT 1").get(id);
+  }
+  function getAdjustmentRequest(requestId) {
+    return db.prepare('SELECT * FROM cap_vien_step11_adjustment_request WHERE id = ? AND submissionId = ?').get(requestId, id);
+  }
+
+  if (action === 'submit_request') {
+    if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Chỉ Chủ nhiệm đề tài hoặc Admin mới được nộp đề xuất điều chỉnh.' });
+    if (getOpenAdjustmentRequest()) return res.status(400).json({ message: 'Đã có đề xuất điều chỉnh đang xử lý, vui lòng chờ hoàn tất trước khi nộp đề xuất mới.' });
+    const type = String(payload.type || '').toLowerCase().trim();
+    if (!ALLOWED_ADJUSTMENT_TYPES.includes(type)) return res.status(400).json({ message: 'Loại điều chỉnh không hợp lệ' });
+    const content = String(payload.content || '').trim();
+    if (!content) return res.status(400).json({ message: 'Vui lòng nhập nội dung đề xuất' });
+    const ins = db.prepare(
+      'INSERT INTO cap_vien_step11_adjustment_request (submissionId, type, content, status, requestedById, requestedAt) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(id, type, content, 'submitted', req.user.id, nowIso);
+    insertCapVienHistory(id, '11', 'adjustment_submit_request', req.user.id, ownerHistoryRole, 'Nộp đề xuất điều chỉnh (' + type + ')');
+    return res.json({ message: 'Đã nộp đề xuất điều chỉnh, chờ Phòng KHCN xem xét.', requestId: ins.lastInsertRowid });
+  }
+
+  if (action === 'update_request') {
+    if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Chỉ Chủ nhiệm đề tài hoặc Admin mới được sửa đề xuất.' });
+    const requestId = parseInt(payload.requestId, 10);
+    if (!requestId) return res.status(400).json({ message: 'Thiếu requestId' });
+    const r = getAdjustmentRequest(requestId);
+    if (!r) return res.status(404).json({ message: 'Không tìm thấy đề xuất' });
+    if (r.status !== 'khcn_need_revision') return res.status(400).json({ message: 'Chỉ sửa được khi Phòng KHCN yêu cầu bổ sung.' });
+    const updates = [];
+    const params = [];
+    if (payload.type !== undefined) {
+      const t = String(payload.type || '').toLowerCase().trim();
+      if (!ALLOWED_ADJUSTMENT_TYPES.includes(t)) return res.status(400).json({ message: 'Loại điều chỉnh không hợp lệ' });
+      updates.push('type = ?'); params.push(t);
+    }
+    if (payload.content !== undefined) {
+      const c = String(payload.content || '').trim();
+      if (!c) return res.status(400).json({ message: 'Nội dung không được để trống' });
+      updates.push('content = ?'); params.push(c);
+    }
+    updates.push('status = ?'); params.push('submitted');
+    params.push(requestId);
+    db.prepare('UPDATE cap_vien_step11_adjustment_request SET ' + updates.join(', ') + ' WHERE id = ?').run(...params);
+    insertCapVienHistory(id, '11', 'adjustment_update_request', req.user.id, ownerHistoryRole, 'Nộp lại đề xuất điều chỉnh sau khi bổ sung');
+    return res.json({ message: 'Đã nộp lại đề xuất, chờ Phòng KHCN xem xét.' });
+  }
+
+  if (action === 'withdraw_request') {
+    if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Chỉ Chủ nhiệm đề tài hoặc Admin mới được rút đề xuất.' });
+    const requestId = parseInt(payload.requestId, 10);
+    if (!requestId) return res.status(400).json({ message: 'Thiếu requestId' });
+    const r = getAdjustmentRequest(requestId);
+    if (!r) return res.status(404).json({ message: 'Không tìm thấy đề xuất' });
+    if (r.status !== 'submitted') return res.status(400).json({ message: 'Chỉ rút được khi đề xuất đang chờ Phòng KHCN xem xét lần đầu.' });
+    db.prepare("UPDATE cap_vien_step11_adjustment_request SET status = 'rejected' WHERE id = ?").run(requestId);
+    insertCapVienHistory(id, '11', 'adjustment_withdraw_request', req.user.id, ownerHistoryRole, 'Rút đề xuất điều chỉnh');
+    return res.json({ message: 'Đã rút đề xuất.' });
+  }
+
+  if (action === 'khcn_request_revision') {
+    if (!isPhongKhcnOrAdmin) return res.status(403).json({ message: 'Chỉ Admin hoặc Phòng KHCN mới được yêu cầu bổ sung.' });
+    const requestId = parseInt(payload.requestId, 10);
+    if (!requestId) return res.status(400).json({ message: 'Thiếu requestId' });
+    const note = String(payload.note || '').trim();
+    if (!note) return res.status(400).json({ message: 'Vui lòng nhập nội dung yêu cầu bổ sung' });
+    const r = getAdjustmentRequest(requestId);
+    if (!r) return res.status(404).json({ message: 'Không tìm thấy đề xuất' });
+    if (r.status !== 'submitted') return res.status(400).json({ message: 'Chỉ xử lý được khi đề xuất đang chờ Phòng KHCN xem xét.' });
+    db.prepare("UPDATE cap_vien_step11_adjustment_request SET status = 'khcn_need_revision', khcnNote = ?, khcnDecidedById = ?, khcnDecidedAt = ? WHERE id = ?").run(note, req.user.id, nowIso, requestId);
+    insertCapVienHistory(id, '11', 'adjustment_khcn_request_revision', req.user.id, actorRole, 'Yêu cầu bổ sung đề xuất điều chỉnh: ' + note);
+    return res.json({ message: 'Đã yêu cầu Chủ nhiệm bổ sung đề xuất.' });
+  }
+
+  if (action === 'khcn_forward') {
+    if (!isPhongKhcnOrAdmin) return res.status(403).json({ message: 'Chỉ Admin hoặc Phòng KHCN mới được trình Viện trưởng.' });
+    const requestId = parseInt(payload.requestId, 10);
+    if (!requestId) return res.status(400).json({ message: 'Thiếu requestId' });
+    const r = getAdjustmentRequest(requestId);
+    if (!r) return res.status(404).json({ message: 'Không tìm thấy đề xuất' });
+    if (r.status !== 'submitted') return res.status(400).json({ message: 'Chỉ trình được khi đề xuất đang chờ Phòng KHCN xem xét.' });
+    const note = payload.note ? String(payload.note).trim() : null;
+    db.prepare("UPDATE cap_vien_step11_adjustment_request SET status = 'khcn_forwarded', khcnNote = ?, khcnDecidedById = ?, khcnDecidedAt = ? WHERE id = ?").run(note, req.user.id, nowIso, requestId);
+    insertCapVienHistory(id, '11', 'adjustment_khcn_forward', req.user.id, actorRole, 'Trình Viện trưởng phê duyệt đề xuất điều chỉnh');
+    return res.json({ message: 'Đã trình Viện trưởng phê duyệt.' });
+  }
+
+  if (action === 'khcn_reject') {
+    if (!isPhongKhcnOrAdmin) return res.status(403).json({ message: 'Chỉ Admin hoặc Phòng KHCN mới được từ chối.' });
+    const requestId = parseInt(payload.requestId, 10);
+    if (!requestId) return res.status(400).json({ message: 'Thiếu requestId' });
+    const note = String(payload.note || '').trim();
+    if (!note) return res.status(400).json({ message: 'Vui lòng nhập lý do từ chối' });
+    const r = getAdjustmentRequest(requestId);
+    if (!r) return res.status(404).json({ message: 'Không tìm thấy đề xuất' });
+    if (r.status !== 'submitted') return res.status(400).json({ message: 'Chỉ từ chối được khi đề xuất đang chờ Phòng KHCN xem xét.' });
+    db.prepare("UPDATE cap_vien_step11_adjustment_request SET status = 'rejected', khcnNote = ?, khcnDecidedById = ?, khcnDecidedAt = ? WHERE id = ?").run(note, req.user.id, nowIso, requestId);
+    insertCapVienHistory(id, '11', 'adjustment_khcn_reject', req.user.id, actorRole, 'Phòng KHCN từ chối đề xuất: ' + note);
+    return res.json({ message: 'Đã từ chối đề xuất.' });
+  }
+
+  if (action === 'director_approve') {
+    if (!isDirectorOrAdmin) return res.status(403).json({ message: 'Chỉ Viện trưởng hoặc Admin mới được phê duyệt.' });
+    const requestId = parseInt(payload.requestId, 10);
+    if (!requestId) return res.status(400).json({ message: 'Thiếu requestId' });
+    const r = getAdjustmentRequest(requestId);
+    if (!r) return res.status(404).json({ message: 'Không tìm thấy đề xuất' });
+    if (r.status !== 'khcn_forwarded') return res.status(400).json({ message: 'Chỉ phê duyệt được khi Phòng KHCN đã trình.' });
+    const note = payload.note ? String(payload.note).trim() : null;
+    db.prepare("UPDATE cap_vien_step11_adjustment_request SET status = 'approved', directorNote = ?, directorDecidedById = ?, directorDecidedAt = ? WHERE id = ?").run(note, req.user.id, nowIso, requestId);
+    insertCapVienHistory(id, '11', 'adjustment_director_approve', req.user.id, actorRole, 'Viện trưởng phê duyệt đề xuất điều chỉnh');
+    return res.json({ message: 'Đã phê duyệt đề xuất điều chỉnh.' });
+  }
+
+  if (action === 'director_reject') {
+    if (!isDirectorOrAdmin) return res.status(403).json({ message: 'Chỉ Viện trưởng hoặc Admin mới được từ chối.' });
+    const requestId = parseInt(payload.requestId, 10);
+    if (!requestId) return res.status(400).json({ message: 'Thiếu requestId' });
+    const note = String(payload.note || '').trim();
+    if (!note) return res.status(400).json({ message: 'Vui lòng nhập lý do không phê duyệt' });
+    const r = getAdjustmentRequest(requestId);
+    if (!r) return res.status(404).json({ message: 'Không tìm thấy đề xuất' });
+    if (r.status !== 'khcn_forwarded') return res.status(400).json({ message: 'Chỉ xử lý được khi Phòng KHCN đã trình.' });
+    db.prepare("UPDATE cap_vien_step11_adjustment_request SET status = 'rejected', directorNote = ?, directorDecidedById = ?, directorDecidedAt = ? WHERE id = ?").run(note, req.user.id, nowIso, requestId);
+    insertCapVienHistory(id, '11', 'adjustment_director_reject', req.user.id, actorRole, 'Viện trưởng không phê duyệt: ' + note);
+    return res.json({ message: 'Đã ghi nhận Viện trưởng không phê duyệt.' });
   }
 
   return res.status(400).json({ message: 'Hành động không hợp lệ.' });
@@ -18911,8 +19097,12 @@ app.use(
     lastModified: false,
     /** Tránh cache HTML; các file khác vẫn tải lại đầy đủ khi không còn 304. */
     setHeaders(res, filePath) {
-      const lower = String(filePath || '').toLowerCase();
-      if (lower.endsWith('.html')) {
+      const lower = String(filePath || '').toLowerCase().replace(/\\/g, '/');
+      // Các file JS của module DMS đang sửa đổi thường xuyên — nếu cache như file tĩnh thông
+      // thường, trình duyệt có thể chạy bản cũ dù HTML đã tải bản mới (tab/nút mới hiện ra
+      // nhưng bấm không phản ứng vì JS xử lý vẫn là bản trước đó).
+      const isNoCacheJs = /\/js\/dms-(records-app|admin-page)\.js$/.test(lower);
+      if (lower.endsWith('.html') || isNoCacheJs) {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
         res.setHeader('Pragma', 'no-cache');
       }

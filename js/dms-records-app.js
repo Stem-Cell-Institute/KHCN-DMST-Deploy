@@ -1902,7 +1902,10 @@
 
   function init() {
     if (!getToken()) {
-      window.location.href = 'dang-nhap.html?returnUrl=' + encodeURIComponent('tai-lieu-hanh-chinh.html');
+      // Giữ nguyên query string (vd ?highlightDoc=1736 từ QR nhãn số hoá) khi bắt đăng nhập,
+      // nếu không sau khi đăng nhập xong sẽ về trang danh sách trống, mất luôn tài liệu cần xem.
+      window.location.href =
+        'dang-nhap.html?returnUrl=' + encodeURIComponent('tai-lieu-hanh-chinh.html' + window.location.search);
       return;
     }
     var urlP = new URLSearchParams(window.location.search);
@@ -1934,7 +1937,9 @@
     }
     loadAll().catch(function (e) {
       if (String(e.message || '').indexOf('401') !== -1 || String(e.message).indexOf('hết hạn') !== -1) {
-        window.location.href = 'dang-nhap.html?returnUrl=' + encodeURIComponent('tai-lieu-hanh-chinh.html');
+        var backHl = state._highlightRowId ? '?highlightDoc=' + state._highlightRowId : window.location.search;
+        window.location.href =
+          'dang-nhap.html?returnUrl=' + encodeURIComponent('tai-lieu-hanh-chinh.html' + backHl);
         return;
       }
       el('dms-app-root').innerHTML =

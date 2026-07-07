@@ -367,7 +367,6 @@
                 callStepAPI(8, 'admin_waive', {});
             },
             '10-nop-bao-cao': function() { showPeriodicReportUploadDialog(); },
-            '11-de-xuat-dieu-chinh': function() { var loai = prompt('Loại điều chỉnh (nhân sự/kế hoạch/dự toán/gia hạn):'); var nd = prompt('Nội dung:'); if (loai && nd) callStepAPI(11, 'request', { type: loai, content: nd }); },
             '12-nop-nghiem-thu': function() { alert('Mở form nộp hồ sơ nghiệm thu.'); },
             '13-nop-phieu-pb': function() { alert('Mở form nộp phiếu phản biện nghiệm thu.'); },
             '15-lap-bien-ban': function() { callStepAPI(15, 'complete', {}); },
@@ -487,6 +486,11 @@
             callSupplyAPI('lock_catalog', {});
             return;
         }
+        if (action === 'unlock_catalog') {
+            if (!confirm('Mở khoá danh mục hoá chất/vật tư?\n\nChủ nhiệm sẽ sửa/thêm/xóa được các mục trong danh mục trở lại — chỉ nên làm sau khi đề xuất thay đổi dự toán liên quan đã được duyệt.')) return;
+            callSupplyAPI('unlock_catalog', {});
+            return;
+        }
         var siid = parseInt(btn.getAttribute('data-siid'), 10);
         if ((action === 'update_item' || action === 'delete_item' || action === 'request_issuance') && !siid) return;
         if (action === 'update_item') {
@@ -540,6 +544,77 @@
         if (action === 'delete_issuance') {
             if (!confirm('Xóa đề nghị cấp phát này?')) return;
             callSupplyAPI('delete_issuance', { issuanceId: issid });
+        }
+    }
+
+    // Bước 11 — đề xuất điều chỉnh (nhân sự/kế hoạch/dự toán/gia hạn), quy trình 2 cấp Phòng KHCN -> Viện trưởng.
+    function callAdjustmentAPI(action, payload) {
+        fetch(apiBase + '/api/cap-vien/submissions/' + id + '/step11-adjustment/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action: action, payload: payload || {} })
+        }).then(function(r) {
+            return r.json().then(function(d) { return { ok: r.ok, data: d }; });
+        }).then(function(res) {
+            if (res.ok) {
+                alert(res.data.message || 'Đã cập nhật thành công.');
+                reloadKeepingTimelineStep('11');
+            } else {
+                alert(res.data.message || 'Thất bại.');
+            }
+        }).catch(function() {
+            alert('Lỗi kết nối máy chủ.');
+        });
+    }
+
+    function execStep11AdjustmentAction(action, btn) {
+        if (action === 'submit_request') {
+            var typeEl = document.getElementById('step11-new-type');
+            var contentEl2 = document.getElementById('step11-new-content');
+            var content = ((contentEl2 && contentEl2.value) || '').trim();
+            if (!content) { alert('Vui lòng nhập nội dung đề xuất.'); return; }
+            callAdjustmentAPI('submit_request', { type: (typeEl && typeEl.value) || 'khac', content: content });
+            return;
+        }
+        var arid = parseInt(btn.getAttribute('data-arid'), 10);
+        if (!arid) return;
+        if (action === 'update_request') {
+            var typeEl2 = document.getElementById('step11-edit-type-' + arid);
+            var contentEl3 = document.getElementById('step11-edit-content-' + arid);
+            var content2 = ((contentEl3 && contentEl3.value) || '').trim();
+            if (!content2) { alert('Nội dung không được để trống.'); return; }
+            callAdjustmentAPI('update_request', { requestId: arid, type: (typeEl2 && typeEl2.value) || 'khac', content: content2 });
+            return;
+        }
+        if (action === 'withdraw_request') {
+            if (!confirm('Rút lại đề xuất điều chỉnh này?')) return;
+            callAdjustmentAPI('withdraw_request', { requestId: arid });
+            return;
+        }
+        if (action === 'khcn_request_revision' || action === 'khcn_reject') {
+            var noteEl2 = document.getElementById('step11-khcn-note-' + arid);
+            var note2 = ((noteEl2 && noteEl2.value) || '').trim();
+            if (!note2) { alert('Vui lòng nhập ghi chú.'); return; }
+            callAdjustmentAPI(action, { requestId: arid, note: note2 });
+            return;
+        }
+        if (action === 'khcn_forward') {
+            if (!confirm('Trình đề xuất này lên Viện trưởng phê duyệt?')) return;
+            var noteEl3 = document.getElementById('step11-khcn-note-' + arid);
+            callAdjustmentAPI('khcn_forward', { requestId: arid, note: ((noteEl3 && noteEl3.value) || '').trim() || null });
+            return;
+        }
+        if (action === 'director_approve') {
+            if (!confirm('Phê duyệt đề xuất điều chỉnh này?')) return;
+            var noteEl4 = document.getElementById('step11-director-note-' + arid);
+            callAdjustmentAPI('director_approve', { requestId: arid, note: ((noteEl4 && noteEl4.value) || '').trim() || null });
+            return;
+        }
+        if (action === 'director_reject') {
+            var noteEl5 = document.getElementById('step11-director-note-' + arid);
+            var note3 = ((noteEl5 && noteEl5.value) || '').trim();
+            if (!note3) { alert('Vui lòng nhập lý do không phê duyệt.'); return; }
+            callAdjustmentAPI('director_reject', { requestId: arid, note: note3 });
         }
     }
 
@@ -2604,6 +2679,9 @@
                 (supplyLocked9
                     ? 'Danh mục đã khoá lúc ' + fmtDateTime(data.step9_supply_locked_at) + (data.step9SupplyLockedByName ? ' bởi ' + escapeHtml(data.step9SupplyLockedByName) : '') + ' — số lượng duyệt là số liệu chính thức để đối sánh cấp phát.'
                     : 'Danh mục đang khai báo (chưa khoá) — Chủ nhiệm/Admin có thể sửa tự do. Sau khi khoá, số lượng duyệt sẽ cố định để đối sánh với các đợt cấp phát.') +
+                (supplyLocked9 && isPhongKhcnOrAdmin9
+                    ? ' <button type="button" class="btn-action btn-sm" data-supply-action="unlock_catalog" style="margin-left:8px">🔓 Mở khoá danh mục</button>'
+                    : '') +
                 '</p>';
 
             // Đối chiếu với hồ sơ Bước 4A đã duyệt — để Admin/Phòng KHCN có căn cứ kiểm tra trước khi khoá,
@@ -2800,8 +2878,92 @@
         html += '</div></div>';
 
         (function(){ var s=getStepState(11,stepsDone); html+='<div class="stage-card '+stageClass(s)+'" data-step="11"><div class="stage-header" onclick="toggleStage(this)"><div class="stage-left"><div class="stage-icon">'+stageIcon(s)+'</div><div class="stage-info"><h3>Bước 11: Điều chỉnh nội dung/nhân sự (nếu cần)</h3><div class="stage-subtitle"><span>📝 Chủ nhiệm đề xuất</span><span class="stage-duration">' + formatStepActualDuration('11', 'Khi cần thiết') + '</span></div></div></div><div class="stage-status"><span class="stage-badge '+stageBadge(s)+'">'+stageBadgeTxt(s)+'</span><span class="expand-icon">▼</span></div></div>'; })();
-        html += '<div class="stage-content"><div style="padding:30px;text-align:center;color:#999"><div style="font-size:48px;margin-bottom:10px">✏️</div><div style="font-size:14px">Bước này chỉ kích hoạt khi cần điều chỉnh:<br>• Thay đổi nhân sự chính<br>• Điều chỉnh kế hoạch nghiên cứu<br>• Thay đổi dự toán (±10%)<br>• Gia hạn thời gian</div></div>';
-        html += actionButtons(11, [{ label: '✏️ Đề xuất điều chỉnh', action: 'de-xuat-dieu-chinh' }]) + templateHint(11) + '</div></div>';
+        (function() {
+            var user11 = {}; try { user11 = JSON.parse(localStorage.getItem('user') || '{}'); } catch(e) {}
+            var isOwner11 = (data.submittedById != null && user11.id != null) && Number(data.submittedById) === Number(user11.id);
+            var isAdmin11 = (user11.role || '').toLowerCase() === 'admin';
+            var isPhongKhcnOrAdmin11 = isAdmin11 || ['phong_khcn', 'thu_ky'].indexOf((user11.role || '').toLowerCase()) >= 0;
+            var isDirectorOrAdmin11 = isAdmin11 || (user11.role || '').toLowerCase() === 'vien_truong';
+            var typeLabel11 = { nhan_su: 'Thay đổi nhân sự', ke_hoach: 'Điều chỉnh kế hoạch nghiên cứu', du_toan: 'Thay đổi dự toán', gia_han: 'Gia hạn thời gian', khac: 'Khác' };
+            var statusLabel11 = { submitted: 'Chờ Phòng KHCN xem xét', khcn_need_revision: 'Phòng KHCN yêu cầu bổ sung', khcn_forwarded: 'Đã trình Viện trưởng', approved: 'Đã phê duyệt', rejected: 'Không được duyệt' };
+            var statusColor11 = { submitted: '#1565c0', khcn_need_revision: '#b45309', khcn_forwarded: '#7c3aed', approved: '#15803d', rejected: '#b91c1c' };
+            var allReq11 = data.step11AdjustmentRequests || [];
+            var openReq11 = allReq11.filter(function(r) { return r.status !== 'approved' && r.status !== 'rejected'; })[0] || null;
+            var closedReq11 = allReq11.filter(function(r) { return r.status === 'approved' || r.status === 'rejected'; });
+
+            html += '<div class="stage-content"><p style="padding:0 20px;margin-top:16px;color:var(--gray);font-size:0.9rem">Kích hoạt khi cần: thay đổi nhân sự chính, điều chỉnh kế hoạch nghiên cứu, thay đổi dự toán (±10%), hoặc gia hạn thời gian — theo quy trình 2 cấp: Phòng KHCN xem xét rồi trình Viện trưởng duyệt.</p>';
+            html += '<div style="padding:0 20px 16px">';
+
+            if (!openReq11) {
+                if (isOwner11 || isAdmin11) {
+                    html += '<div style="padding:14px;background:#f8f9fa;border-radius:12px;border:1px solid #dee2e6">' +
+                        '<div style="font-weight:600;margin-bottom:8px">✏️ Nộp đề xuất điều chỉnh mới</div>' +
+                        '<select id="step11-new-type" style="padding:6px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:8px">' +
+                        Object.keys(typeLabel11).map(function(k) { return '<option value="' + k + '">' + typeLabel11[k] + '</option>'; }).join('') +
+                        '</select>' +
+                        '<textarea id="step11-new-content" placeholder="Nội dung đề xuất, lý do..." style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;min-height:60px;margin-bottom:8px"></textarea>' +
+                        '<button type="button" class="btn-action" data-adjustment-action="submit_request">📤 Nộp đề xuất</button>' +
+                        '</div>';
+                } else {
+                    html += '<p style="color:#94a3b8">Chưa có đề xuất điều chỉnh nào.</p>';
+                }
+            } else {
+                var r11 = openReq11;
+                html += '<div style="padding:14px;background:#f8f9fa;border-radius:12px;border:1px solid #dee2e6" data-adjustment-id="' + r11.id + '">' +
+                    '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">' +
+                    '<div><strong>' + (typeLabel11[r11.type] || r11.type) + '</strong> — nộp bởi ' + escapeHtml(r11.requestedByName || '—') + ' • ' + fmtDateTime(r11.requestedAt) + '</div>' +
+                    '<span style="font-weight:600;color:' + (statusColor11[r11.status] || '#333') + '">' + (statusLabel11[r11.status] || r11.status) + '</span>' +
+                    '</div>';
+
+                if (r11.status === 'khcn_need_revision' && (isOwner11 || isAdmin11)) {
+                    html += '<div style="margin-bottom:8px;padding:8px 10px;background:#fffbeb;border-radius:8px;font-size:0.88rem"><strong>Phòng KHCN yêu cầu bổ sung:</strong> ' + escapeHtml(r11.khcnNote || '') + '</div>' +
+                        '<select id="step11-edit-type-' + r11.id + '" style="padding:6px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:8px">' +
+                        Object.keys(typeLabel11).map(function(k) { return '<option value="' + k + '"' + (r11.type === k ? ' selected' : '') + '>' + typeLabel11[k] + '</option>'; }).join('') +
+                        '</select>' +
+                        '<textarea id="step11-edit-content-' + r11.id + '" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;min-height:60px;margin-bottom:8px">' + escapeHtml(r11.content) + '</textarea>' +
+                        '<button type="button" class="btn-action" data-adjustment-action="update_request" data-arid="' + r11.id + '">📤 Nộp lại</button>';
+                } else {
+                    html += '<div style="white-space:pre-wrap;margin-bottom:8px">' + escapeHtml(r11.content) + '</div>';
+                    if (r11.khcnNote) html += '<div style="margin-bottom:8px;padding:8px 10px;background:#f1f5f9;border-radius:8px;font-size:0.88rem"><strong>Ghi chú Phòng KHCN:</strong> ' + escapeHtml(r11.khcnNote) + '</div>';
+                }
+
+                if (r11.status === 'submitted') {
+                    if (isOwner11 || isAdmin11) {
+                        html += ' <button type="button" class="btn-action btn-sm" data-adjustment-action="withdraw_request" data-arid="' + r11.id + '" style="background:#6c757d">Rút đề xuất</button>';
+                    }
+                    if (isPhongKhcnOrAdmin11) {
+                        html += '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #cbd5e1">' +
+                            '<input type="text" id="step11-khcn-note-' + r11.id + '" placeholder="Ghi chú (bắt buộc khi yêu cầu bổ sung/từ chối)" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:8px">' +
+                            '<button type="button" class="btn-action btn-sm" data-adjustment-action="khcn_request_revision" data-arid="' + r11.id + '">↩ Yêu cầu bổ sung</button> ' +
+                            '<button type="button" class="btn-action btn-sm" data-adjustment-action="khcn_forward" data-arid="' + r11.id + '">📨 Trình Viện trưởng</button> ' +
+                            '<button type="button" class="btn-action btn-sm" data-adjustment-action="khcn_reject" data-arid="' + r11.id + '" style="background:#dc3545;color:#fff">✕ Từ chối</button>' +
+                            '</div>';
+                    }
+                }
+
+                if (r11.status === 'khcn_forwarded' && isDirectorOrAdmin11) {
+                    html += '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed #cbd5e1">' +
+                        '<input type="text" id="step11-director-note-' + r11.id + '" placeholder="Ghi chú (bắt buộc khi không phê duyệt)" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:8px">' +
+                        '<button type="button" class="btn-action btn-sm" data-adjustment-action="director_approve" data-arid="' + r11.id + '">✅ Phê duyệt</button> ' +
+                        '<button type="button" class="btn-action btn-sm" data-adjustment-action="director_reject" data-arid="' + r11.id + '" style="background:#dc3545;color:#fff">✕ Không phê duyệt</button>' +
+                        '</div>';
+                }
+                html += '</div>';
+            }
+
+            if (closedReq11.length) {
+                html += '<details style="margin-top:12px"><summary style="cursor:pointer;color:#64748b;font-size:0.88rem">Lịch sử đề xuất trước đó (' + closedReq11.length + ')</summary>' +
+                    '<div style="margin-top:8px">' + closedReq11.map(function(r) {
+                        return '<div style="padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:8px;font-size:0.88rem">' +
+                            '<strong>' + (typeLabel11[r.type] || r.type) + '</strong> — <span style="color:' + (statusColor11[r.status] || '#333') + '">' + (statusLabel11[r.status] || r.status) + '</span>' +
+                            '<div style="margin-top:4px;color:#475569">' + escapeHtml(r.content) + '</div>' +
+                            (r.directorNote ? '<div style="margin-top:4px;color:#475569"><em>Viện trưởng: ' + escapeHtml(r.directorNote) + '</em></div>' : '') +
+                            '</div>';
+                    }).join('') + '</div></details>';
+            }
+
+            html += '</div>' + templateHint(11) + '</div></div>';
+        })();
 
         // ===== GIAI ĐOẠN 4 =====
         html += '<div class="phase-header"><h3>🎯 GIAI ĐOẠN 4: NGHIỆM THU</h3></div>';
@@ -3019,6 +3181,11 @@
                     var sAct = this.getAttribute('data-supply-action');
                     if (sAct) {
                         execStep9SupplyAction(sAct, this);
+                        return;
+                    }
+                    var adjAct = this.getAttribute('data-adjustment-action');
+                    if (adjAct) {
+                        execStep11AdjustmentAction(adjAct, this);
                         return;
                     }
                     var step = this.getAttribute('data-step');
