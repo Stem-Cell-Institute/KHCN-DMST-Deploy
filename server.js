@@ -217,6 +217,16 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 const ALLOWED_EMAIL_DOMAIN = '@sci.edu.vn';
+/**
+ * Kiểm tra định dạng email an toàn trước khi lưu vào users.email — chặn khoảng trắng/ký tự điều
+ * khiển (\r \n \t...) để email không thể dùng làm vector chèn header khi truyền cho nodemailer
+ * (CRLF/SMTP header injection), vì email lưu trong DB sẽ được dùng lại ở rất nhiều chỗ gửi mail.
+ */
+function isSafeEmailFormat(str) {
+  const s = String(str || '');
+  if (s.length > 190) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);
+}
 /** Chỉ dùng đặt lịch thiết bị CRD — JWT có role này chỉ được gọi /api/crd/* (+ me, logout, health). */
 const CRD_ONLY_USER_ROLE = 'crd_user';
 /** Giá trị đặc biệt: tin nhắn gửi tới mọi người trong module CRD (kênh chung). */
@@ -2136,6 +2146,15 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ace_templates (
+    template_type TEXT PRIMARY KEY,
+    original_name TEXT NOT NULL,
+    path TEXT NOT NULL,
+    updated_at TEXT DEFAULT (datetime('now'))
+  )
+`);
+
 // Bảng placeholder cho thống kê trang chủ (khi có module tương ứng sẽ thêm cột và dữ liệu)
 db.exec(`CREATE TABLE IF NOT EXISTS personnel (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT DEFAULT (datetime('now')))`);
 db.exec(`CREATE TABLE IF NOT EXISTS ip_assets (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT DEFAULT (datetime('now')))`);
@@ -3422,6 +3441,11 @@ function getCouncilEmails() {
   return emailsWithAnyRole(['chu_tich', 'thu_ky', 'thanh_vien', 'admin']);
 }
 
+/** Email của mọi user có role Phòng KHCN — dùng làm người nhận (TO) khi nộp hồ sơ mới, và CC khi thông báo kết quả duyệt (Đề tài cấp Viện). */
+function getPhongKhcnEmails() {
+  return emailsWithAnyRole(['phong_khcn']);
+}
+
 function getBudgetTeamEmails() {
   return emailsWithAnyRole(['totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc']);
 }
@@ -3745,6 +3769,19 @@ function sendNotificationToCouncil(submissionTitle, submittedByEmail) {
   }).catch(err => console.error('[Email] Lỗi gửi:', err.message));
 }
 
+/** Thông báo tới Hội đồng khi NCV nộp lại hồ sơ sau khi Thư ký yêu cầu bổ sung (GĐ3). */
+function sendResubmitEmail(submissionTitle, submittedByEmail) {
+  const toList = getNotificationEmails();
+  if (!transporter || toList.length === 0) return Promise.resolve();
+  return transporter.sendMail({
+    from: getSmtpFrom(),
+    to: toList.join(', '),
+    subject: '[SCI-ACE] Hồ sơ đã nộp lại sau bổ sung: ' + submissionTitle,
+    text: 'Nghiên cứu viên ' + submittedByEmail + ' đã nộp lại hồ sơ (sau khi được yêu cầu bổ sung): ' + submissionTitle + '. Vui lòng đăng nhập vào khu vực Hội đồng để kiểm tra lại.',
+    html: '<p>Nghiên cứu viên <strong>' + submittedByEmail + '</strong> đã <strong>nộp lại</strong> hồ sơ (sau khi được yêu cầu bổ sung): <strong>' + submissionTitle + '</strong>.</p><p>Vui lòng đăng nhập vào <a href="' + (process.env.BASE_URL || 'http://localhost:' + PORT) + '/hoi-dong.html">khu vực Hội đồng</a> để kiểm tra lại.</p>'
+  }).catch(err => console.error('[Email] Lỗi gửi:', err.message));
+}
+
 /** Gửi email thông báo tin nhắn mới trên kênh chung CRD cho người đã bật thông báo */
 function crdSendBroadcastEmailNotification(senderPersonId, message, ts) {
   if (!transporter) {
@@ -3839,7 +3876,9 @@ function getCapVienStepInfo(status) {
 // Đề tài cấp Viện: gửi thông báo khi có hồ sơ mới nộp
 function sendCapVienNewSubmissionEmail(opts) {
   const { submissionId, submissionTitle, submittedByEmail, submittedByName, createdAt, status } = opts;
-  const toList = getNotificationEmails('cap_vien_new_submission');
+  // Ưu tiên gửi thẳng tới Phòng KHCN (người xử lý Bước 2); nếu chưa cấu hình role phong_khcn thì fallback về danh sách thông báo cũ.
+  let toList = getPhongKhcnEmails();
+  if (!toList.length) toList = getNotificationEmails('cap_vien_new_submission');
   if (!transporter || toList.length === 0) return Promise.resolve();
   const baseUrl = process.env.BASE_URL || ('http://localhost:' + PORT);
   const councilUrl = baseUrl + '/hoi-dong-de-tai-cap-vien.html';
@@ -3850,7 +3889,7 @@ function sendCapVienNewSubmissionEmail(opts) {
 
   const subject = '[Đề tài cấp Viện Tế bào gốc]: Hồ sơ mới được nộp: ' + (submissionTitle || '');
   const text =
-    'Kính gửi Quý thành viên Hội đồng,\n\n' +
+    'Kính gửi Phòng Khoa học và Công nghệ,\n\n' +
     'Hệ thống quản lý KHCN&ĐMST Viện Tế bào gốc có ghi nhận hồ sơ mới đăng kí đề tài cấp Viện TBG do ' + submitterLabel + ' nộp.\n\n' +
     'Thông tin đề tài:\n- Tên đề tài: ' + (submissionTitle || '') + '\n- Người nộp: ' + submitterLabel + ' (' + (submittedByEmail || '') + ')\n- Ngày nộp: ' + dateStr + '\n\n' +
     'Khu vực Hội đồng (theo dõi và tải hồ sơ): ' + councilUrl + '\n\n' +
@@ -3861,7 +3900,7 @@ function sendCapVienNewSubmissionEmail(opts) {
 
   const html =
     '<div style="font-family:Arial,sans-serif;max-width:620px;line-height:1.6">' +
-    '<p>Kính gửi Quý thành viên Hội đồng,</p>' +
+    '<p>Kính gửi Phòng Khoa học và Công nghệ,</p>' +
     '<p>Hệ thống quản lý KHCN&ĐMST Viện Tế bào gốc có ghi nhận hồ sơ mới đăng kí đề tài cấp Viện TBG do <strong>' + (submitterLabel.replace(/</g, '&lt;').replace(/>/g, '&gt;')) + '</strong> nộp.</p>' +
     '<p><strong>Thông tin đề tài:</strong></p>' +
     '<ul style="margin:0.5em 0">' +
@@ -5022,11 +5061,11 @@ function isCrdOnlyUserRole(role) {
   return String(role || '').toLowerCase() === CRD_ONLY_USER_ROLE;
 }
 
-// Vai trò HĐKHCN (chu_tich/thu_ky/thanh_vien/totruong_tham_dinh_tc/thanh_vien_tham_dinh_tc) có thể
-// được cấp THÊM cho một user qua bảng council_role_grants, tách biệt khỏi users.role (vai trò hệ
-// thống, vd vien_truong/phong_khcn/admin) — để 1 người vừa giữ vai trò hệ thống vừa tham gia HĐKHCN
-// mà không bị ghi đè mất vai trò nào. Xem module-hoi-dong-khcn admin panel.
-const COUNCIL_ROLE_TOKENS = ['chu_tich', 'thu_ky', 'thanh_vien', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
+// Vai trò HĐKHCN (chu_tich/thu_ky/thanh_vien/totruong_tham_dinh_tc/thanh_vien_tham_dinh_tc) và Phòng
+// KHCN (phong_khcn) có thể được cấp THÊM cho một user qua bảng council_role_grants, tách biệt khỏi
+// users.role (vai trò hệ thống, vd vien_truong/admin) — để 1 người vừa giữ vai trò hệ thống khác vừa
+// kiêm nhiệm HĐKHCN/Phòng KHCN mà không bị ghi đè mất vai trò nào. Xem module-hoi-dong-khcn admin panel.
+const COUNCIL_ROLE_TOKENS = ['chu_tich', 'thu_ky', 'thanh_vien', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc', 'phong_khcn'];
 
 // Vai trò Tổ thẩm định tài chính — cùng mức bảo vệ "chỉ Master Admin" như vai trò HĐKHCN
 // (councilRoles) ở các route cấp/sửa/xóa vai trò bên dưới.
@@ -5399,6 +5438,9 @@ app.post('/api/register', async (req, res) => {
 
   if (!em || !fn || !pw) {
     return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
+  }
+  if (!isSafeEmailFormat(em)) {
+    return res.status(400).json({ message: 'Email không hợp lệ.' });
   }
   if (!em.endsWith(ALLOWED_EMAIL_DOMAIN)) {
     return res.status(400).json({ message: 'Chỉ chấp nhận email có đuôi ' + ALLOWED_EMAIL_DOMAIN });
@@ -6261,6 +6303,77 @@ app.put('/api/submissions/:id/review', authMiddleware, (req, res) => {
   return res.json({ message: 'Đã cập nhật kết quả kiểm tra. Email đã gửi đến nghiên cứu viên và Hội đồng.', status: newStatus });
 });
 
+// GĐ3: Nghiên cứu viên nộp lại hồ sơ sau khi Thư ký yêu cầu bổ sung (NEED_REVISION) — có thể thay file SCI-ACE-01/02/03, quay lại SUBMITTED để Thư ký kiểm tra lại
+app.post('/api/submissions/:id/resubmit', authMiddleware, upload.fields([
+  { name: 'sci_ace_01', maxCount: 1 },
+  { name: 'sci_ace_02', maxCount: 1 },
+  { name: 'sci_ace_03', maxCount: 1 }
+]), (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ' });
+  const sub = db.prepare('SELECT id, title, submittedBy, submittedById, status FROM submissions WHERE id = ?').get(id);
+  if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
+  if ((sub.status || '') !== 'NEED_REVISION') {
+    return res.status(400).json({ message: 'Chỉ có thể nộp lại khi hồ sơ đang ở trạng thái Cần bổ sung' });
+  }
+  const isSubmitter = sub.submittedById === req.user.id;
+  const isAdmin = req.user.role === 'admin';
+  if (!isSubmitter && !isAdmin) {
+    return res.status(403).json({ message: 'Chỉ nghiên cứu viên nộp hồ sơ hoặc Admin mới được nộp lại' });
+  }
+  const files = req.files || {};
+  const allowedExt = ['.pdf', '.docx', '.doc'];
+  const firstFile = db.prepare('SELECT path FROM submission_files WHERE submissionId = ? LIMIT 1').get(id);
+  const finalDir = firstFile && firstFile.path ? path.dirname(firstFile.path) : path.join(uploadDir, 'submission_' + id);
+  fs.mkdirSync(finalDir, { recursive: true });
+  const replaceFile = (fieldName, file) => {
+    const ext = (path.extname(file.originalname || '') || '').toLowerCase();
+    if (!allowedExt.includes(ext)) {
+      try { fs.unlinkSync(file.path); } catch (_) {}
+      return { ok: false, fieldName };
+    }
+    const originalName = fixFilenameEncoding(file.originalname || '') || (fieldName + ext);
+    const finalPath = path.join(finalDir, fieldName + ext);
+    try { fs.renameSync(file.path, finalPath); } catch (e) {
+      try { fs.copyFileSync(file.path, finalPath); } catch (_) {}
+      try { fs.unlinkSync(file.path); } catch (_) {}
+    }
+    const existing = db.prepare('SELECT path FROM submission_files WHERE submissionId = ? AND fieldName = ?').get(id, fieldName);
+    if (existing && existing.path !== finalPath && fs.existsSync(existing.path)) {
+      try { fs.unlinkSync(existing.path); } catch (_) {}
+    }
+    db.prepare('DELETE FROM submission_files WHERE submissionId = ? AND fieldName = ?').run(id, fieldName);
+    db.prepare('INSERT INTO submission_files (submissionId, fieldName, originalName, path, uploadedAt) VALUES (?, ?, ?, ?, ?)')
+      .run(id, fieldName, originalName, finalPath, new Date().toISOString());
+    return { ok: true, fieldName, originalName };
+  };
+  const replacedFields = [];
+  for (const fieldName of ['sci_ace_01', 'sci_ace_02', 'sci_ace_03']) {
+    const f = files[fieldName] && files[fieldName][0];
+    if (!f || !f.path) continue;
+    const result = replaceFile(fieldName, f);
+    if (!result.ok) {
+      return res.status(400).json({ message: 'Chỉ chấp nhận file PDF hoặc Word cho ' + fieldName.toUpperCase().replace('_', '-') });
+    }
+    replacedFields.push(result.originalName);
+  }
+  const note = (req.body && req.body.note) ? String(req.body.note).trim() : '';
+  db.prepare('UPDATE submissions SET status = ?, reviewNote = NULL, reviewedAt = NULL, reviewedById = NULL WHERE id = ?').run('SUBMITTED', id);
+  insertGd5History(
+    id,
+    'resubmit',
+    req.user.id,
+    null,
+    replacedFields.length ? replacedFields.join(', ') : null,
+    note || 'Nghiên cứu viên nộp lại hồ sơ sau khi bổ sung' + (replacedFields.length ? ' (đã thay ' + replacedFields.length + ' file)' : '')
+  );
+  const tempDir = req._uploadDir;
+  if (tempDir && fs.existsSync(tempDir)) { try { fs.rmSync(tempDir, { recursive: true }); } catch (_) {} }
+  sendResubmitEmail(sub.title, sub.submittedBy);
+  console.log('[API] POST /api/submissions/' + id + '/resubmit — NCV đã nộp lại hồ sơ');
+  return res.json({ message: 'Đã nộp lại hồ sơ. Thư ký sẽ kiểm tra lại.', status: 'SUBMITTED' });
+});
+
 // Chủ tịch Hội đồng phân công phản biện (GĐ4): ≥2 thành viên, lưu lịch sử, gửi email cho phản biện và toàn Hội đồng
 app.put('/api/submissions/:id/assign-reviewers', authMiddleware, (req, res) => {
   console.log('[API] PUT /api/submissions/' + req.params.id + '/assign-reviewers');
@@ -6270,7 +6383,7 @@ app.put('/api/submissions/:id/assign-reviewers', authMiddleware, (req, res) => {
   }
   const id = parseInt(req.params.id, 10);
   if (!id) return res.status(400).json({ message: 'ID hồ sơ không hợp lệ' });
-  const sub = db.prepare('SELECT id, title, submittedBy, status FROM submissions WHERE id = ?').get(id);
+  const sub = db.prepare('SELECT id, title, submittedBy, submittedById, status FROM submissions WHERE id = ?').get(id);
   if (!sub) return res.status(404).json({ message: 'Không tìm thấy hồ sơ' });
   if ((sub.status || '') !== 'VALIDATED') {
     return res.status(400).json({ message: 'Chỉ có thể phân công phản biện khi hồ sơ ở trạng thái Đã kiểm tra (chờ phân công)' });
@@ -6286,6 +6399,10 @@ app.put('/api/submissions/:id/assign-reviewers', authMiddleware, (req, res) => {
   const invalid = uniqueIds.filter(uid => !councilIds.includes(uid));
   if (invalid.length > 0) {
     return res.status(400).json({ message: 'Tất cả phản biện phải là thành viên Hội đồng (Chủ tịch, Thư ký, Thành viên) hoặc Admin' });
+  }
+  // Chống xung đột lợi ích: người nộp hồ sơ không được là phản biện của chính hồ sơ mình
+  if (sub.submittedById != null && uniqueIds.includes(sub.submittedById)) {
+    return res.status(400).json({ message: 'Không thể chọn người nộp hồ sơ làm phản biện cho chính hồ sơ của mình (xung đột lợi ích).' });
   }
   const note = (req.body && req.body.note) ? String(req.body.note).trim() : '';
   const assignedAt = new Date().toISOString();
@@ -6313,10 +6430,20 @@ app.put('/api/submissions/:id/reset-gd4', authMiddleware, adminOnly, (req, res) 
   if (status !== 'UNDER_REVIEW') {
     return res.status(400).json({ message: 'Chỉ có thể đưa về GĐ4 khi hồ sơ đang ở giai đoạn Đang đánh giá (GĐ5). Trạng thái hiện tại: ' + status });
   }
+  // Dọn file phản biện GĐ5 (nếu có phản biện cũ đã nộp trước khi reset) — tránh việc phản biện MỚI được phân công sau này
+  // bị tính nhầm là "đã nộp" dựa trên file rác của phản biện CŨ, khiến hệ thống tự chuyển sang GĐ6 khi thực ra chưa đủ 2 người mới nộp.
+  const staleReviewFiles = db.prepare(
+    "SELECT fieldName, path FROM submission_files WHERE submissionId = ? AND fieldName IN ('gd5_review_1','gd5_review_2')"
+  ).all(id);
+  staleReviewFiles.forEach((f) => {
+    if (f.path && fs.existsSync(f.path)) { try { fs.unlinkSync(f.path); } catch (_) {} }
+  });
+  db.prepare("DELETE FROM submission_files WHERE submissionId = ? AND fieldName IN ('gd5_review_1','gd5_review_2')").run(id);
   db.prepare(
     'UPDATE submissions SET status = ?, assignedReviewerIds = NULL, assignedAt = NULL, assignedById = NULL, assignNote = NULL WHERE id = ?'
   ).run('VALIDATED', id);
-  console.log('[API] PUT /api/submissions/' + id + '/reset-gd4 — đã đưa về GĐ4');
+  insertGd5History(id, 'reset_gd4', req.user.id, null, null, 'Admin đưa hồ sơ về GĐ4' + (staleReviewFiles.length ? ' (đã xóa ' + staleReviewFiles.length + ' file phản biện cũ)' : ''));
+  console.log('[API] PUT /api/submissions/' + id + '/reset-gd4 — đã đưa về GĐ4, xóa ' + staleReviewFiles.length + ' file phản biện cũ');
   return res.json({
     message: 'Đã đưa hồ sơ về GĐ4. Chủ tịch Hội đồng có thể vào trang theo dõi và thực hiện lại phân công phản biện.',
     status: 'VALIDATED'
@@ -6496,6 +6623,7 @@ app.delete('/api/submissions/:id', authMiddleware, adminOnly, (req, res) => {
   const submissionDir = files.length > 0 ? resolveGdSubmissionDirForRmSync(id, files[0].path) : null;
   db.transaction(() => {
     db.prepare('DELETE FROM submission_files WHERE submissionId = ?').run(id);
+    try { db.prepare('DELETE FROM submission_gd5_history WHERE submissionId = ?').run(id); } catch (e) { /* bảng có thể chưa tồn tại ở DB cũ */ }
     db.prepare('DELETE FROM submissions WHERE id = ?').run(id);
   })();
   if (submissionDir && fs.existsSync(submissionDir)) {
@@ -6635,7 +6763,7 @@ app.get('/api/cap-vien/public-templates', (req, res) => {
     return res.json({ tasks });
   } catch (e) {
     console.error('[public-templates list]', e);
-    return res.status(500).json({ message: e.message || 'Lỗi CSDL' });
+    return res.status(500).json({ message: 'Lỗi CSDL' });
   }
 });
 
@@ -6702,7 +6830,7 @@ app.post(
         if (f.path && fs.existsSync(f.path)) fs.unlinkSync(f.path);
       } catch (_) {}
       console.error('[public-templates upload]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi lưu' });
+      return res.status(500).json({ message: 'Lỗi lưu' });
     }
   }
 );
@@ -6727,7 +6855,7 @@ app.delete('/api/cap-vien/public-templates/:taskCode', authMiddleware, adminOnly
     return res.json({ ok: true, message: 'Đã xóa mẫu' });
   } catch (e) {
     console.error('[public-templates delete]', e);
-    return res.status(500).json({ message: e.message || 'Lỗi xóa' });
+    return res.status(500).json({ message: 'Lỗi xóa' });
   }
 });
 
@@ -7207,7 +7335,7 @@ app.post('/api/cap-vien/submissions/:id/steps/6/upload-decision', authMiddleware
     saveSlot(fileVn, 'step6_decision_vn', 'VN');
     saveSlot(fileEn, 'step6_decision_en', 'EN');
   } catch (e) {
-    return res.status(400).json({ message: e.message || 'Lỗi lưu file' });
+    return res.status(400).json({ message: 'Lỗi lưu file' });
   }
   insertCapVienHistory(id, '6', 'step6_decision_upload', req.user.id, roleDb, 'Upload Quyết định: ' + saved.join(', '));
   console.log('[API] cap-vien step 6 upload-decision — submission ' + id);
@@ -7630,7 +7758,7 @@ app.post('/api/cap-vien/submissions/:id/periodic-report/admin', authMiddleware, 
       return res.status(400).json({ message: 'Không xác định được mốc neo lịch.' });
     }
     console.error('[periodic-report admin]', err);
-    return res.status(500).json({ message: err.message || 'Lỗi server' });
+    return res.status(500).json({ message: 'Lỗi server' });
   }
 });
 
@@ -8239,9 +8367,13 @@ app.post('/api/cap-vien/submissions/:id/steps/:step', authMiddleware, (req, res)
       researcherEmail,
       researcherName: rowMail ? rowMail.ownerName : null,
       soQd: rowMail ? rowMail.step6_so_qd : sub6.step6_so_qd,
-      councilList: getNotificationEmails('cap_vien_step6_completed_notice')
+      // CC cả Hội đồng KHCN lẫn Phòng KHCN (Phòng KHCN là nơi đã nhận hồ sơ nộp mới, cần biết kết quả duyệt cuối cùng)
+      councilList: Array.from(new Set([
+        ...getNotificationEmails('cap_vien_step6_completed_notice'),
+        ...getPhongKhcnEmails()
+      ]))
     }).catch((err) => console.error('[Email] Bước 6 hoàn thành:', err && err.message));
-    return res.json({ message: 'Đã ghi nhận hoàn thành Bước 6. Hồ sơ chuyển sang Bước 7 (Ký hợp đồng). Đã gửi thông báo hành chính tới Chủ nhiệm (CC Hội đồng KHCN).', status: 'APPROVED' });
+    return res.json({ message: 'Đã ghi nhận hoàn thành Bước 6. Hồ sơ chuyển sang Bước 7 (Ký hợp đồng). Đã gửi thông báo hành chính tới Chủ nhiệm (CC Hội đồng KHCN & Phòng KHCN).', status: 'APPROVED' });
   }
   if (step === '7') {
     const roleLower = (role || '').toLowerCase();
@@ -9490,6 +9622,7 @@ app.post('/api/admin/users', authMiddleware, adminOnly, async (req, res) => {
   const { email, fullname, role, password, academicTitle } = req.body || {};
   const em = (email || '').trim().toLowerCase();
   if (!em) return res.status(400).json({ message: 'Vui lòng nhập email' });
+  if (!isSafeEmailFormat(em)) return res.status(400).json({ message: 'Email không hợp lệ.' });
   const allowed = ['researcher', 'thanh_vien', 'thu_ky', 'chu_tich', 'admin', 'phong_khcn', 'vien_truong', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
   const r = (role || 'researcher').toLowerCase().trim();
   const councilRoles = ['chu_tich', 'thu_ky', 'thanh_vien'];
@@ -9654,7 +9787,8 @@ app.get('/api/homepage-stats', (req, res) => {
     personnel = null;
   }
   /**
-   * Tài sản trí tuệ: đếm `ip_assets` chỉ khi module được bật; tắt → null (không hiển thị 0).
+   * Tài sản trí tuệ: số thực từ công bố loại "Bằng sáng chế / GPHI" (publications.pub_type = 'patent'),
+   * cùng nguồn dữ liệu với module Công bố khoa học — chỉ khi module «ip» được bật; tắt → null (không hiển thị 0).
    */
   let ip = null;
   try {
@@ -9662,7 +9796,9 @@ app.get('/api/homepage-stats', (req, res) => {
       .prepare('SELECT COALESCE(enabled, 0) AS en FROM homepage_modules WHERE code = ?')
       .get('ip');
     if (hmIp && Number(hmIp.en) === 1) {
-      ip = dbCount('SELECT COUNT(*) as c FROM ip_assets');
+      ip = dbCount(
+        "SELECT COUNT(*) as c FROM publications WHERE COALESCE(status, '') != 'retracted' AND pub_type = 'patent'"
+      );
     }
   } catch (e) {
     ip = null;
@@ -9821,6 +9957,19 @@ app.get('/api/homepage-stats', (req, res) => {
   } catch (e) {
     /* bảng document workflow chưa có */
   }
+  /** Thẻ module «Hội đồng đạo đức trên động vật» — đồng bộ trạng thái với /api/submissions (SCI-ACE) */
+  let aceMini = { total: 0, inReview: 0, approved: 0 };
+  try {
+    aceMini.total = dbCount('SELECT COUNT(*) as c FROM submissions');
+    aceMini.inReview = dbCount(
+      "SELECT COUNT(*) as c FROM submissions WHERE COALESCE(status, 'SUBMITTED') IN ('SUBMITTED','VALIDATED','NEED_REVISION','UNDER_REVIEW','IN_MEETING','CONDITIONAL')"
+    );
+    aceMini.approved = dbCount(
+      "SELECT COUNT(*) as c FROM submissions WHERE status IN ('APPROVED','IMPLEMENTATION','COMPLETED')"
+    );
+  } catch (e) {
+    /* bảng submissions (SCI-ACE) chưa có */
+  }
   return res.json({
     missions,
     missionMini,
@@ -9834,6 +9983,7 @@ app.get('/api/homepage-stats', (req, res) => {
     dmsMini,
     equipmentMini,
     documentWorkflowMini,
+    aceMini,
   });
 });
 
@@ -11393,6 +11543,119 @@ app.post('/api/admin/missions-templates', authMiddleware, adminOnly, upload.sing
   return res.status(201).json({ message: 'Đã cập nhật mẫu ' + (TEMPLATE_LABELS[type] || type), template: row });
 });
 
+// Mẫu hồ sơ SCI-ACE (Hội đồng đạo đức trên động vật) — Admin/Thư ký Hội đồng upload, mọi người đăng nhập được download
+const ACE_TEMPLATE_DEFS = [
+  { type: 'nhom1_muc_luc', group: 1, label: 'Mục lục Hệ thống' },
+  { type: 'nhom1_huong_dan_tong_hop', group: 1, label: 'Hướng dẫn Tổng hợp' },
+  { type: 'nhom1_huong_dan_thao_tac', group: 1, label: 'Hướng dẫn Thao tác Động vật' },
+  { type: 'nhom1_quy_che', group: 1, label: 'Quy chế Hội đồng' },
+  { type: 'sci_ace_01', group: 2, label: 'SCI-ACE-01: Đơn đề nghị xét duyệt' },
+  { type: 'sci_ace_02', group: 2, label: 'SCI-ACE-02: Phiếu thuyết minh đề tài' },
+  { type: 'sci_ace_03', group: 2, label: 'SCI-ACE-03: Báo cáo tuân thủ nguyên tắc 3R' },
+  { type: 'sci_ace_04', group: 2, label: 'SCI-ACE-04: Báo cáo giải trình tiếp thu' },
+  { type: 'sci_ace_06', group: 2, label: 'SCI-ACE-06: Báo cáo thay đổi kế hoạch' },
+  { type: 'sci_ace_07', group: 2, label: 'SCI-ACE-07: Báo cáo kết quả tuân thủ' },
+  { type: 'sci_ace_pdg', group: 3, label: 'SCI-ACE-PĐG: Phiếu nhận xét thành viên Hội đồng' },
+  { type: 'sci_ace_05', group: 3, label: 'SCI-ACE-05: Biên bản họp Hội đồng' },
+  { type: 'sci_ace_qd_vn', group: 3, label: 'Quyết định phê duyệt (Tiếng Việt)' },
+  { type: 'sci_ace_qd_en', group: 3, label: 'Decision (English)' },
+];
+const ACE_TEMPLATE_TYPES = ACE_TEMPLATE_DEFS.map((d) => d.type);
+const ACE_TEMPLATE_BY_TYPE = {};
+ACE_TEMPLATE_DEFS.forEach((d) => { ACE_TEMPLATE_BY_TYPE[d.type] = d; });
+
+/** Admin hoặc Thư ký Hội đồng (KHCN/SCI-ACE dùng chung role) mới được cập nhật mẫu hồ sơ SCI-ACE. */
+function aceCanManageTemplates(req) {
+  return roleIsAny(req, ['admin', 'thu_ky']);
+}
+
+app.get('/api/ace-templates', (req, res) => {
+  const rows = db.prepare('SELECT template_type, original_name, updated_at FROM ace_templates').all();
+  const byType = {};
+  rows.forEach((r) => { byType[r.template_type] = r; });
+  const templates = ACE_TEMPLATE_DEFS.map((d) => ({
+    type: d.type,
+    group: d.group,
+    label: d.label,
+    original_name: byType[d.type] ? byType[d.type].original_name : null,
+    updated_at: byType[d.type] ? byType[d.type].updated_at : null,
+    has_file: !!byType[d.type],
+  }));
+  return res.json({ templates });
+});
+
+app.get('/api/ace-templates/can-manage', authMiddleware, (req, res) => {
+  return res.json({ canManage: aceCanManageTemplates(req) });
+});
+
+app.get('/api/ace-templates/:type/download', authMiddleware, (req, res) => {
+  const type = (req.params.type || '').trim();
+  if (!ACE_TEMPLATE_TYPES.includes(type)) return res.status(400).json({ message: 'Loại mẫu không hợp lệ' });
+  const row = db.prepare('SELECT template_type, original_name, path FROM ace_templates WHERE template_type = ?').get(type);
+  if (!row) return res.status(404).json({ message: 'Chưa có mẫu này' });
+  const templatesRoot = path.resolve(uploadDir, 'ace-templates');
+  const fullPath = path.resolve(templatesRoot, String(row.path || '').trim());
+  if (!pathIsStrictlyInsideResolvedRoot(templatesRoot, fullPath)) {
+    return res.status(403).json({ message: 'Đường dẫn file mẫu không hợp lệ' });
+  }
+  if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File không tồn tại' });
+  const safeName = (row.original_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
+  res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '"');
+  return res.sendFile(fullPath);
+});
+
+app.post(
+  '/api/admin/ace-templates',
+  authMiddleware,
+  (req, res, next) => {
+    if (!aceCanManageTemplates(req)) return res.status(403).json({ message: 'Chỉ Admin hoặc Thư ký Hội đồng mới được cập nhật mẫu.' });
+    next();
+  },
+  upload.single('file'),
+  (req, res) => {
+    const type = (req.body.template_type || '').trim();
+    if (!ACE_TEMPLATE_TYPES.includes(type)) {
+      try { if (req.file && req.file.path) fs.unlinkSync(req.file.path); } catch (_) {}
+      return res.status(400).json({ message: 'template_type không hợp lệ' });
+    }
+    if (!req.file || !req.file.path) return res.status(400).json({ message: 'Vui lòng chọn file để upload' });
+    const ext = (req.file.originalname || '').split('.').pop().toLowerCase();
+    if (!['pdf', 'doc', 'docx'].includes(ext)) {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
+      return res.status(400).json({ message: 'Chỉ chấp nhận PDF, Word (.doc, .docx)' });
+    }
+    const destDir = path.join(uploadDir, 'ace-templates');
+    fs.mkdirSync(destDir, { recursive: true });
+    const finalName = type + '_' + Date.now() + '.' + ext;
+    const destPath = path.join(destDir, finalName);
+    fs.copyFileSync(req.file.path, destPath);
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
+    db.prepare("INSERT OR REPLACE INTO ace_templates (template_type, original_name, path, updated_at) VALUES (?, ?, ?, datetime('now'))").run(type, req.file.originalname || finalName, finalName);
+    const row = db.prepare('SELECT template_type, original_name, updated_at FROM ace_templates WHERE template_type = ?').get(type);
+    return res.status(201).json({ message: 'Đã cập nhật mẫu ' + (ACE_TEMPLATE_BY_TYPE[type] ? ACE_TEMPLATE_BY_TYPE[type].label : type), template: row });
+  }
+);
+
+app.delete('/api/admin/ace-templates/:type', authMiddleware, (req, res) => {
+  if (!aceCanManageTemplates(req)) return res.status(403).json({ message: 'Chỉ Admin hoặc Thư ký Hội đồng mới được xóa mẫu.' });
+  const type = (req.params.type || '').trim();
+  if (!ACE_TEMPLATE_TYPES.includes(type)) return res.status(400).json({ message: 'Loại mẫu không hợp lệ' });
+  const row = db.prepare('SELECT path FROM ace_templates WHERE template_type = ?').get(type);
+  if (!row) return res.status(404).json({ message: 'Không có file để xóa' });
+  try {
+    const templatesRoot = path.resolve(uploadDir, 'ace-templates');
+    const fullPath = path.resolve(templatesRoot, String(row.path || '').trim());
+    if (pathIsStrictlyInsideResolvedRoot(templatesRoot, fullPath) && fs.existsSync(fullPath)) {
+      try { fs.unlinkSync(fullPath); } catch (_) {}
+    }
+    db.prepare('DELETE FROM ace_templates WHERE template_type = ?').run(type);
+    return res.json({ ok: true, message: 'Đã xóa mẫu' });
+  } catch (e) {
+    console.error('[ace-templates delete]', e);
+    return res.status(500).json({ message: 'Lỗi xóa' });
+  }
+});
+
 // Import CSV hoặc Excel (.xlsx): cập nhật/thêm đề tài vào missions (Admin)
 app.post('/api/admin/missions/import', authMiddleware, adminOnly, upload.single('file'), (req, res) => {
   if (!req.file || !req.file.path) {
@@ -11727,6 +11990,7 @@ app.post('/api/admin/notification-recipients', authMiddleware, adminOnly, (req, 
   const { email, fullname } = req.body || {};
   const em = (email || '').trim().toLowerCase();
   if (!em) return res.status(400).json({ message: 'Vui lòng nhập email' });
+  if (!isSafeEmailFormat(em)) return res.status(400).json({ message: 'Email không hợp lệ.' });
   try {
     db.prepare('INSERT INTO notification_recipients (email, fullname) VALUES (?, ?)').run(em, (fullname || '').trim() || null);
     const row = db.prepare('SELECT id, email, fullname, createdAt FROM notification_recipients WHERE email = ?').get(em);
@@ -11763,6 +12027,7 @@ app.post('/api/admin/cooperation/notification-recipients', authMiddleware, admin
   const { email, fullname, topics, role } = req.body || {};
   const em = (email || '').trim().toLowerCase();
   if (!em) return res.status(400).json({ message: 'Vui lòng nhập email.' });
+  if (!isSafeEmailFormat(em)) return res.status(400).json({ message: 'Email không hợp lệ.' });
   const topicsVal = (topics === 'all' || (typeof topics === 'string' && topics.trim() === 'all')) ? 'all' : (Array.isArray(topics) ? topics.filter(Boolean).join(',') : (typeof topics === 'string' ? topics.trim() : 'all'));
   const roleVal = (role === 'vien_truong' || (typeof role === 'string' && role.trim().toLowerCase() === 'vien_truong')) ? 'vien_truong' : null;
   try {
@@ -11871,14 +12136,14 @@ app.put('/api/admin/cooperation/settings/thoa-thuan-expiry', authMiddleware, adm
       post_expiry_min_days: coopGetThoaThuanPostExpiryMinDays()
     });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi lưu cấu hình.' });
+    return res.status(500).json({ message: 'Lỗi lưu cấu hình.' });
   }
 });
 
 app.post('/api/admin/cooperation/thoa-thuan/run-expiry-check', authMiddleware, adminOnly, (req, res) => {
   coopRunThoaThuanExpiryAlerts()
     .then((r) => res.json({ ok: true, ...r }))
-    .catch((e) => res.status(500).json({ message: e.message || String(e) }));
+    .catch((e) => res.status(500).json({ message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' }));
 });
 
 // Gửi đề xuất Thỏa thuận (MOU): lưu vào DB + gửi email tới danh sách nhận thông báo (topic mou hoặc all)
@@ -11957,7 +12222,7 @@ function vienTruongOrAdmin(req, res, next) {
 // Helper: Admin, P.KHCN (users.role) hoặc Viện trưởng — dùng cho mục QUẢN LÝ
 function canSeeQuanLySection(req, res, next) {
   const role = (req.user.role || '').toLowerCase();
-  if (role === 'admin' || role === 'phong_khcn') return next();
+  if (role === 'admin' || roleIsAny(req, ['phong_khcn'])) return next();
   const email = (req.user.email || '').trim().toLowerCase();
   if (!email) return res.status(403).json({ message: 'Chỉ Admin, Phòng KHCN hoặc Viện trưởng mới có quyền này' });
   try {
@@ -12043,7 +12308,7 @@ app.get('/api/cooperation/de-xuat-chi-tiet/:source/:id', authMiddleware, (req, r
       const submitterEmail = (r.submitted_by_email || '').trim().toLowerCase();
       if (submitterEmail !== userEmail && req.user.role !== 'admin') {
         const vt = db.prepare('SELECT 1 FROM cooperation_notification_recipients WHERE lower(trim(email)) = ? AND lower(trim(role)) = \'vien_truong\'').get(userEmail);
-        const pk = (req.user.role || '').toLowerCase() === 'phong_khcn';
+        const pk = roleIsAny(req, ['phong_khcn']);
         if (!vt && !pk) return res.status(403).json({ message: 'Không có quyền xem đề xuất này' });
       }
       const step = (r.status || '') === 'da_duyet' ? 4 : ((r.status || '') === 'tu_choi' ? 4 : 1);
@@ -12094,7 +12359,7 @@ app.get('/api/cooperation/can-approve', authMiddleware, (req, res) => {
 app.get('/api/cooperation/quan-ly-stats', authMiddleware, (req, res) => {
   const role = (req.user.role || '').toLowerCase();
   const email = (req.user.email || '').trim().toLowerCase();
-  let canSeeQuanLy = role === 'admin' || role === 'phong_khcn';
+  let canSeeQuanLy = role === 'admin' || roleIsAny(req, ['phong_khcn']);
   if (!canSeeQuanLy && email) {
     try {
       const r = db.prepare('SELECT 1 FROM cooperation_notification_recipients WHERE lower(trim(email)) = ? AND lower(trim(role)) = \'vien_truong\'').get(email);
@@ -12446,7 +12711,7 @@ function canAccessHtqtDeXuat(req, row) {
   const role = (req.user.role || '').toLowerCase();
   const email = (req.user.email || '').trim().toLowerCase();
   if (role === 'admin') return true;
-  if (role === 'phong_khcn') return true;
+  if (roleIsAny(req, ['phong_khcn'])) return true;
   try {
     const vt = db.prepare('SELECT 1 FROM cooperation_notification_recipients WHERE lower(trim(email)) = ? AND lower(trim(role)) = \'vien_truong\'').get(email);
     if (vt) return true;
@@ -13446,7 +13711,7 @@ app.put('/api/admin/cooperation/thoa-thuan/:id', authMiddleware, coopPhongOrAdmi
 // P.KHCN/Admin: thêm thỏa thuận + upload scan
 app.post('/api/cooperation/thoa-thuan', authMiddleware, coopPhongOrAdmin, (req, res) => {
   uploadHtqtThoaThuanScan.single('scan_file')(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Upload file thất bại' });
+    if (err) return res.status(400).json({ message: 'Upload file thất bại' });
     const { ten, doi_tac, loai, het_han, ngay_ky, thoi_han_nam, quoc_gia, loai_doi_tac, staff_notes } = req.body || {};
     const tenTrim = (ten || '').trim();
     const doiTacTrim = (doi_tac || '').trim();
@@ -13511,7 +13776,7 @@ app.post('/api/cooperation/thoa-thuan/:id/terminate', authMiddleware, coopPhongO
   const id = parseInt(req.params.id, 10);
   if (!id) return res.status(400).json({ message: 'ID không hợp lệ.' });
   uploadHtqtThoaThuanTermination.single('termination_file')(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Upload termination file failed' });
+    if (err) return res.status(400).json({ message: 'Upload termination file failed' });
     const termRaw = String((req.body && req.body.terminated_at) || '').trim();
     if (!/^(\d{4})-(\d{2})-(\d{2})$/.test(termRaw)) {
       return res.status(400).json({ message: 'Vui lòng nhập ngày kết thúc (YYYY-MM-DD).' });
@@ -13564,7 +13829,7 @@ app.post('/api/cooperation/thoa-thuan/:id/agreement-scan', authMiddleware, coopP
   }
   if (!exists) return res.status(404).json({ message: 'Không tìm thấy thỏa thuận.' });
   uploadHtqtThoaThuanScan.single('scan_file')(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Upload failed' });
+    if (err) return res.status(400).json({ message: 'Upload failed' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file bản scan.' });
     const scanPath = path.join('uploads', 'htqt-thoa-thuan', req.file.filename).replace(/\\/g, '/');
     const scanName = req.file.originalname || req.file.filename;
@@ -13643,7 +13908,7 @@ app.get('/api/admin/council-role-grants', authMiddleware, adminOnly, (req, res) 
       .all();
     return res.json({ ok: true, data: rows });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Không tải được danh sách.' });
+    return res.status(500).json({ message: 'Không tải được danh sách.' });
   }
 });
 
@@ -14039,7 +14304,7 @@ app.get('/api/crd/state', authMiddleware, (req, res) => {
     if (block) return res.status(403).json({ message: block });
     return res.json(crdGetStateForUser(req.user, mePersonId));
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi CRD' });
+    return res.status(500).json({ message: 'Lỗi CRD' });
   }
 });
 
@@ -14084,7 +14349,7 @@ app.post('/api/crd/bookings', authMiddleware, (req, res) => {
     ).run(id, mid, mePersonId, d, sh, eh, pur, 'confirmed', rg);
     return res.status(201).json({ booking: crdBookingToClient(db.prepare('SELECT * FROM crd_bookings WHERE id = ?').get(id)) });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14106,7 +14371,7 @@ app.delete('/api/crd/bookings/:id', authMiddleware, (req, res) => {
     db.prepare('DELETE FROM crd_bookings WHERE id = ?').run(id);
     return res.json({ ok: true });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14153,7 +14418,7 @@ app.put('/api/crd/bookings/:id', authMiddleware, (req, res) => {
     ).run(startH, endH, purpose, researchGroup, id);
     return res.json({ booking: crdBookingToClient(db.prepare('SELECT * FROM crd_bookings WHERE id = ?').get(id)) });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14230,7 +14495,7 @@ app.post('/api/crd/chats', authMiddleware, (req, res) => {
     );
     return res.status(201).json({ chat: crdChatToClient(db.prepare('SELECT * FROM crd_chats WHERE id = ?').get(id)) });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14247,7 +14512,7 @@ app.put('/api/crd/chats/:id/read', authMiddleware, (req, res) => {
     db.prepare('UPDATE crd_chats SET read_flag = 1 WHERE id = ?').run(id);
     return res.json({ ok: true });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14264,7 +14529,7 @@ app.put('/api/crd/chats/mark-thread-read', authMiddleware, (req, res) => {
     ).run(fromId, mePersonId);
     return res.json({ ok: true });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14284,7 +14549,7 @@ app.put('/api/crd/chats/broadcast-read', authMiddleware, (req, res) => {
     ).run(mePersonId, ts);
     return res.json({ ok: true, broadcastLastRead: ts });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14307,7 +14572,7 @@ app.post('/api/crd/complaints', authMiddleware, (req, res) => {
       .run(mePersonId, ag, bk, sub, bod, 'open');
     return res.status(201).json({ id: r.lastInsertRowid });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14330,7 +14595,7 @@ app.get('/api/crd/admin/snapshot', authMiddleware, adminOnly, (req, res) => {
       }));
     return res.json({ ...base, complaints });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14338,7 +14603,7 @@ app.get('/api/crd/admin/lab-announcements', authMiddleware, adminOnly, (req, res
   try {
     return res.json({ announcements: crdLabAnnouncementsAll() });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14364,7 +14629,7 @@ app.post('/api/crd/admin/lab-announcements', authMiddleware, adminOnly, (req, re
       labAnnouncements: crdLabAnnouncementsActive()
     });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14392,7 +14657,7 @@ app.put('/api/crd/admin/lab-announcements/:id', authMiddleware, adminOnly, (req,
       labAnnouncements: crdLabAnnouncementsActive()
     });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14403,7 +14668,7 @@ app.delete('/api/crd/admin/lab-announcements/:id', authMiddleware, adminOnly, (r
     if (!r.changes) return res.status(404).json({ message: 'Không tìm thấy thông báo' });
     return res.json({ ok: true, labAnnouncements: crdLabAnnouncementsActive() });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14431,7 +14696,7 @@ app.post('/api/crd/admin/machines', authMiddleware, adminOnly, (req, res) => {
     if (e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
       return res.status(409).json({ message: 'ID thiết bị đã tồn tại' });
     }
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14469,7 +14734,7 @@ app.put('/api/crd/admin/machines/reorder', authMiddleware, adminOnly, (req, res)
       .map(crdMachineToClient);
     return res.json({ machines });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14499,7 +14764,7 @@ app.put('/api/crd/admin/machines/:id', authMiddleware, adminOnly, (req, res) => 
     ).run(name, type, location, color, availFrom, availTo, maxHours, description || '', sortOrder, id);
     return res.json({ machine: crdMachineToClient(db.prepare('SELECT * FROM crd_machines WHERE id = ?').get(id)) });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14512,7 +14777,7 @@ app.delete('/api/crd/admin/machines/:id', authMiddleware, adminOnly, (req, res) 
     db.prepare('DELETE FROM crd_machines WHERE id = ?').run(id);
     return res.json({ ok: true });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14535,7 +14800,7 @@ app.post('/api/crd/admin/persons', authMiddleware, adminOnly, (req, res) => {
     if (e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
       return res.status(409).json({ message: 'ID đã tồn tại' });
     }
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14564,7 +14829,7 @@ app.put('/api/crd/admin/persons/:id', authMiddleware, adminOnly, (req, res) => {
     ).run(name, email || null, role, avatar || '?', isBanned, crdAccessRevoked, id);
     return res.json({ user: crdPersonToUser(db.prepare('SELECT * FROM crd_persons WHERE id = ?').get(id)) });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14582,7 +14847,7 @@ app.delete('/api/crd/admin/persons/:id', authMiddleware, adminOnly, (req, res) =
     db.prepare('DELETE FROM crd_persons WHERE id = ?').run(id);
     return res.json({ ok: true });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14620,7 +14885,7 @@ app.get('/api/crd/admin/persons/:id/stats', authMiddleware, adminOnly, (req, res
       byMachine
     });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14658,7 +14923,7 @@ app.get('/api/crd/admin/users', authMiddleware, adminOnly, (req, res) => {
     });
     return res.json(result);
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14672,7 +14937,7 @@ app.put('/api/crd/admin/users/:id/disable', authMiddleware, adminOnly, (req, res
     db.prepare('UPDATE users SET is_disabled = ? WHERE id = ?').run(newVal, id);
     return res.json({ ok: true, isDisabled: newVal === 1, message: newVal ? 'Đã vô hiệu hoá tài khoản' : 'Đã kích hoạt lại tài khoản' });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14689,7 +14954,7 @@ app.post('/api/crd/admin/users/:id/reset-password', authMiddleware, adminOnly, (
     db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, id);
     return res.json({ ok: true, message: 'Đã đặt lại mật khẩu thành công' });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14717,7 +14982,7 @@ app.post('/api/crd/admin/role-defs', authMiddleware, adminOnly, (req, res) => {
     );
     return res.status(201).json({ crdRoles: crdRoleDefsToClient() });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14739,7 +15004,7 @@ app.put('/api/crd/admin/role-defs/:slug', authMiddleware, adminOnly, (req, res) 
     db.prepare('UPDATE crd_role_defs SET label=?, sort_order=?, is_admin_slot=? WHERE slug=?').run(label, sortOrder, isAdm, slug);
     return res.json({ crdRoles: crdRoleDefsToClient() });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14758,7 +15023,7 @@ app.delete('/api/crd/admin/role-defs/:slug', authMiddleware, adminOnly, (req, re
     db.prepare('DELETE FROM crd_role_defs WHERE slug = ?').run(slug);
     return res.json({ crdRoles: crdRoleDefsToClient() });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14799,7 +15064,7 @@ app.put('/api/crd/admin/bookings/:id', authMiddleware, adminOnly, (req, res) => 
     ).run(machineId, personId, date, startH, endH, purpose || '', researchGroup || '', status || 'confirmed', id);
     return res.json({ booking: crdBookingToClient(db.prepare('SELECT * FROM crd_bookings WHERE id = ?').get(id)) });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -14810,7 +15075,7 @@ app.delete('/api/crd/admin/bookings/:id', authMiddleware, adminOnly, (req, res) 
     if (!r.changes) return res.status(404).json({ message: 'Không tìm thấy' });
     return res.json({ ok: true });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -15101,7 +15366,7 @@ try {
       .then(() => ({ ok: true }))
       .catch((e) => {
         console.warn('[EQUIP mail]', e.message);
-        return { ok: false, reason: 'smtp_error', error: e.message || 'smtp_error' };
+        return { ok: false, reason: 'smtp_error', error: 'smtp_error' };
       });
   }
 
@@ -15144,7 +15409,7 @@ try {
       .then(() => ({ ok: true }))
       .catch((e) => {
         console.warn('[DOCFLOW mail]', e.message);
-        return { ok: false, reason: 'smtp_error', error: e.message || 'smtp_error' };
+        return { ok: false, reason: 'smtp_error', error: 'smtp_error' };
       });
   }
   const internalWorkflowRouter = createInternalDocumentsWorkflowRouter({
@@ -15298,7 +15563,7 @@ app.get('/api/dev/pub-analytics-access', authMiddleware, adminOrMasterAdminApi, 
     const s = getPubAnalyticsSettings(db);
     return res.json({ ok: true, mode: s.mode, email_suffix: s.emailSuffix });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+    return res.status(500).json({ ok: false, error: 'Lỗi' });
   }
 });
 
@@ -15324,7 +15589,7 @@ app.put('/api/dev/pub-analytics-access', authMiddleware, adminOrMasterAdminApi, 
     ).run('pub_analytics_email_suffix', suffix);
     return res.json({ ok: true, mode: raw, email_suffix: suffix });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+    return res.status(500).json({ ok: false, error: 'Lỗi' });
   }
 });
 
@@ -15352,7 +15617,7 @@ app.get('/api/users/search', authMiddleware, adminOrMasterAdminApi, (req, res) =
     return res.json({ ok: true, success: true, data: rows });
   } catch (e) {
     console.error('[GET /api/users/search]', e);
-    return res.status(500).json({ ok: false, success: false, error: e.message || 'Lỗi' });
+    return res.status(500).json({ ok: false, success: false, error: 'Lỗi' });
   }
 });
 
@@ -15376,7 +15641,7 @@ app.delete('/api/crd/admin/chats/:id', authMiddleware, (req, res) => {
     db.prepare('UPDATE crd_chats SET is_deleted = 1 WHERE id = ?').run(id);
     return res.json({ ok: true });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -15411,7 +15676,7 @@ app.put('/api/crd/email-notif', authMiddleware, (req, res) => {
     db.prepare('UPDATE users SET crd_email_notif = ? WHERE id = ?').run(val, r.uid);
     return res.json({ ok: true, enabled: val === 1 });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -15423,7 +15688,7 @@ app.get('/api/crd/email-notif', authMiddleware, (req, res) => {
     const row = db.prepare('SELECT crd_email_notif FROM users WHERE id = ?').get(r.uid);
     return res.json({ enabled: row && Number(row.crd_email_notif) === 1 });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -15441,7 +15706,7 @@ app.put('/api/crd/admin/complaints/:id', authMiddleware, adminOnly, (req, res) =
     db.prepare('UPDATE crd_complaints SET status=?, admin_note=? WHERE id=?').run(status, adminNote || '', id);
     return res.json({ ok: true });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -15453,7 +15718,7 @@ app.delete('/api/crd/admin/complaints/:id', authMiddleware, adminOnly, (req, res
     if (!r.changes) return res.status(404).json({ message: 'Không tìm thấy' });
     return res.json({ ok: true });
   } catch (e) {
-    return res.status(500).json({ message: e.message || 'Lỗi' });
+    return res.status(500).json({ message: 'Lỗi' });
   }
 });
 
@@ -15717,7 +15982,7 @@ async function coopRunThoaThuanExpiryAlerts() {
       AND lower(trim(trang_thai)) IN ('hieu_luc','sap_het_han')
     `).all();
   } catch (e) {
-    return { sent: 0, error: e.message };
+    return { sent: 0, error: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' };
   }
 
   const baseUrl = process.env.BASE_URL || ('http://localhost:' + PORT);
@@ -15870,14 +16135,14 @@ const STATUS_LABELS_COOP = {
 function coopIsManager(req) {
   const role = (req.user && req.user.role || '').toLowerCase();
   const email = (req.user && req.user.email || '').trim().toLowerCase();
-  return role === 'admin' || role === 'phong_khcn' || coopIsVienTruong(email);
+  return role === 'admin' || roleIsAny(req, ['phong_khcn']) || coopIsVienTruong(email);
 }
 
 function coopCanDownloadDoanRaVanBan(req, row) {
   if (!row || !row.van_ban_word_path) return false;
   const role = (req.user && req.user.role || '').toLowerCase();
   if (role === 'admin') return true;
-  if (role === 'phong_khcn') return true;
+  if (roleIsAny(req, ['phong_khcn'])) return true;
   const email = (req.user && req.user.email || '').trim().toLowerCase();
   if (email && (row.submitted_by_email || '').trim().toLowerCase() === email) return true;
   if (coopIsVienTruong(email)) return true;
@@ -16133,7 +16398,7 @@ function coopTryAutoGenerateDoanRaVanBan(id) {
     return { ok: true, outName };
   } catch (e) {
     console.error('[doan_ra] auto Word:', e);
-    return { ok: false, skipped: 'error', message: e.message || String(e) };
+    return { ok: false, skipped: 'error', message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' };
   }
 }
 
@@ -16241,7 +16506,7 @@ function coopTryAutoGenerateDoanVaoVanBan(id) {
     return { ok: true, outName };
   } catch (e) {
     console.error('[doan_vao] auto Word:', e);
-    return { ok: false, skipped: 'error', message: e.message || String(e) };
+    return { ok: false, skipped: 'error', message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' };
   }
 }
 
@@ -16405,7 +16670,7 @@ function coopTryAutoGenerateMouVanBan(id) {
     return { ok: true, outName };
   } catch (e) {
     console.error('[mou] auto Word:', e);
-    return { ok: false, skipped: 'error', message: e.message || String(e) };
+    return { ok: false, skipped: 'error', message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' };
   }
 }
 
@@ -16570,7 +16835,7 @@ function coopTryAutoGenerateYtnnVanBan(id) {
     return { ok: true, outName };
   } catch (e) {
     console.error('[ytnn] auto Word:', e);
-    return { ok: false, skipped: 'error', message: e.message || String(e) };
+    return { ok: false, skipped: 'error', message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' };
   }
 }
 
@@ -16606,7 +16871,7 @@ function coopEnsureFreshYtnnVanBan(id) {
 // Middleware phân quyền mới
 function coopPhongOrAdmin(req, res, next) {
   const role = (req.user && req.user.role || '').toLowerCase();
-  if (role === 'admin' || role === 'phong_khcn') return next();
+  if (role === 'admin' || roleIsAny(req, ['phong_khcn'])) return next();
   return res.status(403).json({ message: 'Chỉ Phòng KHCN hoặc Admin mới có quyền này.' });
 }
 function coopVTOrAdmin(req, res, next) {
@@ -16695,7 +16960,7 @@ function coopDashSeries12m(emailLower) {
 function coopDashboardViewer(req, res, next) {
   const role = (req.user && req.user.role || '').toLowerCase();
   const email = (req.user && req.user.email || '').trim().toLowerCase();
-  if (role === 'admin' || role === 'phong_khcn' || coopIsVienTruong(email)) return next();
+  if (role === 'admin' || roleIsAny(req, ['phong_khcn']) || coopIsVienTruong(email)) return next();
   return res.status(403).json({ message: 'Chỉ Quản trị viện, Phòng KHCN hoặc Viện trưởng mới xem được Dashboard.' });
 }
 
@@ -16704,7 +16969,7 @@ app.get('/api/cooperation/sidebar-badges', authMiddleware, (req, res) => {
   try {
     const role = (req.user.role || '').toLowerCase();
     const email = (req.user.email || '').trim().toLowerCase();
-    const isManager = role === 'admin' || role === 'phong_khcn' || coopIsVienTruong(email);
+    const isManager = role === 'admin' || roleIsAny(req, ['phong_khcn']) || coopIsVienTruong(email);
 
     const safeCount = (sql, ...params) => {
       try { return (db.prepare(sql).get(...params) || {}).c || 0; } catch (e) { return 0; }
@@ -16759,7 +17024,7 @@ app.get('/api/cooperation/sidebar-badges', authMiddleware, (req, res) => {
     let hnht_cho_phong = 0;
     let hnht_sap_dien_ra = 0;
     let hnht_minh_chung_qua_han = 0;
-    if (role === 'admin' || role === 'phong_khcn') {
+    if (role === 'admin' || roleIsAny(req, ['phong_khcn'])) {
       hnht_cho_phong = safeCount(
         "SELECT COUNT(*) AS c FROM conference_registrations WHERE status IN ('submitted','khcn_reviewing')"
       );
@@ -16776,7 +17041,7 @@ app.get('/api/cooperation/sidebar-badges', authMiddleware, (req, res) => {
 
     let doi_tac_tong = 0;
     let thoa_thuan_tong = 0;
-    if (role === 'admin' || role === 'phong_khcn') {
+    if (role === 'admin' || roleIsAny(req, ['phong_khcn'])) {
       thoa_thuan_tong = safeCount('SELECT COUNT(*) AS c FROM cooperation_thoa_thuan');
       try {
         doi_tac_tong = cooperationComputePartnerStats().total || 0;
@@ -16892,7 +17157,7 @@ app.get('/api/cooperation/dashboard-stats', authMiddleware, coopDashboardViewer,
       hnht_sap_dien_ra,
       hnht_minh_chung_qua_han,
       generated_at: new Date().toISOString(),
-      is_phong_khcn: role === 'admin' || role === 'phong_khcn',
+      is_phong_khcn: role === 'admin' || roleIsAny(req, ['phong_khcn']),
       is_vien_truong: role === 'admin' || coopIsVienTruong(email),
       is_admin: role === 'admin',
     });
@@ -17195,7 +17460,7 @@ app.post('/api/admin/cooperation/doan-ra/:id/van-ban-word', authMiddleware, admi
     return res.status(400).json({ message: 'Chỉ upload văn bản Word sau khi đề xuất đã được phê duyệt.' });
   }
   uploadHtqtDoanRa.single('file')(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
+    if (err) return res.status(400).json({ message: 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
     const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkDoanRaVanBanFile(row);
@@ -17241,7 +17506,7 @@ app.get('/api/cooperation/doan-ra/:id/van-ban-word', authMiddleware, (req, res) 
 
 app.post('/api/admin/cooperation/doan-ra/to-trinh-template', authMiddleware, adminOnly, (req, res) => {
   uploadToTrinhTemplate.single('file')(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
+    if (err) return res.status(400).json({ message: 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .docx (mẫu Tờ trình Đoàn ra, có placeholder {ma_so}, {quoc_gia}, …).' });
     return res.json({ ok: true, message: 'Đã lưu mẫu Tờ trình Đoàn ra (.docx).' });
   });
@@ -17295,7 +17560,7 @@ app.post('/api/admin/cooperation/doan-vao/:id/van-ban-word', authMiddleware, adm
     return res.status(400).json({ message: 'Chỉ upload văn bản Word sau khi đề xuất đã được phê duyệt.' });
   }
   uploadHtqtDoanVao.single('file')(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
+    if (err) return res.status(400).json({ message: 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
     const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkDoanVaoVanBanFile(row);
@@ -17341,7 +17606,7 @@ app.get('/api/cooperation/doan-vao/:id/van-ban-word', authMiddleware, (req, res)
 
 app.post('/api/admin/cooperation/doan-vao/to-trinh-template', authMiddleware, adminOnly, (req, res) => {
   uploadToTrinhTemplateDoanVao.single('file')(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
+    if (err) return res.status(400).json({ message: 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .docx (mẫu Tờ trình Đoàn vào, có placeholder {ma_so}, {don_vi_de_xuat}, …).' });
     return res.json({ ok: true, message: 'Đã lưu mẫu Tờ trình Đoàn vào (.docx).' });
   });
@@ -17395,7 +17660,7 @@ app.post('/api/admin/cooperation/mou/:id/van-ban-word', authMiddleware, adminOnl
     return res.status(400).json({ message: 'Chỉ upload văn bản Word sau khi đề xuất đã được phê duyệt.' });
   }
   uploadHtqtMou.single('file')(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
+    if (err) return res.status(400).json({ message: 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
     const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkMouVanBanFile(row);
@@ -17441,7 +17706,7 @@ app.get('/api/cooperation/mou/:id/van-ban-word', authMiddleware, (req, res) => {
 
 app.post('/api/admin/cooperation/mou/to-trinh-template', authMiddleware, adminOnly, (req, res) => {
   uploadToTrinhTemplateMou.single('file')(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
+    if (err) return res.status(400).json({ message: 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .docx (mẫu Tờ trình Thỏa thuận/MOU, có placeholder {ma_so}, {ten_doi_tac}, …).' });
     return res.json({ ok: true, message: 'Đã lưu mẫu Tờ trình Đề xuất Thỏa thuận (.docx).' });
   });
@@ -17495,7 +17760,7 @@ app.post('/api/admin/cooperation/ytnn/:id/van-ban-word', authMiddleware, adminOn
     return res.status(400).json({ message: 'Chỉ upload văn bản Word sau khi đề xuất đã được phê duyệt.' });
   }
   uploadHtqtYtnn.single('file')(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
+    if (err) return res.status(400).json({ message: 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .doc hoặc .docx.' });
     const rel = storedUploadsPathForDatabase(req.file.path);
     coopUnlinkYtnnVanBanFile(row);
@@ -17541,7 +17806,7 @@ app.get('/api/cooperation/ytnn/:id/van-ban-word', authMiddleware, (req, res) => 
 
 app.post('/api/admin/cooperation/ytnn/to-trinh-template', authMiddleware, adminOnly, (req, res) => {
   uploadToTrinhTemplateYtnn.single('file')(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
+    if (err) return res.status(400).json({ message: 'Lỗi upload' });
     if (!req.file) return res.status(400).json({ message: 'Chọn file .docx (mẫu Tờ trình YTNN: {ma_so}, {ten_de_tai}, {mo_ta_de_tai}, {ten_to_chuc_doi_tac}, {quoc_gia_doi_tac}, {chu_nhiem_de_tai}, {hoc_ham_hoc_vi}, {don_vi_chu_nhiem}, {kinh_phi}, {don_vi_tien_te}, {tieu_de_to_trinh}, {nguoi_phe_duyet}, …).' });
     return res.json({ ok: true, message: 'Đã lưu mẫu Tờ trình Đề tài YTNN (.docx).' });
   });
@@ -18461,7 +18726,7 @@ app.put('/api/events/:id/sessions', authMiddleware, coopPhongOrAdmin, (req, res)
 });
 app.post('/api/events/:id/files', authMiddleware, coopPhongOrAdmin, (req, res) => {
   uploadEventFiles.array('files', 10)(req, res, (err) => {
-    if (err) return res.status(400).json({ message: err.message || 'Upload thất bại' });
+    if (err) return res.status(400).json({ message: 'Upload thất bại' });
     const id = parseInt(req.params.id, 10);
     if (!eventGetById(id)) return res.status(404).json({ message: 'Không tìm thấy sự kiện' });
     const loai = String((req.body || {}).loai_file || 'khac');
@@ -19075,7 +19340,6 @@ function sendAdminUiStatus(res) {
     mode: adminUiServeMode,
     reason: adminUiModeReason,
     reactBuildIndexExists: !!(adminUiDistDir && fs.existsSync(adminUiIndexFile)),
-    reactBuildDistDir: adminUiDistDir,
     autoBuild: adminUiAutoBuildState,
     legacyFallbackExists: fs.existsSync(legacyWorkflowHtml),
     adminPath: '/admin',
@@ -19271,7 +19535,7 @@ async function mountSciKhcnPublicationsRouters() {
       });
     } catch (e) {
       console.error('[enrich/trigger]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi enrichment' });
+      return res.status(500).json({ message: 'Lỗi enrichment' });
     }
   });
 
@@ -19281,7 +19545,7 @@ async function mountSciKhcnPublicationsRouters() {
       return res.json(stats);
     } catch (e) {
       console.error('[enrich/stats]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi thống kê enrichment' });
+      return res.status(500).json({ message: 'Lỗi thống kê enrichment' });
     }
   });
 
@@ -19296,7 +19560,7 @@ async function mountSciKhcnPublicationsRouters() {
     adminOnly,
     (req, res, next) => {
       uploadSjrCsv.single('file')(req, res, (err) => {
-        if (err) return res.status(400).json({ message: err.message || 'Upload thất bại' });
+        if (err) return res.status(400).json({ message: 'Upload thất bại' });
         next();
       });
     },
@@ -19318,7 +19582,7 @@ async function mountSciKhcnPublicationsRouters() {
         });
       } catch (e) {
         console.error('[sjr-csv-import]', e);
-        return res.status(500).json({ message: e.message || 'Lỗi import SJR' });
+        return res.status(500).json({ message: 'Lỗi import SJR' });
       }
     }
   );
@@ -19352,7 +19616,7 @@ async function mountSciKhcnPublicationsRouters() {
       return res.json({ ok: true, message: 'Đã cập nhật JCR IF', changes });
     } catch (e) {
       console.error('[journal-metrics/update-if]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi CSDL' });
+      return res.status(500).json({ message: 'Lỗi CSDL' });
     }
   });
 
@@ -19368,7 +19632,7 @@ async function mountSciKhcnPublicationsRouters() {
       res.send(Buffer.from(buf));
     } catch (e) {
       console.error('[export/excel]', e);
-      if (!res.headersSent) res.status(500).json({ message: e.message || 'Lỗi xuất Excel' });
+      if (!res.headersSent) res.status(500).json({ message: 'Lỗi xuất Excel' });
     }
   });
 
@@ -19404,7 +19668,7 @@ async function mountSciKhcnPublicationsRouters() {
       });
     } catch (e) {
       console.error('[refresh-external-metrics]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi cập nhật Scopus/OpenAlex' });
+      return res.status(500).json({ message: 'Lỗi cập nhật Scopus/OpenAlex' });
     }
   });
 
@@ -19413,7 +19677,7 @@ async function mountSciKhcnPublicationsRouters() {
     try {
       res.json({ success: true, researchers: trustMod.listResearchers() });
     } catch (e) {
-      res.status(500).json({ success: false, message: e.message || String(e) });
+      res.status(500).json({ success: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -19465,7 +19729,7 @@ async function mountSciKhcnPublicationsRouters() {
         })
       });
       console.error('[publications/admin/clear-all]', e);
-      return res.status(500).json({ message: e.message || 'Không xóa được CSDL' });
+      return res.status(500).json({ message: 'Không xóa được CSDL' });
     }
   });
 

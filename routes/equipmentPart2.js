@@ -267,7 +267,9 @@ function registerEquipmentPart2(router, deps) {
     storage: storageReplace,
     limits: { fileSize: UPLOAD_MAX },
     fileFilter: (req, file, cb) => {
-      if (file.mimetype !== PDF_MIME) return cb(new Error('Chỉ chấp nhận PDF'));
+      if (file.mimetype !== PDF_MIME || path.extname(file.originalname || '').toLowerCase() !== '.pdf') {
+        return cb(new Error('Chỉ chấp nhận PDF'));
+      }
       cb(null, true);
     },
   });
@@ -289,7 +291,9 @@ function registerEquipmentPart2(router, deps) {
     storage: incidentStorage,
     limits: { fileSize: IMG_MAX, files: 5 },
     fileFilter: (req, file, cb) => {
-      const ok = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype);
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const ok = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype) &&
+        ['.jpg', '.jpeg', '.png', '.webp'].includes(ext);
       cb(ok ? null : new Error('Chỉ JPG/PNG/WebP'), ok);
     },
   });
@@ -311,7 +315,9 @@ function registerEquipmentPart2(router, deps) {
     storage: resolutionStorage,
     limits: { fileSize: 12 * 1024 * 1024, files: 10 },
     fileFilter: (req, file, cb) => {
-      const ok = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.mimetype);
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const ok = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.mimetype) &&
+        ['.jpg', '.jpeg', '.png', '.webp', '.pdf'].includes(ext);
       cb(ok ? null : new Error('Chỉ JPG/PNG/WebP/PDF'), ok);
     },
   });
@@ -320,7 +326,7 @@ function registerEquipmentPart2(router, deps) {
     const ct = String(req.headers['content-type'] || '');
     if (ct.includes('multipart/form-data')) {
       return resolutionUpload.array('resolution_files', 10)(req, res, (err) => {
-        if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
+        if (err) return res.status(400).json({ message: 'Lỗi upload' });
         next();
       });
     }
@@ -335,7 +341,7 @@ function registerEquipmentPart2(router, deps) {
         .all();
       res.json({ ok: true, data: rows });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -352,7 +358,7 @@ function registerEquipmentPart2(router, deps) {
         .all();
       res.json({ ok: true, data: rows });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -369,7 +375,7 @@ function registerEquipmentPart2(router, deps) {
       const code = prefix + String(n).padStart(4, '0');
       res.json({ ok: true, equipment_code: code });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -516,7 +522,7 @@ function registerEquipmentPart2(router, deps) {
   router.post('/:id/public-incidents', (req, res) => {
     incidentUpload.array('photos', 5)(req, res, (err) => {
       if (err) {
-        return res.status(400).json({ message: err.message || 'Lỗi upload ảnh' });
+        return res.status(400).json({ message: 'Lỗi upload ảnh' });
       }
       try {
         const ip = equipmentClientIp(req);
@@ -628,7 +634,7 @@ function registerEquipmentPart2(router, deps) {
         res.status(201).json({ ok: true, id: incId });
       } catch (e) {
         console.error('[public incident create]', e);
-        res.status(500).json({ message: e.message || 'Lỗi' });
+        res.status(500).json({ message: 'Lỗi' });
       }
     });
   });
@@ -644,7 +650,7 @@ function registerEquipmentPart2(router, deps) {
         .all(req.user.id, limit);
       res.json({ ok: true, data: rows });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -657,7 +663,7 @@ function registerEquipmentPart2(router, deps) {
       ).run(nid, req.user.id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -677,7 +683,7 @@ function registerEquipmentPart2(router, deps) {
         .all();
       res.json({ ok: true, total, byStatus, byDept });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -714,7 +720,7 @@ function registerEquipmentPart2(router, deps) {
       out.sort((a, b) => (a._daysLeft !== b._daysLeft ? a._daysLeft - b._daysLeft : a.id - b.id));
       res.json({ ok: true, data: out });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -735,7 +741,7 @@ function registerEquipmentPart2(router, deps) {
         .all();
       res.json({ ok: true, data: rows });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -775,7 +781,7 @@ function registerEquipmentPart2(router, deps) {
       const data = rows.map((r) => ({ ...r, reactivated_count: reactivated[r.id] || 0 }));
       res.json({ ok: true, data });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -861,7 +867,7 @@ function registerEquipmentPart2(router, deps) {
       res.end();
     } catch (e) {
       console.error('[equipment export]', e);
-      if (!res.headersSent) res.status(500).json({ message: e.message || 'Lỗi xuất Excel' });
+      if (!res.headersSent) res.status(500).json({ message: 'Lỗi xuất Excel' });
     }
   });
 
@@ -875,7 +881,7 @@ function registerEquipmentPart2(router, deps) {
       const dataUrl = await QRCode.toDataURL(url, { width: 280, margin: 2 });
       res.json({ ok: true, dataUrl, url });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -896,7 +902,7 @@ function registerEquipmentPart2(router, deps) {
         .all(id);
       res.json({ ok: true, data: rows });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -937,7 +943,7 @@ function registerEquipmentPart2(router, deps) {
       );
       res.status(201).json({ ok: true, id: ins.lastInsertRowid });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -990,7 +996,7 @@ function registerEquipmentPart2(router, deps) {
       );
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1014,7 +1020,7 @@ function registerEquipmentPart2(router, deps) {
         .all(id);
       res.json({ ok: true, data: rows });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1059,7 +1065,7 @@ function registerEquipmentPart2(router, deps) {
       );
       res.status(201).json({ ok: true, id: ins.lastInsertRowid });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1091,7 +1097,7 @@ function registerEquipmentPart2(router, deps) {
       }
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1123,14 +1129,14 @@ function registerEquipmentPart2(router, deps) {
       const rows = db.prepare(sql).all(...params);
       res.json({ ok: true, data: rows });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
   router.post('/:id/incidents', authMiddleware, moduleViewerMw, (req, res) => {
     incidentUpload.array('photos', 5)(req, res, (err) => {
       if (err) {
-        return res.status(400).json({ message: err.message || 'Lỗi upload ảnh' });
+        return res.status(400).json({ message: 'Lỗi upload ảnh' });
       }
       try {
         const eqId = parseEquipmentId(req.params.id);
@@ -1219,7 +1225,7 @@ function registerEquipmentPart2(router, deps) {
         res.status(201).json({ ok: true, id: incId });
       } catch (e) {
         console.error('[incident create]', e);
-        res.status(500).json({ message: e.message || 'Lỗi' });
+        res.status(500).json({ message: 'Lỗi' });
       }
     });
   });
@@ -1245,7 +1251,7 @@ function registerEquipmentPart2(router, deps) {
       );
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1335,7 +1341,7 @@ function registerEquipmentPart2(router, deps) {
         emailReason: mailResult && mailResult.reason ? String(mailResult.reason) : null,
       });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1385,7 +1391,7 @@ function registerEquipmentPart2(router, deps) {
       return res.sendFile(normalized);
     } catch (e) {
       console.error('[incident attachment]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1403,7 +1409,7 @@ function registerEquipmentPart2(router, deps) {
     },
     (req, res) => {
       uploadPdfReplace.single('file')(req, res, (err) => {
-        if (err) return res.status(400).json({ message: err.message || 'Lỗi upload' });
+        if (err) return res.status(400).json({ message: 'Lỗi upload' });
         try {
           const id = parseEquipmentId(req.params.id);
           const oldId = parseEquipmentId(req.params.docId);
@@ -1457,7 +1463,7 @@ function registerEquipmentPart2(router, deps) {
           res.status(201).json({ ok: true, document: doc });
         } catch (e) {
           console.error('[doc replace]', e);
-          res.status(500).json({ message: e.message || 'Lỗi' });
+          res.status(500).json({ message: 'Lỗi' });
         }
       });
     }

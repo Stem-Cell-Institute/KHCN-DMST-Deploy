@@ -74,9 +74,9 @@ function createConferenceEmailService({ db, sendMail, buildEmail, baseUrl }) {
     ];
     const html = buildEmail(
       `[HNHT] Đăng ký tham dự HN/HT mới — ${code}`,
-      'Có đăng ký mới cần Phòng KHCN xem xét.',
+      'Có đăng ký mới cần Phòng KHCN xem xét trước khi trình Viện trưởng phê duyệt.',
       rows,
-      'Trân trọng.',
+      'Sau khi Phòng xem xét và phê duyệt, hệ thống sẽ tự động gửi email trình Viện trưởng — Viện trưởng không cần theo dõi ở bước này. Trân trọng.',
       reviewLink
     );
     await sendMail({
@@ -123,12 +123,13 @@ function createConferenceEmailService({ db, sendMail, buildEmail, baseUrl }) {
         : `Đề nghị hỗ trợ: ${Number(registration.funding_requested_vnd || 0).toLocaleString('vi-VN')} VNĐ`;
     const html = buildEmail(
       `[HNHT] Đề nghị phê duyệt — ${code}`,
-      'Kính gửi Viện trưởng xem xét phê duyệt đăng ký tham dự HN/HT.',
+      'Đăng ký đã được Phòng KHCN xem xét, kính đề nghị Viện trưởng phê duyệt.',
       [
         ['Người đăng ký', esc(submitter.fullname || submitter.email)],
         ['Đơn vị', esc(registration.unit)],
         ['Hội nghị/Hội thảo', esc(registration.conf_name)],
         ['Kinh phí', esc(fund)],
+        ['Ý kiến Phòng KHCN', esc(registration.khcn_comment || '—')],
       ],
       'Trân trọng.',
       reviewLink

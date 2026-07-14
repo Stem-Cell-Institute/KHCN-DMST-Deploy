@@ -224,8 +224,8 @@
                 <h3>2 cách cấp vai trò — chọn đúng cách theo tình huống</h3>
                 <ol class="method-steps">
                     <li><strong>Vai trò đơn</strong> (cột trái): dùng khi tạo tài khoản mới, hoặc người đó chỉ cần đúng 1 vai trò. Cách này <strong>ghi đè</strong> vai trò hệ thống hiện tại của tài khoản.</li>
-                    <li><strong>Vai trò kép</strong> (cột phải): dùng khi người đó <strong>đã có vai trò hệ thống khác</strong> (VD: Viện trưởng, Phòng KHCN&amp;QHĐN) và cần <strong>thêm</strong> vai trò Hội đồng/Thẩm định mà không mất vai trò cũ. Vai trò kép lưu ở bảng riêng, cộng thêm chứ không ghi đè.</li>
-                    <li>Vai trò gồm: HĐKHCN (Chủ tịch, Thư ký, Thành viên) và Tổ thẩm định TC (Tổ trưởng, Thành viên). Chỉ tài khoản <strong>@sci.edu.vn</strong>, chỉ <strong>Master Admin</strong> được cấp/sửa.</li>
+                    <li><strong>Vai trò kép</strong> (cột phải): dùng khi người đó <strong>đã có vai trò hệ thống khác</strong> (VD: Viện trưởng, Nghiên cứu viên) và cần <strong>thêm</strong> vai trò Hội đồng/Thẩm định/Phòng KHCN mà không mất vai trò cũ. Vai trò kép lưu ở bảng riêng, cộng thêm chứ không ghi đè.</li>
+                    <li>Vai trò gồm: HĐKHCN (Chủ tịch, Thư ký, Thành viên), Tổ thẩm định TC (Tổ trưởng, Thành viên) và Phòng KHCN. Chỉ tài khoản <strong>@sci.edu.vn</strong>, chỉ <strong>Master Admin</strong> được cấp/sửa.</li>
                 </ol>
             </div>
 
@@ -812,8 +812,8 @@
             return (email || '').toLowerCase().endsWith(ALLOWED_DOMAIN);
         }
 
-        // ===== QUẢN TRỊ MODULE: vai trò HĐKHCN "phụ" (council_role_grants) — cộng thêm, không đụng users.role =====
-        const MADMIN_ROLE_TOKENS = ['chu_tich', 'thu_ky', 'thanh_vien', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc'];
+        // ===== QUẢN TRỊ MODULE: vai trò HĐKHCN/Phòng KHCN "phụ" (council_role_grants) — cộng thêm, không đụng users.role =====
+        const MADMIN_ROLE_TOKENS = ['chu_tich', 'thu_ky', 'thanh_vien', 'totruong_tham_dinh_tc', 'thanh_vien_tham_dinh_tc', 'phong_khcn'];
         let madminUsersCache = [];
         let madminGrantsCache = [];
 

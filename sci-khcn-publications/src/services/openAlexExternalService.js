@@ -162,7 +162,7 @@ export async function fetchOpenAlexWorkByWos(wosRaw) {
     }
     return { ok: false, status: 404, work: null, error: 'Không tìm thấy' };
   } catch (e) {
-    return { ok: false, status: 0, work: null, error: e.message || 'fetch failed' };
+    return { ok: false, status: 0, work: null, error: 'fetch failed' };
   }
 }
 
@@ -191,7 +191,7 @@ export async function fetchOpenAlexWorkByScopusId(scopusEidRaw) {
     }
     return { ok: false, status: 404, work: null, error: 'Không tìm thấy' };
   } catch (e) {
-    return { ok: false, status: 0, work: null, error: e.message || 'fetch failed' };
+    return { ok: false, status: 0, work: null, error: 'fetch failed' };
   }
 }
 

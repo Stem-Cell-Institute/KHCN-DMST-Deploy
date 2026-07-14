@@ -317,7 +317,9 @@
                     var showMeetingForm = (status === 'IN_MEETING' && info.current === 6 && !info.rejected && (user.role === 'thu_ky' || user.role === 'admin'));
                     var showGd6Form = (status === 'APPROVED' && info.current === 7 && !info.rejected && (user.role === 'thu_ky' || user.role === 'admin'));
                     var isSubmitter = (data.submittedById === user.id);
+                    var submittedById = data.submittedById;
                     var showGd7Form = (status === 'IMPLEMENTATION' && info.current === 8 && (isSubmitter || user.role === 'admin'));
+                    var showResubmitForm = (status === 'NEED_REVISION' && info.current === 3 && (isSubmitter || user.role === 'admin'));
                     STAGES.forEach(function(st) {
                         var logicalStepStart = (st.num === 1) ? 1 : st.num + 1;
                         var logicalStepEnd = (st.num === 1) ? 2 : st.num + 1;
@@ -358,6 +360,18 @@
                                 '<button type="button" class="btn-done btn-supplement" id="gd3-btn-supplement">⚠ Yêu cầu bổ sung</button>' +
                                 '<button type="button" class="btn-done" id="gd3-done">Ghi nhận (theo lựa chọn trên)</button>' +
                                 '</div>' +
+                                '</div>';
+                        }
+                        var resubmitForm = '';
+                        if (st.num === 2 && state === 'current' && showResubmitForm) {
+                            resubmitForm = '<div class="stage-secretary-actions" id="resubmit-form-gd3">' +
+                                '<label>Nộp lại hồ sơ (có thể thay file nếu cần, để trống nếu không đổi):</label>' +
+                                '<label for="resubmit-01" style="font-weight:400;">SCI-ACE-01 (Đơn đề nghị) — tùy chọn</label><input type="file" id="resubmit-01" accept=".pdf,.doc,.docx">' +
+                                '<label for="resubmit-02" style="font-weight:400;">SCI-ACE-02 (Phiếu thuyết minh) — tùy chọn</label><input type="file" id="resubmit-02" accept=".pdf,.doc,.docx">' +
+                                '<label for="resubmit-03" style="font-weight:400;">SCI-ACE-03 (Báo cáo 3R) — tùy chọn</label><input type="file" id="resubmit-03" accept=".pdf,.doc,.docx">' +
+                                '<label>Ghi chú cho Thư ký (tùy chọn):</label>' +
+                                '<textarea id="resubmit-note" placeholder="Mô tả những gì đã chỉnh sửa/bổ sung..."></textarea>' +
+                                '<button type="button" class="btn-done" id="resubmit-btn">📤 Nộp lại hồ sơ</button>' +
                                 '</div>';
                         }
                         var gd3History = '';
@@ -613,7 +627,7 @@
                             '<div class="stage-num">GĐ' + st.num + '</div>' +
                             '<div class="stage-title">' + escapeHtml(st.title) + '</div>' +
                             metaOrGd1 +
-                            note + overdueHtml + secretaryForm + chairmanForm + gd5Form + gd5History + meetingForm + conditionalFlowBlock + meetingHistory + gd6Form + gd6History + gd7Form + gd7History + gd3History + gd4History + '</div>';
+                            note + overdueHtml + secretaryForm + resubmitForm + chairmanForm + gd5Form + gd5History + meetingForm + conditionalFlowBlock + meetingHistory + gd6Form + gd6History + gd7Form + gd7History + gd3History + gd4History + '</div>';
                     });
                     document.getElementById('stages').innerHTML = stagesHtml;
                     var scrollToStage = sessionStorage.getItem('trackingScrollToStage');
@@ -836,6 +850,38 @@
                                     .catch(function() { alert('Không thể kết nối máy chủ.'); condSubmitBtn.disabled = false; });
                             };
                         }
+                    var resubmitBtn = document.getElementById('resubmit-btn');
+                    if (resubmitBtn) {
+                        var apiBaseResubmit = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
+                        var tokResubmit = localStorage.getItem('token');
+                        resubmitBtn.onclick = function() {
+                            var f01 = document.getElementById('resubmit-01');
+                            var f02 = document.getElementById('resubmit-02');
+                            var f03 = document.getElementById('resubmit-03');
+                            var noteEl = document.getElementById('resubmit-note');
+                            resubmitBtn.disabled = true;
+                            var fd = new FormData();
+                            if (f01 && f01.files[0]) fd.append('sci_ace_01', f01.files[0]);
+                            if (f02 && f02.files[0]) fd.append('sci_ace_02', f02.files[0]);
+                            if (f03 && f03.files[0]) fd.append('sci_ace_03', f03.files[0]);
+                            if (noteEl && noteEl.value.trim()) fd.append('note', noteEl.value.trim());
+                            fetch(apiBaseResubmit + '/api/submissions/' + id + '/resubmit', {
+                                method: 'POST',
+                                headers: { 'Authorization': 'Bearer ' + tokResubmit },
+                                body: fd
+                            }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                                .then(function(result) {
+                                    if (result.ok) {
+                                        alert(result.data.message || 'Đã nộp lại hồ sơ.');
+                                        window.location.reload();
+                                    } else {
+                                        alert(result.data.message || 'Không thể nộp lại.');
+                                        resubmitBtn.disabled = false;
+                                    }
+                                })
+                                .catch(function() { alert('Không thể kết nối máy chủ.'); resubmitBtn.disabled = false; });
+                        };
+                    }
                     var condApproveBtn = document.getElementById('conditional-approve-btn');
                         if (condApproveBtn) {
                             var apiBaseCondApp = (window.location.protocol === 'file:' || (window.location.port || (window.location.protocol === 'https:' ? '443' : '80')) !== '3000') ? 'http://localhost:3000' : '';
@@ -1019,6 +1065,8 @@
                                 .then(function(result) {
                                     var data = result.data;
                                     var council = (data && data.council) ? data.council : [];
+                                    // Chống xung đột lợi ích: không cho chọn chính người nộp hồ sơ làm phản biện của hồ sơ mình
+                                    council = council.filter(function(u) { return u.id !== submittedById; });
                                     var sel1 = document.getElementById('gd4-reviewer1');
                                     var sel2 = document.getElementById('gd4-reviewer2');
                                     var msgEl = document.getElementById('gd4-council-msg');

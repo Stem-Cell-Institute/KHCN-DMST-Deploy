@@ -11,6 +11,10 @@ const ALLOWED_MIME = new Set([
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]);
+const ALLOWED_EXT = new Set(['.pdf', '.doc', '.docx']);
+
+const ALLOWED_MIME_EVIDENCE = new Set([...ALLOWED_MIME, 'image/jpeg', 'image/png']);
+const ALLOWED_EXT_EVIDENCE = new Set([...ALLOWED_EXT, '.jpg', '.jpeg', '.png']);
 
 function sanitizeOrig(name) {
   return String(name || 'file')
@@ -167,7 +171,14 @@ module.exports = function createConferenceRegistrationRouter(deps) {
   });
 
   const fileFilter = (_req, file, cb) => {
-    if (ALLOWED_MIME.has(file.mimetype)) return cb(null, true);
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (ALLOWED_MIME.has(file.mimetype) && ALLOWED_EXT.has(ext)) return cb(null, true);
+    cb(new Error('INVALID_FILE_TYPE'));
+  };
+
+  const evidenceFileFilter = (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (ALLOWED_MIME_EVIDENCE.has(file.mimetype) && ALLOWED_EXT_EVIDENCE.has(ext)) return cb(null, true);
     cb(new Error('INVALID_FILE_TYPE'));
   };
 
@@ -183,8 +194,8 @@ module.exports = function createConferenceRegistrationRouter(deps) {
   const uploadEvidenceMw = multer({
     storage,
     limits: { fileSize: 20 * 1024 * 1024 },
-    fileFilter,
-  }).array('evidence_files', 5);
+    fileFilter: evidenceFileFilter,
+  }).array('evidence_files', 10);
 
   const router = express.Router();
 
@@ -245,7 +256,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       const rows = db.prepare(sql).all(...params);
       return res.json({ list: rows.map(rowToResponse) });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -369,7 +380,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       const row = db.prepare('SELECT * FROM conference_registrations WHERE id = ?').get(id);
       return res.status(201).json(rowToResponse(row));
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -389,11 +400,12 @@ module.exports = function createConferenceRegistrationRouter(deps) {
         director_reject:
           isDirectorUser(req.user, coopIsVienTruong) && ['khcn_approved', 'director_reviewing'].includes(row.status),
         upload_evidence:
-          Number(row.submitted_by_user_id) === Number(req.user.id) && row.status === 'director_approved',
+          Number(row.submitted_by_user_id) === Number(req.user.id) &&
+          ['director_approved', 'completed'].includes(row.status),
       };
       return res.json({ data: rowToResponse(row), attachments: atts, capabilities });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -498,7 +510,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       const out = db.prepare('SELECT * FROM conference_registrations WHERE id = ?').get(id);
       return res.json(rowToResponse(out));
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -518,7 +530,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       tx();
       return res.json({ ok: true });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -550,7 +562,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
 
       return res.json(rowToResponse(fresh));
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -576,7 +588,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       emails.sendDirectorReviewRequest(fresh, submitter).catch(() => {});
       return res.json(rowToResponse(fresh));
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -603,7 +615,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       emails.sendKhcnRejectedNotification(fresh, submitter, req.user, comment).catch(() => {});
       return res.json(rowToResponse(fresh));
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -629,7 +641,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       emails.sendDirectorApprovedNotification(fresh, submitter).catch(() => {});
       return res.json(rowToResponse(fresh));
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -656,7 +668,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       emails.sendDirectorRejectedNotification(fresh, submitter, comment).catch(() => {});
       return res.json(rowToResponse(fresh));
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -664,7 +676,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
   router.post('/:id/upload-evidence', (req, res, next) => {
     uploadEvidenceMw(req, res, (err) => {
       if (err) {
-        if (err.message === 'INVALID_FILE_TYPE') return res.status(400).json({ message: 'Chỉ chấp nhận PDF, DOC, DOCX' });
+        if (err.message === 'INVALID_FILE_TYPE') return res.status(400).json({ message: 'Chỉ chấp nhận PDF, DOC, DOCX, JPG, PNG' });
         if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ message: 'File quá 20MB' });
         return next(err);
       }
@@ -676,7 +688,9 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       const row = db.prepare('SELECT * FROM conference_registrations WHERE id = ?').get(id);
       if (!row) return res.status(404).json({ message: 'Không tìm thấy' });
       if (Number(row.submitted_by_user_id) !== Number(req.user.id)) return res.status(403).json({ message: 'Chỉ người nộp' });
-      if (row.status !== 'director_approved') return res.status(400).json({ message: 'Chỉ nộp minh chứng khi đã được Viện trưởng phê duyệt' });
+      if (!['director_approved', 'completed'].includes(row.status)) {
+        return res.status(400).json({ message: 'Chỉ nộp minh chứng khi đã được Viện trưởng phê duyệt' });
+      }
       const files = req.files || [];
       if (!files.length) return res.status(400).json({ message: 'Cần ít nhất một file' });
       const evidenceNote = (req.body && req.body.evidence_note) || '';
@@ -706,7 +720,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       emails.sendEvidenceUploadedNotification(fresh, submitter, files.length).catch(() => {});
       return res.json(rowToResponse(fresh));
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -733,7 +747,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
     } catch (e) {
       if (e.code === 'NOT_FOUND') return res.status(404).json({ message: 'Không tìm thấy' });
       if (e.code === 'TEMPLATE_MISSING') return res.status(500).json({ message: 'Thiếu file mẫu Word' });
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -755,7 +769,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
         .all(id);
       return res.json({ list: logs });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -776,7 +790,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       if (!fs.existsSync(abs)) return res.status(404).json({ message: 'File không tồn tại trên máy chủ' });
       res.download(abs, att.original_name || path.basename(abs));
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 

@@ -87,7 +87,7 @@ module.exports = function createDashboardPermissionsRouter({ db, isMasterAdmin, 
       return res.json({ ok: true, success: true, allowed: !!row });
     } catch (e) {
       console.error('[dashboard-perms/check]', e);
-      return res.status(500).json({ ok: false, success: false, allowed: false, error: e.message });
+      return res.status(500).json({ ok: false, success: false, allowed: false, error: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -114,7 +114,7 @@ module.exports = function createDashboardPermissionsRouter({ db, isMasterAdmin, 
       return res.json({ ok: true, success: true, data: rows });
     } catch (e) {
       console.error('[dashboard-perms GET]', e);
-      return res.status(500).json({ ok: false, success: false, error: e.message });
+      return res.status(500).json({ ok: false, success: false, error: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -166,7 +166,7 @@ module.exports = function createDashboardPermissionsRouter({ db, isMasterAdmin, 
       return res.json({ ok: true, success: true, granted: count, dashboardId });
     } catch (e) {
       console.error('[dashboard-perms POST]', e);
-      return res.status(500).json({ ok: false, success: false, error: e.message });
+      return res.status(500).json({ ok: false, success: false, error: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -188,7 +188,7 @@ module.exports = function createDashboardPermissionsRouter({ db, isMasterAdmin, 
       return res.json({ ok: true, success: true });
     } catch (e) {
       console.error('[dashboard-perms DELETE]', e);
-      return res.status(500).json({ ok: false, success: false, error: e.message });
+      return res.status(500).json({ ok: false, success: false, error: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 

@@ -28,7 +28,7 @@ doiRouter.post('/fetch', async (req, res, next) => {
   } catch (err) {
     const msg = err.message || '';
     if (msg.includes('DOI không hợp lệ')) {
-      return res.status(400).json({ ok: false, error: err.message });
+      return res.status(400).json({ ok: false, error: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
     next(err);
   }

@@ -424,7 +424,7 @@ module.exports = function createEquipmentAnalyticsRouter({ db }) {
       return res.json(data);
     } catch (e) {
       console.error('[equipment-analytics/usage-heatmap]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi máy chủ' });
+      return res.status(500).json({ message: 'Lỗi máy chủ' });
     }
   });
 
@@ -451,7 +451,7 @@ module.exports = function createEquipmentAnalyticsRouter({ db }) {
         return res.json({ logs: [] });
       }
       console.error('[equipment-analytics/maintenance-logs]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi máy chủ' });
+      return res.status(500).json({ message: 'Lỗi máy chủ' });
     }
   });
 
@@ -467,7 +467,7 @@ module.exports = function createEquipmentAnalyticsRouter({ db }) {
       return res.json({ equipment });
     } catch (e) {
       console.error('[equipment-analytics/utilization]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi máy chủ' });
+      return res.status(500).json({ message: 'Lỗi máy chủ' });
     }
   });
 
@@ -480,7 +480,7 @@ module.exports = function createEquipmentAnalyticsRouter({ db }) {
       return res.json(data);
     } catch (e) {
       console.error('[equipment-analytics/user-behavior]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi máy chủ' });
+      return res.status(500).json({ message: 'Lỗi máy chủ' });
     }
   });
 
@@ -489,7 +489,7 @@ module.exports = function createEquipmentAnalyticsRouter({ db }) {
       return res.json({ equipment: maintenanceStatusList(db) });
     } catch (e) {
       console.error('[equipment-analytics/maintenance-status]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi máy chủ' });
+      return res.status(500).json({ message: 'Lỗi máy chủ' });
     }
   });
 
@@ -515,7 +515,7 @@ module.exports = function createEquipmentAnalyticsRouter({ db }) {
       return res.json({ ok: true, id: machineId, maintenance_threshold_hours: thr });
     } catch (e) {
       console.error('[equipment-analytics/maintenance-threshold PATCH]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi máy chủ' });
+      return res.status(500).json({ message: 'Lỗi máy chủ' });
     }
   });
 
@@ -568,7 +568,7 @@ module.exports = function createEquipmentAnalyticsRouter({ db }) {
       });
     } catch (e) {
       console.error('[equipment-analytics/maintenance-log POST]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi máy chủ' });
+      return res.status(500).json({ message: 'Lỗi máy chủ' });
     }
   });
 
@@ -588,7 +588,7 @@ module.exports = function createEquipmentAnalyticsRouter({ db }) {
         return res.json({ equipment_id: req.params.equipment_id, logs: [] });
       }
       console.error('[equipment-analytics/maintenance-log GET]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi máy chủ' });
+      return res.status(500).json({ message: 'Lỗi máy chủ' });
     }
   });
 
@@ -599,7 +599,7 @@ module.exports = function createEquipmentAnalyticsRouter({ db }) {
       return res.json(reportSummary(db, range));
     } catch (e) {
       console.error('[equipment-analytics/report/summary]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi máy chủ' });
+      return res.status(500).json({ message: 'Lỗi máy chủ' });
     }
   });
 
@@ -768,7 +768,7 @@ module.exports = function createEquipmentAnalyticsRouter({ db }) {
     } catch (e) {
       console.error('[equipment-analytics/report/export]', e);
       if (!res.headersSent) {
-        return res.status(500).json({ success: false, error: e.message || 'Lỗi xuất file' });
+        return res.status(500).json({ success: false, error: 'Lỗi xuất file' });
       }
     }
   });

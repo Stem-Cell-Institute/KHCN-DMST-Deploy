@@ -69,7 +69,7 @@ export function mountEnrichmentStatsSse(app, authMiddleware, getEnrichmentStats)
         const stats = await getEnrichmentStats();
         res.write(`data: ${JSON.stringify(stats)}\n\n`);
       } catch (e) {
-        res.write(`event: error\ndata: ${JSON.stringify({ message: e.message || String(e) })}\n\n`);
+        res.write(`event: error\ndata: ${JSON.stringify({ message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' })}\n\n`);
       }
     };
 

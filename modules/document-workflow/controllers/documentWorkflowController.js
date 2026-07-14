@@ -300,7 +300,7 @@ ${htmlLink}
         unit: row.department_id || undefined,
       });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không tải được thông tin người dùng.' });
+      return res.status(500).json({ message: 'Không tải được thông tin người dùng.' });
     }
   }
 
@@ -311,7 +311,7 @@ ${htmlLink}
         : db.prepare(`SELECT id, code, name FROM units WHERE active = 1 ORDER BY name`).all();
       return res.json({ ok: true, data: rows });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không tải được danh sách đơn vị.' });
+      return res.status(500).json({ message: 'Không tải được danh sách đơn vị.' });
     }
   }
 
@@ -329,7 +329,7 @@ ${htmlLink}
             .all();
       return res.json({ ok: true, data: rows });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không tải được danh sách người dùng.' });
+      return res.status(500).json({ message: 'Không tải được danh sách người dùng.' });
     }
   }
 
@@ -340,7 +340,7 @@ ${htmlLink}
         : documentModel.getDashboardStats();
       return res.json({ ok: true, data: stats });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không tải được thống kê dashboard.' });
+      return res.status(500).json({ message: 'Không tải được thống kê dashboard.' });
     }
   }
 
@@ -358,7 +358,7 @@ ${htmlLink}
       }
       return res.status(201).json({ ok: true, data: result.data });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không tạo được hồ sơ.' });
+      return res.status(500).json({ message: 'Không tạo được hồ sơ.' });
     }
   }
 
@@ -370,7 +370,7 @@ ${htmlLink}
       if (result && result.ok) return res.json(result);
       return res.status(500).json({ message: 'Workflow service chưa được cấu hình.' });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không tải được danh sách hồ sơ.' });
+      return res.status(500).json({ message: 'Không tải được danh sách hồ sơ.' });
     }
   }
 
@@ -387,7 +387,7 @@ ${htmlLink}
       }
       return res.status(500).json({ message: 'Workflow service chưa được cấu hình.' });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không tải được chi tiết hồ sơ.' });
+      return res.status(500).json({ message: 'Không tải được chi tiết hồ sơ.' });
     }
   }
 
@@ -417,7 +417,7 @@ ${htmlLink}
       history(documentId, Number(updated.current_step || record.current_step || 1), 'document_general_updated', 'Cập nhật hồ sơ trực tiếp bởi quản trị module', req);
       return res.json({ ok: true, data: updated });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không cập nhật được hồ sơ.' });
+      return res.status(500).json({ message: 'Không cập nhật được hồ sơ.' });
     }
   }
 
@@ -434,7 +434,7 @@ ${htmlLink}
       history(documentId, Number(record.current_step || 1), 'document_deleted', 'Xóa mềm hồ sơ (deleted_at)', req);
       return res.json({ ok: true });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không xóa được hồ sơ.' });
+      return res.status(500).json({ message: 'Không xóa được hồ sơ.' });
     }
   }
 
@@ -468,7 +468,7 @@ ${htmlLink}
       );
       return res.json({ ok: true, data: updated });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không hủy được quy trình hồ sơ.' });
+      return res.status(500).json({ message: 'Không hủy được quy trình hồ sơ.' });
     }
   }
 
@@ -484,7 +484,7 @@ ${htmlLink}
       if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
       return res.json({ ok: true, data: result.data });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không phân công được hồ sơ.' });
+      return res.status(500).json({ message: 'Không phân công được hồ sơ.' });
     }
   }
 
@@ -501,7 +501,7 @@ ${htmlLink}
       if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
       return res.json({ ok: true, data: result.data, attachmentIds: result.attachmentIds || [] });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không lưu được dự thảo.' });
+      return res.status(500).json({ message: 'Không lưu được dự thảo.' });
     }
   }
 
@@ -517,7 +517,7 @@ ${htmlLink}
       if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
       return res.json({ ok: true, data: result.data });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không xử lý được thẩm định.' });
+      return res.status(500).json({ message: 'Không xử lý được thẩm định.' });
     }
   }
 
@@ -533,7 +533,7 @@ ${htmlLink}
       if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
       return res.status(result.status || 201).json({ ok: true, data: result.data });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không thêm được góp ý.' });
+      return res.status(500).json({ message: 'Không thêm được góp ý.' });
     }
   }
 
@@ -550,7 +550,7 @@ ${htmlLink}
       if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
       return res.json({ ok: true, data: result.data, attachmentIds: result.attachmentIds || [] });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không hoàn thiện được dự thảo.' });
+      return res.status(500).json({ message: 'Không hoàn thiện được dự thảo.' });
     }
   }
 
@@ -567,7 +567,7 @@ ${htmlLink}
       if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
       return res.json({ ok: true, data: result.data, attachmentIds: result.attachmentIds || [] });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không trình ký được hồ sơ.' });
+      return res.status(500).json({ message: 'Không trình ký được hồ sơ.' });
     }
   }
 
@@ -584,7 +584,7 @@ ${htmlLink}
       if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
       return res.json({ ok: true, data: result.data, attachmentIds: result.attachmentIds || [] });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không ban hành được văn bản.' });
+      return res.status(500).json({ message: 'Không ban hành được văn bản.' });
     }
   }
 
@@ -600,7 +600,7 @@ ${htmlLink}
       if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
       return res.json({ ok: true, data: result.data });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không lưu trữ được hồ sơ.' });
+      return res.status(500).json({ message: 'Không lưu trữ được hồ sơ.' });
     }
   }
 
@@ -623,7 +623,7 @@ ${htmlLink}
       history(documentId, step, 'attachment_added', `Upload bổ sung ${ids.length} file`, req);
       return res.status(201).json({ ok: true, attachmentIds: ids });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không upload được file đính kèm.' });
+      return res.status(500).json({ message: 'Không upload được file đính kèm.' });
     }
   }
 
@@ -664,7 +664,7 @@ ${htmlLink}
       );
       return res.sendFile(normalized);
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không tải được file đính kèm.' });
+      return res.status(500).json({ message: 'Không tải được file đính kèm.' });
     }
   }
 

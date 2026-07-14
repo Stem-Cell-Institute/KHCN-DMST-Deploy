@@ -49,7 +49,7 @@ app.get('/api/researchers/list-for-disambiguation', publicationsAuthMiddleware, 
   try {
     res.json({ success: true, researchers: listResearchers() });
   } catch (e) {
-    res.status(500).json({ success: false, message: e.message || String(e) });
+    res.status(500).json({ success: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
   }
 });
 

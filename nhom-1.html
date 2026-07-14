@@ -6,6 +6,17 @@
     <title>Nhóm 1: Hướng dẫn Vận hành - SCI-ACE</title>
     <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        button.download-btn { border: none; cursor: pointer; font: inherit; }
+        button.download-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .tpl-meta { display: block; font-size: 0.8rem; color: var(--gray); margin-top: 0.35rem; }
+        .admin-template-tools { display: none; align-items: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+        body.can-manage-ace-templates .admin-template-tools { display: flex; }
+        .admin-template-tools input[type="file"] { font-size: 0.75rem; max-width: 160px; }
+        .btn-upload, .btn-delete-tpl { border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; }
+        .btn-upload { background: var(--primary); color: #fff; }
+        .btn-delete-tpl { background: #dc3545; color: #fff; }
+    </style>
 </head>
 <body>
     <header>
@@ -47,53 +58,69 @@
                 </p>
                 
                 <div class="download-grid">
-                    <div class="download-card">
+                    <div class="download-card" data-ace-type="nhom1_muc_luc">
                         <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
-                        
+
                         <h4>Mục lục Hệ thống</h4>
                         <p style="color: var(--gray); margin: 1rem 0;">Tổng quan toàn bộ hệ thống tài liệu với danh sách đầy đủ các mẫu và mô tả chi tiết.</p>
                         <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem;">
                             <span class="badge">Tổng quan</span>
                         </div>
-                        <a href="files/00_MUC_LUC_HE_THONG.docx" download class="download-btn">
-                            📥 Tải xuống
-                        </a>
+                        <button type="button" class="download-btn" disabled>📥 Tải xuống</button>
+                        <span class="tpl-meta"></span>
+                        <div class="admin-template-tools">
+                            <input type="file" class="tpl-file" accept=".pdf,.doc,.docx" aria-label="Chọn file mẫu">
+                            <button type="button" class="btn-upload">Gửi lên</button>
+                            <button type="button" class="btn-delete-tpl" disabled>Xóa</button>
+                        </div>
                     </div>
-                    <div class="download-card">
+                    <div class="download-card" data-ace-type="nhom1_huong_dan_tong_hop">
                         <div style="font-size: 3rem; margin-bottom: 1rem;">📖</div>
-                        
+
                         <h4>Hướng dẫn Tổng hợp</h4>
                         <p style="color: var(--gray); margin: 1rem 0;">Hướng dẫn chi tiết về quy trình, cách sử dụng từng loại mẫu và thông tin liên hệ.</p>
                         <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem;">
                             <span class="badge">Hướng dẫn</span>
                         </div>
-                        <a href="files/HUONG_DAN_TONG_HOP_HO_SO.docx" download class="download-btn">
-                            📥 Tải xuống
-                        </a>
+                        <button type="button" class="download-btn" disabled>📥 Tải xuống</button>
+                        <span class="tpl-meta"></span>
+                        <div class="admin-template-tools">
+                            <input type="file" class="tpl-file" accept=".pdf,.doc,.docx" aria-label="Chọn file mẫu">
+                            <button type="button" class="btn-upload">Gửi lên</button>
+                            <button type="button" class="btn-delete-tpl" disabled>Xóa</button>
+                        </div>
                     </div>
-                    <div class="download-card">
+                    <div class="download-card" data-ace-type="nhom1_huong_dan_thao_tac">
                         <div style="font-size: 3rem; margin-bottom: 1rem;">🐭</div>
-                        
+
                         <h4>Hướng dẫn Thao tác Động vật</h4>
                         <p style="color: var(--gray); margin: 1rem 0;">Nguyên tắc 3R (Replacement, Reduction, Refinement), quy trình thao tác và chăm sóc động vật trong nghiên cứu.</p>
                         <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem;">
                             <span class="badge required">Bắt buộc đọc</span>
                         </div>
-                        <a href="files/NHOM_1_1_Huong_dan_van_tat_thao_tac_dong_vat.docx" download class="download-btn">
-                            📥 Tải xuống
-                        </a>
+                        <button type="button" class="download-btn" disabled>📥 Tải xuống</button>
+                        <span class="tpl-meta"></span>
+                        <div class="admin-template-tools">
+                            <input type="file" class="tpl-file" accept=".pdf,.doc,.docx" aria-label="Chọn file mẫu">
+                            <button type="button" class="btn-upload">Gửi lên</button>
+                            <button type="button" class="btn-delete-tpl" disabled>Xóa</button>
+                        </div>
                     </div>
-                    <div class="download-card">
+                    <div class="download-card" data-ace-type="nhom1_quy_che">
                         <div style="font-size: 3rem; margin-bottom: 1rem;">⚖️</div>
-                        
+
                         <h4>Quy chế Hội đồng</h4>
                         <p style="color: var(--gray); margin: 1rem 0;">Quy định về cơ cấu tổ chức, quy trình xét duyệt, trách nhiệm các bên liên quan.</p>
                         <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem;">
                             <span class="badge">Quy chế</span>
                         </div>
-                        <a href="files/NHOM_1_2_Quy_che_to_chuc_va_hoat_dong_HDDD.docx" download class="download-btn">
-                            📥 Tải xuống
-                        </a>
+                        <button type="button" class="download-btn" disabled>📥 Tải xuống</button>
+                        <span class="tpl-meta"></span>
+                        <div class="admin-template-tools">
+                            <input type="file" class="tpl-file" accept=".pdf,.doc,.docx" aria-label="Chọn file mẫu">
+                            <button type="button" class="btn-upload">Gửi lên</button>
+                            <button type="button" class="btn-delete-tpl" disabled>Xóa</button>
+                        </div>
                     </div>
 
                 </div>
@@ -128,5 +155,6 @@
             </div>
         </div>
     </footer>
+    <script src="js/ace-templates.js"></script>
 </body>
 </html>

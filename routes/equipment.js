@@ -626,7 +626,7 @@ module.exports = function createEquipmentRouter(deps) {
         },
       });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Không tải được thông tin quyền module.' });
+      res.status(500).json({ message: 'Không tải được thông tin quyền module.' });
     }
   });
 
@@ -734,7 +734,7 @@ module.exports = function createEquipmentRouter(deps) {
         },
       });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Lỗi tải cấu hình module' });
+      res.status(500).json({ message: 'Lỗi tải cấu hình module' });
     }
   });
 
@@ -838,7 +838,7 @@ module.exports = function createEquipmentRouter(deps) {
       }
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Không lưu được chính sách module' });
+      res.status(500).json({ message: 'Không lưu được chính sách module' });
     }
   });
 
@@ -868,7 +868,7 @@ module.exports = function createEquipmentRouter(deps) {
       ).run(JSON.stringify(out), req.user.id);
       return res.json({ ok: true, visibleFields: out });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không lưu được cấu hình trường xem của Viewer.' });
+      return res.status(500).json({ message: 'Không lưu được cấu hình trường xem của Viewer.' });
     }
   });
 
@@ -914,7 +914,7 @@ module.exports = function createEquipmentRouter(deps) {
       );
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Không lưu được phân quyền user' });
+      res.status(500).json({ message: 'Không lưu được phân quyền user' });
     }
   });
 
@@ -927,7 +927,7 @@ module.exports = function createEquipmentRouter(deps) {
       db.prepare(`DELETE FROM equipment_module_user_access WHERE user_id = ?`).run(userId);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Không xoá được phân quyền user' });
+      res.status(500).json({ message: 'Không xoá được phân quyền user' });
     }
   });
 
@@ -944,7 +944,7 @@ module.exports = function createEquipmentRouter(deps) {
       if (String(e.message || '').includes('UNIQUE')) {
         return res.status(409).json({ message: 'Mã phòng/lab đã tồn tại' });
       }
-      res.status(500).json({ message: e.message || 'Không thêm được phòng/lab' });
+      res.status(500).json({ message: 'Không thêm được phòng/lab' });
     }
   });
 
@@ -970,7 +970,7 @@ module.exports = function createEquipmentRouter(deps) {
       if (String(e.message || '').includes('UNIQUE')) {
         return res.status(409).json({ message: 'Mã phòng/lab đã tồn tại' });
       }
-      res.status(500).json({ message: e.message || 'Không cập nhật được phòng/lab' });
+      res.status(500).json({ message: 'Không cập nhật được phòng/lab' });
     }
   });
 
@@ -985,7 +985,7 @@ module.exports = function createEquipmentRouter(deps) {
       db.prepare(`DELETE FROM equipment_departments WHERE id = ?`).run(id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ message: e.message || 'Không xoá được phòng/lab' });
+      res.status(500).json({ message: 'Không xoá được phòng/lab' });
     }
   });
 
@@ -1027,7 +1027,7 @@ module.exports = function createEquipmentRouter(deps) {
     storage,
     limits: { fileSize: UPLOAD_MAX, fieldSize: 2 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-      if (file.mimetype !== PDF_MIME) {
+      if (file.mimetype !== PDF_MIME || path.extname(file.originalname || '').toLowerCase() !== '.pdf') {
         return cb(new Error('Chỉ chấp nhận file PDF (application/pdf).'));
       }
       cb(null, true);
@@ -1137,7 +1137,7 @@ module.exports = function createEquipmentRouter(deps) {
       });
     } catch (e) {
       console.error('[equipment list]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1247,7 +1247,7 @@ module.exports = function createEquipmentRouter(deps) {
       });
     } catch (e) {
       console.error('[equipment stats overview]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1352,7 +1352,7 @@ module.exports = function createEquipmentRouter(deps) {
       res.json({ ok: true, data: rows });
     } catch (e) {
       console.error('[equipment search]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1385,7 +1385,7 @@ module.exports = function createEquipmentRouter(deps) {
         .all(...params);
       return res.json({ ok: true, ids: (rows || []).map((r) => Number(r.id)).filter((x) => Number.isFinite(x) && x > 0) });
     } catch (e) {
-      return res.status(500).json({ message: e.message || 'Không lấy được danh sách ID để xuất.' });
+      return res.status(500).json({ message: 'Không lấy được danh sách ID để xuất.' });
     }
   });
 
@@ -1506,7 +1506,7 @@ module.exports = function createEquipmentRouter(deps) {
       return res.end();
     } catch (e) {
       console.error('[equipment export selected]', e);
-      return res.status(500).json({ message: e.message || 'Không xuất được file Excel.' });
+      return res.status(500).json({ message: 'Không xuất được file Excel.' });
     }
   });
 
@@ -1525,7 +1525,7 @@ module.exports = function createEquipmentRouter(deps) {
       return res.send(buf);
     } catch (e) {
       console.error('[equipment qr]', e);
-      return res.status(500).json({ message: e.message || 'Lỗi' });
+      return res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1578,7 +1578,7 @@ module.exports = function createEquipmentRouter(deps) {
       });
     } catch (e) {
       console.error('[equipment public]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1696,7 +1696,7 @@ module.exports = function createEquipmentRouter(deps) {
       });
     } catch (e) {
       console.error('[equipment get]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1771,7 +1771,7 @@ module.exports = function createEquipmentRouter(deps) {
         return res.status(409).json({ message: 'Mã thiết bị đã tồn tại' });
       }
       console.error('[equipment create]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1853,7 +1853,7 @@ module.exports = function createEquipmentRouter(deps) {
         return res.status(409).json({ message: 'Mã thiết bị đã tồn tại' });
       }
       console.error('[equipment put]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1877,7 +1877,7 @@ module.exports = function createEquipmentRouter(deps) {
       res.json({ ok: true, equipment: row });
     } catch (e) {
       console.error('[equipment status]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1895,7 +1895,7 @@ module.exports = function createEquipmentRouter(deps) {
       res.json({ ok: true, deleted: true });
     } catch (e) {
       console.error('[equipment delete]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1916,7 +1916,7 @@ module.exports = function createEquipmentRouter(deps) {
       res.json({ ok: true, data: rows });
     } catch (e) {
       console.error('[equipment trash list]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1935,7 +1935,7 @@ module.exports = function createEquipmentRouter(deps) {
       res.json({ ok: true, equipment: row });
     } catch (e) {
       console.error('[equipment restore]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -1961,7 +1961,7 @@ module.exports = function createEquipmentRouter(deps) {
       res.json({ ok: true, deleted: true, permanent: true });
     } catch (e) {
       console.error('[equipment permanent delete]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -2031,7 +2031,7 @@ module.exports = function createEquipmentRouter(deps) {
         res.status(201).json({ ok: true, document: doc });
       } catch (e) {
         console.error('[equipment doc upload]', e);
-        res.status(500).json({ message: e.message || 'Lỗi' });
+        res.status(500).json({ message: 'Lỗi' });
       }
     });
   });
@@ -2071,7 +2071,7 @@ module.exports = function createEquipmentRouter(deps) {
       res.json({ ok: true, document: row });
     } catch (e) {
       console.error('[equipment doc put]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -2101,7 +2101,7 @@ module.exports = function createEquipmentRouter(deps) {
       res.json({ ok: true });
     } catch (e) {
       console.error('[equipment doc disable]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -2142,7 +2142,7 @@ module.exports = function createEquipmentRouter(deps) {
       return res.sendFile(normalized);
     } catch (e) {
       console.error('[equipment download]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -2187,7 +2187,7 @@ module.exports = function createEquipmentRouter(deps) {
       res.status(201).json({ ok: true, video: row });
     } catch (e) {
       console.error('[equipment video post]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -2224,7 +2224,7 @@ module.exports = function createEquipmentRouter(deps) {
       res.json({ ok: true, video: row });
     } catch (e) {
       console.error('[equipment video put]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 
@@ -2239,7 +2239,7 @@ module.exports = function createEquipmentRouter(deps) {
       res.json({ ok: true });
     } catch (e) {
       console.error('[equipment video delete]', e);
-      res.status(500).json({ message: e.message || 'Lỗi' });
+      res.status(500).json({ message: 'Lỗi' });
     }
   });
 

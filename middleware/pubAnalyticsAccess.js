@@ -117,7 +117,7 @@ function createCheckPubAnalyticsAccess(db, opts = {}) {
       next();
     } catch (e) {
       console.error('[checkPubAnalyticsAccess]', e);
-      return res.status(500).json({ ok: false, success: false, error: e.message || 'Lỗi' });
+      return res.status(500).json({ ok: false, success: false, error: 'Lỗi' });
     }
   };
 }

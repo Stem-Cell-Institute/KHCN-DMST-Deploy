@@ -3,12 +3,17 @@
  * Used when RSS/Atom is not available for a site.
  */
 const cheerio = require('cheerio');
-const { BROWSER_UA } = require('./rssFeedUtils');
+const { BROWSER_UA, assertPublicHttpUrl } = require('./rssFeedUtils');
 
 const MAX_HTML_CHARS = 2 * 1024 * 1024;
 const FETCH_MS = 12000;
 
 async function fetchHtmlPage(url) {
+  try {
+    await assertPublicHttpUrl(url);
+  } catch (_) {
+    return null;
+  }
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), FETCH_MS);
   try {

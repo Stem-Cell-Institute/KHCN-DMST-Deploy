@@ -6,6 +6,17 @@
     <title>Nhóm 2: Hồ sơ Nghiên cứu viên - SCI-ACE</title>
     <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        button.download-btn { border: none; cursor: pointer; font: inherit; }
+        button.download-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .tpl-meta { display: block; font-size: 0.8rem; color: var(--gray); margin-top: 0.35rem; }
+        .admin-template-tools { display: none; align-items: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+        body.can-manage-ace-templates .admin-template-tools { display: flex; }
+        .admin-template-tools input[type="file"] { font-size: 0.75rem; max-width: 160px; }
+        .btn-upload, .btn-delete-tpl { border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.75rem; cursor: pointer; }
+        .btn-upload { background: var(--primary); color: #fff; }
+        .btn-delete-tpl { background: #dc3545; color: #fff; }
+    </style>
 </head>
 <body>
     <header>
@@ -47,7 +58,7 @@
                 </p>
                 
                 <div class="download-grid">
-                    <div class="download-card">
+                    <div class="download-card" data-ace-type="sci_ace_01">
                         <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
                         <span class="download-code">SCI-ACE-01</span>
                         <h4>Đơn đề nghị xét duyệt</h4>
@@ -55,11 +66,15 @@
                         <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem;">
                             <span class="badge required">Bắt buộc - Lần đầu</span>
                         </div>
-                        <a href="files/NHOM_2_1_Don_de_nghi_xet_duyet_SCI-ACE-01.docx" download class="download-btn">
-                            📥 Tải xuống
-                        </a>
+                        <button type="button" class="download-btn" disabled>📥 Tải xuống</button>
+                        <span class="tpl-meta"></span>
+                        <div class="admin-template-tools">
+                            <input type="file" class="tpl-file" accept=".pdf,.doc,.docx" aria-label="Chọn file mẫu">
+                            <button type="button" class="btn-upload">Gửi lên</button>
+                            <button type="button" class="btn-delete-tpl" disabled>Xóa</button>
+                        </div>
                     </div>
-                    <div class="download-card">
+                    <div class="download-card" data-ace-type="sci_ace_02">
                         <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
                         <span class="download-code">SCI-ACE-02</span>
                         <h4>Phiếu thuyết minh đề tài</h4>
@@ -67,11 +82,15 @@
                         <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem;">
                             <span class="badge required">Bắt buộc - Lần đầu</span>
                         </div>
-                        <a href="files/NHOM_2_2_Phieu_thuyet_minh_de_tai_SCI-ACE-02.docx" download class="download-btn">
-                            📥 Tải xuống
-                        </a>
+                        <button type="button" class="download-btn" disabled>📥 Tải xuống</button>
+                        <span class="tpl-meta"></span>
+                        <div class="admin-template-tools">
+                            <input type="file" class="tpl-file" accept=".pdf,.doc,.docx" aria-label="Chọn file mẫu">
+                            <button type="button" class="btn-upload">Gửi lên</button>
+                            <button type="button" class="btn-delete-tpl" disabled>Xóa</button>
+                        </div>
                     </div>
-                    <div class="download-card">
+                    <div class="download-card" data-ace-type="sci_ace_03">
                         <div style="font-size: 3rem; margin-bottom: 1rem;">🔄</div>
                         <span class="download-code">SCI-ACE-03</span>
                         <h4>Báo cáo tuân thủ nguyên tắc 3R</h4>
@@ -79,11 +98,15 @@
                         <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem;">
                             <span class="badge required">Bắt buộc - Lần đầu</span>
                         </div>
-                        <a href="files/NHOM_2_3_Bao_cao_tuan_thu_3R_SCI-ACE-03.docx" download class="download-btn">
-                            📥 Tải xuống
-                        </a>
+                        <button type="button" class="download-btn" disabled>📥 Tải xuống</button>
+                        <span class="tpl-meta"></span>
+                        <div class="admin-template-tools">
+                            <input type="file" class="tpl-file" accept=".pdf,.doc,.docx" aria-label="Chọn file mẫu">
+                            <button type="button" class="btn-upload">Gửi lên</button>
+                            <button type="button" class="btn-delete-tpl" disabled>Xóa</button>
+                        </div>
                     </div>
-                    <div class="download-card">
+                    <div class="download-card" data-ace-type="sci_ace_04">
                         <div style="font-size: 3rem; margin-bottom: 1rem;">💬</div>
                         <span class="download-code">SCI-ACE-04</span>
                         <h4>Báo cáo giải trình tiếp thu</h4>
@@ -91,11 +114,15 @@
                         <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem;">
                             <span class="badge">Khi Hội đồng yêu cầu</span>
                         </div>
-                        <a href="files/NHOM_2_4_Bao_cao_giai_trinh_SCI-ACE-04.docx" download class="download-btn">
-                            📥 Tải xuống
-                        </a>
+                        <button type="button" class="download-btn" disabled>📥 Tải xuống</button>
+                        <span class="tpl-meta"></span>
+                        <div class="admin-template-tools">
+                            <input type="file" class="tpl-file" accept=".pdf,.doc,.docx" aria-label="Chọn file mẫu">
+                            <button type="button" class="btn-upload">Gửi lên</button>
+                            <button type="button" class="btn-delete-tpl" disabled>Xóa</button>
+                        </div>
                     </div>
-                    <div class="download-card">
+                    <div class="download-card" data-ace-type="sci_ace_06">
                         <div style="font-size: 3rem; margin-bottom: 1rem;">🔀</div>
                         <span class="download-code">SCI-ACE-06</span>
                         <h4>Báo cáo thay đổi kế hoạch</h4>
@@ -103,11 +130,15 @@
                         <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem;">
                             <span class="badge">Khi có thay đổi</span>
                         </div>
-                        <a href="files/NHOM_2_5_Bao_cao_thay_doi_ke_hoach_SCI-ACE-06.docx" download class="download-btn">
-                            📥 Tải xuống
-                        </a>
+                        <button type="button" class="download-btn" disabled>📥 Tải xuống</button>
+                        <span class="tpl-meta"></span>
+                        <div class="admin-template-tools">
+                            <input type="file" class="tpl-file" accept=".pdf,.doc,.docx" aria-label="Chọn file mẫu">
+                            <button type="button" class="btn-upload">Gửi lên</button>
+                            <button type="button" class="btn-delete-tpl" disabled>Xóa</button>
+                        </div>
                     </div>
-                    <div class="download-card">
+                    <div class="download-card" data-ace-type="sci_ace_07">
                         <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
                         <span class="download-code">SCI-ACE-07</span>
                         <h4>Báo cáo kết quả tuân thủ</h4>
@@ -115,9 +146,13 @@
                         <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem;">
                             <span class="badge">Định kỳ / Kết thúc</span>
                         </div>
-                        <a href="files/NHOM_2_6_Bao_cao_ket_qua_tuan_thu_SCI-ACE-07.docx" download class="download-btn">
-                            📥 Tải xuống
-                        </a>
+                        <button type="button" class="download-btn" disabled>📥 Tải xuống</button>
+                        <span class="tpl-meta"></span>
+                        <div class="admin-template-tools">
+                            <input type="file" class="tpl-file" accept=".pdf,.doc,.docx" aria-label="Chọn file mẫu">
+                            <button type="button" class="btn-upload">Gửi lên</button>
+                            <button type="button" class="btn-delete-tpl" disabled>Xóa</button>
+                        </div>
                     </div>
 
                 </div>
@@ -152,5 +187,6 @@
             </div>
         </div>
     </footer>
+    <script src="js/ace-templates.js"></script>
 </body>
 </html>

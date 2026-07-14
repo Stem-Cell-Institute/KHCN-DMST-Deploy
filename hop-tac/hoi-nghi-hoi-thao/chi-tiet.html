@@ -11,20 +11,36 @@ body{margin:0;font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color
 .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px}
 .topbar a{color:var(--muted);text-decoration:none;font-size:13px;margin-right:16px}
 main{max-width:900px;margin:0 auto;padding:24px}
-h1{font-size:20px}
-dl{display:grid;grid-template-columns:200px 1fr;gap:8px 16px}
-dt{color:var(--muted);font-weight:600}dd{margin:0}
-.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
-.card h2{font-size:15px;margin:0 0 12px}
+h1{font-size:20px;margin:0 0 4px}
+#code{color:var(--muted);font-size:13px;margin:0 0 16px}
+dl{display:grid;grid-template-columns:200px 1fr;gap:10px 16px;margin:0}
+dt{color:var(--muted);font-weight:600}dd{margin:0;word-break:break-word}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.card h2{font-size:15px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #eef2f7}
+.badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;display:inline-block}
+.b-gray{background:#f1f5f9;color:#64748b}.b-blue{background:#e8f0fe;color:#1d4ed8}
+.b-green{background:#ecfdf5;color:#065f46}.b-red{background:#fef2f2;color:#b91c1c}.b-amber{background:#fffbeb;color:#b45309}
+.filelist{list-style:none;margin:0;padding:0}
+.filelist li{padding:8px 0;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.filelist li:last-child{border-bottom:none}
+.filelist a{color:var(--accent);text-decoration:none;font-weight:600}
+.filelist a:hover{text-decoration:underline}
 .timeline{border-left:2px solid var(--border);padding-left:14px;margin-left:6px}
-.tl-item{margin-bottom:12px}
+.tl-item{margin-bottom:14px}
+.tl-item strong{text-transform:capitalize}
 .tl-meta{font-size:12px;color:var(--muted)}
 .btn{padding:8px 14px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;margin:4px 4px 0 0;font:inherit}
 .btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn-r{background:#dc2626;color:#fff;border-color:#dc2626}
-textarea,input[type=file]{width:100%;max-width:420px}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+label{display:block;font-weight:600;font-size:13px;margin:10px 0 4px}
+textarea,input[type=text]{width:100%;max-width:420px;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font:inherit}
+input[type=file]{width:100%;max-width:420px}
+.hint{font-size:13px;color:var(--muted);margin:0 0 8px}
 .hidden{display:none!important}
 .err{color:#b91c1c;font-size:13px;margin:8px 0}
+.ok{color:#065f46;font-size:13px;margin:8px 0}
+.loading{padding:40px;text-align:center;color:var(--muted)}
 </style>
 <script src="../../js/system-access.js"></script>
 </head>
@@ -38,13 +54,14 @@ textarea,input[type=file]{width:100%;max-width:420px}
   <p id="code"></p>
   <div id="err" class="err hidden"></div>
   <div id="content" class="loading">Đang tải...</div>
-  <div id="actions" class="card hidden"><h2>Thao tác</h2><div id="act_inner"></div></div>
-  <div id="evidence" class="card hidden"><h2>Nộp minh chứng (sau sự kiện)</h2>
-    <p style="font-size:13px;color:var(--muted)">Tối đa 5 file, mỗi file 20MB, PDF/DOC/DOCX.</p>
-    <label>Ghi chú</label><textarea id="ev_note" rows="2"></textarea>
-    <label>File</label><input type="file" id="ev_files" multiple accept=".pdf,.doc,.docx">
+  <div id="actions" class="card hidden"><h2>Theo dõi</h2><div id="act_inner"></div></div>
+  <div id="evidence" class="card hidden"><h2>Nộp minh chứng tham gia (sau sự kiện)</h2>
+    <p class="hint">Tối đa 10 file, mỗi file 20MB, định dạng PDF/DOC/DOCX/JPG/PNG. Có thể nộp bổ sung nhiều lần.</p>
+    <label>Ghi chú</label><textarea id="ev_note" rows="2" placeholder="Ghi chú (tùy chọn)"></textarea>
+    <label>File minh chứng</label><input type="file" id="ev_files" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
     <div><button type="button" class="btn btn-p" id="btn_ev">Gửi minh chứng</button></div>
     <div id="ev_err" class="err hidden"></div>
+    <div id="ev_ok" class="ok hidden"></div>
   </div>
   <div class="card"><h2>Nhật ký thao tác</h2><div id="audit" class="timeline"></div></div>
 </main>
@@ -60,6 +77,12 @@ textarea,input[type=file]{width:100%;max-width:420px}
     return o;
   }
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  var ST = {
+    draft:['Nháp','b-gray'], submitted:['Chờ Phòng KHCN','b-amber'], khcn_reviewing:['Phòng xem xét','b-amber'],
+    khcn_approved:['Chờ Viện trưởng','b-blue'], director_reviewing:['VT xem xét','b-blue'],
+    director_approved:['Đã phê duyệt','b-green'], director_rejected:['VT từ chối','b-red'],
+    khcn_rejected:['Phòng từ chối','b-red'], completed:['Hoàn tất','b-green'], cancelled:['Đã hủy','b-gray']
+  };
 
   async function load(){
     if (!id || !tok()) { location.href = '/dang-nhap.html'; return; }
@@ -77,6 +100,7 @@ textarea,input[type=file]{width:100%;max-width:420px}
     document.getElementById('title').textContent = d.conf_name || 'Chi tiết';
     document.getElementById('code').innerHTML = '<strong>Mã:</strong> ' + esc(d.submission_code);
 
+    var st = ST[d.status] || [d.status, 'b-gray'];
     var rows = [
       ['Đơn vị', d.unit], ['Nhóm NC', d.research_group], ['Chức danh', d.job_title],
       ['Loại HN', d.conf_type], ['Đơn vị tổ chức', d.conf_organizer],
@@ -85,15 +109,18 @@ textarea,input[type=file]{width:100%;max-width:420px}
       ['Có bài', Number(d.has_paper)?'Có':'Không'], ['Tiêu đề bài', d.paper_title], ['Tác giả', d.paper_authors],
       ['Hình thức bài', d.paper_type], ['Tóm tắt', d.paper_abstract], ['Mục đích', d.purpose],
       ['Kinh phí', d.funding_type], ['Đề nghị VNĐ', d.funding_requested_vnd], ['Ghi chú KP', d.funding_note],
-      ['Trạng thái', d.status], ['Ý kiến Phòng', d.khcn_comment], ['Ý kiến Viện trưởng', d.director_comment],
     ];
     var html = '<div class="card"><h2>Thông tin</h2><dl>' + rows.map(function(x){
       return '<dt>'+esc(x[0])+'</dt><dd>'+esc(x[1])+'</dd>';
-    }).join('') + '</dl></div>';
-    html += '<div class="card"><h2>File đính kèm</h2><ul>';
+    }).join('') +
+      '<dt>Trạng thái</dt><dd><span class="badge '+st[1]+'">'+esc(st[0])+'</span></dd>' +
+      '<dt>Ý kiến Phòng</dt><dd>'+esc(d.khcn_comment)+'</dd>' +
+      '<dt>Ý kiến Viện trưởng</dt><dd>'+esc(d.director_comment)+'</dd>' +
+      '</dl></div>';
+    html += '<div class="card"><h2>File đính kèm</h2><ul class="filelist">';
     if (!atts.length) html += '<li>Không có file</li>';
     atts.forEach(function(a){
-      html += '<li><a href="'+API+'/api/conference-registrations/'+id+'/attachments/'+a.id+'/file" target="_blank">'+esc(a.original_name)+'</a> ('+esc(a.file_type)+')</li>';
+      html += '<li><a href="'+API+'/api/conference-registrations/'+id+'/attachments/'+a.id+'/file" target="_blank">'+esc(a.original_name)+'</a><span class="badge b-gray">'+esc(a.file_type)+'</span></li>';
     });
     html += '</ul></div>';
     document.getElementById('content').innerHTML = html;
@@ -103,9 +130,9 @@ textarea,input[type=file]{width:100%;max-width:420px}
     inner.innerHTML = '';
     if (cap.khcn_approve) {
       act.classList.remove('hidden');
-      inner.innerHTML = '<input id="c_k" placeholder="Ý kiến (tùy chọn)" style="width:100%;max-width:400px;padding:6px"><br>' +
-        '<button type="button" class="btn btn-p" id="ap_k">Phê duyệt (Phòng)</button>' +
-        '<button type="button" class="btn btn-r" id="rj_k">Từ chối (Phòng)</button>';
+      inner.innerHTML = '<label>Ý kiến (tùy chọn)</label><input type="text" id="c_k">' +
+        '<div><button type="button" class="btn btn-p" id="ap_k">Phê duyệt (Phòng)</button>' +
+        '<button type="button" class="btn btn-r" id="rj_k">Từ chối (Phòng)</button></div>';
       document.getElementById('ap_k').onclick = async function(){
         var c = document.getElementById('c_k').value;
         var x = await fetch(API + '/api/conference-registrations/' + id + '/khcn-approve', { method:'POST', headers:h('application/json'), body: JSON.stringify({ comment: c }) });
@@ -120,9 +147,9 @@ textarea,input[type=file]{width:100%;max-width:420px}
     }
     if (cap.director_approve) {
       act.classList.remove('hidden');
-      inner.innerHTML += '<input id="c_d" placeholder="Ý kiến (tùy chọn)" style="width:100%;max-width:400px;padding:6px;margin-top:8px"><br>' +
-        '<button type="button" class="btn btn-p" id="ap_d">Phê duyệt (Viện trưởng)</button>' +
-        '<button type="button" class="btn btn-r" id="rj_d">Từ chối (Viện trưởng)</button>';
+      inner.innerHTML += '<label>Ý kiến (tùy chọn)</label><input type="text" id="c_d">' +
+        '<div><button type="button" class="btn btn-p" id="ap_d">Phê duyệt (Viện trưởng)</button>' +
+        '<button type="button" class="btn btn-r" id="rj_d">Từ chối (Viện trưởng)</button></div>';
       document.getElementById('ap_d').onclick = async function(){
         var c = document.getElementById('c_d').value;
         await fetch(API + '/api/conference-registrations/' + id + '/director-approve', { method:'POST', headers:h('application/json'), body: JSON.stringify({ comment: c }) });
@@ -139,19 +166,37 @@ textarea,input[type=file]{width:100%;max-width:420px}
     if (cap.upload_evidence) {
       document.getElementById('evidence').classList.remove('hidden');
       document.getElementById('btn_ev').onclick = async function(){
-        document.getElementById('ev_err').classList.add('hidden');
+        var btn = document.getElementById('btn_ev');
+        var errEl = document.getElementById('ev_err');
+        var okEl = document.getElementById('ev_ok');
+        errEl.classList.add('hidden');
+        okEl.classList.add('hidden');
+        var fs = document.getElementById('ev_files').files;
+        if (!fs.length) { errEl.textContent = 'Chọn ít nhất một file'; errEl.classList.remove('hidden'); return; }
         var fd = new FormData();
         fd.append('evidence_note', document.getElementById('ev_note').value);
-        var fs = document.getElementById('ev_files').files;
-        for (var i = 0; i < fs.length && i < 5; i++) fd.append('evidence_files', fs[i]);
-        var x = await fetch(API + '/api/conference-registrations/' + id + '/upload-evidence', { method:'POST', headers:{ 'Authorization':'Bearer '+tok() }, body: fd });
-        var jj = await x.json().catch(function(){ return {}; });
-        if (!x.ok) {
-          document.getElementById('ev_err').textContent = jj.message || 'Lỗi upload';
-          document.getElementById('ev_err').classList.remove('hidden');
-          return;
+        for (var i = 0; i < fs.length && i < 10; i++) fd.append('evidence_files', fs[i]);
+        btn.disabled = true;
+        btn.textContent = 'Đang gửi...';
+        try {
+          var x = await fetch(API + '/api/conference-registrations/' + id + '/upload-evidence', { method:'POST', headers:{ 'Authorization':'Bearer '+tok() }, body: fd });
+          var jj = await x.json().catch(function(){ return {}; });
+          if (!x.ok) {
+            errEl.textContent = jj.message || 'Lỗi upload';
+            errEl.classList.remove('hidden');
+            btn.disabled = false;
+            btn.textContent = 'Gửi minh chứng';
+            return;
+          }
+          okEl.textContent = 'Đã nộp minh chứng thành công.';
+          okEl.classList.remove('hidden');
+          setTimeout(function(){ location.reload(); }, 600);
+        } catch (e) {
+          errEl.textContent = 'Lỗi kết nối, thử lại';
+          errEl.classList.remove('hidden');
+          btn.disabled = false;
+          btn.textContent = 'Gửi minh chứng';
         }
-        location.reload();
       };
     }
 

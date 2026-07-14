@@ -272,9 +272,20 @@ module.exports = function createDmsRecordsRouter({
       cb(null, base + ext);
     },
   });
+  const DMS_ALLOWED_EXT = new Set([
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+    '.txt', '.rtf', '.csv', '.zip', '.rar', '.7z', '.jpg', '.jpeg', '.png',
+  ]);
   const upload = multer({
     storage,
     limits: { fileSize: 80 * 1024 * 1024 },
+    fileFilter(_req, file, cb) {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      if (!DMS_ALLOWED_EXT.has(ext)) {
+        return cb(new Error('Loại file không được hỗ trợ'));
+      }
+      cb(null, true);
+    },
   });
   const uploadXlsx = multer({
     storage: multer.memoryStorage(),
@@ -421,7 +432,7 @@ module.exports = function createDmsRecordsRouter({
       });
     } catch (e) {
       console.error('[dms/stats]', e);
-      res.status(500).json({ ok: false, message: e.message || 'Lỗi' });
+      res.status(500).json({ ok: false, message: 'Lỗi' });
     }
   });
 
@@ -448,7 +459,7 @@ module.exports = function createDmsRecordsRouter({
       }
       res.json({ ok: true, categories: rows, counts });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -468,7 +479,7 @@ module.exports = function createDmsRecordsRouter({
         .run(Number.isFinite(parentId) ? parentId : null, name, sortOrder);
       res.json({ ok: true, id: r.lastInsertRowid });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -489,7 +500,7 @@ module.exports = function createDmsRecordsRouter({
       ).run(name || null, Number.isFinite(sortOrder) ? sortOrder : null, isActive, id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -503,7 +514,7 @@ module.exports = function createDmsRecordsRouter({
       db.prepare('DELETE FROM dms_categories WHERE id = ?').run(id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -516,7 +527,7 @@ module.exports = function createDmsRecordsRouter({
         .all();
       res.json({ ok: true, types: rows });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -533,7 +544,7 @@ module.exports = function createDmsRecordsRouter({
         .run(name, code, sortOrder);
       res.json({ ok: true, id: r.lastInsertRowid });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -556,7 +567,7 @@ module.exports = function createDmsRecordsRouter({
       ).run(name, code, sortOrder, isActive, id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -568,7 +579,7 @@ module.exports = function createDmsRecordsRouter({
       db.prepare('DELETE FROM dms_document_types WHERE id = ?').run(id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -577,7 +588,7 @@ module.exports = function createDmsRecordsRouter({
       const rows = db.prepare(`SELECT id, name, color, sort_order FROM dms_tags ORDER BY sort_order, name`).all();
       res.json({ ok: true, tags: rows });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -597,7 +608,7 @@ module.exports = function createDmsRecordsRouter({
       if (String(e.message || '').includes('UNIQUE')) {
         return res.status(400).json({ ok: false, message: 'Tên thẻ đã tồn tại' });
       }
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -616,7 +627,7 @@ module.exports = function createDmsRecordsRouter({
       ).run(name || '', color || '', Number.isFinite(sortOrder) ? sortOrder : null, id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -627,7 +638,7 @@ module.exports = function createDmsRecordsRouter({
       db.prepare('DELETE FROM dms_tags WHERE id = ?').run(id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -644,7 +655,7 @@ module.exports = function createDmsRecordsRouter({
         .all();
       res.json({ ok: true, templates: rows });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -711,7 +722,7 @@ module.exports = function createDmsRecordsRouter({
       if (String(e.message || '').includes('UNIQUE')) {
         return res.status(400).json({ ok: false, message: 'Mã mẫu biểu (code) đã tồn tại.' });
       }
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -808,7 +819,7 @@ module.exports = function createDmsRecordsRouter({
       if (String(e.message || '').includes('UNIQUE')) {
         return res.status(400).json({ ok: false, message: 'Mã mẫu biểu (code) đã tồn tại.' });
       }
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -825,7 +836,7 @@ module.exports = function createDmsRecordsRouter({
       db.prepare('DELETE FROM dms_templates WHERE id = ?').run(id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -992,13 +1003,13 @@ module.exports = function createDmsRecordsRouter({
     try {
       res.json({ ok: true, ...countDuplicateSummary(db) });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
   function handleXlsxUpload(req, res, next) {
     uploadXlsx.single('file')(req, res, (err) => {
-      if (err) return res.status(400).json({ ok: false, message: err.message || String(err) });
+      if (err) return res.status(400).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
       next();
     });
   }
@@ -1032,7 +1043,7 @@ module.exports = function createDmsRecordsRouter({
       });
     } catch (e) {
       console.error('[dms import preview]', e);
-      res.status(500).json({ ok: false, message: e.message || 'Lỗi đọc Excel' });
+      res.status(500).json({ ok: false, message: 'Lỗi đọc Excel' });
     }
   });
 
@@ -1071,7 +1082,7 @@ module.exports = function createDmsRecordsRouter({
       });
     } catch (e) {
       console.error('[dms import excel]', e);
-      res.status(500).json({ ok: false, message: e.message || 'Lỗi import' });
+      res.status(500).json({ ok: false, message: 'Lỗi import' });
     }
   });
 
@@ -1092,7 +1103,7 @@ module.exports = function createDmsRecordsRouter({
       }
       res.json({ ok: true, deleted: ids.length });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1109,7 +1120,7 @@ module.exports = function createDmsRecordsRouter({
       }
       res.json({ ok: true, moved: ids.length });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1150,7 +1161,7 @@ module.exports = function createDmsRecordsRouter({
       }
       archive.finalize();
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1232,7 +1243,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       }
       res.json({ ok: true, document: doc, loans, handovers, activeLoan });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1248,7 +1259,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       const code = doc.digitized_code || assignDigitizedCode(db, id);
       res.json({ ok: true, code });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1267,7 +1278,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       ).run(req.user.id, id);
       res.json({ ok: true, code });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1285,7 +1296,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       ).run(id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1316,7 +1327,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
         .run(id, borrower, reason, dueAt, req.user.id, notes);
       res.json({ ok: true, id: r.lastInsertRowid });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1333,7 +1344,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       ).run(returnedAt || null, loanId);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1354,7 +1365,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
         .run(id, fromP, toP, notes, req.user.id);
       res.json({ ok: true, id: r.lastInsertRowid });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1369,7 +1380,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
         .run(name, notes, req.user.id);
       res.json({ ok: true, id: r.lastInsertRowid });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1386,7 +1397,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
         .all();
       res.json({ ok: true, sessions: rows });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1406,7 +1417,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
         .all(sid);
       res.json({ ok: true, session: s, items });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1439,7 +1450,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       ).run(sid, documentId, st, locFound, notes, req.user.id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1451,7 +1462,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       db.prepare(`UPDATE dms_inventory_sessions SET closed_at = datetime('now','localtime') WHERE id = ?`).run(sid);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1569,7 +1580,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       res.json({ ok: true, documents: list, total, page, limit });
     } catch (e) {
       console.error('[dms/documents]', e);
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1594,7 +1605,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       ).run(isPublic, id);
       res.json({ ok: true, id, is_public: isPublic });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1644,7 +1655,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       }));
       res.json({ ok: true, document: { ...normalizedRow, tags, attachments: normalizedAttachments } });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1684,7 +1695,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
           if (f && f.path) fs.unlinkSync(f.path);
         } catch (_) {}
       }
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1735,7 +1746,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       } catch (_) {}
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1786,7 +1797,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       } catch (_) {}
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -1977,7 +1988,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
         } catch (_) {}
       }
       console.error('[dms/documents POST]', e);
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -2112,7 +2123,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
 
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -2132,7 +2143,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       } catch (_) {}
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -2218,7 +2229,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       res.send(Buffer.from(buf));
     } catch (e) {
       console.error('[dms export]', e);
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -2255,7 +2266,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       res.send(Buffer.from(buf));
     } catch (e) {
       console.error('[dms summary]', e);
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -2272,7 +2283,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
         .all();
       res.json({ ok: true, users: rows });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -2306,7 +2317,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       ).run(userId, role, req.user.id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -2316,7 +2327,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       db.prepare('DELETE FROM dms_user_roles WHERE user_id = ?').run(userId);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -2335,7 +2346,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
         .all();
       res.json({ ok: true, users: rows });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -2413,7 +2424,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       ).run(userId, req.user.id);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 
@@ -2424,7 +2435,7 @@ h1{font-size:15px;margin:0 0 8px;font-weight:600;}
       db.prepare('DELETE FROM dms_module_access WHERE user_id = ?').run(userId);
       res.json({ ok: true });
     } catch (e) {
-      res.status(500).json({ ok: false, message: e.message });
+      res.status(500).json({ ok: false, message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   });
 

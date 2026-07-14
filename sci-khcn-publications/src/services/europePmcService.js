@@ -103,7 +103,7 @@ export async function fetchEuropePmcByPmid(pmid) {
     const article = parseArticleResponse(json);
     return { ok: !!article, status: res.status, article, error: article ? null : 'Không có bản ghi' };
   } catch (e) {
-    return { ok: false, status: 0, article: null, error: e.message || 'fetch failed' };
+    return { ok: false, status: 0, article: null, error: 'fetch failed' };
   }
 }
 
@@ -123,7 +123,7 @@ export async function fetchEuropePmcByPmcId(pmcId) {
     const article = parseArticleResponse(json);
     return { ok: !!article, status: res.status, article, error: article ? null : 'Không có bản ghi' };
   } catch (e) {
-    return { ok: false, status: 0, article: null, error: e.message || 'fetch failed' };
+    return { ok: false, status: 0, article: null, error: 'fetch failed' };
   }
 }
 

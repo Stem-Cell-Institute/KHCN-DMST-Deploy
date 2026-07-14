@@ -144,7 +144,7 @@ module.exports = function createPublicationAnalyticsRouter({ db }) {
       return res.json({ ok: true, data: rows });
     } catch (e) {
       console.error('[pub-analytics/yearly-output]', e);
-      return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+      return res.status(500).json({ ok: false, error: 'Lỗi' });
     }
   });
 
@@ -168,7 +168,7 @@ module.exports = function createPublicationAnalyticsRouter({ db }) {
       return res.json({ ok: true, data: rows });
     } catch (e) {
       console.error('[pub-analytics/quartile-distribution]', e);
-      return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+      return res.status(500).json({ ok: false, error: 'Lỗi' });
     }
   });
 
@@ -206,7 +206,7 @@ module.exports = function createPublicationAnalyticsRouter({ db }) {
       return res.json({ ok: true, data: rows, meta: { limit, from: fromY, to: toY } });
     } catch (e) {
       console.error('[pub-analytics/top-authors]', e);
-      return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+      return res.status(500).json({ ok: false, error: 'Lỗi' });
     }
   });
 
@@ -251,7 +251,7 @@ module.exports = function createPublicationAnalyticsRouter({ db }) {
       return res.json({ ok: true, data: row || {}, meta: { year } });
     } catch (e) {
       console.error('[pub-analytics/kpi-snapshot]', e);
-      return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+      return res.status(500).json({ ok: false, error: 'Lỗi' });
     }
   });
 
@@ -281,7 +281,7 @@ module.exports = function createPublicationAnalyticsRouter({ db }) {
       return res.json({ ok: true, data: rows, meta: { limit, from: fromY, to: toY } });
     } catch (e) {
       console.error('[pub-analytics/top-journals]', e);
-      return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+      return res.status(500).json({ ok: false, error: 'Lỗi' });
     }
   });
 
@@ -313,7 +313,7 @@ module.exports = function createPublicationAnalyticsRouter({ db }) {
       return res.json({ ok: true, data: rows, meta: { limit, from: fromY, to: toY } });
     } catch (e) {
       console.error('[pub-analytics/citations-ranking]', e);
-      return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+      return res.status(500).json({ ok: false, error: 'Lỗi' });
     }
   });
 
@@ -332,7 +332,7 @@ module.exports = function createPublicationAnalyticsRouter({ db }) {
       return res.json({ ok: true, data: kpi, meta: { from: fromY, to: toY } });
     } catch (e) {
       console.error('[pub-analytics/kpi-range]', e);
-      return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+      return res.status(500).json({ ok: false, error: 'Lỗi' });
     }
   });
 
@@ -358,7 +358,7 @@ module.exports = function createPublicationAnalyticsRouter({ db }) {
       return res.json({ ok: true, data: rows, meta: { from: fromY, to: toY } });
     } catch (e) {
       console.error('[pub-analytics/yearly-if]', e);
-      return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+      return res.status(500).json({ ok: false, error: 'Lỗi' });
     }
   });
 
@@ -399,7 +399,7 @@ module.exports = function createPublicationAnalyticsRouter({ db }) {
       return res.json({ ok: true, data: row || {}, meta: { from: fromY, to: toY } });
     } catch (e) {
       console.error('[pub-analytics/database-coverage]', e);
-      return res.status(500).json({ ok: false, error: e.message || 'Lỗi' });
+      return res.status(500).json({ ok: false, error: 'Lỗi' });
     }
   });
 
@@ -505,7 +505,7 @@ module.exports = function createPublicationAnalyticsRouter({ db }) {
     } catch (e) {
       console.error('[pub-analytics/report/export-word]', e);
       if (!res.headersSent) {
-        return res.status(500).json({ ok: false, error: e.message || 'Lỗi xuất Word' });
+        return res.status(500).json({ ok: false, error: 'Lỗi xuất Word' });
       }
     }
   });
@@ -656,7 +656,7 @@ module.exports = function createPublicationAnalyticsRouter({ db }) {
     } catch (e) {
       console.error('[pub-analytics/report/export-excel]', e);
       if (!res.headersSent) {
-        return res.status(500).json({ ok: false, error: e.message || 'Lỗi xuất Excel' });
+        return res.status(500).json({ ok: false, error: 'Lỗi xuất Excel' });
       }
     }
   });

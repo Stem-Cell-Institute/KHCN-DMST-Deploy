@@ -472,7 +472,7 @@ export async function runHarvestSession({
         sessionId,
         totalNew,
         researchersChecked: sessionResults.length,
-        message: e.message || 'Đã dừng quét',
+        message: 'Đã dừng quét',
         newWorksGrouped: ag.newWorksGrouped,
         stats: ag.stats,
       });

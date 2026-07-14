@@ -380,7 +380,7 @@ module.exports = function registerHomepageSidebarRss(app, deps) {
 
       }
 
-      return res.status(500).json({ message: e.message || 'RSS error' });
+      return res.status(500).json({ message: 'RSS error' });
 
     }
 
@@ -456,7 +456,7 @@ module.exports = function registerHomepageSidebarRss(app, deps) {
 
     } catch (e) {
 
-      return res.status(502).json({ message: e.message || 'Feed error' });
+      return res.status(502).json({ message: 'Feed error' });
 
     }
 
@@ -490,7 +490,7 @@ module.exports = function registerHomepageSidebarRss(app, deps) {
 
     } catch (e) {
 
-      res.status(500).json({ message: e.message || 'DB error' });
+      res.status(500).json({ message: 'DB error' });
 
     }
 
@@ -630,7 +630,7 @@ module.exports = function registerHomepageSidebarRss(app, deps) {
 
     } catch (e) {
 
-      res.status(500).json({ message: e.message || 'DB error' });
+      res.status(500).json({ message: 'DB error' });
 
     }
 
@@ -654,7 +654,7 @@ module.exports = function registerHomepageSidebarRss(app, deps) {
 
     } catch (e) {
 
-      res.status(500).json({ message: e.message || 'DB error' });
+      res.status(500).json({ message: 'DB error' });
 
     }
 
@@ -802,7 +802,7 @@ module.exports = function registerHomepageSidebarRss(app, deps) {
 
     } catch (e) {
 
-      res.status(500).json({ message: e.message || 'DB error' });
+      res.status(500).json({ message: 'DB error' });
 
     }
 

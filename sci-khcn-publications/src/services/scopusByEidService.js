@@ -166,7 +166,7 @@ export async function fetchScopusAbstractByEid(eidRaw) {
     const json = await res.json();
     return { ok: true, status: 200, error: null, json };
   } catch (e) {
-    return { ok: false, status: 0, error: e.message || 'fetch failed', json: null };
+    return { ok: false, status: 0, error: 'fetch failed', json: null };
   }
 }
 

@@ -117,7 +117,7 @@ orcidRouter.get('/harvest/stream', async (req, res) => {
     // session_complete / session_aborted đã gửi trong runHarvestSession (onProgress)
   } catch (err) {
     if (err.name !== 'AbortError' && !signal.aborted) {
-      send({ type: 'error', message: err.message });
+      send({ type: 'error', message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
     }
   } finally {
     req.off('close', onReqClose);
@@ -193,7 +193,7 @@ orcidRouter.post('/queue/approve-all', async (req, res, next) => {
         const r = await approveQueueItem(item.id, adminId, {});
         results.push({ id: item.id, ...r });
       } catch (e) {
-        results.push({ id: item.id, error: e.message });
+        results.push({ id: item.id, error: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' });
       }
     }
     res.json({ ok: true, imported: results.filter(r => !r.error).length, results });

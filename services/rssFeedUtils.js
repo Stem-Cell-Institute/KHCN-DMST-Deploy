@@ -2,6 +2,8 @@
  * Fetch and parse RSS 2.0 / Atom feeds (server-side proxy).
  */
 const cheerio = require('cheerio');
+const dns = require('dns').promises;
+const net = require('net');
 
 const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -13,6 +15,46 @@ function normalizeInputUrl(raw) {
     return new URL(u).href;
   } catch {
     return null;
+  }
+}
+
+/** true nếu IP thuộc dải private/loopback/link-local (kể cả 169.254.169.254 metadata của cloud). */
+function isPrivateOrReservedIp(ip) {
+  const type = net.isIP(ip);
+  if (type === 4) {
+    const [a, b] = ip.split('.').map(Number);
+    if (a === 127 || a === 10 || a === 0 || a >= 224) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 169 && b === 254) return true;
+    return false;
+  }
+  if (type === 6) {
+    const lower = ip.toLowerCase();
+    if (lower === '::1' || lower === '::') return true;
+    if (lower.startsWith('fc') || lower.startsWith('fd') || lower.startsWith('fe80')) return true;
+    if (lower.startsWith('::ffff:')) return isPrivateOrReservedIp(lower.slice(7));
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Chặn SSRF: từ chối URL không phải http(s), hoặc trỏ tới host nội bộ/loopback/link-local
+ * (kể cả khi tên miền resolve ra IP nội bộ). Ném lỗi nếu URL không an toàn để fetch.
+ */
+async function assertPublicHttpUrl(rawUrl) {
+  const u = new URL(rawUrl);
+  if (!/^https?:$/i.test(u.protocol)) throw new Error('BLOCKED_PROTOCOL');
+  const hostname = u.hostname.toLowerCase();
+  if (hostname === 'localhost' || hostname.endsWith('.local')) throw new Error('BLOCKED_HOST');
+  if (net.isIP(hostname)) {
+    if (isPrivateOrReservedIp(hostname)) throw new Error('BLOCKED_HOST');
+    return;
+  }
+  const addrs = await dns.lookup(hostname, { all: true });
+  if (!addrs.length || addrs.some((a) => isPrivateOrReservedIp(a.address))) {
+    throw new Error('BLOCKED_HOST');
   }
 }
 
@@ -107,6 +149,7 @@ function parseFeedXml(xml, maxItems) {
 }
 
 async function fetchWithTimeout(url, ms) {
+  await assertPublicHttpUrl(url);
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), ms);
   try {
@@ -151,5 +194,6 @@ module.exports = {
   candidateFeedUrls,
   parseFeedXml,
   fetchFeedXml,
+  assertPublicHttpUrl,
   BROWSER_UA,
 };
