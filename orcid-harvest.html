@@ -271,6 +271,37 @@
   .btn-primary:hover { background: #163d6e; border-color: #163d6e; }
   .btn-danger { background: #dc3545; color: #fff; border-color: #dc3545; }
   .btn-danger:hover { filter: brightness(0.95); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn:disabled:hover { background: var(--surface); border-color: var(--border); }
+  /* Công tắc bật/tắt Harvest */
+  .oh-switch {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .oh-switch.is-on { border-color: #198754; background: #f0f8f3; }
+  .oh-switch.is-off { border-color: #b9a44a; background: #fdf9ec; }
+  .oh-switch-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-3);
+  }
+  .oh-switch.is-on .oh-switch-state { color: #14663f; border-color: #198754; }
+  .oh-switch.is-off .oh-switch-state { color: #7a6410; border-color: #b9a44a; }
+  .oh-switch-hint { font-size: 11.5px; color: var(--text-3); flex-basis: 100%; margin: 0; line-height: 1.45; }
   .notif {
     position: fixed;
     bottom: 20px;
@@ -347,6 +378,13 @@
           <span>Tổng works: <b id="orcidCountWorks">0</b></span>
           <span>Mới: <b id="orcidCountNew">0</b></span>
           <span>Trùng: <b id="orcidCountDup">0</b></span>
+        </div>
+        <div class="oh-switch" id="ohHarvestSwitch">
+          <span class="oh-switch-state" id="ohHarvestState">⏳ Đang kiểm tra…</span>
+          <button type="button" class="btn" id="ohHarvestToggleBtn" onclick="toggleHarvestEnabled()" disabled>…</button>
+          <p class="oh-switch-hint" id="ohHarvestHint">
+            Khi TẮT, mọi lệnh quét đều bị chặn ở phía máy chủ — kể cả gọi trực tiếp API. Trạng thái được lưu lại, giữ nguyên sau khi khởi động lại server.
+          </p>
         </div>
         <div class="oh-row">
           <button type="button" class="btn btn-primary" id="orcidStartBtn" onclick="startOrcidHarvest()">▶ Bắt đầu Quét</button>
@@ -755,12 +793,69 @@ function resetHarvestSessionUi() {
   setOrcidHarvestRunning(false);
 }
 
+// ── Công tắc bật/tắt Harvest ────────────────────────────────────────────────
+// Chỉ là lớp hiển thị: quyết định thật nằm ở server (system_settings), nên tắt
+// từ đây chặn được cả những lệnh quét không đi qua trang này.
+var harvestEnabled = false;
+
+function renderHarvestSwitch() {
+  var wrap = document.getElementById('ohHarvestSwitch');
+  var state = document.getElementById('ohHarvestState');
+  var btn = document.getElementById('ohHarvestToggleBtn');
+  var admin = isPubAdmin();
+  if (wrap) {
+    wrap.classList.toggle('is-on', harvestEnabled);
+    wrap.classList.toggle('is-off', !harvestEnabled);
+  }
+  if (state) state.textContent = harvestEnabled ? '🟢 Harvest: ĐANG BẬT' : '🔴 Harvest: ĐANG TẮT';
+  if (btn) {
+    btn.textContent = harvestEnabled ? '⏻ Tắt Harvest' : '⏻ Bật Harvest';
+    btn.className = harvestEnabled ? 'btn btn-danger' : 'btn btn-primary';
+    btn.disabled = !admin;
+    btn.title = admin ? '' : 'Chỉ Admin mới được bật/tắt chức năng Harvest';
+  }
+  setOrcidHarvestRunning(!!orcidES);
+}
+
+async function loadHarvestEnabled() {
+  try {
+    var data = await apiFetch('/orcid/harvest/enabled');
+    harvestEnabled = data.enabled === true;
+  } catch (e) {
+    // Không đọc được trạng thái → hiển thị như đang tắt, tránh báo bật nhầm.
+    harvestEnabled = false;
+    logOrcid('Không đọc được trạng thái công tắc Harvest: ' + (e.message || e));
+  }
+  renderHarvestSwitch();
+}
+
+async function toggleHarvestEnabled() {
+  var btn = document.getElementById('ohHarvestToggleBtn');
+  var next = !harvestEnabled;
+  if (!next && orcidES) stopOrcidHarvest();
+  if (btn) btn.disabled = true;
+  try {
+    var data = await apiFetch('/orcid/harvest/enabled', {
+      method: 'POST',
+      body: JSON.stringify({ enabled: next })
+    });
+    harvestEnabled = data.enabled === true;
+    showNotif(harvestEnabled ? '🟢 Đã BẬT chức năng Harvest' : '🔴 Đã TẮT chức năng Harvest');
+    logOrcid(harvestEnabled ? '🟢 Công tắc Harvest: BẬT' : '🔴 Công tắc Harvest: TẮT');
+  } catch (e) {
+    showNotif('Không đổi được trạng thái: ' + (e.message || e));
+  } finally {
+    renderHarvestSwitch();
+  }
+}
+
 function setOrcidHarvestRunning(running) {
   var start = document.getElementById('orcidStartBtn');
   var stop = document.getElementById('orcidStopBtn');
   if (start) {
-    start.disabled = !!running;
+    start.disabled = !!running || !harvestEnabled;
     start.textContent = running ? 'Đang quét...' : '▶ Bắt đầu Quét';
+    start.title = harvestEnabled ? '' : 'Chức năng Harvest đang tắt — bật công tắc ở trên trước.';
   }
   if (stop) stop.disabled = !running;
 }
@@ -777,6 +872,14 @@ function stopOrcidHarvest() {
 }
 
 async function startOrcidHarvest() {
+  // Hỏi lại server thay vì tin biến cục bộ: tab có thể mở từ lâu, hoặc admin
+  // khác vừa tắt công tắc.
+  await loadHarvestEnabled();
+  if (!harvestEnabled) {
+    showNotif('⛔ Chức năng Harvest đang TẮT — bật công tắc ở trên trước khi quét');
+    logOrcid('⛔ Không quét: công tắc Harvest đang tắt.');
+    return;
+  }
   if (orcidES) { try { orcidES.close(); } catch (_) {} orcidES = null; }
   document.getElementById('orcidResults').innerHTML = '';
   document.getElementById('orcidLog').textContent = '';
@@ -854,6 +957,7 @@ if (PUB_INSTITUTE_OK) {
   syncUserFromApiMe().then(function () {
     updateWelcomeUser();
     resetHarvestSessionUi();
+    loadHarvestEnabled();
     if (isPubAdmin()) {
       var enrichRow = document.getElementById('ohEnrichRow');
       if (enrichRow) enrichRow.style.display = 'flex';

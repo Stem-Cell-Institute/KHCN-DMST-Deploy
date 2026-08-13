@@ -1,7 +1,8 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const multer = require('multer');
+const multer = require('../lib/upload');
+const { setContentDisposition } = require('../lib/filenames');
 const appPaths = require('../lib/appPaths');
 const { createConferenceEmailService } = require('../services/conferenceEmailService');
 const { exportApprovalWord } = require('../services/conferenceWordExport');
@@ -742,7 +743,7 @@ module.exports = function createConferenceRegistrationRouter(deps) {
       tx();
       const fname = `${row.submission_code || 'HNHT'}-don-dang-ky.docx`;
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fname)}"`);
+      setContentDisposition(res, fname);
       return res.send(buf);
     } catch (e) {
       if (e.code === 'NOT_FOUND') return res.status(404).json({ message: 'Không tìm thấy' });

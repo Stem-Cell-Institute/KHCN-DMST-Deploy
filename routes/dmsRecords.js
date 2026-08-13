@@ -7,7 +7,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const multer = require('multer');
+const multer = require('../lib/upload');
 const archiver = require('archiver');
 const XLSX = require('xlsx');
 const {

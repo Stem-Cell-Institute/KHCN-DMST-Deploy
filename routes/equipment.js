@@ -5,7 +5,8 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const multer = require('multer');
+const multer = require('../lib/upload');
+const { setContentDisposition } = require('../lib/filenames');
 const QRCode = require('qrcode');
 const { checkEquipmentDocAccess } = require('../middleware/checkEquipmentDocAccess');
 const {
@@ -2138,7 +2139,7 @@ module.exports = function createEquipmentRouter(deps) {
         return res.status(404).json({ message: 'File không tồn tại trên máy chủ' });
       }
       res.setHeader('Content-Type', PDF_MIME);
-      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(normalized))}"`);
+      setContentDisposition(res, path.basename(normalized), { inline: true });
       return res.sendFile(normalized);
     } catch (e) {
       console.error('[equipment download]', e);

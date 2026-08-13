@@ -1188,7 +1188,7 @@
                 <details class="sidebar-accordion">
                     <summary class="sidebar-accordion__summary"><span>Báo cáo</span></summary>
                     <div class="sidebar-accordion__panel">
-                        <div class="menu-item menu-item--quiet" tabindex="0" role="button" onclick="showSection('reports')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showSection('reports');}">
+                        <div id="menu-reports" class="menu-item menu-item--quiet" style="display: none;" tabindex="0" role="button" onclick="showSection('reports')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showSection('reports');}">
                             <span>Thống kê &amp; Báo cáo</span>
                         </div>
                         <div class="menu-item menu-item--quiet" tabindex="0" role="button" onclick="showSection('calendar')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showSection('calendar');}">
@@ -1238,7 +1238,8 @@
                     </div>
                 </div>
 
-                <div id="export-import-section" class="filter-bar" style="margin-bottom: 20px;">
+                <!-- Chỉ Admin: mặc định ẩn, applyAdminUiVisibility() mới mở ra. -->
+                <div id="export-import-section" class="filter-bar" style="margin-bottom: 20px; display: none;">
                     <h3 style="margin-bottom: 15px;">📥 Export / Import số liệu</h3>
                     <p style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">Tải mẫu CSV để điền số liệu, hoặc export số liệu hiện tại. <strong>Export Excel (.xlsx)</strong> hiển thị đúng tiếng Việt. Import file <strong>CSV hoặc Excel (.xlsx)</strong> để cập nhật dashboard.</p>
                     <p style="font-size: 0.85rem; color: #555; margin-bottom: 12px;"><strong>Cách nhập hàng loạt:</strong> Trong file mẫu, <em>mỗi dòng</em> = 1 nhiệm vụ (mã, tên, chủ nhiệm, cấp, trạng thái, ngày bắt đầu/kết thúc, tiến độ %, kinh phí). Dòng 1 là tiêu đề cột, dòng 2 là ghi chú (bỏ qua). Từ dòng 3 trở đi: điền thêm nhiều dòng, mỗi dòng một nhiệm vụ. Khi import, hệ thống đọc từng dòng, tách theo cột; nếu <strong>mã đề tài</strong> đã tồn tại thì cập nhật, chưa có thì thêm mới.</p>
@@ -1277,6 +1278,68 @@
                                 <span id="template-van-ban-msg" style="font-size: 0.8rem; color: #0a0;"></span>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Chỉ Admin: mặc định ẩn, applyAdminUiVisibility() mới mở ra. -->
+                <div id="reports-section" class="filter-bar" style="margin-bottom: 20px; display: none;">
+                    <h3 style="margin-bottom: 8px;">📊 Thống kê &amp; Báo cáo</h3>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 4px;">
+                        Xuất báo cáo tổng hợp nhiều năm, gom nhóm <strong>từ cấp nhỏ đến cấp lớn</strong> (Viện → Trường → ĐHQG → Bộ → Nhà nước).
+                    </p>
+                    <p style="font-size: 0.85rem; color: #555; margin-bottom: 14px;">
+                        File Excel gồm 4 sheet: <strong>Tổng quan</strong> (chỉ số &amp; phân bổ theo cấp) ·
+                        <strong>Tổng hợp theo cấp</strong> (bảng chéo cấp × năm, số lượng và kinh phí) ·
+                        <strong>Chi tiết nhiệm vụ</strong> (danh sách có nhóm và dòng tổng) ·
+                        <strong>Theo trạng thái</strong>. Để trống bộ lọc = lấy toàn bộ.
+                    </p>
+                    <div class="filter-row" style="align-items: flex-end; flex-wrap: wrap; gap: 16px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Từ năm</label>
+                            <select id="reportFromYear" style="min-width: 120px;"><option value="">Sớm nhất</option></select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Đến năm</label>
+                            <select id="reportToYear" style="min-width: 120px;"><option value="">Mới nhất</option></select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Trạng thái</label>
+                            <select id="reportStatus" style="min-width: 190px;">
+                                <option value="">Tất cả trạng thái</option>
+                                <optgroup label="Nhóm giai đoạn">
+                                    <option value="cho_vien_xet_chon,cho_bo_tham_dinh,cho_ngoai_xet_chon,cho_phe_duyet_ngoai">Chờ xét duyệt</option>
+                                    <option value="da_phe_duyet,cho_ky_hop_dong,approved">Đã phê duyệt / Chờ ký HĐ</option>
+                                    <option value="dang_thuc_hien,ongoing,xin_dieu_chinh">Đang thực hiện</option>
+                                    <option value="cho_nghiem_thu_co_so,nghiem_thu_trung_gian,cho_nghiem_thu_bo_nn,nghiem_thu_tong_ket,hoan_thien_sau_nghiem_thu,review">Nghiệm thu</option>
+                                    <option value="thanh_ly_hop_dong,hoan_thanh,completed">Hoàn thành</option>
+                                </optgroup>
+                                <optgroup label="Từng trạng thái">
+                                    <option value="planning">Lập kế hoạch</option>
+                                    <option value="dang_thuc_hien">Đang thực hiện</option>
+                                    <option value="cho_nghiem_thu_co_so">Chờ nghiệm thu cơ sở</option>
+                                    <option value="cho_nghiem_thu_bo_nn">Chờ nghiệm thu cấp Bộ/NN</option>
+                                    <option value="hoan_thanh">Hoàn thành</option>
+                                    <option value="thanh_ly_hop_dong">Thanh lý hợp đồng</option>
+                                    <option value="khong_duoc_phe_duyet">Không được phê duyệt</option>
+                                    <option value="overdue">Quá hạn</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top: 14px;">
+                        <label style="display: block; margin-bottom: 6px;">Cấp quản lý <span style="font-weight: 400; color: #666; font-size: 0.85rem;">(không chọn ô nào = lấy tất cả các cấp)</span></label>
+                        <div id="reportLevels" style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center;">
+                            <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" value="institute"> Cấp Viện</label>
+                            <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" value="school"> Cấp Trường ĐH KHTN</label>
+                            <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" value="university"> Cấp ĐHQG</label>
+                            <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" value="ministry"> Cấp Bộ</label>
+                            <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" value="national"> Cấp Nhà nước</label>
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-success" id="btn-export-report">📊 Xuất báo cáo Excel</button>
+                        <button type="button" class="btn btn-secondary" id="btn-reset-report">Đặt lại bộ lọc</button>
+                        <span id="report-msg" style="font-size: 0.9rem;"></span>
                     </div>
                 </div>
 
@@ -2211,6 +2274,12 @@
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             const item = document.querySelector('.menu-item[onclick*="' + section + '"]');
             if (item) item.classList.add('active');
+            if (section === 'reports') {
+                if (!isAdmin) return; // không mở được kể cả khi gọi thẳng showSection('reports')
+                var rs = document.getElementById('reports-section');
+                if (rs) rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
+            }
             if (section === 'all-tasks') {
                 var levelSel = document.getElementById('levelFilter');
                 var statusSel = document.getElementById('statusFilter');
@@ -2956,6 +3025,115 @@
         }
 
         function updateProgress() { alert('Chức năng cập nhật tiến độ đang được phát triển...'); }
+        // ── Báo cáo thống kê nhiệm vụ (khu vực "Thống kê & Báo cáo") ──────────────
+        // Điền danh sách năm từ dữ liệu thật thay vì cố định, để không bỏ sót năm cũ.
+        function populateReportYears() {
+            var from = document.getElementById('reportFromYear');
+            var to = document.getElementById('reportToYear');
+            if (!from || !to) return;
+            fetch(apiBase + '/api/missions')
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    var years = [];
+                    (d.missions || []).forEach(function (m) {
+                        var mm = String(m.start_date || '').match(/^(\d{4})/);
+                        if (mm) years.push(Number(mm[1]));
+                    });
+                    var now = new Date().getFullYear();
+                    var min = years.length ? Math.min.apply(null, years) : now - 10;
+                    var max = Math.max(now, years.length ? Math.max.apply(null, years) : now);
+                    var html = '';
+                    for (var y = max; y >= min; y--) html += '<option value="' + y + '">' + y + '</option>';
+                    from.insertAdjacentHTML('beforeend', html);
+                    to.insertAdjacentHTML('beforeend', html);
+                })
+                .catch(function () { /* giữ nguyên "Sớm nhất/Mới nhất" nếu không tải được */ });
+        }
+
+        function buildReportQuery() {
+            var params = new URLSearchParams();
+            var f = (document.getElementById('reportFromYear') || {}).value || '';
+            var t = (document.getElementById('reportToYear') || {}).value || '';
+            var s = (document.getElementById('reportStatus') || {}).value || '';
+            if (f) params.set('fromYear', f);
+            if (t) params.set('toYear', t);
+            if (s) params.set('statuses', s);
+            var checked = [].slice.call(
+                document.querySelectorAll('#reportLevels input[type="checkbox"]:checked')
+            ).map(function (c) { return c.value; });
+            if (checked.length) params.set('levels', checked.join(','));
+            return params.toString();
+        }
+
+        function setReportMsg(text, color) {
+            var el = document.getElementById('report-msg');
+            if (!el) return;
+            el.textContent = text || '';
+            el.style.color = color || '#666';
+        }
+
+        function exportMissionReport() {
+            var token = localStorage.getItem('token');
+            if (!token) { alert('Vui lòng đăng nhập (Admin) để xuất báo cáo.'); return; }
+            var btn = document.getElementById('btn-export-report');
+            if (btn) btn.disabled = true;
+            setReportMsg('⏳ Đang tạo báo cáo…', '#666');
+
+            var qs = buildReportQuery();
+            var filename = '';
+            fetch(apiBase + '/api/missions/report-excel' + (qs ? '?' + qs : ''), {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+                .then(function (r) {
+                    if (!r.ok) {
+                        return r.json().catch(function () { return {}; }).then(function (d) {
+                            var msg = d.message || r.statusText;
+                            if (r.status === 401) msg = 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
+                            else if (r.status === 403) msg = 'Chỉ Admin mới có quyền xuất báo cáo.';
+                            throw new Error(msg);
+                        });
+                    }
+                    var cd = r.headers.get('Content-Disposition') || '';
+                    var m = cd.match(/filename="?([^";]+)"?/);
+                    filename = m ? m[1] : 'bao_cao_nhiem_vu_khcn.xlsx';
+                    var count = r.headers.get('X-Mission-Count');
+                    return r.arrayBuffer().then(function (buf) { return { buf: buf, count: count }; });
+                })
+                .then(function (res) {
+                    var blob = new Blob([res.buf], {
+                        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    });
+                    var a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = filename;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    var n = res.count == null ? '' : res.count;
+                    if (n === '0') {
+                        setReportMsg('⚠️ Không có nhiệm vụ nào khớp bộ lọc — file chỉ có phần khung.', '#c8490e');
+                    } else {
+                        setReportMsg('✅ Đã xuất ' + n + ' nhiệm vụ — ' + filename, '#0a7d32');
+                    }
+                })
+                .catch(function (e) {
+                    setReportMsg('❌ ' + (e.message || 'Không xuất được báo cáo.'), '#c0392b');
+                })
+                .finally(function () { if (btn) btn.disabled = false; });
+        }
+
+        function resetReportFilters() {
+            var f = document.getElementById('reportFromYear');
+            var t = document.getElementById('reportToYear');
+            var s = document.getElementById('reportStatus');
+            if (f) f.value = '';
+            if (t) t.value = '';
+            if (s) s.value = '';
+            document.querySelectorAll('#reportLevels input[type="checkbox"]').forEach(function (c) {
+                c.checked = false;
+            });
+            setReportMsg('');
+        }
+
         function exportTask() { alert('Chức năng xuất báo cáo đang được phát triển...'); }
 
         window.addEventListener('load', () => {
@@ -2964,8 +3142,15 @@
             try { currentUser = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) { currentUser = {}; }
 
             function applyAdminUiVisibility() {
+                // Export/Import số liệu và Thống kê & Báo cáo: CHỈ Admin.
+                // Các vai trò khác (kể cả vien_truong, phong_khcn) đều không thấy.
+                // Đây chỉ là lớp hiển thị — chặn thật nằm ở adminOnly trên từng endpoint.
                 var exportImportSection = document.getElementById('export-import-section');
                 if (exportImportSection) exportImportSection.style.display = isAdmin ? '' : 'none';
+                var reportsSection = document.getElementById('reports-section');
+                if (reportsSection) reportsSection.style.display = isAdmin ? '' : 'none';
+                var menuReports = document.getElementById('menu-reports');
+                if (menuReports) menuReports.style.display = isAdmin ? '' : 'none';
                 var btnEditTask = document.getElementById('btn-edit-task');
                 if (btnEditTask) btnEditTask.style.display = (isAdmin || isPhongKhcn) ? '' : 'none';
                 var btnManualAdd = document.getElementById('btn-admin-add-manual-mission');
@@ -3008,6 +3193,9 @@
             document.getElementById('btnSubmitLuongB')?.addEventListener('click', submitLuongB);
             var btnTpl = document.getElementById('btn-export-template');
             if (btnTpl) btnTpl.href = apiBase + '/api/missions/export-template';
+            document.getElementById('btn-export-report')?.addEventListener('click', exportMissionReport);
+            document.getElementById('btn-reset-report')?.addEventListener('click', resetReportFilters);
+            populateReportYears();
             document.getElementById('btn-export-excel')?.addEventListener('click', function() {
                 if (!token) { alert('Vui lòng đăng nhập (Admin) để export số liệu.'); return; }
                 fetch(apiBase + '/api/missions/export-excel', { headers: { 'Authorization': 'Bearer ' + token } })

@@ -274,7 +274,33 @@ textarea{resize:vertical;min-height:80px}
 .role-banner.admin-role{background:var(--red-light);color:var(--red)}
 .role-banner.phong-role{background:var(--accent-light);color:var(--accent)}
 .role-banner.vt-role{background:var(--purple-light);color:var(--purple)}
-@media(max-width:900px){.sidebar{display:none}.stats-grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}}
+/* Nút mở menu: chỉ hiện ở khổ hẹp, nơi sidebar chuyển thành ngăn kéo. */
+.coop-nav-toggle{
+  display:none;align-items:center;justify-content:center;width:38px;height:38px;flex-shrink:0;
+  border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--ink);
+  font-size:18px;line-height:1;cursor:pointer;
+}
+.coop-nav-toggle:hover{background:#eef2f9}
+.coop-nav-backdrop{display:none}
+@media(max-width:900px){
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .form-grid{grid-template-columns:1fr}
+  .coop-nav-toggle{display:inline-flex}
+  /* Trước đây sidebar bị display:none ở khổ này nên không có cách nào mở menu.
+     Nay thành ngăn kéo trượt từ trái, mở bằng nút ☰ trên thanh trên cùng. */
+  .sidebar{
+    position:fixed;top:60px;left:0;bottom:0;width:min(84vw,300px);z-index:120;
+    transform:translateX(-100%);transition:transform .25s ease;
+    box-shadow:4px 0 24px rgba(15,23,42,.18);
+  }
+  .sidebar.open{transform:translateX(0)}
+  .coop-nav-backdrop{
+    display:block;position:fixed;top:60px;left:0;right:0;bottom:0;z-index:110;
+    background:rgba(15,23,42,.45);
+  }
+  .coop-nav-backdrop[hidden]{display:none}
+}
+@media (prefers-reduced-motion:reduce){.sidebar{transition:none}}
 .dash-coop-chart{margin-top:18px;padding-top:16px;border-top:1px solid var(--border-subtle)}
 .dash-coop-chart h3{font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:12px}
 .coop-chart{display:flex;align-items:flex-end;gap:5px;height:150px;padding:8px 4px 0;border-bottom:2px solid var(--border-subtle)}
@@ -317,6 +343,15 @@ textarea{resize:vertical;min-height:80px}
   background:var(--card);box-shadow:0 4px 20px rgba(15,23,42,.06);transition:transform .15s ease,box-shadow .15s ease;
 }
 #panel-dashboard .coop-dash-tile:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(15,23,42,.1)}
+/* Ô dẫn được tới danh sách: có con trỏ tay + mũi tên gợi ý. */
+#panel-dashboard .coop-dash-tile--clickable{cursor:pointer;position:relative}
+#panel-dashboard .coop-dash-tile--clickable::after{
+  content:'›';position:absolute;top:10px;right:12px;font-size:20px;line-height:1;
+  color:var(--ink-muted);opacity:.45;transition:opacity .15s ease,transform .15s ease;
+}
+#panel-dashboard .coop-dash-tile--clickable:hover::after,
+#panel-dashboard .coop-dash-tile--clickable:focus-visible::after{opacity:1;transform:translateX(2px)}
+#panel-dashboard .coop-dash-tile--clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #panel-dashboard .coop-dash-tile-ic{
   width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
 }
@@ -746,6 +781,7 @@ textarea{resize:vertical;min-height:80px}
 
 <div class="topbar">
   <div class="topbar-left">
+    <button type="button" class="coop-nav-toggle" id="coop-nav-toggle" onclick="toggleCoopSidebar()" aria-label="Mở menu" aria-expanded="false" aria-controls="coop-sidebar">☰</button>
     <a href="index.html" class="back-btn">← Trang chủ</a>
     <span style="color:var(--border)">|</span>
     <span style="font-size:15px;font-weight:700">Hợp tác trong và ngoài nước</span>
@@ -765,7 +801,8 @@ textarea{resize:vertical;min-height:80px}
 </div>
 
 <div class="layout">
-<nav class="sidebar">
+<div class="coop-nav-backdrop" id="coop-nav-backdrop" onclick="closeCoopSidebar()" hidden></div>
+<nav class="sidebar" id="coop-sidebar">
   <div class="nav-label">Của tôi</div>
   <div class="nav-item active" onclick="gotoPanel(this,'de-xuat-cua-toi')">Đề xuất đã gửi<span class="nav-badge blue nav-badge--zero" id="bdg-cua-toi">0</span></div>
 
@@ -960,7 +997,7 @@ textarea{resize:vertical;min-height:80px}
   <div class="page-header"><h1>Tất cả đề xuất</h1><p>Danh sách toàn bộ đề xuất trong hệ thống</p></div>
   <div class="card" style="margin-bottom:16px"><div class="card-body" style="padding:12px 16px;display:flex;gap:12px;flex-wrap:wrap">
     <select id="fil-loai" style="width:220px;max-width:100%" onchange="loadTatCa()"><option value="">Tất cả loại</option><option value="doan_ra">Đoàn ra</option><option value="doan_vao">Đoàn vào</option><option value="mou">MOU</option><option value="ytnn">Đề tài có yếu tố nước ngoài</option><option value="hnht">HN/HT</option></select>
-        <select id="fil-status" style="width:200px" onchange="loadTatCa()"><option value="">Tất cả trạng thái</option><option value="cho_phong_duyet">Chờ Phòng KHCN</option><option value="yeu_cau_bo_sung">Yêu cầu bổ sung</option><option value="cho_vt_duyet">Chờ Viện trưởng</option><option value="da_duyet">Đã phê duyệt</option><option value="tu_choi">Không phê duyệt</option><option value="ket_thuc_boi_nguoi_nop">Đã kết thúc (người gửi)</option></select>
+        <select id="fil-status" style="width:200px" onchange="loadTatCa()"><option value="">Tất cả trạng thái</option><optgroup label="Nhóm (khớp ô trên Dashboard)"><option value="dang_tham_dinh,cho_ky_duyet,cho_tham_dinh,cho_phong_duyet,cho_vt_duyet,cho_vt_phe_duyet,yeu_cau_bo_sung,cho_phan_loai,dang_chuan_bi">Đang xử lý (mọi bước)</option><option value="da_duyet,da_phe_duyet,hoan_thanh">Đã phê duyệt</option><option value="tu_choi,khong_phe_duyet">Từ chối</option><option value="ket_thuc_boi_nguoi_nop,ket_thuc">Kết thúc / đóng</option></optgroup><optgroup label="Từng trạng thái"><option value="cho_phong_duyet">Chờ Phòng KHCN</option><option value="yeu_cau_bo_sung">Yêu cầu bổ sung</option><option value="cho_vt_duyet">Chờ Viện trưởng</option><option value="da_duyet">Đã phê duyệt</option><option value="tu_choi">Không phê duyệt</option><option value="ket_thuc_boi_nguoi_nop">Đã kết thúc (người gửi)</option></optgroup></select>
     <button class="btn btn-outline btn-sm" onclick="loadTatCa()">Làm mới</button>
   </div></div>
   <div id="tatca-wrap"><div class="loading"><div class="spin"></div>Đang tải...</div></div>
@@ -1394,8 +1431,27 @@ async function loadDashboardPage() {
   var maxV = 1;
   for (var i = 0; i < ser.length; i++) if (ser[i].total > maxV) maxV = ser[i].total;
   var gen = d.generated_at ? new Date(d.generated_at).toLocaleString('vi-VN') : '—';
-  function tile(icon, val, lbl, tone) {
-    return '<div class="coop-dash-tile coop-dash-tile--' + tone + '"><span class="coop-dash-tile-ic" aria-hidden="true">' + icon + '</span><div class="coop-dash-tile-main"><span class="coop-dash-tile-val">' + val + '</span><span class="coop-dash-tile-lbl">' + lbl + '</span></div></div>';
+  // target (tuỳ chọn): { panel, loai, status } — ô trở thành bấm được và dẫn
+  // thẳng tới danh sách tương ứng. Ô nào không có nơi để tới (hoặc người dùng
+  // không có quyền vào panel đó) vẫn hiển thị bình thường nhưng không bấm được.
+  function tile(icon, val, lbl, tone, target) {
+    var cls = '';
+    var attrs = '';
+    if (target && target.href) {
+      cls = ' coop-dash-tile--clickable';
+      attrs =
+        ' role="link" tabindex="0" title="Bấm để mở trang quản lý"'
+        + ' onclick="window.location.href=\'' + target.href + '\'"'
+        + ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window.location.href=\'' + target.href + '\';}"';
+    } else if (target && dashTargetAvailable(target.panel)) {
+      var arg = JSON.stringify(target).replace(/"/g, '&quot;');
+      cls = ' coop-dash-tile--clickable';
+      attrs =
+        ' role="button" tabindex="0" title="Bấm để mở danh sách tương ứng"'
+        + ' onclick="gotoDashTarget(' + arg + ')"'
+        + ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();gotoDashTarget(' + arg + ');}"';
+    }
+    return '<div class="coop-dash-tile coop-dash-tile--' + tone + cls + '"' + attrs + '><span class="coop-dash-tile-ic" aria-hidden="true">' + icon + '</span><div class="coop-dash-tile-main"><span class="coop-dash-tile-val">' + val + '</span><span class="coop-dash-tile-lbl">' + lbl + '</span></div></div>';
   }
   var chartHtml = ser.map(function(row) {
     var h = maxV ? Math.round((row.total / maxV) * 100) : 0;
@@ -1417,28 +1473,29 @@ async function loadDashboardPage() {
     + '<section class="coop-dash-section" aria-labelledby="dash-flow-h">'
     + '<h2 class="coop-dash-section-head" id="dash-flow-h"><span>⏱</span> Luồng cần xử lý</h2>'
     + '<div class="coop-dash-grid">'
-    + tile('📊', d.tat_ca_tong != null ? d.tat_ca_tong : '—', 'Tổng đề xuất trong hệ thống', 'blue')
-    + tile('🏢', d.cho_phong_duyet != null ? d.cho_phong_duyet : '—', 'Chờ Phòng KHCN', 'amber')
-    + tile('✅', d.cho_vt_duyet != null ? d.cho_vt_duyet : '—', 'Chờ Viện trưởng', 'red')
-    + tile('📅', d.su_kien_sap_dien_ra != null ? d.su_kien_sap_dien_ra : '—', 'Sự kiện sắp diễn ra', 'green')
+    + tile('📊', d.tat_ca_tong != null ? d.tat_ca_tong : '—', 'Tổng đề xuất trong hệ thống', 'blue', { panel: 'tat-ca' })
+    + tile('🏢', d.cho_phong_duyet != null ? d.cho_phong_duyet : '—', 'Chờ Phòng KHCN', 'amber', { panel: 'cho-phong-xu-ly' })
+    + tile('✅', d.cho_vt_duyet != null ? d.cho_vt_duyet : '—', 'Chờ Viện trưởng', 'red', { panel: 'cho-vt-duyet' })
+    + tile('📅', d.su_kien_sap_dien_ra != null ? d.su_kien_sap_dien_ra : '—', 'Sự kiện sắp diễn ra', 'green', { panel: 'su-kien' })
     + '</div></section>'
 
     + '<section class="coop-dash-section" aria-labelledby="dash-type-h">'
     + '<h2 class="coop-dash-section-head" id="dash-type-h"><span>🗂</span> Theo loại hồ sơ</h2>'
     + '<div class="coop-dash-grid">'
-    + tile('✈️', bl.doan_ra != null ? bl.doan_ra : 0, 'Đoàn ra', 'violet')
-    + tile('🏛️', bl.doan_vao != null ? bl.doan_vao : 0, 'Đoàn vào', 'blue')
-    + tile('🤝', bl.mou != null ? bl.mou : 0, 'Thỏa thuận (MOU…)', 'blue')
-    + tile('📋', bl.ytnn != null ? bl.ytnn : 0, 'Đề tài có yếu tố nước ngoài', 'blue')
+    + tile('✈️', bl.doan_ra != null ? bl.doan_ra : 0, 'Đoàn ra', 'violet', { panel: 'tat-ca', loai: 'doan_ra' })
+    + tile('🏛️', bl.doan_vao != null ? bl.doan_vao : 0, 'Đoàn vào', 'blue', { panel: 'tat-ca', loai: 'doan_vao' })
+    + tile('🤝', bl.mou != null ? bl.mou : 0, 'Thỏa thuận (MOU…)', 'blue', { panel: 'tat-ca', loai: 'mou' })
+    + tile('📋', bl.ytnn != null ? bl.ytnn : 0, 'Đề tài có yếu tố nước ngoài', 'blue', { panel: 'tat-ca', loai: 'ytnn' })
     + '</div></section>'
 
     + '<section class="coop-dash-section" aria-labelledby="dash-st-h">'
     + '<h2 class="coop-dash-section-head" id="dash-st-h"><span>📈</span> Trạng thái xử lý</h2>'
     + '<div class="coop-dash-grid">'
-    + tile('⚙️', bs.dang_xu_ly != null ? bs.dang_xu_ly : 0, 'Đang xử lý', 'amber')
-    + tile('🌿', bs.da_phe_duyet != null ? bs.da_phe_duyet : 0, 'Đã phê duyệt', 'green')
-    + tile('⛔', bs.tu_choi != null ? bs.tu_choi : 0, 'Từ chối', 'red')
-    + tile('🏁', bs.ket_thuc != null ? bs.ket_thuc : 0, 'Kết thúc / đóng', 'slate')
+    // Giá trị status khớp đúng cách gộp nhóm ở coopDashMergeStatusBuckets() phía server.
+    + tile('⚙️', bs.dang_xu_ly != null ? bs.dang_xu_ly : 0, 'Đang xử lý', 'amber', { panel: 'tat-ca', status: 'dang_tham_dinh,cho_ky_duyet,cho_tham_dinh,cho_phong_duyet,cho_vt_duyet,cho_vt_phe_duyet,yeu_cau_bo_sung,cho_phan_loai,dang_chuan_bi' })
+    + tile('🌿', bs.da_phe_duyet != null ? bs.da_phe_duyet : 0, 'Đã phê duyệt', 'green', { panel: 'tat-ca', status: 'da_duyet,da_phe_duyet,hoan_thanh' })
+    + tile('⛔', bs.tu_choi != null ? bs.tu_choi : 0, 'Từ chối', 'red', { panel: 'tat-ca', status: 'tu_choi,khong_phe_duyet' })
+    + tile('🏁', bs.ket_thuc != null ? bs.ket_thuc : 0, 'Kết thúc / đóng', 'slate', { panel: 'tat-ca', status: 'ket_thuc_boi_nguoi_nop,ket_thuc' })
     + '</div></section>'
 
     + (d.mou_hieu_luc != null
@@ -1449,9 +1506,9 @@ async function loadDashboardPage() {
       ? '<section class="coop-dash-section" aria-labelledby="dash-hnht-h">'
         + '<h2 class="coop-dash-section-head" id="dash-hnht-h"><span>🎓</span> Hội nghị / Hội thảo (HN/HT)</h2>'
         + '<div class="coop-dash-grid">'
-        + tile('⏳', d.hnht_cho_phong != null ? d.hnht_cho_phong : '0', 'Chờ Phòng duyệt', 'amber')
-        + tile('🔜', d.hnht_sap_dien_ra != null ? d.hnht_sap_dien_ra : '0', 'Sắp diễn ra (30 ngày)', 'blue')
-        + tile('⚠️', d.hnht_minh_chung_qua_han != null ? d.hnht_minh_chung_qua_han : '0', 'Quá hạn minh chứng (sau 15 ngày)', 'red')
+        + tile('⏳', d.hnht_cho_phong != null ? d.hnht_cho_phong : '0', 'Chờ Phòng duyệt', 'amber', { href: '/quan-ly/hoi-nghi-hoi-thao' })
+        + tile('🔜', d.hnht_sap_dien_ra != null ? d.hnht_sap_dien_ra : '0', 'Sắp diễn ra (30 ngày)', 'blue', { href: '/quan-ly/hoi-nghi-hoi-thao' })
+        + tile('⚠️', d.hnht_minh_chung_qua_han != null ? d.hnht_minh_chung_qua_han : '0', 'Quá hạn minh chứng (sau 15 ngày)', 'red', { href: '/quan-ly/hoi-nghi-hoi-thao' })
         + '<div class="coop-dash-tile coop-dash-tile--blue coop-dash-tile--link">'
         + '<a class="btn btn-primary btn-sm" href="/quan-ly/hoi-nghi-hoi-thao">Mở quản lý HN/HT</a>'
         + '<span class="coop-dash-tile-lbl">Danh sách &amp; lọc</span></div>'
@@ -1485,6 +1542,69 @@ function setBadge(id, n, opts) {
 // ============================================================
 // NAVIGATION
 // ============================================================
+// ---- Ngăn kéo menu ở khổ hẹp ------------------------------------------------
+function setCoopSidebar(open) {
+  var sb = document.getElementById('coop-sidebar');
+  var bd = document.getElementById('coop-nav-backdrop');
+  var tg = document.getElementById('coop-nav-toggle');
+  if (!sb) return;
+  sb.classList.toggle('open', !!open);
+  if (bd) bd.hidden = !open;
+  if (tg) {
+    tg.setAttribute('aria-expanded', open ? 'true' : 'false');
+    tg.setAttribute('aria-label', open ? 'Đóng menu' : 'Mở menu');
+  }
+}
+function toggleCoopSidebar() {
+  var sb = document.getElementById('coop-sidebar');
+  setCoopSidebar(!(sb && sb.classList.contains('open')));
+}
+function closeCoopSidebar() { setCoopSidebar(false); }
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeCoopSidebar();
+});
+// Quay lại khổ rộng: bỏ trạng thái mở để sidebar hiển thị bình thường trở lại.
+window.addEventListener('resize', function () {
+  if (window.innerWidth > 900) closeCoopSidebar();
+});
+
+/** Panel có tồn tại và người dùng hiện tại vào được không. */
+function dashTargetAvailable(panelId) {
+  if (!panelId || !document.getElementById('panel-' + panelId)) return false;
+  var navEl = document.querySelector('.sidebar .nav-item[onclick*="\'' + panelId + '\'"]');
+  if (!navEl) return true; // panel không gắn với mục sidebar nào (vd Dashboard)
+  return !navEl.classList.contains('hidden');
+}
+
+/**
+ * Điều hướng từ một ô trên Dashboard tới danh sách tương ứng.
+ * Bộ lọc phải đặt TRƯỚC gotoPanel(), vì gotoPanel() gọi luôn hàm tải dữ liệu.
+ */
+function gotoDashTarget(target) {
+  target = target || {};
+  var panelId = target.panel;
+  if (!dashTargetAvailable(panelId)) return;
+
+  if (panelId === 'tat-ca') {
+    var fl = document.getElementById('fil-loai');
+    var fs = document.getElementById('fil-status');
+    if (fl) fl.value = target.loai || '';
+    if (fs) fs.value = target.status || '';
+  }
+
+  var navEl = document.querySelector('.sidebar .nav-item[onclick*="\'' + panelId + '\'"]');
+  if (navEl) {
+    gotoPanel(navEl, panelId);
+  } else {
+    document.querySelectorAll('.nav-item').forEach(function (n) { n.classList.remove('active'); });
+    document.querySelectorAll('.panel').forEach(function (p) { p.classList.remove('active'); });
+    document.getElementById('panel-' + panelId).classList.add('active');
+  }
+  closeCoopSidebar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function gotoPanel(navEl, panelId) {
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
   navEl.classList.add('active');
@@ -1502,6 +1622,7 @@ function gotoPanel(navEl, panelId) {
   if (panelId==='gui-ytnn') loadYtnnList();
   if (panelId==='dashboard') loadDashboardPage();
   syncCoopDashboardTopButton();
+  closeCoopSidebar(); // ở khổ hẹp: chọn xong thì đóng ngăn kéo lại
 }
 
 // ============================================================

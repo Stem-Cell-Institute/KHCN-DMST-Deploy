@@ -10,6 +10,8 @@
  * Trường gắn cờ: `import_status` (SUCCESS | DEAD_DOI_ORCID_RAW), `data_source` (Crossref | …)
  */
 
+import * as cheerio from 'cheerio';
+
 const CROSSREF_BASE  = 'https://api.crossref.org/works';
 const DATACITE_BASE  = 'https://api.datacite.org/dois';
 const OPENALEX_BASE  = 'https://api.openalex.org/works';
@@ -33,6 +35,17 @@ const DATA_SOURCE_LABEL = {
 // Email dùng cho Crossref polite pool — thay bằng email thực của SCI
 const POLITE_EMAIL = process.env.CROSSREF_POLITE_EMAIL || 'khcn@sci.edu.vn';
 
+// ── NCBI E-utilities: định danh + hạn mức ────────────────────────────────────
+// NCBI YÊU CẦU mọi request kèm `tool` và `email`. Thiếu hai tham số này, traffic
+// bị coi là ẩn danh và NCBI chặn thẳng IP thay vì liên hệ cảnh báo trước.
+// Hạn mức: 3 req/s mỗi IP khi không có api_key, 10 req/s khi có.
+// Xin key miễn phí: https://account.ncbi.nlm.nih.gov → Settings → API Key Management
+const NCBI_TOOL    = process.env.NCBI_TOOL || 'SCI-KHCN';
+const NCBI_EMAIL   = process.env.NCBI_EMAIL || POLITE_EMAIL;
+const NCBI_API_KEY = process.env.NCBI_API_KEY || '';
+/** Khoảng cách tối thiểu giữa hai request NCBI bất kỳ — đặt dưới hạn mức để có biên an toàn. */
+const NCBI_MIN_INTERVAL_MS = NCBI_API_KEY ? 150 : 400;
+
 // ── Hàm chính: fetch và enrich 1 DOI ─────────────────────────────────────────
 // `options.orcid_raw_data`: object work từ ORCID (title, journalTitle, pubYear, putCode, …)
 export async function fetchAndEnrichDOI(rawDoi, options = {}) {
@@ -52,8 +65,10 @@ export async function fetchAndEnrichDOI(rawDoi, options = {}) {
     try {
       const pmResult = await fetchPubMedByDOI(doi);
       if (pmResult) pubmedData = parsePubMed(pmResult);
-    } catch (_) {
-      /* một DOI lỗi mạng không làm sập pipeline */
+    } catch (e) {
+      // Một DOI lỗi không làm sập pipeline, nhưng phải ghi lại: nuốt im lặng
+      // từng khiến lỗi efetch (retmode sai) không bị phát hiện trong thời gian dài.
+      console.warn(`[PubMed] Enrich thất bại (${doi}): ${e?.message || e}`);
     }
   }
 
@@ -652,47 +667,145 @@ function dataSourceToResolverKey(dataSource) {
 }
 
 // ── 2. PUBMED ─────────────────────────────────────────────────────────────────
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Hàng đợi tuần tự cho MỌI request NCBI.
+ *
+ * Hạn mức của NCBI tính trên toàn IP, không theo từng DOI — nên không thể chỉ
+ * chèn delay trong vòng lặp harvest: một DOI bắn 2 request (esearch + efetch)
+ * và nếu không xếp hàng thì hai request đó đi gần như đồng thời, vượt ngưỡng.
+ * Mọi lời gọi đều phải đi qua đây để bảo đảm khoảng cách tối thiểu giữa 2 request.
+ */
+let ncbiQueue = Promise.resolve();
+let ncbiLastRequestAt = 0;
+
+function ncbiEnqueue(task) {
+  const result = ncbiQueue.then(async () => {
+    const waitMs = NCBI_MIN_INTERVAL_MS - (Date.now() - ncbiLastRequestAt);
+    if (waitMs > 0) await sleep(waitMs);
+    try {
+      return await task();
+    } finally {
+      ncbiLastRequestAt = Date.now();
+    }
+  });
+  // Nuốt lỗi ở nhánh giữ hàng đợi để một request hỏng không làm đứt cả chuỗi.
+  ncbiQueue = result.then(() => {}, () => {});
+  return result;
+}
+
+/**
+ * Gọi một endpoint E-utilities: tự gắn tool/email/api_key, xếp hàng theo hạn mức,
+ * lùi thời gian khi bị 429 (quá tải) hoặc 503.
+ */
+async function ncbiFetch(endpoint, params, { retries = 3, timeoutMs = 8000 } = {}) {
+  const qs = new URLSearchParams({ ...params, tool: NCBI_TOOL, email: NCBI_EMAIL });
+  if (NCBI_API_KEY) qs.set('api_key', NCBI_API_KEY);
+  const url = `${PUBMED_BASE}/${endpoint}?${qs.toString()}`;
+
+  for (let attempt = 0; ; attempt++) {
+    const res = await ncbiEnqueue(() =>
+      fetchWithTimeout(url, {
+        headers: { 'User-Agent': `${NCBI_TOOL}/1.0 (${NCBI_EMAIL})` },
+      }, timeoutMs)
+    );
+
+    if (res.status !== 429 && res.status !== 503) return res;
+
+    // Giải phóng socket trước khi thử lại — body chưa đọc sẽ giữ kết nối.
+    try { await res.text(); } catch (_) {}
+
+    if (attempt >= retries) {
+      throw new Error(`NCBI HTTP ${res.status} — đã thử lại ${retries} lần`);
+    }
+    const retryAfterSec = parseInt(res.headers.get('retry-after') || '', 10);
+    const backoffMs = Number.isFinite(retryAfterSec) && retryAfterSec > 0
+      ? retryAfterSec * 1000
+      : NCBI_MIN_INTERVAL_MS * 2 ** (attempt + 1);
+    console.warn(`[PubMed] HTTP ${res.status}, chờ ${backoffMs}ms rồi thử lại (lần ${attempt + 1}/${retries}).`);
+    await sleep(backoffMs);
+  }
+}
+
 async function fetchPubMedByDOI(doi) {
-  // Bước 1: esearch — tìm PMID từ DOI
-  const searchUrl = `${PUBMED_BASE}/esearch.fcgi?db=pubmed&term=${encodeURIComponent(doi)}[doi]&retmode=json`;
-  const searchRes = await fetchWithTimeout(searchUrl, {}, 8000);
-  if (!searchRes.ok) throw new Error('PubMed esearch failed');
+  // Bước 1: esearch — tìm PMID từ DOI (esearch có hỗ trợ retmode=json)
+  const searchRes = await ncbiFetch('esearch.fcgi', {
+    db: 'pubmed',
+    term: `${doi}[doi]`,
+    retmode: 'json',
+    retmax: '1',
+  });
+  if (!searchRes.ok) throw new Error(`PubMed esearch HTTP ${searchRes.status}`);
   const searchJson = await searchRes.json();
   const pmids = searchJson.esearchresult?.idlist || [];
   if (!pmids.length) return null;
 
   const pmid = pmids[0];
 
-  // Bước 2: efetch — lấy metadata đầy đủ
-  const fetchUrl = `${PUBMED_BASE}/efetch.fcgi?db=pubmed&id=${pmid}&retmode=json&rettype=abstract`;
-  const fetchRes = await fetchWithTimeout(fetchUrl, {}, 8000);
-  if (!fetchRes.ok) throw new Error('PubMed efetch failed');
-  const fetchJson = await fetchRes.json();
+  // Bước 2: efetch — lấy abstract + MeSH.
+  // efetch của db=pubmed KHÔNG hỗ trợ retmode=json (chỉ xml/text); yêu cầu json
+  // sẽ nhận về XML và làm hỏng bước parse.
+  const fetchRes = await ncbiFetch('efetch.fcgi', {
+    db: 'pubmed',
+    id: pmid,
+    retmode: 'xml',
+    rettype: 'abstract',
+  });
+  if (!fetchRes.ok) throw new Error(`PubMed efetch HTTP ${fetchRes.status}`);
+  const xml = await fetchRes.text();
 
-  return { pmid, data: fetchJson.PubmedArticleSet?.PubmedArticle?.[0] };
+  return { pmid, xml };
 }
 
 function parsePubMed(result) {
-  if (!result?.data) return null;
-  const article = result.data.MedlineCitation?.Article;
-  const abstract = article?.Abstract?.AbstractText;
-  return {
-    pmid: result.pmid,
-    abstractText: Array.isArray(abstract)
-      ? abstract.map(t => typeof t === 'string' ? t : t?._ || '').join(' ')
-      : (typeof abstract === 'string' ? abstract : null),
-    meshTerms: (result.data.MedlineCitation?.MeshHeadingList?.MeshHeading || [])
-      .map(m => m.DescriptorName?._ || m.DescriptorName || '')
-      .filter(Boolean)
-      .join('; '),
-  };
+  if (!result?.xml) return null;
+
+  const $ = cheerio.load(result.xml, { xmlMode: true });
+
+  // Abstract có thể tách nhiều đoạn có nhãn (BACKGROUND, METHODS, …).
+  const abstractText = $('Abstract > AbstractText')
+    .map((_, el) => {
+      const label = $(el).attr('Label');
+      const text = $(el).text().trim();
+      if (!text) return null;
+      return label ? `${label}: ${text}` : text;
+    })
+    .get()
+    .filter(Boolean)
+    .join(' ') || null;
+
+  const meshTerms = $('MeshHeadingList > MeshHeading > DescriptorName')
+    .map((_, el) => $(el).text().trim())
+    .get()
+    .filter(Boolean)
+    .join('; ') || null;
+
+  return { pmid: result.pmid, abstractText, meshTerms };
 }
 
+const PUBMED_KEYWORDS = [
+  'stem cell', 'therapy', 'therapeutic', 'clinical', 'cancer', 'tumor', 'tumour',
+  'gene', 'genom', 'biology', 'biomedical', 'medicine', 'medical', 'immuno',
+  'protein', 'cell', 'msc', 'nk cell', 'patient', 'in vivo', 'in vitro',
+];
+/**
+ * Khớp theo ranh giới từ, không phải chuỗi con: `includes('nk')` trước đây khớp
+ * cả "think"/"link"/"bank" nên gần như bài nào cũng lọt qua.
+ */
+const PUBMED_KEYWORD_RE = new RegExp(
+  `\\b(${PUBMED_KEYWORDS.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
+  'i'
+);
+
 function shouldFetchPubMed(base) {
-  const bioKeywords = ['stem cell', 'therapy', 'clinical', 'cancer', 'gene', 'biology',
-                       'medicine', 'immuno', 'protein', 'cell', 'nk', 'msc'];
-  const titleLower = (base.title || '').toLowerCase();
-  return bioKeywords.some(k => titleLower.includes(k));
+  const haystack = [base.title, base.journalName, base.keywords]
+    .filter(Boolean)
+    .join(' ');
+  return PUBMED_KEYWORD_RE.test(haystack);
 }
 
 // ── 3. UNPAYWALL ─────────────────────────────────────────────────────────────

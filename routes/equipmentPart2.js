@@ -6,7 +6,8 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const multer = require('multer');
+const multer = require('../lib/upload');
+const { setContentDisposition } = require('../lib/filenames');
 const QRCode = require('qrcode');
 
 const PDF_MIME = 'application/pdf';
@@ -1387,7 +1388,7 @@ function registerEquipmentPart2(router, deps) {
               ? 'image/webp'
               : 'image/jpeg';
       res.setHeader('Content-Type', ct);
-      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(normalized))}"`);
+      setContentDisposition(res, path.basename(normalized), { inline: true });
       return res.sendFile(normalized);
     } catch (e) {
       console.error('[incident attachment]', e);

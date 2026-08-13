@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const multer = require('multer');
+const multer = require('../../../lib/upload');
 
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',

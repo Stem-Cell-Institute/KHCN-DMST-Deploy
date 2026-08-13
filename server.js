@@ -23,6 +23,7 @@ const { startWorker } = require(path.join(__dirname, 'services', 'enrichmentWork
 const fs = require('fs');
 const { spawnSync } = require('child_process');
 const appPaths = require('./lib/appPaths');
+const { decodeUploadedFilename, setContentDisposition } = require('./lib/filenames');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 const express = require('express');
@@ -36,7 +37,7 @@ const ipKeyGenerator =
   });
 const helmet = require('helmet');
 const cors = require('cors');
-const multer = require('multer');
+const multer = require('./lib/upload');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
@@ -48,6 +49,7 @@ const {
   buildEventReportDocBuffer,
   toVietnameseCurrencyWords,
 } = require('./services/eventWordBuilder');
+const { buildMissionReportBuffer } = require('./services/missionReportBuilder');
 
 // Database - tự động chọn SQLite hoặc Turso dựa trên .env
 // Sử dụng ./lib/db-bridge.js thay vì better-sqlite3 trực tiếp
@@ -10386,8 +10388,7 @@ app.get('/api/missions/:id/files/:fileId/download', authMiddleware, (req, res) =
   const checked = normalizeAndCheckDownloadPath(row.path);
   if (checked.err === 403) return res.status(403).json({ message: 'Truy cập bị từ chối' });
   if (checked.err) return res.status(404).json({ message: 'File không tồn tại' });
-  const safeName = (row.original_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
-  res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '"');
+  setContentDisposition(res, row.original_name || 'download');
   return res.sendFile(checked.norm);
 });
 
@@ -10409,7 +10410,7 @@ app.get('/api/missions/:id/files/:fileId/view', authMiddleware, (req, res) => {
   const ext = (row.original_name || '').split('.').pop().toLowerCase();
   if (ext === 'pdf') {
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename="' + (row.original_name || 'view.pdf').replace(/[^a-zA-Z0-9._-]/g, '_') + '"');
+    setContentDisposition(res, row.original_name || 'view.pdf', { inline: true });
   }
   return res.sendFile(checked.norm);
 });
@@ -11158,7 +11159,10 @@ function csvEscape(s) {
 }
 
 // Export template CSV: dùng sep=, để Excel mở ra mỗi cột 1 ô (không dồn vào 1 ô)
-app.get('/api/missions/export-template', (req, res) => {
+// Mẫu nhập liệu chỉ phục vụ luồng Import của Admin — khoá cùng mức với /export và /import.
+// Tải bằng thẻ <a href> nên không gửi được header Authorization; getTokenFromReq đọc thêm
+// cookie auth_token (đã đặt khi đăng nhập) nên link vẫn tải được với tài khoản Admin.
+app.get('/api/missions/export-template', authMiddleware, adminOnly, (req, res) => {
   const header = 'code,title,principal,level,status,start_date,end_date,progress,budget';
   const note = 'GHI CHÚ (dòng này bỏ qua khi import): Mỗi dòng = 1 nhiệm vụ. Cấp: national|ministry|university|school|institute. Trạng thái: planning|cho_vien_xet_chon|cho_bo_tham_dinh|cho_ngoai_xet_chon|cho_phe_duyet_ngoai|da_phe_duyet|cho_ky_hop_dong|dang_thuc_hien|xin_dieu_chinh|cho_nghiem_thu_co_so|nghiem_thu_trung_gian|cho_nghiem_thu_bo_nn|nghiem_thu_tong_ket|hoan_thien_sau_nghiem_thu|thanh_ly_hop_dong|hoan_thanh|khong_duoc_phe_duyet. Ngày: YYYY-MM-DD';
   const sample1 = 'DT-2025-001,Nghiên cứu ứng dụng tế bào gốc trong điều trị,TS. Nguyễn Văn A,institute,ongoing,2025-01-15,2027-12-31,35,500000000';
@@ -11219,6 +11223,90 @@ app.get('/api/missions/export-excel', authMiddleware, adminOnly, (req, res) => {
   } catch (err) {
     console.error('[Export Excel]', err);
     return res.status(500).json({ message: 'Lỗi xuất Excel: ' + (err.message || 'Không xác định') });
+  }
+});
+
+/**
+ * Báo cáo thống kê nhiệm vụ (.xlsx) — lọc theo khoảng năm / cấp / trạng thái.
+ * Phải khai báo TRƯỚC '/api/missions/:id', nếu không 'report-excel' bị bắt làm :id.
+ * Năm lấy theo năm bắt đầu (start_date); bản ghi thiếu start_date chỉ xuất hiện
+ * khi không đặt bộ lọc năm.
+ */
+app.get('/api/missions/report-excel', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    syncMissionsFromCapVien();
+
+    const parseYear = (v) => {
+      const n = parseInt(String(v || '').trim(), 10);
+      return Number.isFinite(n) && n >= 1900 && n <= 2200 ? n : null;
+    };
+    const parseList = (v) =>
+      String(v || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+    let fromYear = parseYear(req.query.fromYear);
+    let toYear = parseYear(req.query.toYear);
+    if (fromYear && toYear && fromYear > toYear) [fromYear, toYear] = [toYear, fromYear];
+    const levels = parseList(req.query.levels);
+    const statuses = parseList(req.query.statuses);
+
+    const where = [];
+    const params = [];
+    if (fromYear != null) {
+      where.push("start_date IS NOT NULL AND TRIM(start_date) <> '' AND CAST(substr(start_date,1,4) AS INTEGER) >= ?");
+      params.push(fromYear);
+    }
+    if (toYear != null) {
+      where.push("start_date IS NOT NULL AND TRIM(start_date) <> '' AND CAST(substr(start_date,1,4) AS INTEGER) <= ?");
+      params.push(toYear);
+    }
+    if (levels.length) {
+      where.push(`level IN (${levels.map(() => '?').join(',')})`);
+      params.push(...levels);
+    }
+    if (statuses.length) {
+      where.push(`status IN (${statuses.map(() => '?').join(',')})`);
+      params.push(...statuses);
+    }
+
+    const sql =
+      'SELECT code, title, principal, level, status, start_date, end_date, progress, budget, ' +
+      'managing_agency, contract_number, funding_source, field, mission_type ' +
+      'FROM missions' +
+      (where.length ? ' WHERE ' + where.join(' AND ') : '') +
+      ' ORDER BY level, start_date, code';
+    const rows = db.prepare(sql).all(...params);
+
+    const buf = await buildMissionReportBuffer({
+      rows,
+      filters: { fromYear, toYear, levels, statuses },
+      generatedBy: (req.user && (req.user.fullname || req.user.email)) || '',
+    });
+
+    const span =
+      fromYear != null || toYear != null ? `_${fromYear || 'dau'}-${toYear || 'nay'}` : '';
+    const filename = `bao_cao_nhiem_vu_khcn${span}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    insertUserActivityLog(req, {
+      userId: req.user && req.user.id,
+      email: req.user && req.user.email,
+      action: 'missions_report_export',
+      module: 'missions',
+      path: req.originalUrl || '/api/missions/report-excel',
+      detail: JSON.stringify({ at: new Date().toISOString(), count: rows.length, fromYear, toYear, levels, statuses })
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
+    // Cho phép giao diện đọc số bản ghi đã xuất (fetch chỉ thấy header nằm trong danh sách này).
+    res.setHeader('X-Mission-Count', String(rows.length));
+    res.setHeader('Access-Control-Expose-Headers', 'X-Mission-Count, Content-Disposition');
+    return res.send(Buffer.from(buf));
+  } catch (err) {
+    console.error('[Missions report]', err);
+    return res.status(500).json({ message: 'Lỗi xuất báo cáo: ' + (err.message || 'Không xác định') });
   }
 });
 
@@ -11520,8 +11608,7 @@ app.get('/api/missions-templates/:type/download', authMiddleware, (req, res) => 
     return res.status(403).json({ message: 'Đường dẫn file mẫu không hợp lệ' });
   }
   if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File không tồn tại' });
-  const safeName = (row.original_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
-  res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '"');
+  setContentDisposition(res, row.original_name || 'download');
   return res.sendFile(fullPath);
 });
 
@@ -11599,8 +11686,7 @@ app.get('/api/ace-templates/:type/download', authMiddleware, (req, res) => {
     return res.status(403).json({ message: 'Đường dẫn file mẫu không hợp lệ' });
   }
   if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File không tồn tại' });
-  const safeName = (row.original_name || 'download').replace(/[^a-zA-Z0-9._-]/g, '_');
-  res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '"');
+  setContentDisposition(res, row.original_name || 'download');
   return res.sendFile(fullPath);
 });
 
@@ -17309,7 +17395,16 @@ app.get('/api/cooperation/tat-ca-de-xuat', authMiddleware, (req, res) => {
     try {
       let sql = `SELECT * FROM ${table}`;
       const params = [];
-      if (status) { sql += ' WHERE status=?'; params.push(status); }
+      // `status` nhận 1 giá trị hoặc danh sách ngăn bằng dấu phẩy — các ô trên
+      // Dashboard gộp nhiều trạng thái (vd "Đang xử lý") nên cần lọc theo nhóm.
+      const statusList = String(status || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (statusList.length) {
+        sql += ` WHERE status IN (${statusList.map(() => '?').join(',')})`;
+        params.push(...statusList);
+      }
       sql += ' ORDER BY created_at DESC';
       db.prepare(sql).all(...params).forEach(r => list.push({
         loai: loai_key, id: r.id, ma_de_xuat: r.ma_de_xuat || coopGenMa(loai_key, r.id),
@@ -18791,7 +18886,7 @@ app.post('/api/events/:id/export/to-trinh', authMiddleware, coopPhongOrAdmin, as
     const rel = path.join('uploads', 'events', String(id), fn).replace(/\\/g, '/');
     db.prepare('INSERT INTO event_files (event_id, loai_file, ten_file, duong_dan, mo_ta, nguoi_upload) VALUES (?, ?, ?, ?, ?, ?)').run(id, 'to_trinh_xin_phep', fn, rel, 'Word tờ trình sinh tự động', req.user.fullname || req.user.email || '');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${fn}"; filename*=UTF-8''${encodeURIComponent(fn)}`);
+    setContentDisposition(res, fn);
     return res.send(buf);
   } catch (e) { return res.status(500).json({ message: 'Lỗi xuất Word: ' + e.message }); }
 });
@@ -18813,7 +18908,7 @@ app.post('/api/events/:id/export/bao-cao', authMiddleware, coopPhongOrAdmin, asy
     const rel = path.join('uploads', 'events', String(id), fn).replace(/\\/g, '/');
     db.prepare('INSERT INTO event_files (event_id, loai_file, ten_file, duong_dan, mo_ta, nguoi_upload) VALUES (?, ?, ?, ?, ?, ?)').run(id, 'bao_cao_su_kien', fn, rel, 'Word báo cáo sinh tự động', req.user.fullname || req.user.email || '');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${fn}"; filename*=UTF-8''${encodeURIComponent(fn)}`);
+    setContentDisposition(res, fn);
     return res.send(buf);
   } catch (e) { return res.status(500).json({ message: 'Lỗi xuất Word: ' + e.message }); }
 });
@@ -19734,6 +19829,71 @@ async function mountSciKhcnPublicationsRouters() {
   });
 
   app.use('/api/publications', pubMod.publicationsRouter);
+
+  // ── Công tắc Harvest (bật/tắt từ giao diện) ─────────────────────────────────
+  // Nguồn sự thật đặt tại đây (sci-ace.db) chứ không ở module con: module con
+  // dùng DB riêng (sci_khcn.db), trong khi công tắc phải chặn được cả hai lối
+  // vào — POST /api/orcid/harvest và GET /api/orcid/harvest/stream (SSE).
+  // Mặc định TẮT: sau khi deploy hoặc khởi động lại, harvest không tự chạy.
+  const ORCID_HARVEST_KEY = 'orcid_harvest_enabled';
+
+  function isOrcidHarvestEnabled() {
+    try {
+      const row = db.prepare('SELECT value FROM system_settings WHERE key = ?').get(ORCID_HARVEST_KEY);
+      return !!row && String(row.value) === '1';
+    } catch (e) {
+      // Không đọc được trạng thái → coi như tắt; an toàn hơn là để chạy ngoài kiểm soát.
+      console.error('[orcid-harvest] Không đọc được công tắc:', e && e.message ? e.message : e);
+      return false;
+    }
+  }
+
+  app.get('/api/orcid/harvest/enabled', authMiddleware, (req, res) => {
+    res.json({ ok: true, enabled: isOrcidHarvestEnabled() });
+  });
+
+  app.post('/api/orcid/harvest/enabled', authMiddleware, adminOnly, (req, res) => {
+    const raw = req.body && typeof req.body === 'object' ? req.body.enabled : undefined;
+    const enabled = raw === true || raw === 1 || String(raw) === 'true' || String(raw) === '1';
+    try {
+      db.prepare('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)')
+        .run(ORCID_HARVEST_KEY, enabled ? '1' : '0');
+    } catch (e) {
+      console.error('[orcid-harvest] Không lưu được công tắc:', e && e.message ? e.message : e);
+      return res.status(500).json({ ok: false, message: 'Không lưu được trạng thái Harvest.' });
+    }
+    insertUserActivityLog(req, {
+      userId: req.user && req.user.id,
+      email: req.user && req.user.email,
+      action: enabled ? 'orcid_harvest_enabled' : 'orcid_harvest_disabled',
+      module: 'publications',
+      path: req.originalUrl || '/api/orcid/harvest/enabled',
+      detail: JSON.stringify({ at: new Date().toISOString(), enabled })
+    });
+    console.log(
+      `[orcid-harvest] ${enabled ? 'BẬT' : 'TẮT'} bởi ${(req.user && req.user.email) || 'không rõ'}`
+    );
+    return res.json({ ok: true, enabled });
+  });
+
+  // Chặn khi công tắc tắt. Đăng ký theo đúng từng route (không dùng tiền tố
+  // '/api/orcid/harvest') để không vô tình chặn luôn hai route /enabled ở trên.
+  function requireHarvestEnabled(req, res, next) {
+    if (isOrcidHarvestEnabled()) return next();
+    const message = 'Chức năng Harvest đang TẮT. Bật công tắc ở trang ORCID Auto-Harvest trước khi quét.';
+    // SSE: client là EventSource, chỉ hiểu được thông báo qua chính luồng sự kiện.
+    if (String(req.headers.accept || '').includes('text/event-stream')) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.write(`data: ${JSON.stringify({ type: 'error', message })}\n\n`);
+      res.write(`event: done\ndata: ${JSON.stringify({ ok: false })}\n\n`);
+      return res.end();
+    }
+    return res.status(423).json({ ok: false, success: false, message });
+  }
+  app.get('/api/orcid/harvest/stream', requireHarvestEnabled);
+  app.post('/api/orcid/harvest', requireHarvestEnabled);
 
   const orcidServiceUrl = toUrl(path.join(moduleBase, 'services', 'orcidService.js'));
   app.post('/api/orcid/harvest', authMiddleware, adminOnly, async (req, res, next) => {
