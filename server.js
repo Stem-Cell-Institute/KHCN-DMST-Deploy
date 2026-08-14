@@ -19917,6 +19917,17 @@ async function mountSciKhcnPublicationsRouters() {
     }
   });
 
+  // Khối "Quản lý nghiên cứu viên (ORCID)" và "Duyệt import" trên trang Quản lý
+  // công bố là thao tác của riêng Admin. Router con (module sci-khcn-publications)
+  // không có lớp phân quyền nào, nên chặn tại đây TRƯỚC khi mount — giao diện đã
+  // ẩn bằng .pub-admin-only, nhưng lớp ẩn đó dựa trên localStorage nên không đủ.
+  // Chỉ khoá thao tác GHI; GET danh sách vẫn để nguyên cho trang Auto-Harvest.
+  app.post('/api/orcid/researchers', authMiddleware, adminOnly);
+  app.delete('/api/orcid/researchers/:id', authMiddleware, adminOnly);
+  app.post('/api/orcid/queue/:id/approve', authMiddleware, adminOnly);
+  app.post('/api/orcid/queue/:id/reject', authMiddleware, adminOnly);
+  app.post('/api/orcid/queue/approve-all', authMiddleware, adminOnly);
+
   app.use('/api/orcid', orcidMod.orcidRouter);
   app.use('/api/doi', doiMod.doiRouter);
   console.log('[SCI-KHCN] Đã mount /api/publications, /api/orcid, /api/doi');

@@ -274,6 +274,40 @@ textarea{resize:vertical;min-height:80px}
 .role-banner.admin-role{background:var(--red-light);color:var(--red)}
 .role-banner.phong-role{background:var(--accent-light);color:var(--accent)}
 .role-banner.vt-role{background:var(--purple-light);color:var(--purple)}
+/* Khu tài khoản trong ngăn kéo — mặc định ẩn, chỉ bật ở khổ hẹp (media query bên dưới). */
+.sidebar-account{display:none;padding:0 8px 20px}
+.sidebar-account-who{padding:2px 12px 10px;font-size:12px;color:var(--ink-muted);display:flex;flex-direction:column;gap:2px}
+.sidebar-account-who span:first-child{font-weight:600;color:var(--ink);font-size:13px}
+.sidebar-account-btn{width:calc(100% - 16px);margin:4px 8px;justify-content:center}
+
+/* Thanh trên cùng ở khổ hẹp: tiêu đề là phần co lại, mọi thứ khác giữ nguyên
+   kích thước — trước đây nội dung không co được nên tràn ra ngoài và xuống dòng. */
+.topbar-title{min-width:0}
+.topbar-left>*:not(.topbar-title){flex-shrink:0}
+.topbar-right>*{flex-shrink:0}
+@media(max-width:900px){
+  .topbar{padding:0 12px;gap:10px}
+  .topbar-left{gap:8px;min-width:0;flex:1 1 auto}
+  .topbar-right{gap:8px}
+  .topbar-sep{display:none}
+  .topbar-title{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .user-chip-text{display:none}          /* giữ avatar, bỏ tên + vai trò */
+  .topbar .btn-sm{padding:6px 10px;font-size:12px}
+  .back-btn{padding:6px 10px}
+}
+@media(max-width:640px){
+  .topbar-label{display:none}            /* "Trang chủ", "Tổng quan" còn lại biểu tượng */
+  .topbar-title{font-size:13px}
+  .topbar-right{gap:6px}
+  .topbar .btn-sm{padding:6px 8px;font-size:11.5px}
+  .back-btn{padding:6px 9px;gap:0}
+  /* Không đủ chỗ cho "Quản trị"/"Đăng xuất" trên thanh — chuyển vào ngăn kéo,
+     nơi chúng vẫn giữ nguyên nhãn chữ đầy đủ thay vì rút thành biểu tượng khó đoán. */
+  .topbar-right #btn-admin,
+  .topbar-right #btn-logout{display:none !important}
+  .sidebar-account{display:block}
+}
+
 /* Nút mở menu: chỉ hiện ở khổ hẹp, nơi sidebar chuyển thành ngăn kéo. */
 .coop-nav-toggle{
   display:none;align-items:center;justify-content:center;width:38px;height:38px;flex-shrink:0;
@@ -782,21 +816,21 @@ textarea{resize:vertical;min-height:80px}
 <div class="topbar">
   <div class="topbar-left">
     <button type="button" class="coop-nav-toggle" id="coop-nav-toggle" onclick="toggleCoopSidebar()" aria-label="Mở menu" aria-expanded="false" aria-controls="coop-sidebar">☰</button>
-    <a href="index.html" class="back-btn">← Trang chủ</a>
-    <span style="color:var(--border)">|</span>
-    <span style="font-size:15px;font-weight:700">Hợp tác trong và ngoài nước</span>
+    <a href="index.html" class="back-btn" title="Về Trang chủ">←<span class="topbar-label">Trang chủ</span></a>
+    <span class="topbar-sep" style="color:var(--border)">|</span>
+    <span class="topbar-title" style="font-size:15px;font-weight:700">Hợp tác trong và ngoài nước</span>
   </div>
   <div class="topbar-right">
-    <button type="button" class="btn btn-outline btn-sm hidden" id="btn-coop-dashboard" onclick="gotoCoopDashboardPanel()" title="Tổng quan đề xuất Hợp tác QT" aria-pressed="false">📊 Tổng quan</button>
+    <button type="button" class="btn btn-outline btn-sm hidden" id="btn-coop-dashboard" onclick="gotoCoopDashboardPanel()" title="Tổng quan đề xuất Hợp tác QT" aria-pressed="false">📊<span class="topbar-label">Tổng quan</span></button>
     <div class="user-chip">
       <div class="avatar" id="top-avatar">?</div>
-      <div>
+      <div class="user-chip-text">
         <div id="top-name" style="font-weight:600;font-size:13px">Đang tải...</div>
         <div id="top-role" style="font-size:11px;color:var(--ink-muted)"></div>
       </div>
     </div>
     <button class="btn btn-outline btn-sm" id="btn-admin" style="display:none;background:var(--red-light);color:var(--red);border-color:var(--red)" onclick="window.location.href='admin-hoatac-quocte.html'">Quản trị</button>
-    <button class="btn btn-outline btn-sm" onclick="doLogout()">Đăng xuất</button>
+    <button class="btn btn-outline btn-sm" id="btn-logout" onclick="doLogout()">Đăng xuất</button>
   </div>
 </div>
 
@@ -827,6 +861,15 @@ textarea{resize:vertical;min-height:80px}
   <div class="nav-item nav-item-rich khcn-only hidden" onclick="gotoPanel(this,'su-kien')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gotoPanel(this,'su-kien');}">Sự kiện<span class="nav-badge blue nav-badge--zero" id="bdg-sk">0</span></div>
   <div class="nav-item nav-item-rich khcn-only hidden" onclick="gotoPanel(this,'doi-tac')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gotoPanel(this,'doi-tac');}">Đối tác<span class="nav-badge blue nav-badge--zero" id="bdg-doi-tac">0</span></div>
   <div class="nav-item nav-item-rich khcn-only hidden" onclick="gotoPanel(this,'thoa-thuan')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gotoPanel(this,'thoa-thuan');}">Thỏa thuận<span class="nav-badge blue nav-badge--zero" id="bdg-thoa-thuan">0</span></div>
+
+  <!-- Chỉ hiện ở khổ hẹp: thanh trên cùng không đủ chỗ cho hai nút này. -->
+  <div class="sidebar-account">
+    <div class="nav-divider"></div>
+    <div class="nav-label nav-label-mixed-case">Tài khoản</div>
+    <div class="sidebar-account-who"><span id="side-name">—</span><span id="side-role"></span></div>
+    <button type="button" class="btn btn-outline btn-sm sidebar-account-btn" id="btn-admin-side" style="display:none;background:var(--red-light);color:var(--red);border-color:var(--red)" onclick="window.location.href='admin-hoatac-quocte.html'">Quản trị</button>
+    <button type="button" class="btn btn-outline btn-sm sidebar-account-btn" onclick="doLogout()">Đăng xuất</button>
+  </div>
 </nav>
 
 <main class="main">
@@ -1297,6 +1340,10 @@ async function init() {
   document.getElementById('top-name').textContent = ME.fullname || ME.email || 'Người dùng';
   document.getElementById('top-role').textContent = roleLabel(role);
   document.getElementById('top-avatar').textContent = (ME.fullname||ME.email||'?').charAt(0).toUpperCase();
+  var sideName = document.getElementById('side-name');
+  var sideRole = document.getElementById('side-role');
+  if (sideName) sideName.textContent = ME.fullname || ME.email || 'Người dùng';
+  if (sideRole) sideRole.textContent = roleLabel(role);
 
   // 4. Check quyền từ server
   var perm = await apiGet('/api/cooperation/can-approve');
@@ -1304,6 +1351,9 @@ async function init() {
   if (IS_ADMIN) {
     var btnAdmin = document.getElementById('btn-admin');
     if (btnAdmin) btnAdmin.style.display = 'inline-flex';
+    // Bản trong ngăn kéo (dùng ở khổ hẹp) phải bật/tắt theo cùng điều kiện.
+    var btnAdminSide = document.getElementById('btn-admin-side');
+    if (btnAdminSide) btnAdminSide.style.display = 'inline-flex';
   }
   IS_MANAGER = IS_ADMIN || role === 'phong_khcn';
   IS_VT = IS_ADMIN || (perm && perm.canApprove);
