@@ -132,4 +132,17 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-data/sci-ace.db
+# ── Dữ liệu chạy thật — KHÔNG đưa vào git ────────────────────────────────────
+# CSDL và bản sao lưu: file nhị phân, đổi liên tục, và chứa toàn bộ dữ liệu
+# người dùng. Sao lưu bằng cơ chế riêng (rsync/snapshot volume), không bằng git.
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.bak
+data/backups/
+
+# Bản sao chép tay của server.js — dùng git history thay cho kiểu sao lưu này.
+server-backup-*.js
+
+# Log tạm sinh ra khi chạy
+tmp_server_*.log
