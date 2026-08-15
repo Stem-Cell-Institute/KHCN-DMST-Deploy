@@ -12,6 +12,7 @@
     "build:crd": "esbuild crd-lab-booking/main.jsx --bundle --outfile=crd-lab-booking/bundle.js --format=iife --loader:.jsx=jsx --jsx=automatic --platform=browser",
     "migrate:turso": "node scripts/migrate-to-turso.js",
     "db:status": "node scripts/db-status.js",
+    "routes:inventory": "node scripts/route-inventory.js",
     "import:sjr": "node scripts/import-sjr-csv.js",
     "migrate:reset-precreated": "node migrations/reset-precreated-passwords.js",
     "orcid:harvest": "node scripts/orcid-harvest-cli.js"
