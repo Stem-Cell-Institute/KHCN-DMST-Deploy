@@ -29,6 +29,9 @@
   ],
   "author": "",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0 <21.0.0"
+  },
   "dependencies": {
     "@libsql/client": "^0.14.0",
     "archiver": "^6.0.1",

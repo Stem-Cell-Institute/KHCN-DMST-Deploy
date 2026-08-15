@@ -28,21 +28,35 @@ Ký hiệu: ⬜ chưa bắt đầu · 🟡 đang làm · 🔵 chờ review/merge
 
 ## 🚨 Đang vướng
 
-**Máy `D:\KHCN-DMST Deploy` chưa cài Node.js.** `node` và `npm` không có trong PATH, registry không
-có bản cài nào. Hệ quả: **không chạy được `npm test` và `scripts/route-inventory.js` trên máy này**,
-tức là hai lưới an toàn của toàn bộ kế hoạch refactor đều chưa dùng được.
+**Chưa cài Node 20 → `npm test` và `route-inventory.js` vẫn chưa chạy được lần nào.**
 
-`node_modules/` đã cài sẵn và `better_sqlite3.node` đã build, nên nhiều khả năng thư mục này được
-copy từ máy khác hoặc Node đã bị gỡ.
+Diễn biến: máy ban đầu không có Node. Cài Node 24 thì server chết ngay lúc khởi động —
+`better_sqlite3.node` trong `node_modules/` được build bằng Node 22 (ABI 127), Node 24 cần ABI 137.
+Máy lại không có Python và Visual Studio Build Tools nên `npm rebuild` không cứu được, và
+`better-sqlite3` 11.7.0 không có bản prebuilt cho Node 24.
 
-**Phải xử lý trước Đợt 1:** cài Node.js (khớp phiên bản production), rồi chạy:
+Ba phiên bản đang lệch nhau:
+
+| Nơi | Node | ABI |
+|---|---|---|
+| Production (`Dockerfile`) | **20** | 115 |
+| `node_modules/` trên máy | 22 | 127 |
+| Node đã cài | 24 | 137 |
+
+**Đã chốt: dùng Node 20 để khớp production.** Đã thêm `engines` (package.json), `.nvmrc`, và
+`.npmrc` với `engine-strict=true` để lần sau cài sai bản là npm chặn ngay.
+
+**Việc phải làm trước Đợt 1:**
 
 ```bash
-npm test
-node scripts/route-inventory.js > routes-baseline.txt
+# 1. Cài Node 20 LTS (gỡ Node 24 hoặc dùng nvm-windows để chuyển bản)
+npm ci                                                   # 2. lấy prebuilt better-sqlite3 cho Node 20
+npm test                                                 # 3. phải XANH
+node scripts/route-inventory.js > routes-baseline.txt    # 4. mốc gốc
 ```
 
-`routes-baseline.txt` là mốc gốc để mọi đợt sau đối chiếu. Chưa có nó thì chưa được bắt đầu Đợt 1.
+`routes-baseline.txt` là mốc để mọi đợt sau đối chiếu. Chưa có nó thì chưa được bắt đầu Đợt 1.
+`scripts/route-inventory.js` vẫn **chưa từng chạy**, phải coi là chưa xác thực cho tới bước 4.
 
 ---
 
