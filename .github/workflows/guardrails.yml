@@ -48,8 +48,10 @@ jobs:
       - name: server.js không được phình thêm
         run: |
           set -eu
-          MAX=$(cat .github/server-js-max-lines)
-          NOW=$(wc -l < server.js)
+          # tr -d loại cả \r lẫn xuống dòng: file này hay được sửa trên Windows,
+          # lọt \r vào là phép so sánh số của bash lỗi chứ không phải đỏ đúng lý do.
+          MAX=$(tr -d '[:space:]' < .github/server-js-max-lines)
+          NOW=$(wc -l < server.js | tr -d '[:space:]')
           echo "server.js: $NOW dòng (trần hiện tại: $MAX)"
           if [ "$NOW" -gt "$MAX" ]; then
             echo "::error::server.js tăng từ $MAX lên $NOW dòng. Refactor phải làm file này ngắn đi, không dài ra."
