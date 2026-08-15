@@ -1,0 +1,60 @@
+# Cổng chặn tự động cho quá trình tách server.js (xem readme/KE-HOACH-REFACTOR.md).
+#
+# Mục tiêu: biến "nhớ kiểm tra" thành thứ máy tự ép. Refactor cắt–dán rất dễ để lại
+# lỗi cú pháp hoặc quên chuyển một hàm phụ trợ — những lỗi đó phải đỏ ở PR, không
+# phải đỏ trên production.
+#
+# CHƯA CHẠY ĐƯỢC Ở ĐÂY: `npm test`. tests/helpers/testServer.js cần data/sci-ace.db,
+# mà toàn bộ data/*.db đang bị gitignore. Xem "Nợ kỹ thuật" mục 7 trong
+# readme/REFACTOR-PROGRESS.md. Cho tới khi có DB mẫu, `npm test` vẫn phải chạy tay.
+
+name: guardrails
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Cú pháp backend + trần dòng server.js
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20" # khớp Dockerfile (node:20-bookworm-slim)
+          cache: "npm"
+
+      # Cũng là phép thử cho engines + .npmrc engine-strict: sai bản Node là dừng ở đây.
+      - name: npm ci
+        run: npm ci
+
+      - name: node --check toàn bộ file backend
+        run: |
+          set -eu
+          FILES=$(find server.js routes services middleware lib modules scripts tests migrations \
+            -type f -name "*.js" 2>/dev/null || true)
+          if [ -z "$FILES" ]; then
+            echo "::error::Không tìm thấy file backend nào — kiểm tra lại đường dẫn trong workflow."
+            exit 1
+          fi
+          echo "$FILES" | xargs -n1 node --check
+          echo "Đã kiểm tra cú pháp $(echo "$FILES" | wc -l) file."
+
+      # Trần dòng: refactor chỉ được làm server.js NGẮN đi. Mỗi đợt xong thì hạ
+      # con số trong .github/server-js-max-lines xuống bằng số dòng thực tế.
+      - name: server.js không được phình thêm
+        run: |
+          set -eu
+          MAX=$(cat .github/server-js-max-lines)
+          NOW=$(wc -l < server.js)
+          echo "server.js: $NOW dòng (trần hiện tại: $MAX)"
+          if [ "$NOW" -gt "$MAX" ]; then
+            echo "::error::server.js tăng từ $MAX lên $NOW dòng. Refactor phải làm file này ngắn đi, không dài ra."
+            exit 1
+          fi
+          if [ "$NOW" -lt "$MAX" ]; then
+            echo "::notice::server.js đã giảm còn $NOW dòng. Hạ .github/server-js-max-lines xuống $NOW để chốt tiến độ."
+          fi
