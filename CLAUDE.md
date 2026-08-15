@@ -15,6 +15,11 @@ học + ORCID, đặt lịch thiết bị CRD, văn bản hành chính nội b�
 
 ## Lệnh
 
+**Node 20.x — bắt buộc.** Production chạy `node:20-bookworm-slim` (xem `Dockerfile`). `engines` +
+`.npmrc` (`engine-strict=true`) sẽ chặn nếu cài sai bản. Dùng bản khác thì `better-sqlite3` là
+native module sẽ đổ vỡ với `ERR_DLOPEN_FAILED` / `NODE_MODULE_VERSION` — đổi Node **luôn** phải chạy
+lại `npm ci`.
+
 ```bash
 npm start          # node server.js
 npm test           # node --test tests/**/*.test.js — smoke test, chạy TRƯỚC và SAU mỗi thay đổi

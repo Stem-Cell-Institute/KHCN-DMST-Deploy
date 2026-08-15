@@ -146,3 +146,5 @@ server-backup-*.js
 
 # Log tạm sinh ra khi chạy
 tmp_server_*.log
+# Cấu hình chạy cục bộ của Claude Code — chứa đường dẫn tuyệt đối theo máy.
+.claude/launch.json
