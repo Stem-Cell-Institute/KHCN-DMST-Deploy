@@ -11,7 +11,7 @@ Kế hoạch & quy ước: [KE-HOACH-REFACTOR.md](KE-HOACH-REFACTOR.md)
 
 | Đợt | Nhóm | Endpoint | Trạng thái | Branch |
 |---|---|---|---|---|
-| 0 | Hạ tầng quản lý + dọn tên | 0 | 🔵 Xong, chờ merge | `chore/dot-0-ha-tang-refactor` |
+| 0 | Hạ tầng quản lý + dọn tên | 0 | ✅ Đã merge (`96ec09b`, PR #3) | ~~`chore/dot-0-ha-tang-refactor`~~ đã xóa |
 | 1 | `missions` | 40 | ⬜ Chưa bắt đầu | — |
 | 2 | `crd` | 36 | ⬜ Chưa bắt đầu | — |
 | 3 | `submissions` + `publications` | 36 | ⬜ Chưa bắt đầu | — |
@@ -85,12 +85,14 @@ Việc phát hiện dọc đường nhưng **cố ý không làm** để giữ p
 
 | # | Việc | Phát hiện ở | Mức |
 |---|---|---|---|
-| 1 | Chặn tải mã nguồn qua `express.static` đang dùng **blocklist** (`server.js:19034`). File mới thêm ở thư mục gốc mà quên khai báo sẽ tải về được. Nên đổi sang allowlist. | Đợt 0 | Bảo mật — nên làm sớm, PR riêng |
-| 2 | `routes/equipmentPart2.js` — tên vô nghĩa, dấu hiệu tách vội. Gộp vào `routes/equipment/`. | Đợt 0 | Thấp — làm cùng đợt `equipment` |
-| 7 | **`npm test` chưa chạy được trong CI.** `tests/helpers/testServer.js` bắt buộc có `data/sci-ace.db`, mà `data/*.db` bị gitignore (`.gitignore:138`) nên runner không có DB. Cách sửa: tạo DB mẫu chỉ có lược đồ + vài bản ghi giả, commit vào `tests/fixtures/`, cho helper dùng nó khi thiếu DB thật. Cho tới lúc đó `npm test` vẫn phải chạy tay. | Đợt 0 | **Cao — CI chỉ chặn được lỗi cú pháp, chưa chặn được lỗi hành vi** |
-| 4 | `data/` còn file backup `.db` cũ trên đĩa (`sci-ace-backup-20260321`, `test-unified.db`…). Đã gỡ khỏi Git và ignore, nhưng vẫn chiếm chỗ. | Đợt 0 | Rất thấp |
-| 6 | `npm audit` báo **8 lỗ hổng (6 cao, 2 vừa)**. Đáng chú ý: `multer@1.4.5-lts.2` đã bị khai tử, bản 2.x mới có vá — mà đây là thư viện xử lý **toàn bộ upload** của hệ thống đang chạy thật. | Đợt 0 | **Bảo mật — nên xử lý sớm, PR riêng** |
-| 5 | Đợt 0 mới đổi tên **thư mục**; ~40 file `.docx` trong `templates/cap-vien/` và `templates/hoi-dong-dao-duc/` vẫn còn dấu tiếng Việt trong tên (`SCI-FINAL-01__ĐƠN_ĐỀ_NGHỊ_...docx`). Cùng rủi ro checkout trên Linux, nhưng tên này người dùng nhìn thấy khi tải biểu mẫu → **cần quyết định của người dùng**, không tự đổi. | Đợt 0 | Trung bình — cần quyết định |
+| 1 | **Node 20 nhiều khả năng đã hết vòng đời hỗ trợ** (lịch chính thức: ~04/2026; hôm nay 15/08/2026). `Dockerfile` dùng `node:20-bookworm-slim`, `engines` chốt `>=20 <21` — nếu đúng thì cả prod lẫn dev đang chạy runtime không còn bản vá bảo mật. **Kiểm chứng tại `https://endoflife.date/nodejs`.** Nếu đúng: nâng lên **Node 22 LTS** thành PR riêng (đổi `Dockerfile` + `engines` → `npm ci` → `npm test` → deploy). Lần nâng này sẽ gọn vì `engines` đã chốt sẵn. Quyết định chốt Node 20 hôm 15/08 vẫn đúng — đưa dev khớp prod là việc phải làm trước, nhưng không nên dừng ở đó. | Đợt 0 | **Cao — bảo mật + có hạn chót** |
+| 2 | **`npm test` chưa chạy được trong CI.** `tests/helpers/testServer.js` bắt buộc có `data/sci-ace.db`, mà `data/*.db` bị gitignore (`.gitignore:138`) nên runner không có DB. Cách sửa: tạo DB mẫu chỉ có lược đồ + vài bản ghi giả, commit vào `tests/fixtures/`, cho helper dùng nó khi thiếu DB thật. Cho tới lúc đó `npm test` vẫn phải chạy tay. | Đợt 0 | **Cao — CI chỉ chặn được lỗi cú pháp, chưa chặn được lỗi hành vi** |
+| 3 | `npm audit` báo **8 lỗ hổng (6 cao, 2 vừa)**. Đáng chú ý: `multer@1.4.5-lts.2` đã bị khai tử, bản 2.x mới có vá — mà đây là thư viện xử lý **toàn bộ upload** của hệ thống đang chạy thật. | Đợt 0 | **Bảo mật — nên xử lý sớm, PR riêng** |
+| 4 | Chặn tải mã nguồn qua `express.static` đang dùng **blocklist** (`server.js:19034`). File mới thêm ở thư mục gốc mà quên khai báo sẽ tải về được. Nên đổi sang allowlist. | Đợt 0 | Bảo mật — nên làm sớm, PR riêng |
+| 5 | `readme/DEPLOY-GUIDE.md` vẫn ghi yêu cầu "Node.js v18 LTS hoặc v20 LTS" — mâu thuẫn với `engines >=20 <21` vừa chốt. Ai làm theo hướng dẫn mà cài Node 18 sẽ bị `npm ci` chặn. Cập nhật hướng dẫn cùng lúc với nợ #1. | Đợt 0 | Trung bình — gây hiểu nhầm khi deploy |
+| 6 | ~40 file `.docx` trong `templates/cap-vien/` và `templates/hoi-dong-dao-duc/` vẫn còn dấu tiếng Việt trong tên (`SCI-FINAL-01__ĐƠN_ĐỀ_NGHỊ_...docx`). Đợt 0 mới chỉ đổi tên **thư mục**. Cùng rủi ro checkout trên Linux, nhưng tên này người dùng nhìn thấy khi tải biểu mẫu → **cần quyết định của người dùng**, không tự đổi. | Đợt 0 | Trung bình — cần quyết định |
+| 7 | `routes/equipmentPart2.js` — tên vô nghĩa, dấu hiệu tách vội. Gộp vào `routes/equipment/`. | Đợt 0 | Thấp — làm cùng đợt `equipment` |
+| 8 | `data/` còn file backup `.db` cũ trên đĩa (`sci-ace-backup-20260321`, `test-unified.db`…). Đã gỡ khỏi Git và ignore, nhưng vẫn chiếm chỗ. | Đợt 0 | Rất thấp |
 
 ---
 
@@ -165,4 +167,4 @@ branch `REFACTOR`, `main` không có.
   - 2 thư mục vừa đổi tên **không bị code nào tham chiếu** (đã grep toàn repo) nên di chuyển an toàn
 - **Phiên sau làm:** quyết định 3 branch chưa merge (nợ #3) → merge Đợt 0 → bắt đầu Đợt 1
   (`missions`)
-- **Nợ kỹ thuật thêm:** mục 1–6 ở bảng trên
+- **Nợ kỹ thuật thêm:** toàn bộ mục 1–8 ở bảng trên

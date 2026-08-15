@@ -5,7 +5,7 @@
 # phải đỏ trên production.
 #
 # CHƯA CHẠY ĐƯỢC Ở ĐÂY: `npm test`. tests/helpers/testServer.js cần data/sci-ace.db,
-# mà toàn bộ data/*.db đang bị gitignore. Xem "Nợ kỹ thuật" mục 7 trong
+# mà toàn bộ data/*.db đang bị gitignore. Xem "Nợ kỹ thuật" mục 2 trong
 # readme/REFACTOR-PROGRESS.md. Cho tới khi có DB mẫu, `npm test` vẫn phải chạy tay.
 
 name: guardrails
