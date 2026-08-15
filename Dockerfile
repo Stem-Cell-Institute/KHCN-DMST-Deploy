@@ -7,7 +7,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+# .npmrc phải vào CÙNG bước này, không đợi `COPY . .` phía dưới: npm chỉ đọc
+# engine-strict tại thời điểm chạy `npm ci`. Copy sau thì cổng chặn phiên bản
+# Node chỉ có tác dụng trên máy dev, còn build production vẫn lọt.
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci --omit=dev
 
 COPY . .

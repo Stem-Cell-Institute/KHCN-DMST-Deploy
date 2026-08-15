@@ -5,13 +5,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test \"tests/**/*.test.js\"",
+    "test": "node --test tests/",
     "dev": "node server.js",
     "build": "npm run build:workflow-ui && npm run build:crd",
     "build:workflow-ui": "npm --prefix frontend/document-workflow-ui install && npm --prefix frontend/document-workflow-ui run build",
     "build:crd": "esbuild crd-lab-booking/main.jsx --bundle --outfile=crd-lab-booking/bundle.js --format=iife --loader:.jsx=jsx --jsx=automatic --platform=browser",
     "migrate:turso": "node scripts/migrate-to-turso.js",
     "db:status": "node scripts/db-status.js",
+    "routes:inventory": "node scripts/route-inventory.js",
     "import:sjr": "node scripts/import-sjr-csv.js",
     "migrate:reset-precreated": "node migrations/reset-precreated-passwords.js",
     "orcid:harvest": "node scripts/orcid-harvest-cli.js"
@@ -28,6 +29,9 @@
   ],
   "author": "",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0 <21.0.0"
+  },
   "dependencies": {
     "@libsql/client": "^0.14.0",
     "archiver": "^6.0.1",
