@@ -148,3 +148,8 @@ server-backup-*.js
 tmp_server_*.log
 # Cấu hình chạy cục bộ của Claude Code — chứa đường dẫn tuyệt đối theo máy.
 .claude/launch.json
+
+# Ảnh chụp bảng định tuyến — sinh ra để diff khi refactor, không commit.
+routes-baseline.txt
+routes-before.txt
+routes-after.txt
