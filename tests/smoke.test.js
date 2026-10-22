@@ -26,6 +26,7 @@ test.after(async () => {
 const get = (p, token) => call(srv.baseUrl, p, { token });
 const post = (p, token, body) => call(srv.baseUrl, p, { token, method: 'POST', body });
 const del = (p, token) => call(srv.baseUrl, p, { token, method: 'DELETE' });
+const patch = (p, token, body) => call(srv.baseUrl, p, { token, method: 'PATCH', body });
 
 // ── 1. Sống và cấu hình cơ bản ───────────────────────────────────────────────
 
@@ -168,6 +169,61 @@ test('duyệt bước 2–3: Viện trưởng không phải Thư ký/Chủ tịc
 test('danh sách file đăng ký: admin gọi được, id sai thì 400', async () => {
   const res = await get('/api/missions/khong-phai-so/files', srv.tokens.admin);
   assert.equal(res.status, 400);
+});
+
+/**
+ * Nhóm duyệt Bước 4a/4b/5/6 (Đợt 1.3). Lại chỉ giăng lưới phân quyền + đường dẫn,
+ * không test đường thành công: các endpoint này đẩy hồ sơ qua từng bước của quy trình
+ * và gửi email cho Hội đồng.
+ */
+const BUOC_4_DEN_6_CO_VAI_TRO = [
+  '/api/missions/1/buoc4a/len-lich',
+  '/api/missions/1/buoc4a/ket-qua-hop',
+  '/api/missions/1/buoc4a/gui-bo',
+  '/api/missions/1/buoc4a/ket-qua-bo',
+  '/api/missions/1/buoc4a/chuyen-buoc5',
+  '/api/missions/1/buoc4a/xac-nhan-thuyet-minh-chinh-sua',
+  '/api/missions/1/buoc4b/nop-ho-so',
+  '/api/missions/1/buoc4b/ket-qua',
+  '/api/missions/1/buoc5/nhan-quyet-dinh',
+  '/api/missions/1/buoc6/ky-hop-dong',
+];
+
+/**
+ * NỢ KỸ THUẬT #9 — hai endpoint này chỉ có authMiddleware, KHÔNG kiểm vai trò và
+ * KHÔNG kiểm chủ nhiệm. Bất kỳ ai đã đăng nhập (kể cả tài khoản crd_user bên ngoài)
+ * đều gọi được cho mission id bất kỳ. Test dưới đây GHIM HÀNH VI HIỆN TẠI, không phải
+ * khẳng định nó đúng — khi chốt được chính sách phân quyền thì sửa test này có chủ đích.
+ */
+const BUOC_4_DEN_6_CHI_CAN_DANG_NHAP = [
+  '/api/missions/1/buoc4a/cn-upload-thuyet-minh-chinh-sua',
+  '/api/missions/1/buoc5/upload-thuyet-minh',
+];
+
+test('duyệt Bước 4a/4b/5/6: chưa đăng nhập thì 401', async () => {
+  for (const p of [...BUOC_4_DEN_6_CO_VAI_TRO, ...BUOC_4_DEN_6_CHI_CAN_DANG_NHAP]) {
+    const res = await post(p, undefined, {});
+    assert.equal(res.status, 401, p + ' phải 401 khi chưa đăng nhập');
+  }
+  const res = await patch('/api/missions/1/buoc4a/chinh-lich', undefined, {});
+  assert.equal(res.status, 401, 'chinh-lich (PATCH) phải 401 khi chưa đăng nhập');
+});
+
+test('duyệt Bước 4a/4b/5/6: Viện trưởng bị 403 ở các endpoint có middleware vai trò', async () => {
+  for (const p of BUOC_4_DEN_6_CO_VAI_TRO) {
+    const res = await post(p, srv.tokens.director, {});
+    assert.equal(res.status, 403, p + ' phải chặn vai trò không phận sự');
+  }
+  const res = await patch('/api/missions/1/buoc4a/chinh-lich', srv.tokens.director, {});
+  assert.equal(res.status, 403, 'chinh-lich (PATCH) phải chặn vai trò không phận sự');
+});
+
+test('hai endpoint upload chỉ cần đăng nhập — ghim hiện trạng, xem nợ kỹ thuật #9', async () => {
+  for (const p of BUOC_4_DEN_6_CHI_CAN_DANG_NHAP) {
+    const res = await post(p, srv.tokens.director, { file_id: 'khong-co-that' });
+    assert.notEqual(res.status, 403, p + ' hiện KHÔNG chặn theo vai trò (lỗ hổng đã biết)');
+    assert.equal(res.status, 400, p + ' dừng ở kiểm tra trạng thái quy trình, không phải phân quyền');
+  }
 });
 
 test('export CSV / Excel / mẫu nhập liệu: admin dùng được', async () => {
