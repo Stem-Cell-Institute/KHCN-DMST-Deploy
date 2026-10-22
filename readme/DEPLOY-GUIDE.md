@@ -51,7 +51,7 @@
 | Thành phần | Yêu cầu |
 |------------|---------|
 | **OS** | Ubuntu 20.04+, Debian 11+, macOS, Windows Server 2019+ |
-| **Node.js** | v18 LTS hoặc v20 LTS |
+| **Node.js** | **v24 LTS** (bắt buộc — xem `engines` trong package.json; v18 và v20 đã hết vòng đời) |
 | **RAM** | 1GB (tối thiểu), 2GB+ (khuyến nghị) |
 | **Disk** | 20GB+ (tùy dung lượng file upload) |
 | **Backup** | 10GB+ (cho các bản backup) |
@@ -59,12 +59,12 @@
 ### Cài đặt Node.js (Ubuntu/Debian)
 
 ```bash
-# Cài Node.js 20.x
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+# Cài Node.js 24.x
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 # Kiểm tra
-node --version   # → v20.x.x
+node --version   # → v24.x.x
 npm --version
 ```
 

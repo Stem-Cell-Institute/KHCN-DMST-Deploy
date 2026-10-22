@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test tests/",
+    "test": "node --test \"tests/**/*.test.js\"",
     "dev": "node server.js",
     "build": "npm run build:workflow-ui && npm run build:crd",
     "build:workflow-ui": "npm --prefix frontend/document-workflow-ui install && npm --prefix frontend/document-workflow-ui run build",
@@ -30,13 +30,13 @@
   "author": "",
   "license": "MIT",
   "engines": {
-    "node": ">=20.0.0 <21.0.0"
+    "node": ">=24.22.1 <25.0.0"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
     "archiver": "^6.0.1",
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^11.7.0",
+    "better-sqlite3": "^12.11.1",
     "bibtex-parse": "^2.1.0",
     "cheerio": "^1.2.0",
     "cors": "^2.8.6",

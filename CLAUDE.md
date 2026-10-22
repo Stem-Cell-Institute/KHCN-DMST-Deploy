@@ -15,10 +15,21 @@ học + ORCID, đặt lịch thiết bị CRD, văn bản hành chính nội b�
 
 ## Lệnh
 
-**Node 20.x — bắt buộc.** Production chạy `node:20-bookworm-slim` (xem `Dockerfile`). `engines` +
+**Node 24.x — bắt buộc.** Production chạy `node:24-bookworm-slim` (xem `Dockerfile`). `engines` +
 `.npmrc` (`engine-strict=true`) sẽ chặn nếu cài sai bản. Dùng bản khác thì `better-sqlite3` là
 native module sẽ đổ vỡ với `ERR_DLOPEN_FAILED` / `NODE_MODULE_VERSION` — đổi Node **luôn** phải chạy
 lại `npm ci`.
+
+**Script `npm test` nhạy với bản Node, theo hai chiều ngược nhau.** `node --test "tests/**/*.test.js"`
+chạy đúng trên Node 22+ (Node tự nở glob) nhưng trên Node 20 báo *Could not find*. Ngược lại
+`node --test tests/` chạy trên Node 20 nhưng trên Node 24 lại coi `tests/` là module và báo
+`MODULE_NOT_FOUND`. Dự án đang ở Node 24 nên **giữ dạng glob**; đừng "sửa" nó khi thấy lạ.
+
+**Phiên bản Node và `better-sqlite3` bị ghép cứng với nhau.** `engines` của `better-sqlite3` là lời
+khai tương thích, **không** đảm bảo có bản dựng sẵn. Bản 12.x khai `20.x || 22.x || …` nhưng
+**không phát hành prebuild cho Node 20 trên Windows** — cài trên Node 20 sẽ rơi vào `node-gyp` và
+cần Visual Studio Build Tools. Trước khi đổi bản Node hoặc bản `better-sqlite3`, kiểm tra asset
+`node-v<ABI>-<platform>` trong release của nó (Node 20 = ABI 115, 22 = 127, 24 = 137, 26 = 141).
 
 ```bash
 npm start          # node server.js
