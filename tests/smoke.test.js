@@ -65,6 +65,22 @@ test('token hỏng thì 401', async () => {
   assert.equal(res.status, 401);
 });
 
+/**
+ * cn-info từng thiếu authMiddleware: không token vẫn chạy handler và trả về tên chủ
+ * nhiệm, học hàm/học vị, đơn vị, ORCID, kèm DANH SÁCH ĐỀ TÀI ĐANG THỰC HIỆN KHÁC của
+ * người đó (mã, tên, trạng thái). Duyệt id từ 1 là dựng được hồ sơ. Test này giữ cho
+ * lỗ hổng không quay lại.
+ */
+test('cn-info bắt buộc đăng nhập (không được lộ chủ nhiệm + danh mục đề tài)', async () => {
+  const res = await get('/api/missions/1/cn-info');
+  assert.equal(res.status, 401, 'cn-info phải trả 401 khi chưa đăng nhập, không phải 404/200');
+});
+
+test('cn-info: đã đăng nhập thì không còn bị chặn ở tầng xác thực', async () => {
+  const res = await get('/api/missions/1/cn-info', srv.tokens.admin);
+  assert.notEqual(res.status, 401, 'có token hợp lệ thì không được trả 401');
+});
+
 test('trang HTML được bảo vệ thì chuyển hướng về đăng nhập', async () => {
   const res = await fetch(srv.baseUrl + '/quan-ly-de-tai-co-so.html', { redirect: 'manual' });
   assert.equal(res.status, 302);
