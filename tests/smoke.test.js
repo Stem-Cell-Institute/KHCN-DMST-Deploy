@@ -128,6 +128,48 @@ test('tạo nhiệm vụ cấp Bộ: 201 kèm bản ghi vừa tạo', async () =
   assert.equal(j.mission.level, 'ministry');
 });
 
+/**
+ * Nhóm hồ sơ + duyệt bước 2–3 (Đợt 1.2). KHÔNG test đường thành công của các POST
+ * duyệt bước: chúng đổi trạng thái hồ sơ thật và gửi email, cần dữ liệu mồi riêng.
+ * Ở đây chỉ giăng lưới «endpoint còn sống, đường dẫn không đổi, phân quyền không
+ * tuột» — đúng mục tiêu của bộ test khói. Nhóm này dùng BA middleware vai trò khác
+ * nhau nên đây là chỗ dễ tuột quyền nhất khi di chuyển.
+ */
+const DUYET_BUOC_2_3 = [
+  '/api/missions/1/step2-approve',
+  '/api/missions/1/step2-request-supplement',
+  '/api/missions/1/step2-reject',
+  '/api/missions/1/step3-submit',
+  '/api/missions/1/step3-confirm-4a',
+  '/api/missions/1/step3-confirm-4b',
+  '/api/missions/1/step3-request-revision',
+  '/api/missions/1/step3-stop',
+  '/api/missions/1/reset-ve-buoc3',
+];
+
+test('hồ sơ + duyệt bước 2–3: chưa đăng nhập thì 401', async () => {
+  for (const p of ['/api/missions/1/files', '/api/missions/1/files/1/download', '/api/missions/1/files/1/view']) {
+    const res = await get(p);
+    assert.equal(res.status, 401, p + ' phải 401 khi chưa đăng nhập');
+  }
+  for (const p of DUYET_BUOC_2_3) {
+    const res = await post(p, undefined, {});
+    assert.equal(res.status, 401, p + ' phải 401 khi chưa đăng nhập');
+  }
+});
+
+test('duyệt bước 2–3: Viện trưởng không phải Thư ký/Chủ tịch nên bị 403', async () => {
+  for (const p of DUYET_BUOC_2_3) {
+    const res = await post(p, srv.tokens.director, {});
+    assert.equal(res.status, 403, p + ' phải chặn vai trò không phận sự');
+  }
+});
+
+test('danh sách file đăng ký: admin gọi được, id sai thì 400', async () => {
+  const res = await get('/api/missions/khong-phai-so/files', srv.tokens.admin);
+  assert.equal(res.status, 400);
+});
+
 test('export CSV / Excel / mẫu nhập liệu: admin dùng được', async () => {
   for (const p of ['/api/missions/export', '/api/missions/export-excel', '/api/missions/export-template']) {
     const res = await get(p, srv.tokens.admin);

@@ -36,13 +36,15 @@ npm start          # node server.js
 npm test           # node --test tests/**/*.test.js — smoke test, chạy TRƯỚC và SAU mỗi thay đổi
 npm run build      # build admin UI (Vite) + bundle CRD (esbuild)
 node scripts/route-inventory.js    # liệt kê toàn bộ route đã đăng ký (dùng để diff khi refactor)
+# ^ hiện ra 619 route. KHÔNG phải 360 — con số đó là đếm `app.<method>` bằng grep trong
+#   server.js. 619 là số route thực sự đăng ký, gồm cả router đã tách và mỗi method một dòng.
 ```
 
 ## Kiến trúc
 
 | Thư mục | Vai trò |
 |---|---|
-| `server.js` | **19.836 dòng, 360 endpoint** — đang được tách dần |
+| `server.js` | **19.171 dòng** — đang được tách dần (mốc đầu 19.836; trần hiện tại ở `.github/server-js-max-lines`) |
 | `routes/` | tầng HTTP (đọc `req`, ghi `res`), theo mẫu factory `createXxxRouter({ db, ... })` |
 | `services/` | nghiệp vụ thuần, không biết `req`/`res` |
 | `middleware/` | auth, phân quyền, upload |
@@ -66,6 +68,9 @@ Quy tắc rút gọn: một đợt = một branch = một PR = một phiên. Tr�
 ghi vào mục "Nợ kỹ thuật" của PROGRESS, không làm luôn.
 
 Tên branch và thư mục dùng **ASCII, không dấu tiếng Việt** (checkout trên server Linux sẽ hỏng).
+Và **không đặt tên branch là một từ đơn trùng với tiền tố đang dùng** (`refactor`, `chore`, `fix`,
+`archive`): Git lưu ref thành file/thư mục thật, nên `REFACTOR` và `refactor/...` đụng nhau trên
+Windows và làm hỏng `git fetch` cho mọi branch cùng tiền tố — xem §2.1 của kế hoạch.
 
 ## Cạm bẫy đã biết
 
