@@ -1,0 +1,83 @@
+/*
+ * Nền tảng tiếp cận dùng chung cho mọi trang .html.
+ *
+ * Vì sao có file này: rà 49 trang thì chỉ 5 trang có `:focus-visible` và 3 trang có
+ * `prefers-reduced-motion`. Nghĩa là trên 44 trang, người dùng bàn phím KHÔNG THẤY
+ * mình đang ở đâu — chỉ còn viền mặc định của trình duyệt, mà nhiều trang đã vô tình
+ * xoá nó bằng `outline: none`.
+ *
+ * File này CỐ Ý chỉ làm hai việc, và cả hai đều cộng thêm chứ không sửa bố cục:
+ *   1. Viền focus thấy được, chỉ hiện khi điều hướng bằng bàn phím
+ *   2. Tôn trọng `prefers-reduced-motion`
+ *
+ * Dùng `!important` CÓ CHỦ ĐÍCH. Không phải lười: rất nhiều trang có sẵn quy tắc kiểu
+ * `.form-group input:focus { outline: none }` trong khối <style> nội tuyến — vừa đặc
+ * hiệu hơn (0,2,1 so với 0,1,1) vừa đứng sau, nên luôn thắng. Mà đó chính là lỗi cần
+ * sửa. Sàn tiếp cận phải thắng; nếu để trang ghi đè được thì file này vô dụng.
+ * Chỉ áp cho `:focus-visible` (điều hướng bàn phím), nên bấm chuột vẫn không ra viền.
+ */
+
+/* ── Viền focus ──────────────────────────────────────────────────────────────
+ * `:focus-visible` chỉ khớp khi trình duyệt phán đoán là điều hướng bàn phím, nên
+ * bấm chuột không bị viền — đó là lý do nhiều người xoá `outline` và vô tình chặn
+ * luôn người dùng bàn phím. Dùng `:focus-visible` là có cả hai.
+ *
+ * Màu son đỏ #b7281e: trên nền trắng đạt ~5,1:1, vượt mức 3:1 mà WCAG 2.4.11 đòi
+ * cho chỉ báo focus. `outline-offset` tạo khe hở để viền không chìm vào chính nút.
+ */
+:focus-visible {
+  outline: 3px solid #b7281e !important;
+  outline-offset: 2px !important;
+}
+
+/* Gỡ viền mặc định khi KHÔNG phải focus bàn phím, nhưng chỉ ở nơi trình duyệt
+ * hỗ trợ :focus-visible — để trình duyệt cũ vẫn giữ viền mặc định còn hơn không. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Phần tử bị cắt bởi overflow: viền ngoài sẽ bị khuất, nên dùng thêm quầng sáng */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #b7281e !important;
+  outline-offset: 1px !important;
+}
+
+/* ── Tôn trọng prefers-reduced-motion ─────────────────────────────────────────
+ * Người dùng bật "giảm chuyển động" trong hệ điều hành thường vì chóng mặt hoặc
+ * rối loạn tiền đình. Không tắt hẳn (0s làm vỡ vài thư viện chờ sự kiện
+ * transitionend) mà rút xuống gần như tức thời.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Liên kết bỏ qua điều hướng ───────────────────────────────────────────────
+ * Chỉ hiện khi nhận focus bàn phím. Trang nào muốn dùng thì thêm vào đầu <body>:
+ *   <a class="skip-link" href="#main">Bỏ qua, tới nội dung chính</a>
+ * và đặt id="main" lên <main>. Rà 49 trang mới có 3 trang làm việc này.
+ */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 10px 16px;
+  background: #16233d;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 2px 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}

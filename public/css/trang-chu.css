@@ -48,11 +48,8 @@ body {
 
 ::selection { background: var(--son); color: #fff; }
 
-:focus-visible {
-  outline: 2px solid var(--son);
-  outline-offset: 2px;
-  border-radius: 1px;
-}
+/* Viền focus do public/css/a11y.css quản (dùng !important để thắng các quy tắc
+ * `outline: none` rải rác trong dự án). Đừng khai lại ở đây — sẽ thành code chết. */
 
 html { scrollbar-color: var(--ke-dam) var(--giay); scrollbar-width: thin; }
 /* CỐ Ý chỉ nhuộm màu thanh cuộn qua `scrollbar-color`, KHÔNG thay thế widget bằng
