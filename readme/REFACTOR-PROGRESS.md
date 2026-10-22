@@ -12,10 +12,10 @@ Kế hoạch & quy ước: [KE-HOACH-REFACTOR.md](KE-HOACH-REFACTOR.md)
 | Đợt | Nhóm | Endpoint | Trạng thái | Branch |
 |---|---|---|---|---|
 | 0 | Hạ tầng quản lý + dọn tên | 0 | ✅ Đã merge (`96ec09b`, PR #3) | ~~`chore/dot-0-ha-tang-refactor`~~ đã xóa |
-| 1 | `missions` — **chia 4 PR** (khối 1.431 dòng, gấp 3,5 lần trần) | 40 | 🟡 **Đang làm — 2/4** | xem bảng dưới |
+| 1 | `missions` — **chia 4 PR** (khối 1.431 dòng, gấp 3,5 lần trần) | 40 | 🟡 **Đang làm — 3/4** | xem bảng dưới |
 | └ 1.1 | `stats`, danh sách, tạo mới | 3 | ✅ Đã merge (`931e1b0`, PR #6) · −320 dòng | ~~`refactor/routes-missions-1`~~ |
-| └ 1.2 | `files`, `cn-info`, bước 2–3, `reset-ve-buoc3` | 13 | 🔵 Chờ review (PR 1.2) · −345 dòng | `refactor/routes-missions-2` |
-| └ 1.3 | bước 4a / 4b / 5 / 6 | 14 | ⬜ Chưa bắt đầu | — |
+| └ 1.2 | `files`, `cn-info`, bước 2–3, `reset-ve-buoc3` | 13 | ✅ Đã merge (`1fe9748`, PR #8) · −345 dòng | ~~`refactor/routes-missions-2`~~ |
+| └ 1.3 | bước 4a / 4b / 5 / 6 | 13 | 🔵 Chờ review (PR 1.3) · −337 dòng | `refactor/routes-missions-3` |
 | └ 1.4 | `cho-ct-hd`, `by-code`, `:id`, hồ sơ ngoài, sản phẩm | 10 | ⬜ Chưa bắt đầu | — |
 | 2 | `crd` | 36 | ⬜ Chưa bắt đầu | — |
 | 3 | `submissions` + `publications` | 36 | ⬜ Chưa bắt đầu | — |
@@ -26,9 +26,9 @@ Kế hoạch & quy ước: [KE-HOACH-REFACTOR.md](KE-HOACH-REFACTOR.md)
 
 Ký hiệu: ⬜ chưa bắt đầu · 🟡 đang làm · 🔵 chờ review/merge · ✅ đã merge + deploy ổn định
 
-**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **19.171** hiện tại → *mục tiêu < 300*
+**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **18.834** hiện tại → *mục tiêu < 300*
 
-Đã cắt **665 dòng** (3,4% chặng đường). Trần hiện tại nằm ở `.github/server-js-max-lines`, CI đỏ
+Đã cắt **1.002 dòng** (5,1% chặng đường). Trần hiện tại nằm ở `.github/server-js-max-lines`, CI đỏ
 nếu file dài ra. Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
 
 ---
@@ -100,6 +100,7 @@ Việc phát hiện dọc đường nhưng **cố ý không làm** để giữ p
 | 6 | ~40 file `.docx` trong `templates/cap-vien/` và `templates/hoi-dong-dao-duc/` vẫn còn dấu tiếng Việt trong tên (`SCI-FINAL-01__ĐƠN_ĐỀ_NGHỊ_...docx`). Đợt 0 mới chỉ đổi tên **thư mục**. Cùng rủi ro checkout trên Linux, nhưng tên này người dùng nhìn thấy khi tải biểu mẫu → **cần quyết định của người dùng**, không tự đổi. | Đợt 0 | Trung bình — cần quyết định |
 | 7 | `routes/equipmentPart2.js` — tên vô nghĩa, dấu hiệu tách vội. Gộp vào `routes/equipment/`. | Đợt 0 | Thấp — làm cùng đợt `equipment` |
 | 8 | `data/` còn file backup `.db` cũ trên đĩa (`sci-ace-backup-20260321`, `test-unified.db`…). Đã gỡ khỏi Git và ignore, nhưng vẫn chiếm chỗ. | Đợt 0 | Rất thấp |
+| **9** | **Hai endpoint ghi không kiểm phân quyền.** `POST /api/missions/:id/buoc4a/cn-upload-thuyet-minh-chinh-sua` và `POST /api/missions/:id/buoc5/upload-thuyet-minh` chỉ có `authMiddleware` — **không kiểm vai trò, không kiểm chủ nhiệm đề tài**. Bất kỳ tài khoản đã đăng nhập nào, kể cả **`crd_user`** (tài khoản ngoài chỉ để đặt lịch phòng thí nghiệm), đều gọi được cho **mission id bất kỳ**: đánh dấu `thuyet_minh_chinh_sua_ok = 1` và kích hoạt email gửi cả danh sách Hội đồng, hoặc chèn bản ghi vào `buoc5_thuyet_minh_ls`. Đã di chuyển **nguyên trạng** ở Đợt 1.3 (refactor không được đổi hành vi) và có test ghim hiện trạng trong `tests/smoke.test.js`.<br><br>**Vì sao chưa vá:** cần quyết định nghiệp vụ — ai được upload? Chỉ chủ nhiệm, hay chủ nhiệm + thư ký? Và `missions.principal` là **tên dạng chuỗi**, không phải khóa ngoại tới `users`, nên không so khớp quyền sở hữu bằng một middleware được. Khác hẳn lỗ hổng `cn-info` (PR #7) vốn chỉ là quên một dòng.<br><br>**Giảm nhẹ:** cả hai chỉ mở trong một cửa sổ trạng thái quy trình (`thong_qua_co_chinh_sua`, hoặc đề tài đang ở Bước 5) và cần `file_id` hợp lệ của file đã upload trước đó. | Đợt 1.3 | **Bảo mật — quyền ghi, cần quyết định chính sách** |
 
 ---
 
@@ -151,6 +152,21 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-10-22 · `refactor/routes-missions-3` · Đợt 1.3
+
+- **Đã xong:** tách `routes/missionsPheDuyet.js` — 13 endpoint duyệt Bước 4a/4b/5/6 (−337 dòng).
+  `server.js` còn **18.834 dòng**, tổng đã cắt 1.002 dòng.
+- **Cạm bẫy phát hiện:**
+  - `chuTichOrThuyKyOrAdmin` được định nghĩa **ngay giữa khối code cũ** (chỉ dùng cho đúng một
+    endpoint `ket-qua-hop`), nên nó di chuyển cùng router và nhận `roleIsAny` qua tham số factory
+    thay vì từ phạm vi module của `server.js`.
+  - **Nợ #9** — hai endpoint ghi không kiểm phân quyền, xem bảng nợ. Di chuyển nguyên trạng, có
+    test ghim hiện trạng.
+  - `diff` route-inventory **không phát hiện được việc tuột phân quyền** — nó chỉ so đường dẫn và
+    thứ tự, không so middleware. Vì vậy mỗi đợt đều phải tự viết test ranh giới vai trò.
+- **Phiên sau làm:** Đợt 1.4 (`cho-ct-hd`, `by-code`, `:id`, hồ sơ ngoài, sản phẩm — ~409 dòng),
+  rồi gom `routes/missions*` (6 file) về `routes/missions/` bằng PR chỉ di chuyển file.
 
 ### 2026-10-22 · `refactor/routes-missions-2` · Đợt 1.1 + 1.2
 
