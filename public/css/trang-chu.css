@@ -1,0 +1,469 @@
+/*
+ * Trang chủ STIMS — thế giới thị giác "công báo khoa học".
+ * Hợp đồng hướng thiết kế: readme/GIAO-DIEN-TRANG-CHU.md — đọc trước khi sửa.
+ *
+ * Nguyên tắc: phân cách bằng ĐƯỜNG KẺ và khoảng trắng, không bằng thẻ nổi.
+ * Không gradient, không bóng mờ. Màu cam kết ở quy mô vùng (măng-sét mực xanh đen),
+ * son đỏ là màu tín hiệu DUY NHẤT. Sức nặng do cân nặng và cỡ chữ tạo ra.
+ *
+ * Tên class giữ nguyên vì JS bám vào: .stat-card[data-stat], .module-card[data-module],
+ * .btn-access, .mini-stat-number, .count-up. Đổi tên là vỡ trang chủ.
+ */
+
+:root {
+  /* Mực xanh đen — vật liệu của chữ ký và con dấu trên văn bản hành chính */
+  --muc: #16233d;
+  --muc-sang: #24365a;
+  /* Son dấu đỏ — màu tín hiệu duy nhất. Không dùng làm trang trí. */
+  --son: #b7281e;
+  --son-dam: #8e1f17;
+  /* Giấy: trắng hơi lạnh, không phải kem */
+  --giay: #fafaf8;
+  --giay-trang: #ffffff;
+  /* Chữ phụ TINT TỪ mực, không phải xám trung tính */
+  --chu-phu: #4a5873;
+  --chu-mo: #5a6783;
+  /* Đường kẻ */
+  --ke: #d8dce5;
+  --ke-dam: #b9c0cf;
+
+  --do-rong: 1180px;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--giay);
+  color: var(--muc);
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  font-feature-settings: 'kern' 1;
+}
+
+/* ── Bề mặt trình duyệt: phần không tự vẽ vẫn phải mang thiết kế ───────────── */
+
+::selection { background: var(--son); color: #fff; }
+
+:focus-visible {
+  outline: 2px solid var(--son);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+html { scrollbar-color: var(--ke-dam) var(--giay); scrollbar-width: thin; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: var(--giay); }
+::-webkit-scrollbar-thumb {
+  background: var(--ke-dam);
+  border: 3px solid var(--giay);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--chu-mo); }
+
+input, textarea { caret-color: var(--son); }
+
+/* Mọi chữ số đều thẳng cột — đây là trang số liệu */
+.stat-number, .mini-stat-number, .homepage-news-date {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.container { max-width: var(--do-rong); margin: 0 auto; padding: 0 24px 72px; }
+
+/* ── Măng-sét: trường mực xanh đen chiếm trọn chiều ngang ──────────────────── */
+
+.header {
+  background: var(--muc);
+  color: #fff;
+  /* Tràn mép dù container có padding */
+  margin: 0 -24px 0;
+  padding: 0 24px;
+  /* Đường son dưới măng-sét — một khoảnh khắc chuyển động duy nhất của trang */
+  border-bottom: 2px solid var(--son);
+  animation: ke-son 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ke-son {
+  from { border-bottom-color: color-mix(in srgb, var(--son) 0%, var(--muc)); }
+  to   { border-bottom-color: var(--son); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header { animation: none; }
+}
+
+.header-inner {
+  max-width: var(--do-rong);
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 26px 0 24px;
+}
+
+.header-logo img {
+  width: 58px;
+  height: 58px;
+  display: block;
+  /* Logo trên nền tối: không viền, không khung tròn trắng */
+}
+
+.header-text { min-width: 0; }
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.2vw, 1.95rem);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.18;
+  text-wrap: balance;
+}
+
+.header h1 a.header-home-link,
+a.header-home-link {
+  color: #fff;
+  text-decoration: none;
+}
+
+a.header-home-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.header p.header-stims-subtitle {
+  margin: 5px 0 0;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  /* Tint từ mực, không xám */
+  color: #9fb0cf;
+}
+
+.header p.header-institution {
+  margin: 9px 0 0;
+  font-size: 0.9rem;
+  color: #c3cde0;
+}
+
+.standard-badge {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 3px 9px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 2px;
+}
+
+#auth-status { margin-left: auto; padding-top: 4px; }
+
+/* ── Bảng số liệu: một hàng, kẻ dọc phân cách. Không thẻ, không icon. ──────── */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-bottom: 1px solid var(--ke);
+  margin: 0 0 8px;
+}
+
+.stat-card {
+  padding: 22px 18px 20px;
+  border-left: 1px solid var(--ke);
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.stat-card:first-child { border-left: 0; padding-left: 0; }
+
+/* Icon tile phía trên số liệu là đúng dấu hiệu cần gỡ */
+.stat-icon { display: none; }
+
+.stat-number {
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--muc);
+}
+
+.stat-label {
+  margin-top: 7px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--chu-phu);
+}
+
+/* ── Danh mục module: mục văn bản phân cách bằng kẻ ngang, không phải thẻ ──── */
+
+.modules-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--ke);
+  margin-top: 28px;
+}
+
+.module-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 30px 26px 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--ke);
+  border-radius: 0;
+  box-shadow: none;
+  transition: background-color 160ms ease;
+}
+
+.modules-grid > .module-card:nth-child(even) {
+  padding-left: 30px;
+  border-left: 1px solid var(--ke);
+}
+
+.module-card::before { content: none; }
+
+.module-card:hover { background: var(--giay-trang); }
+
+/* Icon: nhỏ, nằm cùng hàng với tiêu đề — không còn là ô vuông bo góc phía trên */
+.module-icon { margin: 0; }
+
+.module-icon-bg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: none;
+  border-radius: 0;
+  color: var(--son);
+}
+
+.module-icon-bg svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.6;
+}
+
+.module-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 7px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--muc);
+  text-wrap: balance;
+}
+
+.module-description {
+  margin: 0 0 18px;
+  font-size: 0.92rem;
+  line-height: 1.62;
+  color: var(--chu-phu);
+  max-width: 62ch;
+}
+
+.module-description a { color: var(--son); text-underline-offset: 2px; }
+.module-description a:hover { color: var(--son-dam); }
+
+/* Số liệu trong module: hàng ngang, kẻ trên, thẳng cột */
+.module-stats {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0;
+  margin: 0 0 18px;
+  padding-top: 13px;
+  border-top: 1px solid var(--ke);
+}
+
+.mini-stat { padding-right: 14px; }
+
+.mini-stat-number {
+  font-size: 1.22rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--muc);
+}
+
+.mini-stat-label {
+  margin-top: 3px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--chu-mo);
+}
+
+/* Hành động: khối mực đặc, góc gần vuông. Không viên thuốc, không gradient. */
+.btn-access {
+  align-self: flex-start;
+  display: inline-block;
+  padding: 9px 17px;
+  background: var(--muc);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  border: 0;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+.btn-access:hover { background: var(--son); }
+
+.btn-access--crd { background: var(--son); }
+.btn-access--crd:hover { background: var(--son-dam); }
+
+/* CRD nổi bật: đánh dấu bằng một vạch son bên trái 1px, không phải nền màu */
+.module-card--crd-spotlight { border-left: 1px solid var(--son); padding-left: 30px; }
+.module-card--crd-spotlight .module-icon-bg { color: var(--son); }
+.module-card--crd-spotlight .module-description a { font-weight: 600; }
+
+/* Module chưa triển khai */
+.module-card--disabled { opacity: 0.5; }
+.module-card--disabled:hover { background: none; }
+.module-card--disabled .btn-access {
+  background: none;
+  color: var(--chu-mo);
+  border: 1px solid var(--ke-dam);
+  cursor: not-allowed;
+  padding: 8px 16px;
+}
+.module-card--disabled .btn-access:hover { background: none; color: var(--chu-mo); }
+.module-card--disabled .module-icon-bg { color: var(--chu-mo); }
+
+/* Kéo thả sắp xếp (chế độ quản trị) */
+.modules-grid--admin-sort .module-card { cursor: grab; }
+.modules-grid--admin-sort .module-card:active { cursor: grabbing; }
+.module-card--sort-ghost { opacity: 0.35; }
+.module-card--sort-chosen { background: var(--giay-trang); outline: 1px solid var(--son); }
+
+/* ── Thu hẹp màn hình ─────────────────────────────────────────────────────── */
+
+@media (min-width: 901px) {
+  /* Hai cot ngang hang: day so lieu + nut xuong day de day chan thang hang */
+  .module-stats { margin-top: auto; }
+}
+
+@media (max-width: 900px) {
+  .stats { grid-template-columns: repeat(3, 1fr); }
+  .stat-card:nth-child(3n + 1) { border-left: 0; padding-left: 0; }
+  .stat-card:nth-child(n + 4) { border-top: 1px solid var(--ke); }
+  .modules-grid { grid-template-columns: 1fr; }
+  .modules-grid > .module-card:nth-child(even) { padding-left: 0; border-left: 0; }
+  .module-card--crd-spotlight { padding-left: 14px; }
+}
+
+@media (max-width: 560px) {
+  .container { padding: 0 16px 56px; }
+  .header { margin: 0 -16px; padding: 0 16px; }
+  .header-inner { flex-wrap: wrap; padding: 20px 0 18px; }
+  #auth-status { margin-left: 0; width: 100%; padding-top: 12px; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .stat-card { padding: 16px 12px; }
+  .stat-card:nth-child(3n + 1) { border-left: 1px solid var(--ke); padding-left: 12px; }
+  .stat-card:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .stat-card:nth-child(n + 3) { border-top: 1px solid var(--ke); }
+  .module-card { padding: 20px 0; }
+  .module-stats { grid-auto-flow: row; grid-auto-columns: auto; gap: 10px; }
+}
+
+/* ── Khối đăng nhập trong măng-sét ────────────────────────────────────────────
+ * js/auth-status.js sinh ra 4 class này và được DÙNG CHUNG trên nhiều trang —
+ * không sửa file JS đó. Chỉ tạo dáng trong phạm vi măng-sét trang chủ.
+ */
+
+#auth-status a,
+#auth-status button {
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+#auth-status .auth-btn-login {
+  display: inline-block;
+  padding: 9px 16px;
+  background: var(--son);
+  color: #fff;
+  border: 0;
+}
+
+#auth-status .auth-btn-login:hover { background: var(--son-dam); }
+
+#auth-status .auth-user-info {
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #c3cde0;
+  white-space: nowrap;
+}
+
+#auth-status .auth-btn-admin,
+#auth-status .auth-btn-logout {
+  display: inline-block;
+  padding: 8px 14px;
+  background: none;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+}
+
+#auth-status .auth-btn-admin:hover,
+#auth-status .auth-btn-logout:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+/* ── Dải thông báo / tin tức ──────────────────────────────────────────────────
+ * Ghi đè public/css/ticker.css CHỈ trong hai vùng chứa của trang chủ, để trang
+ * quản trị ticker giữ nguyên giao diện của nó.
+ */
+
+#sci-ticker-container .sci-ticker-wrap,
+#homepage-news-marquee-wrap .homepage-news-marquee-inner {
+  background: var(--giay-trang);
+  border: 0;
+  border-bottom: 1px solid var(--ke);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#sci-ticker-container .sci-ticker-label,
+#homepage-news-marquee-wrap .homepage-news-label {
+  background: none;
+  color: var(--son);
+  border-radius: 0;
+  border-right: 1px solid var(--ke);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+#sci-ticker-container .sci-live-dot {
+  background: var(--son);
+  box-shadow: none;
+}
+
+#sci-ticker-container .sci-ticker-inner,
+#homepage-news-marquee-wrap .homepage-news-rail {
+  font-size: 0.9rem;
+  color: var(--muc);
+}
+
+#homepage-news-marquee-wrap .homepage-news-date { color: var(--chu-mo); }
+#homepage-news-marquee-wrap .homepage-news-source { color: var(--son); font-weight: 600; }
