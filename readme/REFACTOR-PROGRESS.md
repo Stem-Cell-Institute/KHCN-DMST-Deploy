@@ -12,11 +12,27 @@ Kế hoạch & quy ước: [KE-HOACH-REFACTOR.md](KE-HOACH-REFACTOR.md)
 | Đợt | Nhóm | Endpoint | Trạng thái | Branch |
 |---|---|---|---|---|
 | 0 | Hạ tầng quản lý + dọn tên | 0 | ✅ Đã merge (`96ec09b`, PR #3) | ~~`chore/dot-0-ha-tang-refactor`~~ đã xóa |
-| 1 | `missions` — **chia 4 PR** (khối 1.431 dòng, gấp 3,5 lần trần) | 40 | 🟡 **Đang làm — 3/4** | xem bảng dưới |
+| 1 | `missions` — **chia 4 PR** (khối 1.431 dòng, gấp 3,5 lần trần) | 40 | 🔵 **4/4 — PR cuối chờ review** | xem bảng dưới |
 | └ 1.1 | `stats`, danh sách, tạo mới | 3 | ✅ Đã merge (`931e1b0`, PR #6) · −320 dòng | ~~`refactor/routes-missions-1`~~ |
 | └ 1.2 | `files`, `cn-info`, bước 2–3, `reset-ve-buoc3` | 13 | ✅ Đã merge (`1fe9748`, PR #8) · −345 dòng | ~~`refactor/routes-missions-2`~~ |
-| └ 1.3 | bước 4a / 4b / 5 / 6 | 13 | 🔵 Chờ review (PR 1.3) · −337 dòng | `refactor/routes-missions-3` |
-| └ 1.4 | `cho-ct-hd`, `by-code`, `:id`, hồ sơ ngoài, sản phẩm | 10 | ⬜ Chưa bắt đầu | — |
+| └ 1.3 | bước 4a / 4b / 5 / 6 | 13 | ✅ Đã merge (`500975a`, PR #9) · −337 dòng | ~~`refactor/routes-missions-3`~~ |
+| └ 1.4 | `cho-ct-hd` + `by-code`, `:id`, hồ sơ ngoài, sản phẩm — **2 router** | 11 | 🔵 Chờ review (PR 1.4) · −283 dòng | `refactor/routes-missions-4` |
+
+**Sau Đợt 1: `server.js` không còn endpoint `/api/missions` nào.** 40 endpoint đã nằm trong 7 file
+`routes/missions*`. Việc còn lại của Đợt 1 là gom chúng về `routes/missions/` bằng một PR **chỉ di
+chuyển file** (theo §2.3 kế hoạch — domain đã vượt 3 file).
+
+**Thứ tự mount bắt buộc trong `server.js`** (đừng đổi, đừng gộp):
+
+```
+missionsCore        /missions/stats
+missionsHoSo
+missionsPheDuyet
+missionsChoXetDuyet /missions/cho-ct-hd-*
+missionsExport      /missions/export*, /missions/report-excel
+missionsChiTiet     /missions/:id          ← PHẢI SAU CÙNG trong nhóm này
+missionsTemplates   /missions-templates    (segment khác, không va chạm)
+```
 | 2 | `crd` | 36 | ⬜ Chưa bắt đầu | — |
 | 3 | `submissions` + `publications` | 36 | ⬜ Chưa bắt đầu | — |
 | 4 | `cap-vien` | 47 | ⬜ Chưa bắt đầu | — |
@@ -26,9 +42,9 @@ Kế hoạch & quy ước: [KE-HOACH-REFACTOR.md](KE-HOACH-REFACTOR.md)
 
 Ký hiệu: ⬜ chưa bắt đầu · 🟡 đang làm · 🔵 chờ review/merge · ✅ đã merge + deploy ổn định
 
-**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **18.834** hiện tại → *mục tiêu < 300*
+**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **18.551** hiện tại → *mục tiêu < 300*
 
-Đã cắt **1.002 dòng** (5,1% chặng đường). Trần hiện tại nằm ở `.github/server-js-max-lines`, CI đỏ
+Đã cắt **1.285 dòng** (6,6% chặng đường). Trần hiện tại nằm ở `.github/server-js-max-lines`, CI đỏ
 nếu file dài ra. Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
 
 ---
@@ -101,6 +117,7 @@ Việc phát hiện dọc đường nhưng **cố ý không làm** để giữ p
 | 7 | `routes/equipmentPart2.js` — tên vô nghĩa, dấu hiệu tách vội. Gộp vào `routes/equipment/`. | Đợt 0 | Thấp — làm cùng đợt `equipment` |
 | 8 | `data/` còn file backup `.db` cũ trên đĩa (`sci-ace-backup-20260321`, `test-unified.db`…). Đã gỡ khỏi Git và ignore, nhưng vẫn chiếm chỗ. | Đợt 0 | Rất thấp |
 | **9** | **Hai endpoint ghi không kiểm phân quyền.** `POST /api/missions/:id/buoc4a/cn-upload-thuyet-minh-chinh-sua` và `POST /api/missions/:id/buoc5/upload-thuyet-minh` chỉ có `authMiddleware` — **không kiểm vai trò, không kiểm chủ nhiệm đề tài**. Bất kỳ tài khoản đã đăng nhập nào, kể cả **`crd_user`** (tài khoản ngoài chỉ để đặt lịch phòng thí nghiệm), đều gọi được cho **mission id bất kỳ**: đánh dấu `thuyet_minh_chinh_sua_ok = 1` và kích hoạt email gửi cả danh sách Hội đồng, hoặc chèn bản ghi vào `buoc5_thuyet_minh_ls`. Đã di chuyển **nguyên trạng** ở Đợt 1.3 (refactor không được đổi hành vi) và có test ghim hiện trạng trong `tests/smoke.test.js`.<br><br>**Vì sao chưa vá:** cần quyết định nghiệp vụ — ai được upload? Chỉ chủ nhiệm, hay chủ nhiệm + thư ký? Và `missions.principal` là **tên dạng chuỗi**, không phải khóa ngoại tới `users`, nên không so khớp quyền sở hữu bằng một middleware được. Khác hẳn lỗ hổng `cn-info` (PR #7) vốn chỉ là quên một dòng.<br><br>**Giảm nhẹ:** cả hai chỉ mở trong một cửa sổ trạng thái quy trình (`thong_qua_co_chinh_sua`, hoặc đề tài đang ở Bước 5) và cần `file_id` hợp lệ của file đã upload trước đó. | Đợt 1.3 | **Bảo mật — quyền ghi, cần quyết định chính sách** |
+| **10** | **`GET /api/missions/by-code/:code` không có `authMiddleware`**, trong khi `/api/missions/:id` ngay cạnh thì có. Nó trả về **toàn bộ bản ghi đề tài**: `budget`, `approved_budget`, `disbursed_budget`, `contract_number`, `funding_source`, `managing_agency`, `objectives`. Mã đề tài sinh theo mẫu `DT-<2 chữ>-<năm>-<4 số>` (xem `POST /api/missions`) nên **dò được**. Đã kiểm chứng: không token trả **404** (handler đã chạy), trong khi `/api/missions/1` trả 401. Di chuyển **nguyên trạng** ở Đợt 1.4, có test ghim hiện trạng.<br><br>**Bản vá nhiều khả năng AN TOÀN** — khác nợ #9. Nơi gọi duy nhất là `theo-doi-de-tai-ngoai-vien-chi-tiet.html:228`, và ngay dòng 224 trang đó cũng gọi `/api/missions/:id` **không kèm header** mà vẫn chạy được, nhờ `getTokenFromReq` đọc cookie `auth_token`. Trang này **không** nằm trong `PUBLIC_HTML_AUTH` nên đòi đăng nhập, và `apiBase` là chuỗi rỗng (cùng origin) ở production → cookie tự gửi kèm. Thêm `authMiddleware` chỉ là một dòng, như PR #7.<br><br>**Cần kiểm trước khi vá:** có tích hợp nào ngoài repo gọi endpoint này không. | Đợt 1.4 | **Bảo mật — lộ số liệu kinh phí, bản vá đã rõ** |
 
 ---
 
@@ -152,6 +169,27 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-10-22 · `refactor/routes-missions-4` · Đợt 1.4 — **hết endpoint `/api/missions` trong `server.js`**
+
+- **Đã xong:** tách 2 router (`missionsChoXetDuyet.js`, `missionsChiTiet.js`), 11 endpoint,
+  −283 dòng. `server.js` còn **18.551 dòng**; tổng Đợt 1 đã cắt **1.285 dòng**.
+- **Cạm bẫy phát hiện:**
+  - **Vùng 1.4 không liền mạch.** Giữa nó có `PUT/DELETE /api/admin/missions/:id` (thuộc Đợt 6)
+    và mount `missionsExport`. Grep theo `'/api/missions` **không bắt** `/api/admin/missions` —
+    suýt cắt nhầm route của đợt khác. Từ nay phải grep `^app\.(get|post|…)\(` cho cả vùng rồi mới
+    chốt ranh giới.
+  - **Bắt buộc 2 router, 2 điểm mount.** Gộp làm một và mount ở vị trí đầu sẽ đẩy `:id` lên trước
+    `missionsExport` → `/api/missions/export` bị nuốt thành `:id = "export"` và trả 400. Đã thêm
+    test «thứ tự đăng ký» canh đúng chế độ hỏng này.
+  - **Nợ #10** — `by-code/:code` không có `authMiddleware`, lộ số liệu kinh phí. Khác nợ #9: ở đây
+    bản vá đã rõ và nhiều khả năng an toàn (xem bằng chứng trong bảng nợ).
+- **Phiên sau làm:**
+  1. Gom `routes/missions*` (7 file) về `routes/missions/` — PR **chỉ di chuyển file**
+  2. Vá nợ #10 (một dòng, như PR #7)
+  3. Đợt 2 (`crd`, 36 endpoint)
+- **Còn treo:** **chưa deploy bản nào lên production** — đã tích 5 PR. Cần hỏi IT: Docker hay PM2,
+  và `node --version` trên server.
 
 ### 2026-10-22 · `refactor/routes-missions-3` · Đợt 1.3
 
