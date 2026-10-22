@@ -85,6 +85,33 @@ test('thống kê nhiệm vụ trả về 200', async () => {
   assert.equal(res.status, 200);
 });
 
+test('tạo nhiệm vụ: chưa đăng nhập thì 401', async () => {
+  const res = await post('/api/missions', undefined, { title: 'X', level: 'ministry' });
+  assert.equal(res.status, 401);
+});
+
+test('tạo nhiệm vụ: cấp Viện bị từ chối và được chỉ sang trang Đề tài cấp Viện', async () => {
+  const res = await post('/api/missions', srv.tokens.admin, { title: 'X', level: 'institute' });
+  assert.equal(res.status, 400);
+  const j = await res.json();
+  assert.match(j.message, /Cấp Viện/, 'thông báo phải chỉ người dùng sang trang Đề tài cấp Viện');
+});
+
+test('tạo nhiệm vụ: thiếu tên đề tài thì 400', async () => {
+  const res = await post('/api/missions', srv.tokens.admin, { level: 'ministry' });
+  assert.equal(res.status, 400);
+});
+
+test('tạo nhiệm vụ cấp Bộ: 201 kèm bản ghi vừa tạo', async () => {
+  const title = 'Đề tài kiểm thử khói ' + Date.now();
+  const res = await post('/api/missions', srv.tokens.admin, { title, level: 'ministry' });
+  assert.equal(res.status, 201);
+  const j = await res.json();
+  assert.ok(j.mission && j.mission.id, 'phải trả về bản ghi vừa tạo');
+  assert.equal(j.mission.title, title);
+  assert.equal(j.mission.level, 'ministry');
+});
+
 test('export CSV / Excel / mẫu nhập liệu: admin dùng được', async () => {
   for (const p of ['/api/missions/export', '/api/missions/export-excel', '/api/missions/export-template']) {
     const res = await get(p, srv.tokens.admin);
