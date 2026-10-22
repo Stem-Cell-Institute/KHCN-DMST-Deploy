@@ -60,6 +60,16 @@
 
 > **Không dùng dấu tiếng Việt và khoảng trắng trong tên thư mục/file được commit.** Lý do: hỏng khi checkout trên Linux server (deploy đang chạy Linux), hỏng khi encode URL, và `git`/`docker` xử lý không nhất quán giữa Windows và Linux.
 
+> **Một tên branch không được vừa là tên lá vừa là tiền tố của tên khác — kể cả khi chỉ khác
+> hoa thường.** Git lưu ref thành file/thư mục thật trong `.git/`, nên branch `REFACTOR` tạo ra
+> *file* `.git/logs/refs/remotes/origin/REFACTOR`, còn `refactor/routes-missions-1` cần *thư mục*
+> `.../origin/refactor/`. Trên Windows không phân biệt hoa thường, hai cái đó là cùng một tên →
+> đụng nhau. Hậu quả thật đã gặp (22/10/2026): `git fetch` báo lỗi, branch mới **không có
+> upstream**. Mã nguồn và PR vẫn an toàn — chỉ sổ sách trong `.git` hỏng, và nó hỏng cho **mọi**
+> branch cùng tiền tố. Đã xử lý bằng cách đổi tên `REFACTOR` → `archive/refactor-ddd-2026-04`
+> trên remote. Khi đặt tên branch, tránh dùng một từ đơn trùng với tiền tố đang dùng
+> (`refactor`, `chore`, `fix`, `archive`).
+
 ### 2.2 Bảng slug domain chuẩn — **nguồn chân lý duy nhất**
 
 Dùng đúng slug này cho: tên thư mục, tên branch, tên file router, prefix API, tên phiên làm việc.
