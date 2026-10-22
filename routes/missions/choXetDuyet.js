@@ -8,7 +8,7 @@
  *
  * Tách khỏi server.js (Đợt 1.4). Không sửa logic — chỉ đổi `app.` thành `router.`.
  *
- * VÌ SAO TÁCH RIÊNG, KHÔNG GỘP VỚI routes/missionsChiTiet.js: hai router này nằm ở hai
+ * VÌ SAO TÁCH RIÊNG, KHÔNG GỘP VỚI routes/missions/chiTiet.js: hai router này nằm ở hai
  * vị trí mount KHÁC NHAU trong server.js, và giữa chúng là router missionsExport. Cả hai
  * route ở đây có segment chữ sau /api/missions/ nên phải đăng ký TRƯỚC
  * '/api/missions/:id' (nằm trong missionsChiTiet.js). Gộp hai file rồi mount một lần sẽ
