@@ -22,9 +22,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Đọc phiên bản từ .nvmrc chứ KHÔNG ghi "24" ở đây. Kho phiên bản của
+      # actions/setup-node trễ so với nodejs.org: ghi "24" thì runner lấy
+      # 24.21.0 và `npm ci` đỏ ngay với EBADENGINE vì engines đòi >=24.22.1
+      # (sàn bảo mật sau bản vá 20/10/2026). .nvmrc là nguồn chân lý duy nhất
+      # cho cả CI lẫn máy dev dùng nvm/fnm.
       - uses: actions/setup-node@v4
         with:
-          node-version: "20" # khớp Dockerfile (node:20-bookworm-slim)
+          node-version-file: ".nvmrc"
           cache: "npm"
 
       # Cũng là phép thử cho engines + .npmrc engine-strict: sai bản Node là dừng ở đây.
