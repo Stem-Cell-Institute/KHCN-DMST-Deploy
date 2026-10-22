@@ -218,6 +218,56 @@ test('duyệt Bước 4a/4b/5/6: Viện trưởng bị 403 ở các endpoint có
   assert.equal(res.status, 403, 'chinh-lich (PATCH) phải chặn vai trò không phận sự');
 });
 
+/**
+ * Nhóm chi tiết + hồ sơ ngoài + sản phẩm (Đợt 1.4).
+ */
+test('chi tiết đề tài và hồ sơ: chưa đăng nhập thì 401', async () => {
+  for (const p of [
+    '/api/missions/cho-ct-hd-xet-duyet',
+    '/api/missions/count-cho-ct-hd-ngoai-vien',
+    '/api/missions/1',
+    '/api/missions/1/ho-so-ngoai',
+    '/api/missions/1/ho-so-ngoai/1/download',
+    '/api/missions/1/san-pham-files',
+    '/api/missions/1/san-pham-files/1/download',
+  ]) {
+    const res = await get(p);
+    assert.equal(res.status, 401, p + ' phải 401 khi chưa đăng nhập');
+  }
+  for (const p of ['/api/missions/1/files', '/api/missions/1/ho-so-ngoai', '/api/missions/1/san-pham-files']) {
+    const res = await post(p, undefined, {});
+    assert.equal(res.status, 401, 'POST ' + p + ' phải 401 khi chưa đăng nhập');
+  }
+});
+
+/**
+ * RÀNG BUỘC THỨ TỰ — test quan trọng nhất của Đợt 1.4.
+ *
+ * '/api/missions/:id' trả 400 «ID không hợp lệ» và KHÔNG gọi next(). Nếu nó được đăng
+ * ký TRƯỚC router missionsExport, mọi đường dẫn '/api/missions/<chữ>' sẽ bị nuốt: thay
+ * vì chạy đúng handler, chúng trả 400. Test này ghim đúng chế độ hỏng đó — 200 chứ
+ * không phải 400.
+ */
+test('thứ tự đăng ký: :id không được nuốt các route có segment chữ', async () => {
+  for (const p of ['/api/missions/export', '/api/missions/stats', '/api/missions/cho-ct-hd-xet-duyet']) {
+    const res = await get(p, srv.tokens.admin);
+    assert.notEqual(res.status, 400, p + ' bị :id nuốt — kiểm tra lại thứ tự mount router');
+  }
+});
+
+/**
+ * NỢ KỸ THUẬT #10 — by-code/:code KHÔNG có authMiddleware, trong khi '/api/missions/:id'
+ * ngay cạnh thì có. Nó trả về TOÀN BỘ bản ghi đề tài, gồm budget, approved_budget,
+ * disbursed_budget, contract_number, funding_source. Mã đề tài sinh theo mẫu
+ * 'DT-<2 chữ>-<năm>-<4 số>' nên dò được. Test dưới GHIM HIỆN TRẠNG, không phải khẳng
+ * định nó đúng.
+ */
+test('by-code hiện không đòi đăng nhập — ghim hiện trạng, xem nợ kỹ thuật #10', async () => {
+  const res = await get('/api/missions/by-code/MA-KHONG-CO-THAT');
+  assert.notEqual(res.status, 401, 'by-code hiện KHÔNG chặn khi chưa đăng nhập (lỗ hổng đã biết)');
+  assert.equal(res.status, 404, 'không token vẫn chạy tới bước tra cứu và trả 404');
+});
+
 test('hai endpoint upload chỉ cần đăng nhập — ghim hiện trạng, xem nợ kỹ thuật #9', async () => {
   for (const p of BUOC_4_DEN_6_CHI_CAN_DANG_NHAP) {
     const res = await post(p, srv.tokens.director, { file_id: 'khong-co-that' });
