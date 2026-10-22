@@ -259,5 +259,5 @@ Phone: (028) xxxx-xxxx
 
 **Phiên bản**: 1.0
 **Ngày cập nhật**: 10/02/2025
-**Người phát triển**: Claude AI Assistant
+**Người phát triển**: Phòng KHCN & QHĐN
 **Bản quyền**: Viện Tế bào gốc - Trường ĐHKHTN, ĐHQG TP.HCM

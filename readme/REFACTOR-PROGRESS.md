@@ -234,7 +234,7 @@ branch `REFACTOR`, `main` không có.
 
 - **Đã xong:**
   - `readme/KE-HOACH-REFACTOR.md` — kế hoạch 8 đợt, quy ước đặt tên, bảng slug domain chuẩn
-  - `CLAUDE.md` — ngữ cảnh dài hạn + cạm bẫy đã biết
+  - `readme/KIEN-TRUC-VA-CAM-BAY.md` — ngữ cảnh dài hạn + cạm bẫy đã biết
   - `readme/REFACTOR-PROGRESS.md` — file này
   - `scripts/route-inventory.js` — **đã viết nhưng CHƯA CHẠY THỬ LẦN NÀO** (máy thiếu Node)
   - Dọn tên: `hệ thống file doxc/` → `templates/hoi-dong-dao-duc/`,

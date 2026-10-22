@@ -1,6 +1,6 @@
 # Kế hoạch refactor & quy ước làm việc — KHCN-DMST-Deploy (E-office SCI)
 
-> Tài liệu điều phối. Mọi phiên làm việc (Claude Code hoặc người) **đọc file này trước khi sửa code**.
+> Tài liệu điều phối. Mọi phiên làm việc (bằng công cụ hỗ trợ hoặc làm tay) **đọc file này trước khi sửa code**.
 > Trạng thái từng đợt: xem [REFACTOR-PROGRESS.md](REFACTOR-PROGRESS.md).
 
 ---
@@ -56,7 +56,7 @@
 | File/URL frontend, CSS, ảnh | `kebab-case`, **không dấu tiếng Việt** | `quan-ly-de-tai-co-so.html` | `quản-lý.html` |
 | Bảng & cột DB | `snake_case`, giữ nguyên hiện trạng | `cooperation_doan_ra` | — |
 | Branch Git | `<type>/<slug-domain>-<mô-tả>`, **ASCII, không dấu** | `refactor/routes-cooperation` | `Chỉnh-màu-cho-Trang-chủ` |
-| Phiên Claude Code | **trùng tên branch** | `refactor/routes-crd` | `E-office SCI` |
+| Phiên làm việc | **trùng tên branch** | `refactor/routes-crd` | `E-office SCI` |
 
 > **Không dùng dấu tiếng Việt và khoảng trắng trong tên thư mục/file được commit.** Lý do: hỏng khi checkout trên Linux server (deploy đang chạy Linux), hỏng khi encode URL, và `git`/`docker` xử lý không nhất quán giữa Windows và Linux.
 
@@ -96,7 +96,7 @@ Giữ nguyên các tầng đang có, chỉ **thêm thư mục con theo domain kh
 ```
 KHCN-DMST-Deploy/
 ├─ server.js                  # đích: < 300 dòng, chỉ bootstrap
-├─ CLAUDE.md                  # bộ nhớ dự án cho mọi phiên (xem §5.1)
+├─ readme/KIEN-TRUC-VA-CAM-BAY.md                  # bộ nhớ dự án cho mọi phiên (xem §5.1)
 │
 ├─ routes/                    # tầng HTTP: parse request, gọi service, trả response
 │  ├─ core.js
@@ -155,7 +155,7 @@ Thứ tự chọn theo: **hoàn tất việc đang dở → nhóm tự chứa �
 
 | Đợt | Nội dung | Endpoint | Rủi ro | Điều kiện tiên quyết |
 |---|---|---|---|---|
-| **0** | Hạ tầng quản lý: `CLAUDE.md`, `REFACTOR-PROGRESS.md`, `scripts/route-inventory.js`, dọn tên §2.4, dọn branch chết | 0 | Rất thấp | — |
+| **0** | Hạ tầng quản lý: `readme/KIEN-TRUC-VA-CAM-BAY.md`, `REFACTOR-PROGRESS.md`, `scripts/route-inventory.js`, dọn tên §2.4, dọn branch chết | 0 | Rất thấp | — |
 | **1** | `missions` — tách nốt 40 endpoint còn lại | 40 | Thấp | Đã có 2 router mẫu |
 | **2** | `crd` — module tự chứa | 36 | Thấp | Smoke test cho `/api/crd` |
 | **3** | `submissions` + `publications`/`orcid` | 36 | Thấp | — |
@@ -255,15 +255,15 @@ buộc "một đợt = một PR": revert được nguyên đợt mà không đ�
 
 ## 5. Quản lý phiên làm việc
 
-Mỗi phiên Claude Code **bắt đầu từ con số 0 về ngữ cảnh**. Ba file dưới đây là bộ nhớ thay thế:
+Mỗi phiên làm việc **bắt đầu từ con số 0 về ngữ cảnh**. Ba file dưới đây là bộ nhớ thay thế:
 
 | File | Vai trò | Ai cập nhật |
 |---|---|---|
-| `CLAUDE.md` | Ngữ cảnh dài hạn: kiến trúc, lệnh chạy, cạm bẫy | Cập nhật khi có phát hiện mới |
+| `readme/KIEN-TRUC-VA-CAM-BAY.md` | Ngữ cảnh dài hạn: kiến trúc, lệnh chạy, cạm bẫy | Cập nhật khi có phát hiện mới |
 | `readme/KE-HOACH-REFACTOR.md` | Kế hoạch & quy ước (file này) | Chỉ đổi khi đổi chiến lược |
 | `readme/REFACTOR-PROGRESS.md` | Trạng thái từng đợt + bàn giao phiên | **Mọi phiên, ở cuối phiên** |
 
-### 5.1 `CLAUDE.md` cần chứa gì
+### 5.1 `readme/KIEN-TRUC-VA-CAM-BAY.md` cần chứa gì
 
 Ngắn (< 100 dòng), chỉ những gì không suy ra được từ code:
 
@@ -276,7 +276,7 @@ Ngắn (< 100 dòng), chỉ những gì không suy ra được từ code:
 ### 5.2 Vòng đời một phiên
 
 **Đầu phiên** — đặt tên phiên **trùng tên branch** (`refactor/routes-crd`), rồi:
-> "Đọc CLAUDE.md và readme/REFACTOR-PROGRESS.md. Làm Đợt N theo §4 của readme/KE-HOACH-REFACTOR.md."
+> "Đọc readme/KIEN-TRUC-VA-CAM-BAY.md và readme/REFACTOR-PROGRESS.md. Làm Đợt N theo §4 của readme/KE-HOACH-REFACTOR.md."
 
 **Trong phiên** — một phiên làm **đúng một đợt**. Phát sinh việc ngoài phạm vi → **ghi vào mục "Nợ kỹ thuật" của PROGRESS**, không làm luôn. Đây là điều quan trọng nhất: refactor hỏng vì phình phạm vi, không phải vì kỹ thuật.
 
@@ -324,7 +324,7 @@ git branch -d <ten-branch>
 
 Đợt 0 gồm 5 việc, không đụng vào logic nào:
 
-1. Tạo `CLAUDE.md`
+1. Tạo `readme/KIEN-TRUC-VA-CAM-BAY.md`
 2. Tạo `readme/REFACTOR-PROGRESS.md` với bảng 8 đợt
 3. Viết `scripts/route-inventory.js`
 4. Dọn tên theo §2.4 bằng `git mv`
