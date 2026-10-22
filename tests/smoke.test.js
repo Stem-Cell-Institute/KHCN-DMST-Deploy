@@ -256,16 +256,20 @@ test('thứ tự đăng ký: :id không được nuốt các route có segment c
 });
 
 /**
- * NỢ KỸ THUẬT #10 — by-code/:code KHÔNG có authMiddleware, trong khi '/api/missions/:id'
- * ngay cạnh thì có. Nó trả về TOÀN BỘ bản ghi đề tài, gồm budget, approved_budget,
- * disbursed_budget, contract_number, funding_source. Mã đề tài sinh theo mẫu
- * 'DT-<2 chữ>-<năm>-<4 số>' nên dò được. Test dưới GHIM HIỆN TRẠNG, không phải khẳng
- * định nó đúng.
+ * by-code/:code từng thiếu authMiddleware (nợ #10, đã vá). Nó trả về TOÀN BỘ bản ghi đề
+ * tài gồm budget, approved_budget, disbursed_budget, contract_number, funding_source —
+ * mà mã đề tài sinh theo mẫu 'DT-<2 chữ>-<năm>-<4 số>' nên dò được. Hai test này giữ cho
+ * lỗ hổng không quay lại.
  */
-test('by-code hiện không đòi đăng nhập — ghim hiện trạng, xem nợ kỹ thuật #10', async () => {
+test('by-code bắt buộc đăng nhập (không được lộ kinh phí, số hợp đồng)', async () => {
   const res = await get('/api/missions/by-code/MA-KHONG-CO-THAT');
-  assert.notEqual(res.status, 401, 'by-code hiện KHÔNG chặn khi chưa đăng nhập (lỗ hổng đã biết)');
-  assert.equal(res.status, 404, 'không token vẫn chạy tới bước tra cứu và trả 404');
+  assert.equal(res.status, 401, 'by-code phải trả 401 khi chưa đăng nhập, không phải 404');
+});
+
+test('by-code: đã đăng nhập thì không còn bị chặn ở tầng xác thực', async () => {
+  const res = await get('/api/missions/by-code/MA-KHONG-CO-THAT', srv.tokens.admin);
+  assert.notEqual(res.status, 401, 'có token hợp lệ thì không được trả 401');
+  assert.equal(res.status, 404, 'mã không tồn tại thì trả 404');
 });
 
 test('hai endpoint upload chỉ cần đăng nhập — ghim hiện trạng, xem nợ kỹ thuật #9', async () => {

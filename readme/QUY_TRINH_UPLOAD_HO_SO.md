@@ -668,4 +668,4 @@ Quy trình upload hồ sơ trong hệ thống SCI-ACE được thiết kế:
 
 **Phiên bản:** 1.0  
 **Ngày cập nhật:** 03/02/2026  
-**Người soạn:** Claude AI Assistant
+**Người soạn:** Phòng KHCN & QHĐN

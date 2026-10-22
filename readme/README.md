@@ -221,7 +221,7 @@ Nếu có góp ý hoặc cần bổ sung, vui lòng liên hệ:
 
 **Phiên bản:** 1.0  
 **Ngày tạo:** 03/02/2026  
-**Tạo bởi:** Claude AI Assistant  
+**Tạo bởi:** Phòng KHCN & QHĐN  
 **Mục đích:** Hỗ trợ triển khai hệ thống tracking cho SCI-ACE
 
 ---

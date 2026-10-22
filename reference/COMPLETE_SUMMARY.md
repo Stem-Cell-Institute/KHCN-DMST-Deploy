@@ -311,7 +311,7 @@ Hệ thống **Quản lý KHCN & ĐMST** đã được hoàn thành **100%** v�
 
 **Phiên bản:** 1.0 (Final)
 **Ngày hoàn thành:** 11/02/2026
-**Người phát triển:** Claude AI Assistant
+**Người phát triển:** Phòng KHCN & QHĐN
 **Bản quyền:** Viện Tế bào gốc - Trường ĐHKHTN, ĐHQG TP.HCM
 
 🎉 **HOÀN THÀNH XUẤT SẮC!** 🎉

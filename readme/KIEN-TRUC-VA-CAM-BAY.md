@@ -1,4 +1,4 @@
-# CLAUDE.md
+# Kiến trúc và cạm bẫy — đọc trước khi sửa code
 
 Ngữ cảnh dài hạn cho mọi phiên làm việc. Đọc file này trước khi sửa code.
 
