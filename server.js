@@ -10337,7 +10337,7 @@ app.get('/api/missions/:id/files', authMiddleware, (req, res) => {
 });
 
 // Thông tin CN + nhiệm vụ đang thực hiện + cảnh báo Điều 10 (cho trang CT HĐ xét duyệt)
-app.get('/api/missions/:id/cn-info', (req, res) => {
+app.get('/api/missions/:id/cn-info', authMiddleware, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) return res.status(400).json({ message: 'ID không hợp lệ' });
   let mission = db.prepare('SELECT id, principal, level FROM missions WHERE id = ?').get(id);
