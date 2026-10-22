@@ -24,7 +24,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20" # khớp Dockerfile (node:20-bookworm-slim)
+          node-version: "24" # khớp Dockerfile (node:24-bookworm-slim)
           cache: "npm"
 
       # Cũng là phép thử cho engines + .npmrc engine-strict: sai bản Node là dừng ở đây.

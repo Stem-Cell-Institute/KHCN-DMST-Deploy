@@ -1,5 +1,5 @@
 # sci-stims / SCI-ACE — Ubuntu IT stack: chạy non-root, dữ liệu qua volume + APP_DATA_DIR
-FROM node:20-bookworm-slim
+FROM node:24-bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 make g++ \
