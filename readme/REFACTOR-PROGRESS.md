@@ -12,27 +12,33 @@ Kế hoạch & quy ước: [KE-HOACH-REFACTOR.md](KE-HOACH-REFACTOR.md)
 | Đợt | Nhóm | Endpoint | Trạng thái | Branch |
 |---|---|---|---|---|
 | 0 | Hạ tầng quản lý + dọn tên | 0 | ✅ Đã merge (`96ec09b`, PR #3) | ~~`chore/dot-0-ha-tang-refactor`~~ đã xóa |
-| 1 | `missions` — **chia 4 PR** (khối 1.431 dòng, gấp 3,5 lần trần) | 40 | 🔵 **4/4 — PR cuối chờ review** | xem bảng dưới |
+| 1 | `missions` — **chia 4 PR + 1 PR gom thư mục** (khối 1.431 dòng, gấp 3,5 lần trần) | 40 | ✅ **Xong — `server.js` hết `/api/missions`** | xem bảng dưới |
 | └ 1.1 | `stats`, danh sách, tạo mới | 3 | ✅ Đã merge (`931e1b0`, PR #6) · −320 dòng | ~~`refactor/routes-missions-1`~~ |
 | └ 1.2 | `files`, `cn-info`, bước 2–3, `reset-ve-buoc3` | 13 | ✅ Đã merge (`1fe9748`, PR #8) · −345 dòng | ~~`refactor/routes-missions-2`~~ |
 | └ 1.3 | bước 4a / 4b / 5 / 6 | 13 | ✅ Đã merge (`500975a`, PR #9) · −337 dòng | ~~`refactor/routes-missions-3`~~ |
-| └ 1.4 | `cho-ct-hd` + `by-code`, `:id`, hồ sơ ngoài, sản phẩm — **2 router** | 11 | 🔵 Chờ review (PR 1.4) · −283 dòng | `refactor/routes-missions-4` |
+| └ 1.4 | `cho-ct-hd` + `by-code`, `:id`, hồ sơ ngoài, sản phẩm — **2 router** | 11 | ✅ Đã merge (`6ae4cc2`, PR #10) · −283 dòng | ~~`refactor/routes-missions-4`~~ |
+| └ 1.5 | Gom 7 file `routes/missions*` → `routes/missions/` — **chỉ di chuyển file** | 0 | 🔵 Chờ review (PR 1.5) | `refactor/gom-routes-missions` |
 
-**Sau Đợt 1: `server.js` không còn endpoint `/api/missions` nào.** 40 endpoint đã nằm trong 7 file
-`routes/missions*`. Việc còn lại của Đợt 1 là gom chúng về `routes/missions/` bằng một PR **chỉ di
-chuyển file** (theo §2.3 kế hoạch — domain đã vượt 3 file).
+**Đợt 1 đã khép.** `server.js` không còn endpoint `/api/missions` nào; 40 endpoint nằm trong 7 file
+dưới `routes/missions/` (§2.3 kế hoạch — domain vượt 3 file thì tách thư mục con).
 
 **Thứ tự mount bắt buộc trong `server.js`** (đừng đổi, đừng gộp):
 
 ```
-missionsCore        /missions/stats
-missionsHoSo
-missionsPheDuyet
-missionsChoXetDuyet /missions/cho-ct-hd-*
-missionsExport      /missions/export*, /missions/report-excel
-missionsChiTiet     /missions/:id          ← PHẢI SAU CÙNG trong nhóm này
-missionsTemplates   /missions-templates    (segment khác, không va chạm)
+routes/missions/core.js          /missions/stats
+routes/missions/hoSo.js
+routes/missions/pheDuyet.js
+routes/missions/choXetDuyet.js   /missions/cho-ct-hd-*
+routes/missions/export.js        /missions/export*, /missions/report-excel
+routes/missions/chiTiet.js       /missions/:id        ← PHẢI SAU CÙNG trong nhóm này
+routes/missions/templates.js     /missions-templates  (segment khác, không va chạm)
 ```
+
+> **Không gom 7 router thành một `index.js`.** §2.3 của kế hoạch có gợi ý mỗi domain xuất một
+> router duy nhất, nhưng ở đây **không áp dụng được**: `chiTiet.js` chứa `/missions/:id`, mà handler
+> đó trả 400 và không gọi `next()`. Gộp lại rồi mount một lần sẽ đặt `:id` cùng vị trí với
+> `export.js` và `core.js` — `/api/missions/export` và `/stats` sẽ bị nuốt. Bảy mount riêng ở bảy vị
+> trí là **điều kiện đúng đắn**, không phải nợ kỹ thuật.
 | 2 | `crd` | 36 | ⬜ Chưa bắt đầu | — |
 | 3 | `submissions` + `publications` | 36 | ⬜ Chưa bắt đầu | — |
 | 4 | `cap-vien` | 47 | ⬜ Chưa bắt đầu | — |
@@ -193,7 +199,7 @@ branch `REFACTOR`, `main` không có.
 
 ### 2026-10-22 · `refactor/routes-missions-3` · Đợt 1.3
 
-- **Đã xong:** tách `routes/missionsPheDuyet.js` — 13 endpoint duyệt Bước 4a/4b/5/6 (−337 dòng).
+- **Đã xong:** tách `routes/missions/pheDuyet.js` — 13 endpoint duyệt Bước 4a/4b/5/6 (−337 dòng).
   `server.js` còn **18.834 dòng**, tổng đã cắt 1.002 dòng.
 - **Cạm bẫy phát hiện:**
   - `chuTichOrThuyKyOrAdmin` được định nghĩa **ngay giữa khối code cũ** (chỉ dùng cho đúng một
@@ -211,8 +217,8 @@ branch `REFACTOR`, `main` không có.
 - **Đã xong:**
   - Nâng Node 20 → **24.22.1** và `better-sqlite3` 11 → 12.11.1 (PR #5, đóng nợ #1 và #5)
   - **Vá lỗ hổng** `cn-info` thiếu `authMiddleware` (PR #7)
-  - **Đợt 1.1** tách `routes/missionsCore.js` (PR #6, −320 dòng)
-  - **Đợt 1.2** tách `routes/missionsHoSo.js` (PR này, −345 dòng)
+  - **Đợt 1.1** tách `routes/missions/core.js` (PR #6, −320 dòng)
+  - **Đợt 1.2** tách `routes/missions/hoSo.js` (PR này, −345 dòng)
   - Đổi tên `REFACTOR` → `archive/refactor-ddd-2026-04` trên remote để gỡ đụng độ tên branch
 - **Cạm bẫy phát hiện:**
   - **Đợt 1 phải chia 4 PR** — khối `missions` là 1.431 dòng, gấp 3,5 lần trần ~400

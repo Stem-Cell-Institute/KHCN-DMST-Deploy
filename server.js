@@ -9992,11 +9992,11 @@ app.get('/api/homepage-stats', (req, res) => {
 // ========== Nhiệm vụ KHCN (Dashboard): trích xuất thống kê + danh sách tìm kiếm ==========
 syncMissionsFromCapVien();
 
-// Nhóm lõi (thống kê, danh sách, đăng ký mới) đã tách sang routes/missionsCore.js.
+// Nhóm lõi (thống kê, danh sách, đăng ký mới) đã tách sang routes/missions/core.js.
 // Mount ĐÚNG TẠI VỊ TRÍ CŨ: phải trước '/api/missions/:id' bên dưới, vì handler đó
 // trả 400 «ID không hợp lệ» và không gọi next() — '/missions/stats' đăng ký sau nó
 // sẽ chết im lặng.
-app.use('/api', require('./routes/missionsCore')({
+app.use('/api', require('./routes/missions/core')({
   db,
   authMiddleware,
   transporter,
@@ -10006,9 +10006,9 @@ app.use('/api', require('./routes/missionsCore')({
   getNotificationEmails,
 }));
 
-// Hồ sơ đăng ký + duyệt Bước 2–3 đã tách sang routes/missionsHoSo.js.
+// Hồ sơ đăng ký + duyệt Bước 2–3 đã tách sang routes/missions/hoSo.js.
 // Mount ĐÚNG TẠI VỊ TRÍ CŨ: vẫn phải trước '/api/missions/:id' bên dưới.
-app.use('/api', require('./routes/missionsHoSo')({
+app.use('/api', require('./routes/missions/hoSo')({
   db,
   authMiddleware,
   thuyKyOrAdmin,
@@ -10025,9 +10025,9 @@ app.use('/api', require('./routes/missionsHoSo')({
   normalizeAndCheckDownloadPath,
 }));
 
-// Duyệt Bước 4a/4b/5/6 đã tách sang routes/missionsPheDuyet.js.
+// Duyệt Bước 4a/4b/5/6 đã tách sang routes/missions/pheDuyet.js.
 // Mount ĐÚNG TẠI VỊ TRÍ CŨ: vẫn phải trước '/api/missions/:id' bên dưới.
-app.use('/api', require('./routes/missionsPheDuyet')({
+app.use('/api', require('./routes/missions/pheDuyet')({
   db,
   authMiddleware,
   thuyKyOrAdmin,
@@ -10039,9 +10039,9 @@ app.use('/api', require('./routes/missionsPheDuyet')({
   getSmtpFrom,
 }));
 
-// Danh sách chờ CT HĐ xét duyệt đã tách sang routes/missionsChoXetDuyet.js.
+// Danh sách chờ CT HĐ xét duyệt đã tách sang routes/missions/choXetDuyet.js.
 // Mount ĐÚNG TẠI VỊ TRÍ CŨ — phải trước missionsExport và missionsChiTiet bên dưới.
-app.use('/api', require('./routes/missionsChoXetDuyet')({
+app.use('/api', require('./routes/missions/choXetDuyet')({
   db,
   authMiddleware,
   roleIsAny,
@@ -10136,10 +10136,10 @@ function csvEscape(s) {
   return str;
 }
 
-// Xuất dữ liệu nhiệm vụ (CSV / Excel / báo cáo thống kê) — xem routes/missionsExport.js.
+// Xuất dữ liệu nhiệm vụ (CSV / Excel / báo cáo thống kê) — xem routes/missions/export.js.
 // Phải mount TRƯỚC handler '/api/missions/:id' bên dưới, nếu không 'export',
 // 'export-excel', 'report-excel'… sẽ bị bắt nhầm thành :id.
-app.use('/api', require('./routes/missionsExport')({
+app.use('/api', require('./routes/missions/export')({
   db,
   authMiddleware,
   adminOnly,
@@ -10149,10 +10149,10 @@ app.use('/api', require('./routes/missionsExport')({
 }));
 
 // Chi tiết đề tài + hồ sơ ngoài Viện + file sản phẩm đã tách sang
-// routes/missionsChiTiet.js. Router này chứa '/missions/:id' nên BẮT BUỘC mount
+// routes/missions/chiTiet.js. Router này chứa '/missions/:id' nên BẮT BUỘC mount
 // SAU missionsCore, missionsChoXetDuyet và missionsExport ở trên — nếu không,
 // '/api/missions/export', '/stats', '/cho-ct-hd-*' sẽ bị :id nuốt thành 400.
-app.use('/api', require('./routes/missionsChiTiet')({
+app.use('/api', require('./routes/missions/chiTiet')({
   db,
   authMiddleware,
   upload,
@@ -10167,8 +10167,8 @@ app.use('/api', require('./routes/missionsChiTiet')({
 const TEMPLATE_TYPES = ['thuyet_minh_chi_tiet', 'van_ban_xin_phep_vien_truong'];
 const TEMPLATE_LABELS = { thuyet_minh_chi_tiet: 'Mẫu Thuyết minh chi tiết', van_ban_xin_phep_vien_truong: 'Mẫu Văn bản xin phép Viện trưởng' };
 
-// Mẫu hồ sơ đăng ký đề tài ngoài Viện — xem routes/missionsTemplates.js.
-app.use('/api', require('./routes/missionsTemplates')({
+// Mẫu hồ sơ đăng ký đề tài ngoài Viện — xem routes/missions/templates.js.
+app.use('/api', require('./routes/missions/templates')({
   db,
   authMiddleware,
   adminOnly,
