@@ -12,7 +12,11 @@ Kế hoạch & quy ước: [KE-HOACH-REFACTOR.md](KE-HOACH-REFACTOR.md)
 | Đợt | Nhóm | Endpoint | Trạng thái | Branch |
 |---|---|---|---|---|
 | 0 | Hạ tầng quản lý + dọn tên | 0 | ✅ Đã merge (`96ec09b`, PR #3) | ~~`chore/dot-0-ha-tang-refactor`~~ đã xóa |
-| 1 | `missions` | 40 | ⬜ Chưa bắt đầu | — |
+| 1 | `missions` — **chia 4 PR** (khối 1.431 dòng, gấp 3,5 lần trần) | 40 | 🟡 **Đang làm — 2/4** | xem bảng dưới |
+| └ 1.1 | `stats`, danh sách, tạo mới | 3 | ✅ Đã merge (`931e1b0`, PR #6) · −320 dòng | ~~`refactor/routes-missions-1`~~ |
+| └ 1.2 | `files`, `cn-info`, bước 2–3, `reset-ve-buoc3` | 13 | 🔵 Chờ review (PR 1.2) · −345 dòng | `refactor/routes-missions-2` |
+| └ 1.3 | bước 4a / 4b / 5 / 6 | 14 | ⬜ Chưa bắt đầu | — |
+| └ 1.4 | `cho-ct-hd`, `by-code`, `:id`, hồ sơ ngoài, sản phẩm | 10 | ⬜ Chưa bắt đầu | — |
 | 2 | `crd` | 36 | ⬜ Chưa bắt đầu | — |
 | 3 | `submissions` + `publications` | 36 | ⬜ Chưa bắt đầu | — |
 | 4 | `cap-vien` | 47 | ⬜ Chưa bắt đầu | — |
@@ -22,7 +26,10 @@ Kế hoạch & quy ước: [KE-HOACH-REFACTOR.md](KE-HOACH-REFACTOR.md)
 
 Ký hiệu: ⬜ chưa bắt đầu · 🟡 đang làm · 🔵 chờ review/merge · ✅ đã merge + deploy ổn định
 
-**Số dòng `server.js`:** 19.836 (mốc đầu, commit `3718304`) → *mục tiêu < 300*
+**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **19.171** hiện tại → *mục tiêu < 300*
+
+Đã cắt **665 dòng** (3,4% chặng đường). Trần hiện tại nằm ở `.github/server-js-max-lines`, CI đỏ
+nếu file dài ra. Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
 
 ---
 
@@ -144,6 +151,30 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-10-22 · `refactor/routes-missions-2` · Đợt 1.1 + 1.2
+
+- **Đã xong:**
+  - Nâng Node 20 → **24.22.1** và `better-sqlite3` 11 → 12.11.1 (PR #5, đóng nợ #1 và #5)
+  - **Vá lỗ hổng** `cn-info` thiếu `authMiddleware` (PR #7)
+  - **Đợt 1.1** tách `routes/missionsCore.js` (PR #6, −320 dòng)
+  - **Đợt 1.2** tách `routes/missionsHoSo.js` (PR này, −345 dòng)
+  - Đổi tên `REFACTOR` → `archive/refactor-ddd-2026-04` trên remote để gỡ đụng độ tên branch
+- **Cạm bẫy phát hiện:**
+  - **Đợt 1 phải chia 4 PR** — khối `missions` là 1.431 dòng, gấp 3,5 lần trần ~400
+  - `/api/missions/:id` **trả 400 và không gọi `next()`** → mọi route có segment chữ sau
+    `/api/missions/` phải đăng ký TRƯỚC nó, nếu không chết im lặng (400 chứ không phải 404)
+  - `transporter` là biến `let`; truyền theo giá trị chỉ an toàn vì gán ở dòng ~3412, trước điểm
+    mount. `npm test` **không bắt được** lỗi này vì test để `SMTP_*` rỗng
+  - `engines` của native module **không** đảm bảo có prebuild — `better-sqlite3` 12.x khai hỗ trợ
+    Node 20 nhưng không phát hành prebuild Windows cho bản đó
+  - **Kho gói trễ hơn nguồn chính thức**: `winget` và `actions/setup-node` đều chỉ có bản Node cũ
+    hơn nodejs.org, khiến sàn bảo mật `>=24.22.1` làm CI đỏ cho tới khi đọc version từ `.nvmrc`
+  - Tên branch không được vừa là lá vừa là tiền tố (xem §2.1 kế hoạch)
+- **Phiên sau làm:** Đợt 1.3 (bước 4a/4b/5/6, ~348 dòng) → 1.4 → gom `routes/missions*` về
+  `routes/missions/` bằng một PR chỉ di chuyển file
+- **Còn treo:** chưa deploy bản nào lên production. Cần hỏi IT: chạy Docker hay PM2, và
+  `node --version` trên server — nếu còn Node 18/20 thì `npm ci` sẽ dừng với `EBADENGINE`
 
 ### 2026-08-15 · `chore/dot-0-ha-tang-refactor` · Đợt 0
 
