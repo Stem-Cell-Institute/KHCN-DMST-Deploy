@@ -55,14 +55,11 @@ body {
 }
 
 html { scrollbar-color: var(--ke-dam) var(--giay); scrollbar-width: thin; }
-::-webkit-scrollbar { width: 11px; height: 11px; }
-::-webkit-scrollbar-track { background: var(--giay); }
-::-webkit-scrollbar-thumb {
-  background: var(--ke-dam);
-  border: 3px solid var(--giay);
-  border-radius: 99px;
-}
-::-webkit-scrollbar-thumb:hover { background: var(--chu-mo); }
+/* CỐ Ý chỉ nhuộm màu thanh cuộn qua `scrollbar-color`, KHÔNG thay thế widget bằng
+ * ::-webkit-scrollbar. Hai skill thiết kế mâu thuẫn ở đúng điểm này: craft floor của
+ * impeccable xếp thanh cuộn vào "bề mặt trình duyệt" cần tạo dáng, còn emil xếp
+ * "custom page scrollbars" vào Common Mistakes và chỉ cho phép ở phần tử nhỏ.
+ * Nhuộm màu là điểm chung: trang vẫn mang thiết kế mà không giành quyền của hệ điều hành. */
 
 input, textarea { caret-color: var(--son); }
 
@@ -129,7 +126,6 @@ a.header-home-link {
   text-decoration: none;
 }
 
-a.header-home-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 .header p.header-stims-subtitle {
   margin: 5px 0 0;
@@ -230,7 +226,6 @@ a.header-home-link:hover { text-decoration: underline; text-underline-offset: 3p
 
 .module-card::before { content: none; }
 
-.module-card:hover { background: var(--giay-trang); }
 
 /* Icon: nhỏ, nằm cùng hàng với tiêu đề — không còn là ô vuông bo góc phía trên */
 .module-icon { margin: 0; }
@@ -273,7 +268,6 @@ a.header-home-link:hover { text-decoration: underline; text-underline-offset: 3p
 }
 
 .module-description a { color: var(--son); text-underline-offset: 2px; }
-.module-description a:hover { color: var(--son-dam); }
 
 /* Số liệu trong module: hàng ngang, kẻ trên, thẳng cột */
 .module-stats {
@@ -306,8 +300,11 @@ a.header-home-link:hover { text-decoration: underline; text-underline-offset: 3p
 /* Hành động: khối mực đặc, góc gần vuông. Không viên thuốc, không gradient. */
 .btn-access {
   align-self: flex-start;
-  display: inline-block;
-  padding: 9px 17px;
+  display: inline-flex;
+  align-items: center;
+  /* 44px: san tap target toi thieu cho thiet bi cam ung */
+  min-height: 44px;
+  padding: 0 18px;
   background: var(--muc);
   color: #fff;
   font-size: 0.88rem;
@@ -320,10 +317,8 @@ a.header-home-link:hover { text-decoration: underline; text-underline-offset: 3p
   transition: background-color 140ms ease;
 }
 
-.btn-access:hover { background: var(--son); }
 
 .btn-access--crd { background: var(--son); }
-.btn-access--crd:hover { background: var(--son-dam); }
 
 /* CRD nổi bật: đánh dấu bằng một vạch son bên trái 1px, không phải nền màu */
 .module-card--crd-spotlight { border-left: 1px solid var(--son); padding-left: 30px; }
@@ -332,15 +327,13 @@ a.header-home-link:hover { text-decoration: underline; text-underline-offset: 3p
 
 /* Module chưa triển khai */
 .module-card--disabled { opacity: 0.5; }
-.module-card--disabled:hover { background: none; }
 .module-card--disabled .btn-access {
   background: none;
   color: var(--chu-mo);
   border: 1px solid var(--ke-dam);
   cursor: not-allowed;
-  padding: 8px 16px;
+  padding: 0 17px;
 }
-.module-card--disabled .btn-access:hover { background: none; color: var(--chu-mo); }
 .module-card--disabled .module-icon-bg { color: var(--chu-mo); }
 
 /* Kéo thả sắp xếp (chế độ quản trị) */
@@ -350,6 +343,29 @@ a.header-home-link:hover { text-decoration: underline; text-underline-offset: 3p
 .module-card--sort-chosen { background: var(--giay-trang); outline: 1px solid var(--son); }
 
 /* ── Thu hẹp màn hình ─────────────────────────────────────────────────────── */
+
+/* ── Hiệu ứng rê chuột ────────────────────────────────────────────────────────
+ * Gom hết vào @media (hover: hover). Trên thiết bị cảm ứng, `:hover` không gated
+ * sẽ DÍNH LẠI sau khi chạm: thẻ vừa bấm giữ nguyên nền sáng, nút giữ nguyên màu
+ * son cho tới khi chạm chỗ khác. Không hiệu ứng nào ở đây mang thông tin, nên bỏ
+ * hẳn trên cảm ứng là đúng.
+ */
+
+@media (hover: hover) {
+  a.header-home-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .module-card:hover { background: var(--giay-trang); }
+  .module-description a:hover { color: var(--son-dam); }
+  .btn-access:hover { background: var(--son); }
+  .btn-access--crd:hover { background: var(--son-dam); }
+  .module-card--disabled:hover { background: none; }
+  .module-card--disabled .btn-access:hover { background: none; color: var(--chu-mo); }
+  #auth-status .auth-btn-login:hover { background: var(--son-dam); }
+  #auth-status .auth-btn-admin:hover,
+  #auth-status .auth-btn-logout:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.55);
+  }
+}
 
 @media (min-width: 901px) {
   /* Hai cot ngang hang: day so lieu + nut xuong day de day chan thang hang */
@@ -397,14 +413,15 @@ a.header-home-link:hover { text-decoration: underline; text-underline-offset: 3p
 }
 
 #auth-status .auth-btn-login {
-  display: inline-block;
-  padding: 9px 16px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 17px;
   background: var(--son);
   color: #fff;
   border: 0;
 }
 
-#auth-status .auth-btn-login:hover { background: var(--son-dam); }
 
 #auth-status .auth-user-info {
   font-size: 0.86rem;
@@ -415,18 +432,15 @@ a.header-home-link:hover { text-decoration: underline; text-underline-offset: 3p
 
 #auth-status .auth-btn-admin,
 #auth-status .auth-btn-logout {
-  display: inline-block;
-  padding: 8px 14px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 15px;
   background: none;
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.34);
 }
 
-#auth-status .auth-btn-admin:hover,
-#auth-status .auth-btn-logout:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.55);
-}
 
 /* ── Dải thông báo / tin tức ──────────────────────────────────────────────────
  * Ghi đè public/css/ticker.css CHỈ trong hai vùng chứa của trang chủ, để trang
