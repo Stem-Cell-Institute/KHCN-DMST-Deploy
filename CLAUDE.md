@@ -44,7 +44,7 @@ node scripts/route-inventory.js    # liệt kê toàn bộ route đã đăng ký
 
 | Thư mục | Vai trò |
 |---|---|
-| `server.js` | **19.171 dòng** — đang được tách dần (mốc đầu 19.836; trần hiện tại ở `.github/server-js-max-lines`) |
+| `server.js` | **18.834 dòng** — đang được tách dần (mốc đầu 19.836; trần hiện tại ở `.github/server-js-max-lines`) |
 | `routes/` | tầng HTTP (đọc `req`, ghi `res`), theo mẫu factory `createXxxRouter({ db, ... })` |
 | `services/` | nghiệp vụ thuần, không biết `req`/`res` |
 | `middleware/` | auth, phân quyền, upload |
