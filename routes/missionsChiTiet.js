@@ -20,12 +20,12 @@
  * (/missions/cho-ct-hd-*) và missionsExport (/missions/export*). Đừng gộp nó với các
  * router đó, và đừng dời điểm mount lên trên.
  *
- * ⚠️ NỢ KỸ THUẬT #10 — `GET /missions/by-code/:code` KHÔNG có authMiddleware, trong khi
- * '/missions/:id' ngay dưới thì có. Nó trả về TOÀN BỘ bản ghi đề tài gồm budget,
- * approved_budget, disbursed_budget, contract_number, funding_source. Mã đề tài sinh
- * theo mẫu 'DT-<2 chữ>-<năm>-<4 số>' nên dò được. Di chuyển NGUYÊN TRẠNG ở đợt này vì
- * refactor không được đổi hành vi; có test ghim hiện trạng. Xem readme/
- * REFACTOR-PROGRESS.md mục #10 — ở đó ghi cả bằng chứng cho thấy bản vá là an toàn.
+ * `GET /missions/by-code/:code` TỪNG thiếu authMiddleware (nợ kỹ thuật #10, đã vá).
+ * Nó trả về TOÀN BỘ bản ghi đề tài gồm budget, approved_budget, disbursed_budget,
+ * contract_number, funding_source — mà mã đề tài sinh theo mẫu 'DT-<2 chữ>-<năm>-<4 số>'
+ * nên dò được. Đừng gỡ authMiddleware khỏi route này: nơi gọi duy nhất
+ * (theo-doi-de-tai-ngoai-vien-chi-tiet.html) không gửi header Bearer nhưng vẫn qua được
+ * nhờ cookie `auth_token`, giống hệt cách nó gọi '/missions/:id' ngay dòng trên.
  */
 
 const express = require('express');
@@ -42,7 +42,7 @@ module.exports = function createMissionsChiTietRouter({
 }) {
 const router = express.Router();
 
-router.get('/missions/by-code/:code', (req, res) => {
+router.get('/missions/by-code/:code', authMiddleware, (req, res) => {
   const code = (req.params.code || '').trim();
   if (!code) return res.status(400).json({ message: 'Mã đề tài không hợp lệ' });
   syncMissionsFromCapVien();
