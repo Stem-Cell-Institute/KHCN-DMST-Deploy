@@ -219,9 +219,27 @@ npm test
 - [ ] Không sửa logic nghiệp vụ trong cùng commit
 - [ ] Đã bấm thử tay ≥ 3 màn hình frontend liên quan
 
+### Kiểu merge
+
+| Loại PR | Kiểu merge | Vì sao |
+|---|---|---|
+| **Đợt refactor (1–7)** | **Create a merge commit** | Giữ nguyên từng commit lẻ |
+| Sửa lỗi vặt, tài liệu | *Squash and merge* | Lịch sử vụn, gộp lại là đúng |
+
+Cả hai kiểu đều quay lui được (squash thì `git revert <sha>`, merge commit thì `git revert -m 1 <merge>`).
+Lý do chọn merge commit cho đợt refactor nằm ở chỗ khác:
+
+- **`git bisect`.** Lỗi cắt–dán thường một tháng sau mới có người báo. Nếu cả đợt là một commit
+  khổng lồ, bisect chỉ nói được "lỗi nằm trong Đợt 5" — mà Đợt 5 có 84 endpoint. Giữ commit lẻ thì
+  nó chỉ thẳng ra commit nào.
+- **Thông điệp commit là tài liệu.** Lý do "vì sao làm thế này" nằm trong từng commit; squash gộp
+  hết thành một khối và lý do chỉ còn sống trên GitHub.
+- **Quay lui từng phần.** Bỏ được một thay đổi trong đợt mà giữ phần còn lại.
+
 ### Rollback
 
-Mỗi đợt là một merge commit độc lập → hỏng thì `git revert -m 1 <merge-commit>`. Đây là lý do bắt buộc "một đợt = một PR": revert được nguyên đợt mà không đụng đợt khác.
+Mỗi đợt là một merge commit độc lập → hỏng thì `git revert -m 1 <merge-commit>`. Đây là lý do bắt
+buộc "một đợt = một PR": revert được nguyên đợt mà không đụng đợt khác.
 
 ---
 
