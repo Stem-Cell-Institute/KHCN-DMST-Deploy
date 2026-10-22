@@ -31,7 +31,7 @@ Theo §4 của [readme/KE-HOACH-REFACTOR.md](../readme/KE-HOACH-REFACTOR.md):
 
 ## Kiểm thử
 
-- [ ] `npm test` xanh (chạy tay — CI chưa chạy được test, xem nợ kỹ thuật #7)
+- [ ] `npm test` xanh (chạy tay — CI chưa chạy được test, xem nợ kỹ thuật #2)
 - [ ] Đã thử trên trình duyệt
 
 Màn hình / endpoint đã thử:
