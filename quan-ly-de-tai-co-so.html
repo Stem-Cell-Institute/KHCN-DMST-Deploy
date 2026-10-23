@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
     <title>Quản lý nhiệm vụ KHCN - Viện Tế bào gốc</title>
     <style>
         * {
@@ -17,7 +19,7 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #16233d;
             color: white;
             padding: 20px 40px;
             display: flex;
@@ -192,7 +194,7 @@
             width: 3px;
             height: 0;
             border-radius: 0 3px 3px 0;
-            background: linear-gradient(180deg, #667eea, #764ba2);
+            background: #16233d;
             opacity: 0;
             transition: height 0.22s ease, opacity 0.22s ease, transform 0.22s ease;
         }
@@ -214,7 +216,7 @@
 
         .menu-item:focus-visible {
             outline: none;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.35);
+            box-shadow: 0 0 0 3px rgba(22,35,61, 0.35);
         }
 
         .menu-item .badge {
@@ -687,30 +689,30 @@
         }
 
         .btn-primary {
-            background: #667eea;
+            background: #16233d;
             color: white;
         }
 
         .btn-primary:hover {
             background: #5568d3;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 5px 15px rgba(22,35,61, 0.3);
         }
         .btn-add-task {
             padding: 14px 28px;
             font-size: 1.1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #16233d;
             color: white;
             border: none;
             border-radius: 10px;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 15px rgba(22,35,61, 0.4);
             transition: all 0.3s;
         }
         .btn-add-task:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            box-shadow: 0 6px 20px rgba(22,35,61, 0.5);
         }
 
         .btn-success { background: #6bcf7f; color: white; }
@@ -739,7 +741,7 @@
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #16233d;
         }
 
         .stat-label {
@@ -801,7 +803,7 @@
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #16233d;
         }
 
         .table-container {
@@ -902,7 +904,7 @@
 
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background: #16233d;
             transition: width 0.3s;
         }
 
@@ -992,8 +994,8 @@
         }
 
         .tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+            color: #16233d;
+            border-bottom-color: #16233d;
         }
 
         .tab-content {
@@ -1039,9 +1041,9 @@
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: #667eea;
+            background: #16233d;
             border: 3px solid white;
-            box-shadow: 0 0 0 2px #667eea;
+            box-shadow: 0 0 0 2px #16233d;
         }
 
         .timeline-date {
@@ -1262,7 +1264,7 @@
                         <p style="font-size: 0.85rem; color: #555; margin-bottom: 12px;">Admin upload mẫu để user tải về khi đăng ký. User không thấy nút upload này.</p>
                         <div class="filter-row" style="align-items: flex-end; flex-wrap: wrap; gap: 16px;">
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label style="font-size: 0.85rem;">Mẫu Thuyết minh chi tiết</label>
+                                <label style="font-size: 0.85rem;" for="template-thuyet-minh">Mẫu Thuyết minh chi tiết</label>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <input type="file" id="template-thuyet-minh" accept=".pdf,.doc,.docx" style="max-width: 220px;">
                                     <button type="button" class="btn btn-info" id="btn-upload-template-thuyet-minh" style="font-size: 0.9rem;">Upload mẫu</button>
@@ -1270,7 +1272,7 @@
                                 <span id="template-thuyet-minh-msg" style="font-size: 0.8rem; color: #0a0;"></span>
                             </div>
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label style="font-size: 0.85rem;">Mẫu Văn bản xin phép Viện trưởng</label>
+                                <label style="font-size: 0.85rem;" for="template-van-ban-xin-phep">Mẫu Văn bản xin phép Viện trưởng</label>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <input type="file" id="template-van-ban-xin-phep" accept=".pdf,.doc,.docx" style="max-width: 220px;">
                                     <button type="button" class="btn btn-info" id="btn-upload-template-van-ban" style="font-size: 0.9rem;">Upload mẫu</button>
@@ -1295,15 +1297,15 @@
                     </p>
                     <div class="filter-row" style="align-items: flex-end; flex-wrap: wrap; gap: 16px;">
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label>Từ năm</label>
+                            <label for="reportFromYear">Từ năm</label>
                             <select id="reportFromYear" style="min-width: 120px;"><option value="">Sớm nhất</option></select>
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label>Đến năm</label>
+                            <label for="reportToYear">Đến năm</label>
                             <select id="reportToYear" style="min-width: 120px;"><option value="">Mới nhất</option></select>
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label>Trạng thái</label>
+                            <label for="reportStatus">Trạng thái</label>
                             <select id="reportStatus" style="min-width: 190px;">
                                 <option value="">Tất cả trạng thái</option>
                                 <optgroup label="Nhóm giai đoạn">
@@ -1347,11 +1349,11 @@
                     <h3 style="margin-bottom: 15px;">Bộ lọc nhanh</h3>
                     <div class="filter-row">
                         <div class="form-group">
-                            <label>Tìm kiếm</label>
+                            <label for="searchInput">Tìm kiếm</label>
                             <input type="text" placeholder="Mọi từ khóa: mã, tên, chủ nhiệm, cấp, trạng thái, ngày, tiến độ, kinh phí, nguồn…" id="searchInput" title="Nhiều từ cách nhau bằng khoảng trắng — mỗi từ đều phải khớp (giống Quản lý công bố). Không phân biệt dấu.">
                         </div>
                         <div class="form-group">
-                            <label>Cấp đề tài</label>
+                            <label for="levelFilter">Cấp đề tài</label>
                             <select id="levelFilter">
                                 <option value="">Tất cả</option>
                                 <option value="national">Cấp Nhà nước</option>
@@ -1362,7 +1364,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Trạng thái</label>
+                            <label for="statusFilter">Trạng thái</label>
                             <select id="statusFilter">
                                 <option value="">Tất cả</option>
                                 <optgroup label="Giai đoạn 1 — Trước hợp đồng">
@@ -1399,7 +1401,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Năm</label>
+                            <label for="yearFilter">Năm</label>
                             <select id="yearFilter">
                                 <option value="">Tất cả</option>
                                 <option value="2025">2025</option>
@@ -1488,23 +1490,23 @@
                 <div id="basic-info" class="tab-content active">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>Mã đề tài</label>
+                            <label for="add-code">Mã đề tài</label>
                             <input type="text" id="add-code" placeholder="Để trống — cơ quan ngoài cấp sau">
                         </div>
                         <div class="form-group">
-                            <label>Cơ quan quản lý</label>
+                            <label for="add-managing-agency">Cơ quan quản lý</label>
                             <input type="text" id="add-managing-agency" placeholder="VD: Bộ KH&CN, ĐHQG-HCM">
                         </div>
                         <div class="form-group">
-                            <label>Hợp đồng số</label>
+                            <label for="add-contract-number">Hợp đồng số</label>
                             <input type="text" id="add-contract-number" placeholder="Số hợp đồng (nếu có)">
                         </div>
                         <div class="form-group form-group-full">
-                            <label>Tên đề tài *</label>
+                            <label for="add-title">Tên đề tài *</label>
                             <input type="text" id="add-title" placeholder="Nhập tên đầy đủ của đề tài KHCN" required>
                         </div>
                         <div class="form-group">
-                            <label>Loại đề tài</label>
+                            <label for="add-mission-type">Loại đề tài</label>
                             <select id="add-mission-type">
                                 <option value="research">Đề tài nghiên cứu</option>
                                 <option value="project">Dự án</option>
@@ -1512,7 +1514,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Lĩnh vực</label>
+                            <label for="add-field">Lĩnh vực</label>
                             <select id="add-field">
                                 <option value="stem-cell">Tế bào gốc</option>
                                 <option value="biotechnology">Công nghệ sinh học</option>
@@ -1521,15 +1523,15 @@
                             </select>
                         </div>
                         <div class="form-group form-group-full">
-                            <label>Mục tiêu nghiên cứu</label>
+                            <label for="add-objectives">Mục tiêu nghiên cứu</label>
                             <textarea id="add-objectives" placeholder="Mô tả mục tiêu và ý nghĩa của đề tài" rows="3"></textarea>
                         </div>
                         <div class="form-group">
-                            <label>Ngày bắt đầu</label>
+                            <label for="add-start-date">Ngày bắt đầu</label>
                             <input type="date" id="add-start-date">
                         </div>
                         <div class="form-group">
-                            <label>Ngày kết thúc</label>
+                            <label for="add-end-date">Ngày kết thúc</label>
                             <input type="date" id="add-end-date">
                         </div>
                     </div>
@@ -1559,7 +1561,7 @@
                             <textarea placeholder="Nhập danh sách thành viên (mỗi người một dòng)"></textarea>
                         </div>
                         <div class="form-group form-group-full">
-                            <label>Đơn vị phối hợp</label>
+                            <label for="add-cooperating-units">Đơn vị phối hợp</label>
                             <textarea id="add-cooperating-units" placeholder="Các đơn vị trong/ngoài viện tham gia phối hợp (nếu có đơn vị ngoài SCI)"></textarea>
                         </div>
                     </div>
@@ -1568,7 +1570,7 @@
                 <div id="budget-info" class="tab-content">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>Nguồn kinh phí</label>
+                            <label for="add-funding-source">Nguồn kinh phí</label>
                             <select id="add-funding-source">
                                 <option value="">Chọn nguồn...</option>
                                 <option value="nsnn">Ngân sách Nhà nước</option>
@@ -1579,15 +1581,15 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Tổng kinh phí / Kinh phí được duyệt (VNĐ)</label>
+                            <label for="add-budget">Tổng kinh phí / Kinh phí được duyệt (VNĐ)</label>
                             <input type="number" id="add-budget" placeholder="0">
                         </div>
                         <div class="form-group">
-                            <label>Kinh phí đã giải ngân (VNĐ)</label>
+                            <label for="add-disbursed-budget">Kinh phí đã giải ngân (VNĐ)</label>
                             <input type="number" id="add-disbursed-budget" placeholder="0">
                         </div>
                         <div class="form-group">
-                            <label>Năm giải ngân</label>
+                            <label for="add-disbursement-year">Năm giải ngân</label>
                             <input type="text" id="add-disbursement-year" placeholder="VD: 2025">
                         </div>
                     </div>
@@ -1612,15 +1614,15 @@
                     <p style="margin-bottom: 1rem; color: #666; font-size: 0.9rem;">Upload hồ sơ pháp lý (có thể bổ sung sau khi có QĐ phê duyệt):</p>
                     <div class="form-grid">
                         <div class="form-group form-group-full">
-                            <label>Quyết định phê duyệt</label>
+                            <label for="add-file-decision">Quyết định phê duyệt</label>
                             <input type="file" accept=".pdf,.doc,.docx" id="add-file-decision">
                         </div>
                         <div class="form-group form-group-full">
-                            <label>Hợp đồng nghiên cứu</label>
+                            <label for="add-file-contract">Hợp đồng nghiên cứu</label>
                             <input type="file" accept=".pdf,.doc,.docx" id="add-file-contract">
                         </div>
                         <div class="form-group form-group-full">
-                            <label>Biên bản nghiệm thu (trung gian / tổng kết)</label>
+                            <label for="add-file-acceptance">Biên bản nghiệm thu (trung gian / tổng kết)</label>
                             <input type="file" accept=".pdf,.doc,.docx" id="add-file-acceptance" multiple>
                         </div>
                     </div>
@@ -1647,11 +1649,11 @@
                 <form id="adminManualAddForm" onsubmit="return false;">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>Mã đề tài (code) *</label>
+                            <label for="admin-manual-code">Mã đề tài (code) *</label>
                             <input type="text" id="admin-manual-code" placeholder="VD: DT-BL-2026-001">
                         </div>
                         <div class="form-group">
-                            <label>Cấp đề tài *</label>
+                            <label for="admin-manual-level">Cấp đề tài *</label>
                             <select id="admin-manual-level">
                                 <option value="national">Cấp Nhà nước</option>
                                 <option value="ministry">Cấp Bộ</option>
@@ -1661,16 +1663,16 @@
                             </select>
                         </div>
                         <div class="form-group" style="grid-column: 1 / -1;">
-                            <label>Tên đề tài (title) *</label>
+                            <label for="admin-manual-title">Tên đề tài (title) *</label>
                             <input type="text" id="admin-manual-title" placeholder="Nhập tên đầy đủ của đề tài KHCN">
                         </div>
                         <div class="form-group" style="grid-column: 1 / -1;">
-                            <label>Chủ nhiệm (principal) *</label>
+                            <label for="admin-manual-principal">Chủ nhiệm (principal) *</label>
                             <input type="text" id="admin-manual-principal" placeholder="VD: TS. Nguyễn Văn A">
                         </div>
 
                         <div class="form-group" style="grid-column: 1 / -1;">
-                            <label>Trạng thái *</label>
+                            <label for="admin-manual-status">Trạng thái *</label>
                             <select id="admin-manual-status"></select>
                             <div id="admin-manual-status-custom-wrap" style="display:none;margin-top:10px;">
                                 <label for="admin-manual-status-custom" style="font-size:12px;color:#555;display:block;margin-bottom:4px;">Mô tả trạng thái tùy chỉnh (khi không khớp danh mục — tối đa 200 ký tự)</label>
@@ -1679,19 +1681,19 @@
                             <small style="display:block;margin-top:6px;color:#666;font-size:12px;">Ưu tiên chọn đúng mục trong danh mục để thống kê / lọc; chỉ gõ tay khi chọn «Khác — gõ tay».</small>
                         </div>
                         <div class="form-group">
-                            <label>Tiến độ (%)</label>
+                            <label for="admin-manual-progress">Tiến độ (%)</label>
                             <input type="number" id="admin-manual-progress" min="0" max="100" value="0">
                         </div>
                         <div class="form-group">
-                            <label>Ngày bắt đầu</label>
+                            <label for="admin-manual-start-date">Ngày bắt đầu</label>
                             <input type="date" id="admin-manual-start-date">
                         </div>
                         <div class="form-group">
-                            <label>Ngày kết thúc</label>
+                            <label for="admin-manual-end-date">Ngày kết thúc</label>
                             <input type="date" id="admin-manual-end-date">
                         </div>
                         <div class="form-group" style="grid-column: 1 / -1;">
-                            <label>Kinh phí (budget - VNĐ)</label>
+                            <label for="admin-manual-budget">Kinh phí (budget - VNĐ)</label>
                             <input type="number" id="admin-manual-budget" placeholder="VD: 500000000">
                         </div>
                     </div>
@@ -1764,11 +1766,11 @@
             <div id="editTaskCapVienNote" style="display:none;padding:10px;margin-bottom:15px;background:#fff3cd;border-radius:8px;font-size:0.9rem;">Lưu ý: Đề tài này được đồng bộ từ Đề tài cấp Viện. Thông tin có thể bị ghi đè khi Admin chạy «Đồng bộ từ đề tài cấp Viện». Để sửa nội dung gốc, vui lòng vào trang Theo dõi đề tài cấp Viện.</div>
             <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
                 <div class="form-group">
-                    <label>Mã đề tài *</label>
+                    <label for="edit-code">Mã đề tài *</label>
                     <input type="text" id="edit-code" required>
                 </div>
                 <div class="form-group">
-                    <label>Cấp đề tài *</label>
+                    <label for="edit-level">Cấp đề tài *</label>
                     <select id="edit-level">
                         <option value="national">Cấp Nhà nước</option>
                         <option value="ministry">Cấp Bộ</option>
@@ -1778,27 +1780,27 @@
                     </select>
                 </div>
                 <div class="form-group" style="grid-column: 1 / -1;">
-                    <label>Tên đề tài *</label>
+                    <label for="edit-title">Tên đề tài *</label>
                     <input type="text" id="edit-title" required>
                 </div>
                 <div class="form-group" style="grid-column: 1 / -1;">
-                    <label>Chủ nhiệm</label>
+                    <label for="edit-principal">Chủ nhiệm</label>
                     <input type="text" id="edit-principal" placeholder="VD: TS. Nguyễn Văn A">
                 </div>
                 <div class="form-group">
-                    <label>Học vị CN</label>
+                    <label for="edit-principal-hoc-vi">Học vị CN</label>
                     <input type="text" id="edit-principal-hoc-vi" placeholder="VD: TS., PGS.TS.">
                 </div>
                 <div class="form-group">
-                    <label>Đơn vị CN</label>
+                    <label for="edit-principal-don-vi">Đơn vị CN</label>
                     <input type="text" id="edit-principal-don-vi" placeholder="VD: Phòng Tế bào gốc">
                 </div>
                 <div class="form-group">
-                    <label>ORCID CN</label>
+                    <label for="edit-principal-orcid">ORCID CN</label>
                     <input type="text" id="edit-principal-orcid" placeholder="VD: 0000-0001-2345-6789">
                 </div>
                 <div class="form-group" style="grid-column: 1 / -1;">
-                    <label>Trạng thái *</label>
+                    <label for="edit-status">Trạng thái *</label>
                     <select id="edit-status">
                         <optgroup label="Giai đoạn 1 — Trước hợp đồng">
                             <option value="planning">Lập kế hoạch</option>
@@ -1842,19 +1844,19 @@
                     <small style="display:block;margin-top:6px;color:#666;font-size:12px;">Chọn đúng mục trong danh mục để thống kê và lọc; chỉ khi không có mục phù hợp, chọn «Khác — gõ trạng thái tùy chỉnh».</small>
                 </div>
                 <div class="form-group">
-                    <label>Tiến độ (%)</label>
+                    <label for="edit-progress">Tiến độ (%)</label>
                     <input type="number" id="edit-progress" min="0" max="100" value="0">
                 </div>
                 <div class="form-group">
-                    <label>Ngày bắt đầu</label>
+                    <label for="edit-start-date">Ngày bắt đầu</label>
                     <input type="date" id="edit-start-date">
                 </div>
                 <div class="form-group">
-                    <label>Ngày kết thúc</label>
+                    <label for="edit-end-date">Ngày kết thúc</label>
                     <input type="date" id="edit-end-date">
                 </div>
                 <div class="form-group">
-                    <label>Tổng kinh phí (VNĐ)</label>
+                    <label for="edit-budget">Tổng kinh phí (VNĐ)</label>
                     <input type="number" id="edit-budget" min="0" placeholder="0">
                 </div>
             </div>
@@ -2569,7 +2571,7 @@
                 container.innerHTML = '<p style="color:#666;">Đề tài này chưa có ID. Lưu đề tài trước khi quản lý sản phẩm.</p>';
                 return;
             }
-            container.innerHTML = '<div class="doc-section"><h4>Sản phẩm đề tài</h4><p style="color:#666;margin:10px 0;font-size:0.9rem;">Admin và Chủ nhiệm có thể upload file sản phẩm để lưu trữ trên hệ thống và tải lại khi cần.</p><div id="sanPhamFileList" class="ho-so-list"></div><div id="sanPhamFileForm" class="ho-so-form"><h5 style="margin-bottom:12px;">Upload file sản phẩm</h5><form id="formSanPhamFile" onsubmit="return submitSanPhamFile(event)"><div class="form-group"><label>File tài liệu sản phẩm (chọn nhiều file cùng lúc)</label><input type="file" id="sanPhamFileInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.csv,.zip,.rar,.7z" multiple required><p style="margin:6px 0 0 0;font-size:12px;color:#888;">Giữ nguyên tên file tiếng Việt khi tải về.</p></div><button type="submit" class="btn btn-primary">Upload sản phẩm</button></form></div></div>';
+            container.innerHTML = '<div class="doc-section"><h4>Sản phẩm đề tài</h4><p style="color:#666;margin:10px 0;font-size:0.9rem;">Admin và Chủ nhiệm có thể upload file sản phẩm để lưu trữ trên hệ thống và tải lại khi cần.</p><div id="sanPhamFileList" class="ho-so-list"></div><div id="sanPhamFileForm" class="ho-so-form"><h5 style="margin-bottom:12px;">Upload file sản phẩm</h5><form id="formSanPhamFile" onsubmit="return submitSanPhamFile(event)"><div class="form-group"><label for="sanPhamFileInput">File tài liệu sản phẩm (chọn nhiều file cùng lúc)</label><input type="file" id="sanPhamFileInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.csv,.zip,.rar,.7z" multiple required><p style="margin:6px 0 0 0;font-size:12px;color:#888;">Giữ nguyên tên file tiếng Việt khi tải về.</p></div><button type="submit" class="btn btn-primary">Upload sản phẩm</button></form></div></div>';
             loadSanPhamFiles(missionId);
         }
 
@@ -2595,7 +2597,7 @@
                     files.forEach(function(f) {
                         const createdAt = f.created_at ? formatDateTime(f.created_at) : '—';
                         const safeName = (f.original_name || 'file').replace(/"/g, '');
-                        const dlLink = '<button type="button" class="btn-dl" style="font-size:12px;padding:4px 10px;cursor:pointer;border:1px solid #667eea;background:#667eea;color:white;border-radius:6px;" onclick="downloadSanPhamFile(' + missionId + ',' + f.id + ',\'' + safeName.replace(/'/g, "\\'") + '\')">Tải</button>';
+                        const dlLink = '<button type="button" class="btn-dl" style="font-size:12px;padding:4px 10px;cursor:pointer;border:1px solid #16233d;background:#16233d;color:white;border-radius:6px;" onclick="downloadSanPhamFile(' + missionId + ',' + f.id + ',\'' + safeName.replace(/'/g, "\\'") + '\')">Tải</button>';
                         html += '<tr><td>' + escapeHtml(f.original_name || '—') + '</td><td>' + createdAt + '</td><td>' + dlLink + '</td></tr>';
                     });
                     html += '</tbody></table>';
@@ -2681,7 +2683,7 @@
                 container.innerHTML = '<p style="color:#666;">Đề tài này chưa có ID. Lưu đề tài trước khi quản lý hồ sơ.</p>';
                 return;
             }
-            container.innerHTML = '<div class="doc-section"><h4>Hồ sơ nộp cơ quan ngoài</h4><p style="color:#666;margin:10px 0;font-size:0.9rem;">Mẫu do Bộ/ĐHQG quy định. Hệ thống chỉ lưu trữ file đã nộp (upload file + ghi chú ngày nộp).</p><div id="hoSoNgoaiList" class="ho-so-list"></div><div id="hoSoNgoaiForm" class="ho-so-form"><h5 style="margin-bottom:12px;">Nộp hồ sơ mới</h5><form id="formHoSoNgoai" onsubmit="return submitHoSoNgoai(event)"><div class="form-group"><label>File (PDF, Word, Excel)</label><input type="file" id="hoSoNgoaiFile" accept=".pdf,.doc,.docx,.xls,.xlsx" required></div><div class="form-group"><label>Ngày nộp</label><input type="date" id="hoSoNgoaiDate"></div><div class="form-group"><label>Ghi chú</label><textarea id="hoSoNgoaiNote" rows="2" placeholder="VD: Nộp Bộ KHCN, số công văn..."></textarea></div><button type="submit" class="btn btn-primary">Nộp hồ sơ</button></form></div></div>';
+            container.innerHTML = '<div class="doc-section"><h4>Hồ sơ nộp cơ quan ngoài</h4><p style="color:#666;margin:10px 0;font-size:0.9rem;">Mẫu do Bộ/ĐHQG quy định. Hệ thống chỉ lưu trữ file đã nộp (upload file + ghi chú ngày nộp).</p><div id="hoSoNgoaiList" class="ho-so-list"></div><div id="hoSoNgoaiForm" class="ho-so-form"><h5 style="margin-bottom:12px;">Nộp hồ sơ mới</h5><form id="formHoSoNgoai" onsubmit="return submitHoSoNgoai(event)"><div class="form-group"><label for="hoSoNgoaiFile">File (PDF, Word, Excel)</label><input type="file" id="hoSoNgoaiFile" accept=".pdf,.doc,.docx,.xls,.xlsx" required></div><div class="form-group"><label for="hoSoNgoaiDate">Ngày nộp</label><input type="date" id="hoSoNgoaiDate"></div><div class="form-group"><label for="hoSoNgoaiNote">Ghi chú</label><textarea id="hoSoNgoaiNote" rows="2" placeholder="VD: Nộp Bộ KHCN, số công văn..."></textarea></div><button type="submit" class="btn btn-primary">Nộp hồ sơ</button></form></div></div>';
             loadHoSoNgoai(missionId);
         }
 
@@ -2708,7 +2710,7 @@
                         const subDate = f.submission_date ? formatDate(f.submission_date) : '—';
                         const note = (f.note || '').trim() ? escapeHtml(f.note) : '—';
                         const safeName = (f.original_name || 'file').replace(/"/g, '');
-                        const dlLink = '<button type="button" class="btn-dl" style="font-size:12px;padding:4px 10px;cursor:pointer;border:1px solid #667eea;background:#667eea;color:white;border-radius:6px;" onclick="downloadHoSoNgoai(' + missionId + ',' + f.id + ',\'' + safeName.replace(/'/g, "\\'") + '\')">Tải</button>';
+                        const dlLink = '<button type="button" class="btn-dl" style="font-size:12px;padding:4px 10px;cursor:pointer;border:1px solid #16233d;background:#16233d;color:white;border-radius:6px;" onclick="downloadHoSoNgoai(' + missionId + ',' + f.id + ',\'' + safeName.replace(/'/g, "\\'") + '\')">Tải</button>';
                         html += '<tr><td>' + escapeHtml(f.original_name || '—') + '</td><td>' + subDate + '</td><td>' + note + '</td><td>' + dlLink + '</td></tr>';
                     });
                     html += '</tbody></table>';

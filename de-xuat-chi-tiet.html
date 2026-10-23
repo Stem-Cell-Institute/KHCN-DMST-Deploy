@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
 <title>Chi tiết đề xuất — Hợp tác Quốc tế</title>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -132,15 +134,15 @@ body { font-family: 'Be Vietnam Pro', sans-serif; background: var(--bg); color: 
     <div class="modal-header"><h3>Phê duyệt đề xuất</h3><button onclick="closeModal('modal-phe-duyet')">✕</button></div>
     <div class="modal-body">
       <div class="form-group">
-        <label>Ý kiến Viện trưởng</label>
+        <label for="phe-duyet-y-kien">Ý kiến Viện trưởng</label>
         <textarea id="phe-duyet-y-kien" placeholder="Gợi ý điền sẵn theo loại hình"></textarea>
       </div>
       <div class="form-group">
-        <label>Ngày ký *</label>
+        <label for="phe-duyet-ngay-ky">Ngày ký *</label>
         <input type="date" id="phe-duyet-ngay-ky" required>
       </div>
       <div class="form-group">
-        <label>Số văn bản (nếu có)</label>
+        <label for="phe-duyet-so-vb">Số văn bản (nếu có)</label>
         <input type="text" id="phe-duyet-so-vb" placeholder="VD: 45/TB-SCI">
       </div>
     </div>
@@ -156,11 +158,11 @@ body { font-family: 'Be Vietnam Pro', sans-serif; background: var(--bg); color: 
     <div class="modal-header"><h3>Yêu cầu bổ sung</h3><button onclick="closeModal('modal-yeu-cau')">✕</button></div>
     <div class="modal-body">
       <div class="form-group">
-        <label>Nội dung yêu cầu * (tối thiểu 20 ký tự)</label>
+        <label for="yeu-cau-noi-dung">Nội dung yêu cầu * (tối thiểu 20 ký tự)</label>
         <textarea id="yeu-cau-noi-dung" placeholder="Đề nghị bổ sung:&#10;1. ...&#10;2. ..." minlength="20" required></textarea>
       </div>
       <div class="form-group">
-        <label>Hạn bổ sung *</label>
+        <label for="yeu-cau-han">Hạn bổ sung *</label>
         <input type="date" id="yeu-cau-han" required>
       </div>
     </div>
@@ -177,7 +179,7 @@ body { font-family: 'Be Vietnam Pro', sans-serif; background: var(--bg); color: 
     <div class="modal-body">
       <p style="color:var(--red);font-size:13px;margin-bottom:16px;">⚠ Lưu ý: Hành động này không thể hoàn tác.</p>
       <div class="form-group">
-        <label>Lý do * (tối thiểu 30 ký tự)</label>
+        <label for="khong-duyet-ly-do">Lý do * (tối thiểu 30 ký tự)</label>
         <textarea id="khong-duyet-ly-do" minlength="30" required></textarea>
       </div>
     </div>

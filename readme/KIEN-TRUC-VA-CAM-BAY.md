@@ -45,7 +45,7 @@ node scripts/route-inventory.js    # liệt kê toàn bộ route đã đăng ký
 | Thư mục | Vai trò |
 |---|---|
 | `server.js` | **18.551 dòng** — đang được tách dần (mốc đầu 19.836; trần hiện tại ở `.github/server-js-max-lines`) |
-| `routes/` | tầng HTTP (đọc `req`, ghi `res`), theo mẫu factory `createXxxRouter({ db, ... })` |
+| `routes/` | tầng HTTP (đọc `req`, ghi `res`), theo mẫu factory `createXxxRouter({ db, ... })`. Domain vượt 3 file thì tách thư mục con — xem `routes/missions/` (7 file) |
 | `services/` | nghiệp vụ thuần, không biết `req`/`res` |
 | `middleware/` | auth, phân quyền, upload |
 | `lib/` | hạ tầng: `database.js`, `appPaths.js`, `config.js`, `filenames.js`, `upload.js` |
@@ -75,7 +75,16 @@ Windows và làm hỏng `git fetch` cho mọi branch cùng tiền tố — xem �
 ## Cạm bẫy đã biết
 
 **Thứ tự đăng ký route có ý nghĩa.** Route tĩnh phải khai báo *trước* route `:id`, nếu không sẽ bị
-nuốt — xem ghi chú sẵn có tại `server.js:19604`. Khi di chuyển handler, giữ nguyên vị trí `app.use`.
+nuốt. Khi di chuyển handler, giữ nguyên vị trí `app.use`.
+
+Ví dụ sống trong dự án: `routes/missions/chiTiet.js` chứa `/missions/:id`, mà handler đó trả 400
+«ID không hợp lệ» và **không gọi `next()`**. Nên 7 router của `routes/missions/` phải mount ở **7 vị
+trí riêng** trong `server.js`, với `chiTiet.js` sau cùng. Gộp chúng thành một `index.js` sẽ làm
+`/api/missions/export` và `/stats` bị `:id` nuốt — trả 400 thay vì chạy đúng handler, rất khó truy.
+
+**Khi dời file router sâu thêm một cấp, nhớ sửa `require` tương đối.** Lần gom `routes/missions/`
+đã vấp: `require('../services/...')` phải thành `require('../../services/...')`. `node --check` và
+`diff` route-inventory **không bắt được** lỗi này — chỉ `npm test` hoặc khởi động server mới thấy.
 
 **`express.static(__dirname)` phục vụ toàn bộ thư mục gốc** (`server.js:19286`). Vì vậy mới có một
 middleware chặn tải mã nguồn/cấu hình bằng **danh sách chặn** ở `server.js:19034`. Hệ quả: file mới

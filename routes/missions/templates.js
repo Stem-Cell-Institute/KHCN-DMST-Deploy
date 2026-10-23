@@ -10,7 +10,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { setContentDisposition } = require('../lib/filenames');
+const { setContentDisposition } = require('../../lib/filenames');
 
 const ALLOWED_EXT = ['pdf', 'doc', 'docx'];
 

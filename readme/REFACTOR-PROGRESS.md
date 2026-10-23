@@ -12,27 +12,33 @@ Kế hoạch & quy ước: [KE-HOACH-REFACTOR.md](KE-HOACH-REFACTOR.md)
 | Đợt | Nhóm | Endpoint | Trạng thái | Branch |
 |---|---|---|---|---|
 | 0 | Hạ tầng quản lý + dọn tên | 0 | ✅ Đã merge (`96ec09b`, PR #3) | ~~`chore/dot-0-ha-tang-refactor`~~ đã xóa |
-| 1 | `missions` — **chia 4 PR** (khối 1.431 dòng, gấp 3,5 lần trần) | 40 | 🔵 **4/4 — PR cuối chờ review** | xem bảng dưới |
+| 1 | `missions` — **chia 4 PR + 1 PR gom thư mục** (khối 1.431 dòng, gấp 3,5 lần trần) | 40 | ✅ **Xong — `server.js` hết `/api/missions`** | xem bảng dưới |
 | └ 1.1 | `stats`, danh sách, tạo mới | 3 | ✅ Đã merge (`931e1b0`, PR #6) · −320 dòng | ~~`refactor/routes-missions-1`~~ |
 | └ 1.2 | `files`, `cn-info`, bước 2–3, `reset-ve-buoc3` | 13 | ✅ Đã merge (`1fe9748`, PR #8) · −345 dòng | ~~`refactor/routes-missions-2`~~ |
 | └ 1.3 | bước 4a / 4b / 5 / 6 | 13 | ✅ Đã merge (`500975a`, PR #9) · −337 dòng | ~~`refactor/routes-missions-3`~~ |
-| └ 1.4 | `cho-ct-hd` + `by-code`, `:id`, hồ sơ ngoài, sản phẩm — **2 router** | 11 | 🔵 Chờ review (PR 1.4) · −283 dòng | `refactor/routes-missions-4` |
+| └ 1.4 | `cho-ct-hd` + `by-code`, `:id`, hồ sơ ngoài, sản phẩm — **2 router** | 11 | ✅ Đã merge (`6ae4cc2`, PR #10) · −283 dòng | ~~`refactor/routes-missions-4`~~ |
+| └ 1.5 | Gom 7 file `routes/missions*` → `routes/missions/` — **chỉ di chuyển file** | 0 | 🔵 Chờ review (PR 1.5) | `refactor/gom-routes-missions` |
 
-**Sau Đợt 1: `server.js` không còn endpoint `/api/missions` nào.** 40 endpoint đã nằm trong 7 file
-`routes/missions*`. Việc còn lại của Đợt 1 là gom chúng về `routes/missions/` bằng một PR **chỉ di
-chuyển file** (theo §2.3 kế hoạch — domain đã vượt 3 file).
+**Đợt 1 đã khép.** `server.js` không còn endpoint `/api/missions` nào; 40 endpoint nằm trong 7 file
+dưới `routes/missions/` (§2.3 kế hoạch — domain vượt 3 file thì tách thư mục con).
 
 **Thứ tự mount bắt buộc trong `server.js`** (đừng đổi, đừng gộp):
 
 ```
-missionsCore        /missions/stats
-missionsHoSo
-missionsPheDuyet
-missionsChoXetDuyet /missions/cho-ct-hd-*
-missionsExport      /missions/export*, /missions/report-excel
-missionsChiTiet     /missions/:id          ← PHẢI SAU CÙNG trong nhóm này
-missionsTemplates   /missions-templates    (segment khác, không va chạm)
+routes/missions/core.js          /missions/stats
+routes/missions/hoSo.js
+routes/missions/pheDuyet.js
+routes/missions/choXetDuyet.js   /missions/cho-ct-hd-*
+routes/missions/export.js        /missions/export*, /missions/report-excel
+routes/missions/chiTiet.js       /missions/:id        ← PHẢI SAU CÙNG trong nhóm này
+routes/missions/templates.js     /missions-templates  (segment khác, không va chạm)
 ```
+
+> **Không gom 7 router thành một `index.js`.** §2.3 của kế hoạch có gợi ý mỗi domain xuất một
+> router duy nhất, nhưng ở đây **không áp dụng được**: `chiTiet.js` chứa `/missions/:id`, mà handler
+> đó trả 400 và không gọi `next()`. Gộp lại rồi mount một lần sẽ đặt `:id` cùng vị trí với
+> `export.js` và `core.js` — `/api/missions/export` và `/stats` sẽ bị nuốt. Bảy mount riêng ở bảy vị
+> trí là **điều kiện đúng đắn**, không phải nợ kỹ thuật.
 | 2 | `crd` | 36 | ⬜ Chưa bắt đầu | — |
 | 3 | `submissions` + `publications` | 36 | ⬜ Chưa bắt đầu | — |
 | 4 | `cap-vien` | 47 | ⬜ Chưa bắt đầu | — |
@@ -119,6 +125,9 @@ Việc phát hiện dọc đường nhưng **cố ý không làm** để giữ p
 | ~~9~~ | ✅ **ĐÃ VÁ** — hai endpoint `POST /api/missions/:id/buoc4a/cn-upload-thuyet-minh-chinh-sua` và `POST /api/missions/:id/buoc5/upload-thuyet-minh` nay chỉ cho **chủ nhiệm đề tài, Thư ký Hội đồng hoặc Admin** (chính sách do người dùng chốt). Người khác nhận 403, kể cả khi đề tài không tồn tại (không lộ id nào có thật).<br><br>**Cách xác định chủ nhiệm** (`services/missionOwnership.js`): `missions.principal` là chuỗi tên, nên coi là chủ nhiệm nếu (1) đề tài cấp Viện và user là người nộp hồ sơ (`cap_vien_submissions.submittedById`, khóa thật), hoặc (2) họ tên khớp `principal` sau khi bỏ dấu/hoa thường. Cách (2) đúng với cách hệ thống sinh dữ liệu: `POST /api/missions` tự đặt `principal = họ tên người tạo`.<br><br>**Hệ quả cần biết:** chủ nhiệm không có tài khoản, hoặc tên gõ lệch (vd "Phạm Văn" so với "Phạm Văn Phúc") thì **không tự upload được** — Thư ký/Admin upload hộ. Đo trên bản sao dữ liệu local (42 đề tài, 5 tài khoản): **8 đề tài khớp được, 34 thì không**, nhưng **không đề tài nào đang ở Bước 5 hoặc Nhánh A** nên luồng đang chạy không gãy. Trên production số tài khoản nhiều hơn nên nên đo lại. Chưa có đề tài nào khớp 2 tài khoản trùng tên.<br><br>**Đính chính:** ghi chú cũ nói "kể cả `crd_user`" là **sai** — `authMiddleware` đã chặn `crd_user` (403) ở mọi đường dẫn ngoài `/api/crd/`. Phạm vi thật của lỗ hổng là mọi tài khoản đăng nhập khác (nghiên cứu viên, Viện trưởng…). Test mới ghim cả hai điều đó.<br><br>**Nếu muốn chặt hơn về sau:** thêm cột `missions.principal_user_id` (khóa ngoại) và điền khi tạo/duyệt đề tài; khi đó bỏ phép so tên. | Đợt 1.3 | ✅ Đã xử lý (còn nợ nhỏ: khóa ngoại chủ nhiệm) |
 | ~~10~~ | ✅ **ĐÃ VÁ** — `GET /api/missions/by-code/:code` nay có `authMiddleware`. Trước đó nó trả về toàn bộ bản ghi đề tài (`budget`, `approved_budget`, `disbursed_budget`, `contract_number`, `funding_source`) cho bất kỳ ai biết mã, mà mã sinh theo mẫu `DT-<2 chữ>-<năm>-<4 số>` nên dò được. Kiểm chứng trên server thật: không token **404 → 401**. Có 2 test canh không cho lỗ hổng quay lại. | Đợt 1.4 | ✅ Đã xử lý |
 | ~~11~~ | ✅ **ĐÃ VÁ** — 3 trang (`admin-dashboard-demo.html`, `admin-quan-ly-tai-khoan.html`, `admin-system-logs-monitor.html`) không còn nạp `cdn.tailwindcss.com`. CSS nay build sẵn ra `public/css/tailwind.css` bằng `npm run build:css`. **Từ đây frontend không còn script ngoài nào** — CSP `script-src self` không chặn gì nữa. | Sửa Chart.js CSP | ✅ Đã xử lý |
+| 12 | **Font trang chủ nạp từ Google Fonts.** `index.html` tải Be Vietnam Pro qua `fonts.googleapis.com`. Máy chủ đặt tại Việt Nam nên đây là phụ thuộc mạng ngoài có thể chậm hoặc bị chặn, và trang chủ là trang công khai ai cũng vào. Nên self-host: tải 4 file `.woff2` (400/500/600/700) vào `public/fonts/`, khai `@font-face` với `font-display: swap`, bỏ 3 thẻ `<link>` Google. | Giao diện | Thấp — nhưng ảnh hưởng tốc độ trang công khai |
+| 13 | **`js/auth-status.js` dùng emoji thay icon** (🔐 👤 ⚙️). Craft floor của skill thiết kế cấm emoji đứng thay hệ icon — icon phải được vẽ, cùng nét, cùng cân nặng. File này **dùng chung trên nhiều trang** nên không sửa trong lần làm lại trang chủ; sửa sẽ đổi giao diện mọi trang cùng lúc, cần làm thành PR riêng có rà soát. | Giao diện | Thấp |
+| 14 | **`public/css/ticker.css` vi phạm hai mục của checklist emil.** (a) 3 quy tắc `:hover` không bọc trong `@media (hover: hover)` — trên cảm ứng hiệu ứng dính lại sau khi chạm. (b) Link tin trong dải chạy chỉ cao **32px**, dưới sàn tap target 44px. File này **dùng chung với trang quản trị ticker** nên không sửa trong lần làm lại trang chủ — sửa sẽ đổi cả hai nơi, cần PR riêng có rà soát. | Giao diện | Thấp |
 
 ---
 
@@ -255,7 +264,7 @@ branch `REFACTOR`, `main` không có.
 
 ### 2026-10-22 · `refactor/routes-missions-3` · Đợt 1.3
 
-- **Đã xong:** tách `routes/missionsPheDuyet.js` — 13 endpoint duyệt Bước 4a/4b/5/6 (−337 dòng).
+- **Đã xong:** tách `routes/missions/pheDuyet.js` — 13 endpoint duyệt Bước 4a/4b/5/6 (−337 dòng).
   `server.js` còn **18.834 dòng**, tổng đã cắt 1.002 dòng.
 - **Cạm bẫy phát hiện:**
   - `chuTichOrThuyKyOrAdmin` được định nghĩa **ngay giữa khối code cũ** (chỉ dùng cho đúng một
@@ -273,8 +282,8 @@ branch `REFACTOR`, `main` không có.
 - **Đã xong:**
   - Nâng Node 20 → **24.22.1** và `better-sqlite3` 11 → 12.11.1 (PR #5, đóng nợ #1 và #5)
   - **Vá lỗ hổng** `cn-info` thiếu `authMiddleware` (PR #7)
-  - **Đợt 1.1** tách `routes/missionsCore.js` (PR #6, −320 dòng)
-  - **Đợt 1.2** tách `routes/missionsHoSo.js` (PR này, −345 dòng)
+  - **Đợt 1.1** tách `routes/missions/core.js` (PR #6, −320 dòng)
+  - **Đợt 1.2** tách `routes/missions/hoSo.js` (PR này, −345 dòng)
   - Đổi tên `REFACTOR` → `archive/refactor-ddd-2026-04` trên remote để gỡ đụng độ tên branch
 - **Cạm bẫy phát hiện:**
   - **Đợt 1 phải chia 4 PR** — khối `missions` là 1.431 dòng, gấp 3,5 lần trần ~400
