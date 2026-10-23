@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
   <title>Thêm / Import tài liệu — STIMS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,37 +36,37 @@
       <h2>Thông tin tài liệu</h2>
       <form id="form-manual" class="dms-add-grid">
         <div class="dms-add-field" style="grid-column:1/-1">
-          <label>Tiêu đề / Trích yếu *</label>
+          <label for="f-title">Tiêu đề / Trích yếu *</label>
           <input type="text" id="f-title" required placeholder="VD: Quy định chế độ làm việc…">
         </div>
         <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
           <div class="dms-add-field">
-            <label>Số quyết định / Số hiệu</label>
+            <label for="f-ref">Số quyết định / Số hiệu</label>
             <input type="text" id="f-ref" placeholder="VD: 01, 66/QĐ-SCI…">
           </div>
           <div class="dms-add-field">
-            <label>Đơn vị ban hành</label>
+            <label for="f-dv">Đơn vị ban hành</label>
             <input type="text" id="f-dv" placeholder="VD: CBT, KHTH…">
           </div>
         </div>
         <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
           <div class="dms-add-field">
-            <label>Danh mục</label>
+            <label for="f-cat">Danh mục</label>
             <select id="f-cat"></select>
           </div>
           <div class="dms-add-field">
-            <label>Loại tài liệu</label>
+            <label for="f-type">Loại tài liệu</label>
             <select id="f-type"></select>
           </div>
         </div>
         <div class="dms-add-field" style="grid-column:1/-1">
-          <label>Mẫu biểu (template — định danh kiểm soát ISO)</label>
+          <label for="f-template">Mẫu biểu (template — định danh kiểm soát ISO)</label>
           <select id="f-template"></select>
           <p class="dms-add-note" style="margin-top:6px">Khai báo danh mục mẫu tại <strong>Công cụ quản trị</strong> → tab «Mẫu biểu (ISO)». Gắn mẫu giúp thống nhất metadata và lưu trữ hồ sơ giấy.</p>
         </div>
         <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
           <div class="dms-add-field">
-            <label>Trạng thái</label>
+            <label for="f-status">Trạng thái</label>
             <select id="f-status">
               <option value="active">Có hiệu lực</option>
               <option value="draft">Dự thảo</option>
@@ -74,39 +75,39 @@
             </select>
           </div>
           <div class="dms-add-field">
-            <label>Link bản scan (PDF)</label>
+            <label for="f-scan">Link bản scan (PDF)</label>
             <input type="text" id="f-scan" placeholder="VD: 01-QĐ.pdf hoặc URL">
           </div>
           <div class="dms-add-field">
-            <label>Link file Word</label>
+            <label for="f-word">Link file Word</label>
             <input type="text" id="f-word" placeholder="Đường dẫn hoặc URL tới .doc/.docx">
           </div>
         </div>
         <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
           <div class="dms-add-field">
-            <label>Ngày ban hành</label>
+            <label for="f-issue">Ngày ban hành</label>
             <input type="date" id="f-issue">
             <p class="dms-add-note dms-date-hint" id="f-issue-hint" style="margin-top:4px"></p>
           </div>
           <div class="dms-add-field">
-            <label>Ngày / Hiệu lực đến</label>
+            <label for="f-valid">Ngày / Hiệu lực đến</label>
             <input type="date" id="f-valid">
             <p class="dms-add-note dms-date-hint" id="f-valid-hint" style="margin-top:4px"></p>
           </div>
         </div>
         <div class="dms-add-field" style="grid-column:1/-1">
-          <label>Ghi chú</label>
+          <label for="f-notes">Ghi chú</label>
           <textarea id="f-notes" rows="2" placeholder="Ghi chú nội bộ…"></textarea>
         </div>
         <h3 style="grid-column:1/-1;margin:12px 0 4px;font-size:1rem;font-weight:700">Lưu trữ vật lý &amp; tuân thủ</h3>
         <p class="dms-add-note" style="grid-column:1/-1;margin-top:0">Vị trí kho giấy, bản gốc/sao, thời hạn bảo quản — phục vụ vận hành kho và quy chế nội bộ.</p>
         <div class="dms-add-field" style="grid-column:1/-1">
-          <label>Vị trí lưu trữ (mã kho / kệ / tủ / hộp)</label>
+          <label for="f-phys-loc">Vị trí lưu trữ (mã kho / kệ / tủ / hộp)</label>
           <input type="text" id="f-phys-loc" placeholder="VD: K1-T2-H05 / Phòng 302">
         </div>
         <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
           <div class="dms-add-field">
-            <label>Bản giấy</label>
+            <label for="f-phys-copy">Bản giấy</label>
             <select id="f-phys-copy">
               <option value="">— Chọn —</option>
               <option value="original">Bản gốc</option>
@@ -116,32 +117,32 @@
             </select>
           </div>
           <div class="dms-add-field">
-            <label>Liên kết hồ sơ / CV gốc (cùng vụ việc)</label>
+            <label for="f-parent-case">Liên kết hồ sơ / CV gốc (cùng vụ việc)</label>
             <input type="text" id="f-parent-case" placeholder="Số công văn hoặc mã hồ sơ gốc">
           </div>
         </div>
         <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
           <div class="dms-add-field">
-            <label>Số tờ (tùy quy trình)</label>
+            <label for="f-phys-sheets">Số tờ (tùy quy trình)</label>
             <input type="number" id="f-phys-sheets" min="0" placeholder="Để trống nếu không dùng">
           </div>
           <div class="dms-add-field">
-            <label>Số trang</label>
+            <label for="f-phys-pages">Số trang</label>
             <input type="number" id="f-phys-pages" min="0" placeholder="Để trống nếu không dùng">
           </div>
         </div>
         <div class="dms-add-grid dms-add-grid--2" style="grid-column:1/-1">
           <div class="dms-add-field">
-            <label>Thời hạn bảo quản đến</label>
+            <label for="f-retention">Thời hạn bảo quản đến</label>
             <input type="date" id="f-retention">
           </div>
           <div class="dms-add-field">
-            <label>Ngày đủ điều kiện tiêu hủy</label>
+            <label for="f-destruction">Ngày đủ điều kiện tiêu hủy</label>
             <input type="date" id="f-destruction">
           </div>
         </div>
         <div class="dms-add-field" style="grid-column:1/-1">
-          <label>File đính kèm (PDF, Word…)</label>
+          <label for="f-file">File đính kèm (PDF, Word…)</label>
           <input type="file" id="f-file">
           <div id="f-extra-files" style="display:grid;gap:8px;margin-top:8px"></div>
           <button type="button" class="dms-btn dms-btn-ghost" id="f-add-file" style="margin-top:8px">+ Thêm file</button>
@@ -173,16 +174,16 @@
       <div class="dms-add-grid">
         <div class="dms-add-grid dms-add-grid--2">
           <div class="dms-add-field">
-            <label>Gán danh mục (tùy chọn)</label>
+            <label for="imp-cat">Gán danh mục (tùy chọn)</label>
             <select id="imp-cat"></select>
           </div>
           <div class="dms-add-field">
-            <label>Loại tài liệu (khuyến nghị: Quyết định)</label>
+            <label for="imp-type">Loại tài liệu (khuyến nghị: Quyết định)</label>
             <select id="imp-type"></select>
           </div>
         </div>
         <div class="dms-add-field">
-          <label>Trạng thái mặc định cho dòng nhập mới</label>
+          <label for="imp-status">Trạng thái mặc định cho dòng nhập mới</label>
           <select id="imp-status">
             <option value="active">Có hiệu lực</option>
             <option value="draft">Dự thảo</option>
@@ -190,7 +191,7 @@
           </select>
         </div>
         <div class="dms-add-field">
-          <label>File Excel (.xlsx / .xls)</label>
+          <label for="imp-file">File Excel (.xlsx / .xls)</label>
           <input type="file" id="imp-file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
         </div>
         <div class="dms-add-actions">

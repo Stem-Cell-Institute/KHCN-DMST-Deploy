@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
 <title>Quản lý Công bố Khoa học — SCI-KHCN</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,300;1,9..144,500&display=swap" rel="stylesheet">
@@ -2449,7 +2450,7 @@
     <!-- Filter bar -->
     <div class="filter-bar">
       <div class="filter-group">
-        <label>NĂM CÔNG BỐ</label>
+        <label for="filterYear">NĂM CÔNG BỐ</label>
         <select id="filterYear" onchange="filterTable()">
           <option value="">Tất cả năm</option>
           <option value="2026">2026</option>
@@ -2475,7 +2476,7 @@
         </select>
       </div>
       <div class="filter-group">
-        <label>LOẠI HÌNH</label>
+        <label for="filterTypeSelect">LOẠI HÌNH</label>
         <select id="filterTypeSelect" onchange="filterTable()">
           <option value="">Tất cả</option>
           <option value="journal">Bài báo tạp chí</option>
@@ -2485,7 +2486,7 @@
         </select>
       </div>
       <div class="filter-group">
-        <label>PHÂN HẠNG</label>
+        <label for="filterQSelect">PHÂN HẠNG</label>
         <select id="filterQSelect" onchange="filterTable()">
           <option value="">Tất cả</option>
           <option value="Q1">Q1</option>
@@ -2495,7 +2496,7 @@
         </select>
       </div>
       <div class="filter-group">
-        <label>TRẠNG THÁI</label>
+        <label for="filterStatusSelect">TRẠNG THÁI</label>
         <select id="filterStatusSelect" onchange="filterTable()">
           <option value="">Tất cả</option>
           <option value="published">Đã đăng</option>
@@ -2760,7 +2761,7 @@
       <div class="modal-section-title">Nhập DOI tự động</div>
       <div class="form-row full">
         <div class="form-group">
-          <label>DOI <span class="req">*</span></label>
+          <label for="addDoi">DOI <span class="req">*</span></label>
           <div class="doi-fetch-row">
             <input type="text" id="addDoi" placeholder="vd: 10.1016/j.jhep.2024.01.001">
             <button class="btn btn-primary" onclick="fetchDOI()">🔍 Tự động điền</button>
@@ -2772,28 +2773,28 @@
       <div class="modal-section-title" style="margin-top:20px">Thông tin cơ bản</div>
       <div class="form-row full">
         <div class="form-group">
-          <label>Tiêu đề <span class="req">*</span></label>
+          <label for="addTitle">Tiêu đề <span class="req">*</span></label>
           <textarea id="addTitle" placeholder="Tiêu đề đầy đủ của công bố…"></textarea>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Danh sách tác giả <span class="req">*</span></label>
+          <label for="addAuthors">Danh sách tác giả <span class="req">*</span></label>
           <input type="text" id="addAuthors" placeholder="Họ A, Họ B, Họ C…">
           <div class="form-hint">Tác giả thuộc SCI gạch dưới trong hệ thống</div>
         </div>
         <div class="form-group">
-          <label>Tác giả liên hệ (SCI)</label>
+          <label for="addSciAuthor">Tác giả liên hệ (SCI)</label>
           <input type="text" id="addSciAuthor" placeholder="Họ tên tác giả tại SCI">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Tên tạp chí / Hội nghị <span class="req">*</span></label>
+          <label for="addJournal">Tên tạp chí / Hội nghị <span class="req">*</span></label>
           <input type="text" id="addJournal" placeholder="Journal of…">
         </div>
         <div class="form-group">
-          <label>Loại hình <span class="req">*</span></label>
+          <label for="addType">Loại hình <span class="req">*</span></label>
           <select id="addType">
             <option value="journal">Bài báo tạp chí</option>
             <option value="conference">Kỷ yếu hội nghị quốc tế</option>
@@ -2805,21 +2806,21 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>ISSN / ISBN</label>
+          <label for="addISSN">ISSN / ISBN</label>
           <input type="text" id="addISSN" placeholder="XXXX-XXXX">
         </div>
         <div class="form-group">
-          <label>Năm xuất bản <span class="req">*</span></label>
+          <label for="addYear">Năm xuất bản <span class="req">*</span></label>
           <input type="number" id="addYear" placeholder="2024" min="2000" max="2030">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Số tập (Volume)</label>
+          <label for="addVolume">Số tập (Volume)</label>
           <input type="text" id="addVolume" placeholder="Vol. 45, No. 3, pp. 112–125">
         </div>
         <div class="form-group">
-          <label>ORCID tác giả chính</label>
+          <label for="addORCID">ORCID tác giả chính</label>
           <input type="text" id="addORCID" placeholder="0000-0002-XXXX-XXXX">
         </div>
       </div>
@@ -2827,7 +2828,7 @@
       <div class="modal-section-title">Chỉ mục & Phân hạng</div>
       <div class="form-row">
         <div class="form-group">
-          <label>Cơ sở dữ liệu</label>
+          <label for="addDB">Cơ sở dữ liệu</label>
           <select id="addDB">
             <option value="scopus-wos">Scopus + Web of Science</option>
             <option value="scopus">Scopus</option>
@@ -2838,7 +2839,7 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Phân hạng (Q)</label>
+          <label for="addQ">Phân hạng (Q)</label>
           <select id="addQ">
             <option value="">Không áp dụng</option>
             <option value="Q1">Q1</option>
@@ -2850,11 +2851,11 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Impact Factor (IF)</label>
+          <label for="addIF">Impact Factor (IF)</label>
           <input type="number" id="addIF" placeholder="vd: 5.2" step="0.01">
         </div>
         <div class="form-group">
-          <label>Trạng thái <span class="req">*</span></label>
+          <label for="addStatus">Trạng thái <span class="req">*</span></label>
           <select id="addStatus">
             <option value="published">Đã đăng (Published)</option>
             <option value="accepted">Chấp nhận đăng (Accepted)</option>
@@ -2867,11 +2868,11 @@
       <div class="modal-section-title">Liên kết đề tài</div>
       <div class="form-row">
         <div class="form-group">
-          <label>Mã đề tài liên quan</label>
+          <label for="addProject">Mã đề tài liên quan</label>
           <input type="text" id="addProject" placeholder="vd: B2024-18-01">
         </div>
         <div class="form-group">
-          <label>Cơ quan tài trợ</label>
+          <label for="addFunder">Cơ quan tài trợ</label>
           <input type="text" id="addFunder" placeholder="vd: ĐHQG-HCM, Bộ KH&CN">
         </div>
       </div>
@@ -2901,10 +2902,10 @@
         <textarea id="bibtexImportTextarea" placeholder="@article{..."></textarea>
       </div>
       <div id="bibtexPanelFile" class="bibtex-import-panel">
-        <label class="stats-inline" style="display:block;margin-bottom:8px;color:var(--text-3)">File BibTeX</label>
+        <label class="stats-inline" style="display:block;margin-bottom:8px;color:var(--text-3)" for="bibtexImportFile">File BibTeX</label>
         <input type="file" id="bibtexImportFile" accept=".bib,text/plain" style="font-size:13px">
       </div>
-      <label class="stats-inline pub-admin-only" style="display:block;margin-top:12px;color:var(--text-3)">Gán nguồn (import_source)</label>
+      <label class="stats-inline pub-admin-only" style="display:block;margin-top:12px;color:var(--text-3)" for="bibtexImportSourceSel">Gán nguồn (import_source)</label>
       <select id="bibtexImportSourceSel" class="pub-admin-only" style="margin-top:6px;width:100%;max-width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--surface)">
         <option value="google_scholar">Google Scholar (mặc định)</option>
         <option value="bibtex">BibTeX — nguồn khác</option>

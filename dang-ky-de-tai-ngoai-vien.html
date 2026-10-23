@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
     <title>Đăng ký Nhiệm vụ KHCN mới - Đề tài ngoài Viện</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
         body.content-page-register { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
         .register-page { max-width: 900px; margin: 0 auto; padding: 30px; }
-        .register-intro { background: white; padding: 1.5rem 2rem; border-radius: 12px; margin-bottom: 2rem; border-left: 4px solid #667eea; }
-        .register-intro h2 { color: #667eea; margin-bottom: 0.5rem; }
+        .register-intro { background: white; padding: 1.5rem 2rem; border-radius: 12px; margin-bottom: 2rem; border-left: 4px solid #16233d; }
+        .register-intro h2 { color: #16233d; margin-bottom: 0.5rem; }
         .register-intro p { color: #666; font-size: 0.95rem; }
         .register-section { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem; }
         .register-section h3 { color: #333; margin-bottom: 1rem; font-size: 1.1rem; }
@@ -19,7 +20,7 @@
         .tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 2px solid #e0e0e0; margin-bottom: 1.5rem; align-items: center; }
         .tabs .tab { padding: 12px 20px; border: none; background: transparent; cursor: pointer; font-weight: 500; color: #666; border-radius: 8px 8px 0 0; }
         .tabs .tab:hover { background: #f0f0f0; color: #333; }
-        .tabs .tab.active { background: #667eea; color: white; }
+        .tabs .tab.active { background: #16233d; color: white; }
         .steps-tabs { flex-wrap: wrap; }
         .step-tab { display: inline-flex; align-items: center; gap: 6px; }
         .step-num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; background: rgba(0,0,0,0.15); border-radius: 50%; font-size: 0.85rem; font-weight: 700; }
@@ -29,7 +30,7 @@
         .header-greeting { margin-left: auto; font-size: 1rem; font-weight: 500; color: rgba(255,255,255,0.95); }
         .header-greeting a { color: rgba(255,255,255,0.9); text-decoration: none; }
         .header-greeting a:hover { text-decoration: underline; }
-        .btn-upload-mau { padding: 6px 14px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 0.9rem; }
+        .btn-upload-mau { padding: 6px 14px; background: #16233d; color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 0.9rem; }
         .btn-upload-mau:hover { background: #5568d3; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -38,12 +39,12 @@
         .form-group-full { grid-column: 1 / -1; }
         .form-group label { display: block; font-weight: 500; margin-bottom: 0.4rem; font-size: 0.9rem; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #667eea; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #16233d; }
         .form-group input[type="file"] { padding: 0.5rem; background: #f8f9fa; border: 2px dashed #dee2e6; }
         .form-group textarea { resize: vertical; min-height: 80px; }
         .required-star { color: #dc3545; }
         .upload-desc { font-size: 0.85rem; color: #666; margin-top: 0.25rem; }
-        .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; margin-bottom: 20px; }
+        .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #16233d; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; margin-bottom: 20px; }
         .btn-back:hover { background: #5568d3; }
         .btn-submit { padding: 12px 24px; background: #4caf50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem; }
         .btn-submit:hover { background: #43a047; }
@@ -123,19 +124,19 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Mã đề tài</label>
+                                    <label for="add-code">Mã đề tài</label>
                                     <input type="text" id="add-code" placeholder="Để trống — cơ quan ngoài cấp sau">
                                 </div>
                                 <div class="form-group">
-                                    <label>Cơ quan quản lý</label>
+                                    <label for="add-managing-agency">Cơ quan quản lý</label>
                                     <input type="text" id="add-managing-agency" placeholder="VD: Bộ KH&amp;CN, ĐHQG-HCM">
                                 </div>
                                 <div class="form-group">
-                                    <label>Hợp đồng số</label>
+                                    <label for="add-contract-number">Hợp đồng số</label>
                                     <input type="text" id="add-contract-number" placeholder="Số hợp đồng (nếu có)">
                                 </div>
                                 <div class="form-group form-group-full">
-                                    <label>Tên đề tài <span class="required-star">*</span></label>
+                                    <label for="add-title">Tên đề tài <span class="required-star">*</span></label>
                                     <input type="text" id="add-title" placeholder="Nhập tên đầy đủ của đề tài KHCN" required>
                                 </div>
                                 <div class="form-group">
@@ -156,15 +157,15 @@
                                     </select>
                                 </div>
                                 <div class="form-group form-group-full">
-                                    <label>Mục tiêu nghiên cứu</label>
+                                    <label for="add-objectives">Mục tiêu nghiên cứu</label>
                                     <textarea id="add-objectives" placeholder="Mô tả mục tiêu và ý nghĩa của đề tài" rows="3"></textarea>
                                 </div>
                                 <div class="form-group">
-                                    <label>Ngày bắt đầu</label>
+                                    <label for="add-start-date">Ngày bắt đầu</label>
                                     <input type="date" id="add-start-date">
                                 </div>
                                 <div class="form-group">
-                                    <label>Ngày kết thúc</label>
+                                    <label for="add-end-date">Ngày kết thúc</label>
                                     <input type="date" id="add-end-date">
                                 </div>
                             </div>
@@ -175,23 +176,23 @@
                         <div class="register-section">
                             <div class="form-grid">
                                 <div class="form-group form-group-full">
-                                    <label>Chủ nhiệm <span class="required-star">*</span></label>
+                                    <label for="add-principal">Chủ nhiệm <span class="required-star">*</span></label>
                                     <input type="text" id="add-principal" placeholder="Nhập họ tên Chủ nhiệm" required>
                                 </div>
                                 <div class="form-group">
-                                    <label>Số lượng thành viên</label>
+                                    <label for="add-team-count">Số lượng thành viên</label>
                                     <input type="number" id="add-team-count" min="2" placeholder="Nhập số thành viên">
                                 </div>
                                 <div class="form-group">
-                                    <label>Số nghiên cứu sinh</label>
+                                    <label for="add-phd-count">Số nghiên cứu sinh</label>
                                     <input type="number" id="add-phd-count" min="0" placeholder="Số NCS tham gia">
                                 </div>
                                 <div class="form-group form-group-full">
-                                    <label>Danh sách thành viên</label>
+                                    <label for="add-team-list">Danh sách thành viên</label>
                                     <textarea id="add-team-list" placeholder="Nhập danh sách thành viên (mỗi người một dòng)"></textarea>
                                 </div>
                                 <div class="form-group form-group-full">
-                                    <label>Đơn vị phối hợp</label>
+                                    <label for="add-cooperating-units">Đơn vị phối hợp</label>
                                     <textarea id="add-cooperating-units" placeholder="Các đơn vị trong/ngoài viện tham gia phối hợp (nếu có đơn vị ngoài SCI)"></textarea>
                                 </div>
                             </div>
@@ -202,7 +203,7 @@
                         <div class="register-section">
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label>Nguồn kinh phí</label>
+                                    <label for="add-funding-source">Nguồn kinh phí</label>
                                     <select id="add-funding-source">
                                         <option value="">Chọn nguồn...</option>
                                         <option value="nsnn">Ngân sách Nhà nước</option>
@@ -213,15 +214,15 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Tổng kinh phí / Kinh phí được duyệt (VNĐ)</label>
+                                    <label for="add-budget">Tổng kinh phí / Kinh phí được duyệt (VNĐ)</label>
                                     <input type="number" id="add-budget" placeholder="0">
                                 </div>
                                 <div class="form-group">
-                                    <label>Kinh phí đã giải ngân (VNĐ)</label>
+                                    <label for="add-disbursed-budget">Kinh phí đã giải ngân (VNĐ)</label>
                                     <input type="number" id="add-disbursed-budget" placeholder="0">
                                 </div>
                                 <div class="form-group">
-                                    <label>Năm giải ngân</label>
+                                    <label for="add-disbursement-year">Năm giải ngân</label>
                                     <input type="text" id="add-disbursement-year" placeholder="VD: 2025">
                                 </div>
                             </div>
@@ -231,15 +232,15 @@
                     <div id="timeline-info" class="tab-content">
                         <div class="register-section">
                             <div class="form-group">
-                                <label>Sản phẩm dự kiến</label>
+                                <label for="add-outputs">Sản phẩm dự kiến</label>
                                 <textarea id="add-outputs" placeholder="Liệt kê các sản phẩm nghiên cứu dự kiến (bài báo, sáng chế, v.v.)" rows="4"></textarea>
                             </div>
                             <div class="form-group">
-                                <label>Kế hoạch thực hiện</label>
+                                <label for="add-plan">Kế hoạch thực hiện</label>
                                 <textarea id="add-plan" placeholder="Mô tả các giai đoạn thực hiện và mốc thời gian chính" rows="6"></textarea>
                             </div>
                             <div class="form-group">
-                                <label>Rủi ro và giải pháp</label>
+                                <label for="add-risks">Rủi ro và giải pháp</label>
                                 <textarea id="add-risks" placeholder="Các rủi ro dự kiến và giải pháp phòng ngừa" rows="4"></textarea>
                             </div>
                         </div>
@@ -268,12 +269,12 @@
                                 <p class="upload-desc"><strong>Bắt buộc</strong> nếu Chủ nhiệm là viên chức SCI tham gia đề tài không do Viện chủ trì (Điều 9).</p>
                             </div>
 
-                            <div id="admin-templates-section" class="admin-templates-box" style="display: none; margin-top: 2rem; padding: 1.25rem; background: #f8f9fa; border: 1px dashed #667eea; border-radius: 12px;">
-                                <h4 style="margin-bottom: 0.5rem; color: #667eea;">⚙️ Quản trị mẫu (chỉ Admin)</h4>
+                            <div id="admin-templates-section" class="admin-templates-box" style="display: none; margin-top: 2rem; padding: 1.25rem; background: #f8f9fa; border: 1px dashed #16233d; border-radius: 12px;">
+                                <h4 style="margin-bottom: 0.5rem; color: #16233d;">⚙️ Quản trị mẫu (chỉ Admin)</h4>
                                 <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Upload mẫu để user tải về. Chỉ Admin mới thấy phần này.</p>
                                 <div class="admin-templates-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                                     <div>
-                                        <label style="font-size: 0.85rem; font-weight: 500;">Mẫu Thuyết minh chi tiết</label>
+                                        <label style="font-size: 0.85rem; font-weight: 500;" for="admin-template-thuyet-minh">Mẫu Thuyết minh chi tiết</label>
                                         <div style="display: flex; gap: 8px; margin-top: 4px;">
                                             <input type="file" id="admin-template-thuyet-minh" accept=".pdf,.doc,.docx" style="flex:1; padding: 6px;">
                                             <button type="button" class="btn-upload-mau" id="admin-btn-upload-thuyet-minh">Upload</button>
@@ -281,7 +282,7 @@
                                         <span id="admin-msg-thuyet-minh" style="font-size: 0.8rem; color: #0a0;"></span>
                                     </div>
                                     <div>
-                                        <label style="font-size: 0.85rem; font-weight: 500;">Mẫu Văn bản xin phép Viện trưởng</label>
+                                        <label style="font-size: 0.85rem; font-weight: 500;" for="admin-template-van-ban">Mẫu Văn bản xin phép Viện trưởng</label>
                                         <div style="display: flex; gap: 8px; margin-top: 4px;">
                                             <input type="file" id="admin-template-van-ban" accept=".pdf,.doc,.docx" style="flex:1; padding: 6px;">
                                             <button type="button" class="btn-upload-mau" id="admin-btn-upload-van-ban">Upload</button>

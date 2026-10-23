@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
 <title>Hợp tác trong và ngoài nước — Viện Tế bào gốc</title>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <style>
@@ -896,14 +897,14 @@ textarea{resize:vertical;min-height:80px}
       <div class="alert info">Quy trình: <strong>Bạn gửi</strong> → Phòng KHCN thẩm định → Viện trưởng phê duyệt. Bạn nhận email ở mỗi bước.</div>
       <div id="msg-doan-ra" class="alert hidden"></div>
       <div class="form-grid">
-        <div class="form-group"><label>Quốc gia / Địa điểm *</label><input id="dr-quoc-gia" placeholder="VD: Nhật Bản, Tokyo"></div>
-        <div class="form-group"><label>Mục đích chuyến đi</label><input id="dr-muc-dich" placeholder="VD: Tham dự Hội nghị ISSCR 2025"></div>
-        <div class="form-group"><label>Ngày đi *</label><input id="dr-ngay-di" type="date"></div>
-        <div class="form-group"><label>Ngày về *</label><input id="dr-ngay-ve" type="date"></div>
-        <div class="form-group full"><label>Thành viên đoàn (mỗi người một dòng) *</label><textarea id="dr-thanh-vien" rows="3" placeholder="Nguyễn Văn A — GS.TS&#10;Trần Thị B — ThS"></textarea></div>
-        <div class="form-group"><label>Nguồn kinh phí</label><input id="dr-kinh-phi" placeholder="VD: Kinh phí đề tài, Tự túc"></div>
-        <div class="form-group"><label>Dự toán (VND)</label><input id="dr-du-toan" type="number" min="0" step="1" placeholder="VD: 25 000 000"></div>
-        <div class="form-group full"><label>Ghi chú</label><textarea id="dr-ghi-chu" rows="2"></textarea></div>
+        <div class="form-group"><label for="dr-quoc-gia">Quốc gia / Địa điểm *</label><input id="dr-quoc-gia" placeholder="VD: Nhật Bản, Tokyo"></div>
+        <div class="form-group"><label for="dr-muc-dich">Mục đích chuyến đi</label><input id="dr-muc-dich" placeholder="VD: Tham dự Hội nghị ISSCR 2025"></div>
+        <div class="form-group"><label for="dr-ngay-di">Ngày đi *</label><input id="dr-ngay-di" type="date"></div>
+        <div class="form-group"><label for="dr-ngay-ve">Ngày về *</label><input id="dr-ngay-ve" type="date"></div>
+        <div class="form-group full"><label for="dr-thanh-vien">Thành viên đoàn (mỗi người một dòng) *</label><textarea id="dr-thanh-vien" rows="3" placeholder="Nguyễn Văn A — GS.TS&#10;Trần Thị B — ThS"></textarea></div>
+        <div class="form-group"><label for="dr-kinh-phi">Nguồn kinh phí</label><input id="dr-kinh-phi" placeholder="VD: Kinh phí đề tài, Tự túc"></div>
+        <div class="form-group"><label for="dr-du-toan">Dự toán (VND)</label><input id="dr-du-toan" type="number" min="0" step="1" placeholder="VD: 25 000 000"></div>
+        <div class="form-group full"><label for="dr-ghi-chu">Ghi chú</label><textarea id="dr-ghi-chu" rows="2"></textarea></div>
       </div>
       <div class="form-actions"><button class="btn btn-primary" onclick="submitDoanRa()">Gửi đề xuất Đoàn ra</button></div>
     </div>
@@ -924,14 +925,14 @@ textarea{resize:vertical;min-height:80px}
       <div class="alert info">Quy trình: <strong>Bạn gửi</strong> → Phòng KHCN thẩm định → Viện trưởng phê duyệt. Bạn nhận email ở mỗi bước.</div>
       <div id="msg-doan-vao" class="alert hidden"></div>
       <div class="form-grid">
-        <div class="form-group"><label>Đơn vị đề xuất tiếp nhận *</label><input id="dv-don-vi" placeholder="VD: Phòng Thí nghiệm Tế bào gốc"></div>
-        <div class="form-group"><label>Mục đích chuyến thăm</label><input id="dv-muc-dich" placeholder="VD: Ký kết hợp tác, Trao đổi học thuật"></div>
-        <div class="form-group"><label>Ngày đến *</label><input id="dv-ngay-den" type="date"></div>
-        <div class="form-group"><label>Ngày rời đi</label><input id="dv-ngay-roi" type="date"></div>
-        <div class="form-group full"><label>Thành phần đoàn khách *</label><textarea id="dv-thanh-phan" rows="3" placeholder="Tên, chức vụ, đơn vị từng thành viên..."></textarea></div>
-        <div class="form-group full"><label>Nội dung làm việc dự kiến</label><textarea id="dv-noi-dung" rows="2"></textarea></div>
-        <div class="form-group"><label>Kinh phí đón tiếp</label><input id="dv-kinh-phi" placeholder="VD: Kinh phí Viện"></div>
-        <div class="form-group"><label>Hỗ trợ visa / Nhập cảnh</label><input id="dv-visa" placeholder="VD: Cần hỗ trợ thủ tục visa"></div>
+        <div class="form-group"><label for="dv-don-vi">Đơn vị đề xuất tiếp nhận *</label><input id="dv-don-vi" placeholder="VD: Phòng Thí nghiệm Tế bào gốc"></div>
+        <div class="form-group"><label for="dv-muc-dich">Mục đích chuyến thăm</label><input id="dv-muc-dich" placeholder="VD: Ký kết hợp tác, Trao đổi học thuật"></div>
+        <div class="form-group"><label for="dv-ngay-den">Ngày đến *</label><input id="dv-ngay-den" type="date"></div>
+        <div class="form-group"><label for="dv-ngay-roi">Ngày rời đi</label><input id="dv-ngay-roi" type="date"></div>
+        <div class="form-group full"><label for="dv-thanh-phan">Thành phần đoàn khách *</label><textarea id="dv-thanh-phan" rows="3" placeholder="Tên, chức vụ, đơn vị từng thành viên..."></textarea></div>
+        <div class="form-group full"><label for="dv-noi-dung">Nội dung làm việc dự kiến</label><textarea id="dv-noi-dung" rows="2"></textarea></div>
+        <div class="form-group"><label for="dv-kinh-phi">Kinh phí đón tiếp</label><input id="dv-kinh-phi" placeholder="VD: Kinh phí Viện"></div>
+        <div class="form-group"><label for="dv-visa">Hỗ trợ visa / Nhập cảnh</label><input id="dv-visa" placeholder="VD: Cần hỗ trợ thủ tục visa"></div>
       </div>
       <div class="form-actions"><button class="btn btn-primary" onclick="submitDoanVao()">Gửi đề xuất Đoàn vào</button></div>
     </div>
@@ -952,14 +953,14 @@ textarea{resize:vertical;min-height:80px}
       <div class="alert info">Quy trình: <strong>Bạn gửi</strong> → Phòng KHCN thẩm định → Viện trưởng phê duyệt. Bạn nhận email ở mỗi bước. Dưới đây là các đề xuất Thỏa thuận đã gửi — bấm <strong>Xem</strong> để theo dõi tiến trình.</div>
       <div id="msg-mou" class="alert hidden"></div>
       <div class="form-grid">
-        <div class="form-group"><label>Loại thỏa thuận *</label>
+        <div class="form-group"><label for="mou-loai">Loại thỏa thuận *</label>
           <select id="mou-loai"><option value="">— Chọn loại —</option><option value="MOU">MOU (Biên bản ghi nhớ)</option><option value="MOA">MOA (Thỏa thuận hợp tác)</option><option value="HD_KHCN">Hợp đồng KHCN</option><option value="LOI">LOI (Thư cam kết)</option></select></div>
-        <div class="form-group"><label>Tên đối tác *</label><input id="mou-doi-tac" placeholder="VD: Đại học Tokyo"></div>
-        <div class="form-group"><label>Quốc gia</label><input id="mou-quoc-gia" placeholder="VD: Nhật Bản"></div>
-        <div class="form-group"><label>Thời hạn (năm)</label><input id="mou-thoi-han" type="number" placeholder="VD: 3"></div>
-        <div class="form-group"><label>Giá trị tài chính</label><input id="mou-gia-tri" placeholder="VD: 50,000 USD"></div>
-        <div class="form-group"><label>Đơn vị đề xuất</label><input id="mou-don-vi" placeholder="VD: Phòng Lab Tế bào gốc"></div>
-        <div class="form-group full"><label>Nội dung hợp tác *</label><textarea id="mou-noi-dung" rows="3" placeholder="Mô tả các hoạt động hợp tác dự kiến..."></textarea></div>
+        <div class="form-group"><label for="mou-doi-tac">Tên đối tác *</label><input id="mou-doi-tac" placeholder="VD: Đại học Tokyo"></div>
+        <div class="form-group"><label for="mou-quoc-gia">Quốc gia</label><input id="mou-quoc-gia" placeholder="VD: Nhật Bản"></div>
+        <div class="form-group"><label for="mou-thoi-han">Thời hạn (năm)</label><input id="mou-thoi-han" type="number" placeholder="VD: 3"></div>
+        <div class="form-group"><label for="mou-gia-tri">Giá trị tài chính</label><input id="mou-gia-tri" placeholder="VD: 50,000 USD"></div>
+        <div class="form-group"><label for="mou-don-vi">Đơn vị đề xuất</label><input id="mou-don-vi" placeholder="VD: Phòng Lab Tế bào gốc"></div>
+        <div class="form-group full"><label for="mou-noi-dung">Nội dung hợp tác *</label><textarea id="mou-noi-dung" rows="3" placeholder="Mô tả các hoạt động hợp tác dự kiến..."></textarea></div>
       </div>
       <div class="form-actions"><button class="btn btn-primary" onclick="submitMOU()">Gửi đề xuất Thỏa thuận</button></div>
     </div>
@@ -994,29 +995,29 @@ textarea{resize:vertical;min-height:80px}
       </div>
       <div class="tab-panel active" id="ytnn-t1">
         <div class="form-grid">
-          <div class="form-group full"><label>Tên đề tài *</label><input id="yt-ten" placeholder="Tên đầy đủ của đề tài nghiên cứu"></div>
-          <div class="form-group"><label>Hình thức hợp tác</label><select id="yt-hinh-thuc"><option value="">— Chọn —</option><option>Nghiên cứu hợp tác</option><option>Tài trợ nghiên cứu</option><option>Trao đổi nhà khoa học</option><option>Đào tạo nghiên cứu sinh</option></select></div>
-          <div class="form-group"><label>Loại hình</label><select id="yt-loai-hinh"><option value="">— Chọn —</option><option>Tài trợ trong nước</option><option>Tài trợ quốc tế</option><option>Hợp tác song phương</option></select></div>
-          <div class="form-group"><label>Ngày bắt đầu</label><input id="yt-ngay-bd" type="date"></div>
-          <div class="form-group"><label>Ngày kết thúc</label><input id="yt-ngay-kt" type="date"></div>
-          <div class="form-group full"><label>Mô tả đề tài</label><textarea id="yt-mo-ta" rows="3" placeholder="Mục tiêu và nội dung nghiên cứu..."></textarea></div>
+          <div class="form-group full"><label for="yt-ten">Tên đề tài *</label><input id="yt-ten" placeholder="Tên đầy đủ của đề tài nghiên cứu"></div>
+          <div class="form-group"><label for="yt-hinh-thuc">Hình thức hợp tác</label><select id="yt-hinh-thuc"><option value="">— Chọn —</option><option>Nghiên cứu hợp tác</option><option>Tài trợ nghiên cứu</option><option>Trao đổi nhà khoa học</option><option>Đào tạo nghiên cứu sinh</option></select></div>
+          <div class="form-group"><label for="yt-loai-hinh">Loại hình</label><select id="yt-loai-hinh"><option value="">— Chọn —</option><option>Tài trợ trong nước</option><option>Tài trợ quốc tế</option><option>Hợp tác song phương</option></select></div>
+          <div class="form-group"><label for="yt-ngay-bd">Ngày bắt đầu</label><input id="yt-ngay-bd" type="date"></div>
+          <div class="form-group"><label for="yt-ngay-kt">Ngày kết thúc</label><input id="yt-ngay-kt" type="date"></div>
+          <div class="form-group full"><label for="yt-mo-ta">Mô tả đề tài</label><textarea id="yt-mo-ta" rows="3" placeholder="Mục tiêu và nội dung nghiên cứu..."></textarea></div>
         </div>
       </div>
       <div class="tab-panel" id="ytnn-t2">
         <div class="form-grid">
-          <div class="form-group"><label>Tên tổ chức đối tác</label><input id="yt-doi-tac-ten" placeholder="VD: NIH, Wellcome Trust"></div>
-          <div class="form-group"><label>Quốc gia đối tác</label><input id="yt-doi-tac-qg" placeholder="VD: Hoa Kỳ"></div>
-          <div class="form-group"><label>Người đại diện</label><input id="yt-dai-dien" placeholder="Họ tên, chức danh"></div>
-          <div class="form-group"><label>Website</label><input id="yt-website" type="url" placeholder="https://..."></div>
+          <div class="form-group"><label for="yt-doi-tac-ten">Tên tổ chức đối tác</label><input id="yt-doi-tac-ten" placeholder="VD: NIH, Wellcome Trust"></div>
+          <div class="form-group"><label for="yt-doi-tac-qg">Quốc gia đối tác</label><input id="yt-doi-tac-qg" placeholder="VD: Hoa Kỳ"></div>
+          <div class="form-group"><label for="yt-dai-dien">Người đại diện</label><input id="yt-dai-dien" placeholder="Họ tên, chức danh"></div>
+          <div class="form-group"><label for="yt-website">Website</label><input id="yt-website" type="url" placeholder="https://..."></div>
         </div>
       </div>
       <div class="tab-panel" id="ytnn-t3">
         <div class="form-grid">
-          <div class="form-group"><label>Chủ nhiệm đề tài</label><input id="yt-chu-nhiem" placeholder="Họ tên"></div>
-          <div class="form-group"><label>Học hàm / Học vị</label><input id="yt-hoc-vi" placeholder="VD: GS.TS, PGS.TS"></div>
-          <div class="form-group"><label>Đơn vị</label><input id="yt-don-vi" placeholder="Phòng/Lab thuộc Viện"></div>
-          <div class="form-group"><label>Kinh phí</label><input id="yt-kinh-phi" type="number" placeholder="Giá trị số"></div>
-          <div class="form-group"><label>Đơn vị tiền tệ</label><select id="yt-tien-te"><option value="VNĐ">VNĐ</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="JPY">JPY</option></select></div>
+          <div class="form-group"><label for="yt-chu-nhiem">Chủ nhiệm đề tài</label><input id="yt-chu-nhiem" placeholder="Họ tên"></div>
+          <div class="form-group"><label for="yt-hoc-vi">Học hàm / Học vị</label><input id="yt-hoc-vi" placeholder="VD: GS.TS, PGS.TS"></div>
+          <div class="form-group"><label for="yt-don-vi">Đơn vị</label><input id="yt-don-vi" placeholder="Phòng/Lab thuộc Viện"></div>
+          <div class="form-group"><label for="yt-kinh-phi">Kinh phí</label><input id="yt-kinh-phi" type="number" placeholder="Giá trị số"></div>
+          <div class="form-group"><label for="yt-tien-te">Đơn vị tiền tệ</label><select id="yt-tien-te"><option value="VNĐ">VNĐ</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="JPY">JPY</option></select></div>
         </div>
       </div>
       <div class="form-actions" style="margin-top:20px"><button class="btn btn-primary" onclick="submitYTNN()">Gửi đề xuất đề tài có yếu tố nước ngoài</button></div>
@@ -1053,9 +1054,9 @@ textarea{resize:vertical;min-height:80px}
   <div class="card">
     <div class="card-header"><h2>Danh sách sự kiện</h2></div>
     <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
-      <div class="form-group" style="min-width:150px"><label>Loại</label><select id="ev-filter-loai"><option value="">Tất cả</option><option>Hội thảo</option><option>Hội nghị</option><option>Webinar</option><option>Tập huấn</option><option>Khác</option></select></div>
-      <div class="form-group" style="min-width:190px"><label>Trạng thái</label><select id="ev-filter-status"><option value="">Tất cả</option><option value="draft">Nháp</option><option value="cho_xin_phep">Cần xin phép</option><option value="da_nop_xin_phep">Đã nộp tờ trình</option><option value="da_duoc_phep">Đã được phép</option><option value="dang_to_chuc">Đang tổ chức</option><option value="cho_bao_cao">Cần báo cáo</option><option value="da_bao_cao">Đã nộp báo cáo</option><option value="hoan_thanh">Hoàn thành</option></select></div>
-      <div class="form-group" style="min-width:120px"><label>Năm</label><input id="ev-filter-nam" type="number" min="2020" max="2100" placeholder="2026"></div>
+      <div class="form-group" style="min-width:150px"><label for="ev-filter-loai">Loại</label><select id="ev-filter-loai"><option value="">Tất cả</option><option>Hội thảo</option><option>Hội nghị</option><option>Webinar</option><option>Tập huấn</option><option>Khác</option></select></div>
+      <div class="form-group" style="min-width:190px"><label for="ev-filter-status">Trạng thái</label><select id="ev-filter-status"><option value="">Tất cả</option><option value="draft">Nháp</option><option value="cho_xin_phep">Cần xin phép</option><option value="da_nop_xin_phep">Đã nộp tờ trình</option><option value="da_duoc_phep">Đã được phép</option><option value="dang_to_chuc">Đang tổ chức</option><option value="cho_bao_cao">Cần báo cáo</option><option value="da_bao_cao">Đã nộp báo cáo</option><option value="hoan_thanh">Hoàn thành</option></select></div>
+      <div class="form-group" style="min-width:120px"><label for="ev-filter-nam">Năm</label><input id="ev-filter-nam" type="number" min="2020" max="2100" placeholder="2026"></div>
       <button class="btn btn-outline btn-sm" type="button" onclick="loadEventList()">Lọc</button>
       <button class="btn btn-primary btn-sm mgr hidden" id="btn-ev-new" type="button" onclick="createEventDraft()">+ Tạo sự kiện mới</button>
     </div>
@@ -1070,25 +1071,25 @@ textarea{resize:vertical;min-height:80px}
         <div class="ev-section">
           <div class="ev-section-title">1) Thông tin sự kiện</div>
           <div class="form-grid">
-            <div class="form-group"><label>Số văn bản</label><input id="sk-so-vb" placeholder="58/SCI-KHCN&QHĐN"></div>
-            <div class="form-group"><label>Trạng thái</label><input id="sk-status-view" disabled></div>
-            <div class="form-group full"><label>Tên sự kiện *</label><input id="sk-tieu-de"></div>
-            <div class="form-group"><label>Loại</label><select id="sk-loai"><option>Hội thảo</option><option>Hội nghị</option><option>Webinar</option><option>Tập huấn</option><option>Khác</option></select></div>
-            <div class="form-group"><label>Hình thức</label><select id="sk-hinh-thuc"><option>Trực tiếp</option><option>Trực tuyến (Zoom)</option><option>Hybrid</option></select></div>
-            <div class="form-group"><label>Địa điểm</label><input id="sk-dia-diem"></div>
-            <div class="form-group"><label>Đơn vị tổ chức</label><input id="sk-don-vi"></div>
-            <div class="form-group"><label>Ngày bắt đầu *</label><input id="sk-ngay-bd" type="date"></div>
-            <div class="form-group"><label>Ngày kết thúc</label><input id="sk-ngay-kt" type="date"></div>
-            <div class="form-group"><label>Hạn đăng ký</label><input id="sk-han-dk" type="date"></div>
-            <div class="form-group"><label>Kinh phí dự kiến (VND)</label><input id="sk-kinh-phi" type="number" min="0" step="1000"></div>
-            <div class="form-group"><label>Nguồn kinh phí</label><select id="sk-nguon"><option>Kinh phí VTB gốc</option><option>Bên ngoài</option><option>Kết hợp</option></select></div>
-            <div class="form-group"><label>Quy mô dự kiến</label><input id="sk-quy-mo" type="number" min="0"></div>
-            <div class="form-group"><label>Link sự kiện</label><input id="sk-link" type="url"></div>
-            <div class="form-group"><label>Người phụ trách</label><input id="sk-phu-trach"></div>
-            <div class="form-group"><label>Liên hệ</label><input id="sk-lien-he" placeholder="SĐT / Email"></div>
-            <div class="form-group full"><label>Mục tiêu</label><textarea id="sk-muc-tieu" rows="2"></textarea></div>
-            <div class="form-group full"><label>Thành phần tham dự</label><textarea id="sk-thanh-phan" rows="2"></textarea></div>
-            <div class="form-group full"><label>Ghi chú</label><textarea id="sk-mo-ta" rows="2"></textarea></div>
+            <div class="form-group"><label for="sk-so-vb">Số văn bản</label><input id="sk-so-vb" placeholder="58/SCI-KHCN&QHĐN"></div>
+            <div class="form-group"><label for="sk-status-view">Trạng thái</label><input id="sk-status-view" disabled></div>
+            <div class="form-group full"><label for="sk-tieu-de">Tên sự kiện *</label><input id="sk-tieu-de"></div>
+            <div class="form-group"><label for="sk-loai">Loại</label><select id="sk-loai"><option>Hội thảo</option><option>Hội nghị</option><option>Webinar</option><option>Tập huấn</option><option>Khác</option></select></div>
+            <div class="form-group"><label for="sk-hinh-thuc">Hình thức</label><select id="sk-hinh-thuc"><option>Trực tiếp</option><option>Trực tuyến (Zoom)</option><option>Hybrid</option></select></div>
+            <div class="form-group"><label for="sk-dia-diem">Địa điểm</label><input id="sk-dia-diem"></div>
+            <div class="form-group"><label for="sk-don-vi">Đơn vị tổ chức</label><input id="sk-don-vi"></div>
+            <div class="form-group"><label for="sk-ngay-bd">Ngày bắt đầu *</label><input id="sk-ngay-bd" type="date"></div>
+            <div class="form-group"><label for="sk-ngay-kt">Ngày kết thúc</label><input id="sk-ngay-kt" type="date"></div>
+            <div class="form-group"><label for="sk-han-dk">Hạn đăng ký</label><input id="sk-han-dk" type="date"></div>
+            <div class="form-group"><label for="sk-kinh-phi">Kinh phí dự kiến (VND)</label><input id="sk-kinh-phi" type="number" min="0" step="1000"></div>
+            <div class="form-group"><label for="sk-nguon">Nguồn kinh phí</label><select id="sk-nguon"><option>Kinh phí VTB gốc</option><option>Bên ngoài</option><option>Kết hợp</option></select></div>
+            <div class="form-group"><label for="sk-quy-mo">Quy mô dự kiến</label><input id="sk-quy-mo" type="number" min="0"></div>
+            <div class="form-group"><label for="sk-link">Link sự kiện</label><input id="sk-link" type="url"></div>
+            <div class="form-group"><label for="sk-phu-trach">Người phụ trách</label><input id="sk-phu-trach"></div>
+            <div class="form-group"><label for="sk-lien-he">Liên hệ</label><input id="sk-lien-he" placeholder="SĐT / Email"></div>
+            <div class="form-group full"><label for="sk-muc-tieu">Mục tiêu</label><textarea id="sk-muc-tieu" rows="2"></textarea></div>
+            <div class="form-group full"><label for="sk-thanh-phan">Thành phần tham dự</label><textarea id="sk-thanh-phan" rows="2"></textarea></div>
+            <div class="form-group full"><label for="sk-mo-ta">Ghi chú</label><textarea id="sk-mo-ta" rows="2"></textarea></div>
           </div>
         </div>
 
@@ -1120,8 +1121,8 @@ textarea{resize:vertical;min-height:80px}
         <div class="ev-section">
           <div class="ev-section-title">4) Upload và lưu trữ hồ sơ</div>
           <div class="ev-upload-grid">
-            <div class="form-group"><label>Loại file upload</label><select id="ev-file-type"><option value="to_trinh_xin_phep">Tờ trình xin phép</option><option value="quyet_dinh_cho_phep">Quyết định cho phép</option><option value="tai_lieu_dinh_kem">Tài liệu đính kèm</option><option value="bao_cao_su_kien">Báo cáo sự kiện</option><option value="quyet_dinh_bao_cao">Quyết định báo cáo</option><option value="khac">Khác</option></select></div>
-            <div class="form-group"><label>File đính kèm (PDF/DOCX/JPG/PNG, tối đa 20MB)</label><div class="ev-sk-file-shell"><input id="ev-files-input" type="file" multiple></div></div>
+            <div class="form-group"><label for="ev-file-type">Loại file upload</label><select id="ev-file-type"><option value="to_trinh_xin_phep">Tờ trình xin phép</option><option value="quyet_dinh_cho_phep">Quyết định cho phép</option><option value="tai_lieu_dinh_kem">Tài liệu đính kèm</option><option value="bao_cao_su_kien">Báo cáo sự kiện</option><option value="quyet_dinh_bao_cao">Quyết định báo cáo</option><option value="khac">Khác</option></select></div>
+            <div class="form-group"><label for="ev-files-input">File đính kèm (PDF/DOCX/JPG/PNG, tối đa 20MB)</label><div class="ev-sk-file-shell"><input id="ev-files-input" type="file" multiple></div></div>
           </div>
           <div class="ev-actions"><button class="btn btn-outline" type="button" onclick="uploadEventFiles()">Upload file</button></div>
         </div>
@@ -1147,10 +1148,10 @@ textarea{resize:vertical;min-height:80px}
     <div class="card-body">
       <div id="msg-tt" class="alert hidden"></div>
       <div class="form-grid">
-        <div class="form-group"><label>Tên thỏa thuận *</label><input id="tt-ten"></div>
-        <div class="form-group"><label>Đối tác *</label><input id="tt-doi-tac"></div>
-        <div class="form-group"><label>Loại *</label><select id="tt-loai"><option value="MOU">MOU</option><option value="MOA">MOA</option><option value="HD_KHCN">HĐ KHCN</option><option value="LOI">LOI</option></select></div>
-        <div class="form-group"><label>Quốc gia</label><input id="tt-quoc-gia"></div>
+        <div class="form-group"><label for="tt-ten">Tên thỏa thuận *</label><input id="tt-ten"></div>
+        <div class="form-group"><label for="tt-doi-tac">Đối tác *</label><input id="tt-doi-tac"></div>
+        <div class="form-group"><label for="tt-loai">Loại *</label><select id="tt-loai"><option value="MOU">MOU</option><option value="MOA">MOA</option><option value="HD_KHCN">HĐ KHCN</option><option value="LOI">LOI</option></select></div>
+        <div class="form-group"><label for="tt-quoc-gia">Quốc gia</label><input id="tt-quoc-gia"></div>
         <div class="form-group full tt-term-mode-section">
           <span class="tt-term-mode-section-label">Kiểu thời hạn hiệu lực *</span>
           <div class="tt-term-mode-switch" role="radiogroup" aria-label="Kiểu thời hạn hiệu lực">
@@ -1165,17 +1166,17 @@ textarea{resize:vertical;min-height:80px}
           </div>
           <input type="checkbox" id="tt-no-fixed-term" hidden aria-hidden="true" tabindex="-1">
         </div>
-        <div class="form-group"><label>Ngày ký *</label><input id="tt-ngay-ky" type="date"></div>
+        <div class="form-group"><label for="tt-ngay-ky">Ngày ký *</label><input id="tt-ngay-ky" type="date"></div>
         <div id="tt-panel-term-fixed" class="form-group full tt-term-panel">
-          <div class="form-group"><label><span id="tt-thoi-han-label">Thời hạn hiệu lực (năm) *</span></label><input id="tt-thoi-han-nam" type="number" min="1" max="99" step="1" placeholder="VD: 5"></div>
+          <div class="form-group"><label for="tt-thoi-han-nam"><span id="tt-thoi-han-label">Thời hạn hiệu lực (năm) *</span></label><input id="tt-thoi-han-nam" type="number" min="1" max="99" step="1" placeholder="VD: 5"></div>
           <div class="form-group full" style="margin-bottom:0"><p id="tt-het-han-preview" class="tt-expiry-preview">—</p></div>
         </div>
         <div id="tt-panel-term-open" class="form-group full tt-term-panel tt-term-panel--open hidden">
           <p class="tt-open-term-hint">Thỏa thuận không có ngày hết hiệu lực cố định. Khi có văn bản chấm dứt, mở chi tiết thỏa thuận để ghi nhận ngày kết thúc và file (nếu có).</p>
         </div>
-        <div class="form-group full"><label>Ghi chú (P. KHCN)</label><textarea id="tt-staff-notes" rows="2" placeholder="Ví dụ: Tự động gia hạn hàng năm nếu không có văn bản khác"></textarea></div>
-        <div class="form-group"><label>Trạng thái (tự động)</label><select id="tt-trang-thai" disabled><option value="hieu_luc">Hiệu lực</option><option value="sap_het_han">Sắp hết hạn</option><option value="het_han">Hết hạn</option></select></div>
-        <div class="form-group full tt-scan-wrap"><label>Bản scan thỏa thuận (PDF/DOCX/JPG/PNG, tối đa 20MB)</label><div class="tt-file-input-shell"><input id="tt-scan-file" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"></div></div>
+        <div class="form-group full"><label for="tt-staff-notes">Ghi chú (P. KHCN)</label><textarea id="tt-staff-notes" rows="2" placeholder="Ví dụ: Tự động gia hạn hàng năm nếu không có văn bản khác"></textarea></div>
+        <div class="form-group"><label for="tt-trang-thai">Trạng thái (tự động)</label><select id="tt-trang-thai" disabled><option value="hieu_luc">Hiệu lực</option><option value="sap_het_han">Sắp hết hạn</option><option value="het_han">Hết hạn</option></select></div>
+        <div class="form-group full tt-scan-wrap"><label for="tt-scan-file">Bản scan thỏa thuận (PDF/DOCX/JPG/PNG, tối đa 20MB)</label><div class="tt-file-input-shell"><input id="tt-scan-file" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"></div></div>
       </div>
       <div class="form-actions"><button type="button" class="btn btn-primary" id="btn-tt-submit" onclick="submitTT()">Thêm</button></div>
     </div>
@@ -3455,29 +3456,29 @@ function buildThoaThuanEditFormHtml(it) {
     '<div class="tt-edit-form" style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0">' +
     '<p style="margin:0 0 12px;font-size:14px;font-weight:800;color:#0f766e">Ch\u1ec9nh s\u1eeda th\u1ecfa thu\u1eadn</p>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
-    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">T\u00ean *</label><input id="tt-edit-ten" type="text" value="' +
+    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-ten">T\u00ean *</label><input id="tt-edit-ten" type="text" value="' +
     thoaThuanInputEsc(it.ten) +
     '" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px"></div>' +
-    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">\u0110\u1ed1i t\u00e1c *</label><input id="tt-edit-doi-tac" type="text" value="' +
+    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-doi-tac">\u0110\u1ed1i t\u00e1c *</label><input id="tt-edit-doi-tac" type="text" value="' +
     thoaThuanInputEsc(it.doi_tac) +
     '" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px"></div>' +
-    '<div><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Lo\u1ea1i *</label><select id="tt-edit-loai" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px">' +
+    '<div><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-loai">Lo\u1ea1i *</label><select id="tt-edit-loai" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px">' +
     loaiOpts +
     '</select></div>' +
-    '<div><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Qu\u1ed1c gia</label><input id="tt-edit-quoc-gia" type="text" value="' +
+    '<div><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-quoc-gia">Qu\u1ed1c gia</label><input id="tt-edit-quoc-gia" type="text" value="' +
     thoaThuanInputEsc(it.quoc_gia) +
     '" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px"></div>' +
-    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Lo\u1ea1i \u0111\u1ed1i t\u00e1c</label><select id="tt-edit-loai-doi-tac" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px">' +
+    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-loai-doi-tac">Lo\u1ea1i \u0111\u1ed1i t\u00e1c</label><select id="tt-edit-loai-doi-tac" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px">' +
     ltdOpts +
     '</select></div>' +
     termBlock +
-    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Tr\u1ea1ng th\u00e1i</label><select id="tt-edit-trang-thai" style="width:100%;max-width:280px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px">' +
+    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-trang-thai">Tr\u1ea1ng th\u00e1i</label><select id="tt-edit-trang-thai" style="width:100%;max-width:280px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px">' +
     trOpts +
     '</select></div>' +
-    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Ghi ch\u00fa (P. KHCN)</label><textarea id="tt-edit-staff-notes" rows="2" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;resize:vertical">' +
+    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-staff-notes">Ghi ch\u00fa (P. KHCN)</label><textarea id="tt-edit-staff-notes" rows="2" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;resize:vertical">' +
     thoaThuanInputEsc(it.staff_notes) +
     '</textarea></div>' +
-    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Thay b\u1ea3n scan th\u1ecfa thu\u1eadn (tu\u1ef3 ch\u1ecdn)</label><input type="file" id="tt-edit-scan-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"></div>' +
+    '<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-scan-file">Thay b\u1ea3n scan th\u1ecfa thu\u1eadn (tu\u1ef3 ch\u1ecdn)</label><input type="file" id="tt-edit-scan-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"></div>' +
     '</div>' +
     '<div style="margin-top:14px"><button type="button" class="btn btn-primary btn-sm" id="tt-btn-edit-save" onclick="submitThoaThuanEditSave()">L\u01b0u thay \u0111\u1ed5i</button></div>' +
     '</div>'
