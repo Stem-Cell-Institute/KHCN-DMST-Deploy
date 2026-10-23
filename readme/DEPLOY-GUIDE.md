@@ -458,18 +458,34 @@ grep BASE_URL /opt/sci-ace/.env
 ### Upgrade app
 
 ```bash
+# Backup DB trước khi nâng cấp (xem mục 8)
+/opt/sci-ace/backup.sh
+
 # Pull code mới
 git pull
 
-# Cài dependency mới (nếu có)
-npm install
+# Cài đúng phiên bản theo package-lock.json.
+# BẮT BUỘC mỗi lần pull: dependency có thể đã đổi (ví dụ chart.js được phục vụ từ
+# node_modules qua /public/vendor/chart.umd.js — thiếu gói thì biểu đồ không vẽ được).
+npm ci --omit=dev
 
 # Restart
 pm2 restart sci-ace
 
 # Kiểm tra logs
 pm2 logs sci-ace --lines 20
+
+# Kiểm tra sau deploy: thư viện phục vụ nội bộ phải trả 200 (không phải 404)
+curl -sI http://localhost:3000/public/vendor/chart.umd.js | head -1
 ```
+
+Ghi chú:
+
+- `npm ci --omit=dev` giống bước cài trong `Dockerfile`. `tailwindcss` là devDependency nên **không** cần trên server —
+  file `public/css/tailwind.css` đã build sẵn và nằm trong repo.
+- Sửa class Tailwind trên 3 trang admin (`admin-dashboard-demo.html`, `admin-quan-ly-tai-khoan.html`,
+  `admin-system-logs-monitor.html`) thì chạy `npm run build:css` **ở máy dev** rồi commit file CSS, đừng build trên server.
+- CSP chỉ cho `script-src 'self'`: trang mới đừng nạp `<script src="https://…">` từ CDN, sẽ bị trình duyệt chặn.
 
 ---
 
