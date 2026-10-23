@@ -190,18 +190,17 @@ const BUOC_4_DEN_6_CO_VAI_TRO = [
 ];
 
 /**
- * NỢ KỸ THUẬT #9 — hai endpoint này chỉ có authMiddleware, KHÔNG kiểm vai trò và
- * KHÔNG kiểm chủ nhiệm. Bất kỳ ai đã đăng nhập (kể cả tài khoản crd_user bên ngoài)
- * đều gọi được cho mission id bất kỳ. Test dưới đây GHIM HÀNH VI HIỆN TẠI, không phải
- * khẳng định nó đúng — khi chốt được chính sách phân quyền thì sửa test này có chủ đích.
+ * NỢ KỸ THUẬT #9 (đã vá) — hai endpoint upload thuyết minh trước đây chỉ có authMiddleware,
+ * ai đăng nhập cũng gọi được cho mission id bất kỳ. Chính sách đã chốt: CHỈ chủ nhiệm đề tài,
+ * Thư ký Hội đồng hoặc Admin. Xem services/missionOwnership.js.
  */
-const BUOC_4_DEN_6_CHI_CAN_DANG_NHAP = [
+const BUOC_4_DEN_6_UPLOAD_THUYET_MINH = [
   '/api/missions/1/buoc4a/cn-upload-thuyet-minh-chinh-sua',
   '/api/missions/1/buoc5/upload-thuyet-minh',
 ];
 
 test('duyệt Bước 4a/4b/5/6: chưa đăng nhập thì 401', async () => {
-  for (const p of [...BUOC_4_DEN_6_CO_VAI_TRO, ...BUOC_4_DEN_6_CHI_CAN_DANG_NHAP]) {
+  for (const p of [...BUOC_4_DEN_6_CO_VAI_TRO, ...BUOC_4_DEN_6_UPLOAD_THUYET_MINH]) {
     const res = await post(p, undefined, {});
     assert.equal(res.status, 401, p + ' phải 401 khi chưa đăng nhập');
   }
@@ -272,11 +271,52 @@ test('by-code: đã đăng nhập thì không còn bị chặn ở tầng xác t
   assert.equal(res.status, 404, 'mã không tồn tại thì trả 404');
 });
 
-test('hai endpoint upload chỉ cần đăng nhập — ghim hiện trạng, xem nợ kỹ thuật #9', async () => {
-  for (const p of BUOC_4_DEN_6_CHI_CAN_DANG_NHAP) {
-    const res = await post(p, srv.tokens.director, { file_id: 'khong-co-that' });
-    assert.notEqual(res.status, 403, p + ' hiện KHÔNG chặn theo vai trò (lỗ hổng đã biết)');
-    assert.equal(res.status, 400, p + ' dừng ở kiểm tra trạng thái quy trình, không phải phân quyền');
+/** Thêm user vào DB hộp cát (không ảnh hưởng dữ liệu thật) và ký token cho họ. */
+function themUser({ fullname, role }) {
+  const Database = require('better-sqlite3');
+  const jwt = require('jsonwebtoken');
+  const email = 'test-' + Date.now() + '-' + Math.floor(Math.random() * 1e6) + '@sci.edu.vn';
+  const db = new Database(srv.dbPath);
+  const id = db.prepare('INSERT INTO users (email, password, fullname, role) VALUES (?, ?, ?, ?)').run(email, 'x', fullname, role).lastInsertRowid;
+  db.close();
+  return { id: Number(id), token: jwt.sign({ id: Number(id), email, role }, process.env.JWT_SECRET, { expiresIn: '1h' }) };
+}
+
+test('2 endpoint upload thuyết minh: chỉ chủ nhiệm, Thư ký HĐ hoặc Admin (nợ #9)', async () => {
+  // POST /api/missions đặt principal = họ tên người tạo, nên người tạo chính là chủ nhiệm.
+  const chuNhiem = themUser({ fullname: 'Nguyễn Văn Kiểm-Thử Chủ', role: 'researcher' });
+  const created = await post('/api/missions', chuNhiem.token, { level: 'ministry', title: '[test #9] đề tài', status: 'da_phe_duyet' });
+  assert.equal(created.status, 201, 'tạo đề tài thử phải được');
+  const id = (await created.json()).mission.id;
+  const nguoiKhac = themUser({ fullname: 'Trần Thị Người-Khác', role: 'researcher' });
+  const thuKy = themUser({ fullname: 'Lê Thư Ký Kiểm-Thử', role: 'thu_ky' });
+  const ngoai = themUser({ fullname: 'Tài Khoản Ngoài CRD', role: 'crd_user' });
+
+  const urls = [
+    '/api/missions/' + id + '/buoc4a/cn-upload-thuyet-minh-chinh-sua',
+    '/api/missions/' + id + '/buoc5/upload-thuyet-minh',
+  ];
+  for (const p of urls) {
+    // KHÔNG được phép: 403 trước khi chạm vào trạng thái quy trình.
+    for (const [ten, tok] of [['nghiên cứu viên khác', nguoiKhac.token], ['Viện trưởng', srv.tokens.director], ['crd_user', ngoai.token]]) {
+      const r = await post(p, tok, { file_id: 1 });
+      assert.equal(r.status, 403, ten + ' không được upload ở ' + p);
+    }
+    // ĐƯỢC phép: qua cổng phân quyền (không 403) — Admin, Thư ký, chủ nhiệm.
+    for (const [ten, tok] of [['admin', srv.tokens.admin], ['Thư ký', thuKy.token], ['chủ nhiệm', chuNhiem.token]]) {
+      const r = await post(p, tok, { file_id: 1 });
+      assert.notEqual(r.status, 403, ten + ' phải qua được cổng phân quyền ở ' + p);
+    }
+  }
+
+  // Đường thành công thật của Bước 5: chủ nhiệm upload được.
+  const ok = await post('/api/missions/' + id + '/buoc5/upload-thuyet-minh', chuNhiem.token, { file_id: 1, phien_ban: 'v1' });
+  assert.equal(ok.status, 200, 'chủ nhiệm upload thuyết minh Bước 5 phải thành công');
+
+  // Đề tài không tồn tại: người không phận sự vẫn nhận 403 (không lộ id nào có thật).
+  for (const p of ['/api/missions/999999/buoc4a/cn-upload-thuyet-minh-chinh-sua', '/api/missions/999999/buoc5/upload-thuyet-minh']) {
+    assert.equal((await post(p, nguoiKhac.token, { file_id: 1 })).status, 403, p + ' — id không có thật + không phận sự');
+    assert.equal((await post(p, srv.tokens.admin, { file_id: 1 })).status, 400, p + ' — Admin vẫn thấy lỗi nghiệp vụ bình thường');
   }
 });
 
