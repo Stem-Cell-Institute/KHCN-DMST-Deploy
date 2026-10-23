@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Build ra từ scripts/tailwind.input.css — đừng sửa tay, chạy: npm run build:css
+public/css/tailwind.css linguist-generated=true
