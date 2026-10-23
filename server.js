@@ -17802,6 +17802,17 @@ app.get('/public/vendor/Sortable.min.js', (req, res) => {
   }
 });
 
+/** Chart.js phục vụ nội bộ: CSP chỉ cho script-src 'self', nạp từ CDN sẽ bị chặn.
+ *  Gói npm chỉ có dist/chart.umd.js (đã minify) — không có chart.umd.min.js như URL
+ *  jsDelivr dùng trước đây (jsDelivr tự minify khi file .min.js không tồn tại). */
+app.get('/public/vendor/chart.umd.js', (req, res) => {
+  try {
+    return res.sendFile(path.join(__dirname, 'node_modules', 'chart.js', 'dist', 'chart.umd.js'));
+  } catch (e) {
+    return res.status(404).send('chart.js bundle not found');
+  }
+});
+
 // Admin UI bridge:
 // - If built bundle exists, serve React app at /admin
 // - Otherwise fallback to legacy HTML workflow page from backend
