@@ -21,7 +21,7 @@
  */
 
 const express = require('express');
-const { isMissionPrincipal } = require('../services/missionOwnership');
+const { isMissionPrincipal } = require('../../services/missionOwnership');
 
 module.exports = function createMissionsPheDuyetRouter({
   db,
