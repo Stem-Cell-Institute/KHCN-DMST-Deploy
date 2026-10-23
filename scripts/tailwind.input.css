@@ -1,0 +1,4 @@
+/* Nguồn cho public/css/tailwind.css — xem scripts/tailwind.config.js. Đừng sửa file build. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
