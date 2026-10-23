@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
     <title>Tiến trình đề tài - Đề tài ngoài Viện</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
@@ -10,13 +12,13 @@
         body.content-page-timeline { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
         .timeline-page { max-width: 900px; margin: 0 auto; padding: 30px; }
         .task-header { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .task-code { font-family: monospace; font-size: 14px; color: #667eea; font-weight: 600; margin-bottom: 10px; }
+        .task-code { font-family: monospace; font-size: 14px; color: #16233d; font-weight: 600; margin-bottom: 10px; }
         .task-title { font-size: 24px; font-weight: 600; color: #333; margin-bottom: 15px; }
         .task-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0; }
         .meta-item { display: flex; flex-direction: column; gap: 5px; }
         .meta-label { font-size: 12px; color: #999; text-transform: uppercase; }
         .meta-value { font-size: 15px; color: #333; font-weight: 600; }
-        .phase-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; border-radius: 8px; margin: 30px 0 15px; font-weight: 600; }
+        .phase-header { background: #16233d; color: white; padding: 15px 20px; border-radius: 8px; margin: 30px 0 15px; font-weight: 600; }
         .phase-header:first-of-type { margin-top: 0; }
         .stage-card { background: white; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; border-left: 5px solid #e0e0e0; transition: all 0.3s; }
         .stage-card.completed { border-left-color: #4caf50 !important; }
@@ -42,9 +44,9 @@
         .badge-pending { background: #f5f5f5; color: #999; }
         .empty-state { padding: 3rem 2rem; text-align: center; color: #666; }
         .progress-bar { width: 100%; height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden; margin-top: 10px; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px; transition: width 0.5s; }
-        .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; margin-bottom: 20px; }
-        .btn-back:hover { background: #764ba2; }
+        .progress-fill { height: 100%; background: #16233d; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px; transition: width 0.5s; }
+        .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #16233d; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; margin-bottom: 20px; }
+        .btn-back:hover { background: #24365a; }
         .stage-expand { max-height: 0; overflow: hidden; transition: max-height 0.35s ease-out; }
         .stage-card.expanded .stage-expand { max-height: 2500px; transition: max-height 0.4s ease-in; }
         .stage-expand-inner { padding: 20px 22px 22px; background: #f8fdf9; border-top: 1px solid #e0e0e0; }
@@ -126,13 +128,13 @@
                     <label style="display:block;margin:4px 0;"><input type="radio" name="modal_nhanh_moi" value="A"> Nhánh A — Bộ GD/ĐHQG/Trường</label>
                     <label style="display:block;margin:4px 0;"><input type="radio" name="modal_nhanh_moi" value="B"> Nhánh B — Nhà nước/NAFOSTED</label>
                 </div>
-                <div id="modal-reset-cap-a" style="margin-bottom:12px;display:none;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Cấp đề tài mới</label>
+                <div id="modal-reset-cap-a" style="margin-bottom:12px;display:none;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;" for="modal_cap_moi_a">Cấp đề tài mới</label>
                     <select id="modal_cap_moi_a" style="width:100%;padding:8px;"><option value="ministry">Bộ GD&amp;ĐT</option><option value="university">ĐHQG-HCM</option><option value="school">Trường ĐHKHTN</option></select>
                 </div>
-                <div id="modal-reset-cap-b" style="margin-bottom:12px;display:none;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Cấp đề tài mới</label>
+                <div id="modal-reset-cap-b" style="margin-bottom:12px;display:none;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;" for="modal_cap_moi_b">Cấp đề tài mới</label>
                     <select id="modal_cap_moi_b" style="width:100%;padding:8px;"><option value="national">Nhà nước</option><option value="nafosted">NAFOSTED</option><option value="bo_nganh_khac">Bộ ngành khác</option><option value="nhiem_vu_bo_gd">Nhiệm vụ Bộ GD không phải đề tài</option></select>
                 </div>
-                <div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Lý do thay đổi * (tối thiểu 20 ký tự)</label>
+                <div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;" for="modal_ly_do">Lý do thay đổi * (tối thiểu 20 ký tự)</label>
                     <textarea id="modal_ly_do" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;" placeholder="Nhập lý do..."></textarea>
                     <span id="modal_ly_do_hint" style="font-size:12px;color:#999;"></span>
                 </div>
@@ -390,7 +392,7 @@
                                 html += '<div style="margin-top:8px;">';
                                 lichSu.forEach(function(ls, idx) {
                                     var kqLabel = (ls.ket_qua === 'dong_y' ? 'Đồng ý' : ls.ket_qua === 'dong_y_co_dieu_kien' ? 'Đồng ý có điều kiện' : ls.ket_qua === 'khong_dong_y' ? 'Không đồng ý' : ls.ket_qua || '—');
-                                    html += '<div style="padding:10px 12px;background:#fff;border-left:4px solid #667eea;border-radius:6px;margin-bottom:8px;font-size:13px;">';
+                                    html += '<div style="padding:10px 12px;background:#fff;border-left:4px solid #16233d;border-radius:6px;margin-bottom:8px;font-size:13px;">';
                                     html += '<div style="font-weight:600;">Lần xét ' + (ls.lan_xet || idx + 1) + ' — ' + kqLabel + '</div>';
                                     html += '<div style="font-size:12px;color:#666;margin-top:4px;">' + (ls.nguoi_xet || '—') + ' · ' + formatDate(ls.ngay_xet) + '</div>';
                                     if (ls.ly_do_tu_choi) html += '<div style="margin-top:6px;color:#c00;">' + (ls.ly_do_tu_choi || '').replace(/</g,'&lt;') + '</div>';
@@ -531,7 +533,7 @@
                                 html += '<div id="buoc4a-bo-yc-' + m.id + '" style="margin-left:24px;display:none;"><label>Nội dung Bộ yêu cầu *</label><textarea name="noi_dung_yc" rows="2" style="width:100%;padding:8px;"></textarea><label>Hạn nộp lại *</label><input type="date" name="han_yc" style="padding:8px;"></div>';
                                 html += '<label style="display:block;margin:4px 0;"><input type="radio" name="ket_qua" value="khong_lot" onchange="document.getElementById(\'buoc4a-bo-lydo-' + m.id + '\').style.display=\'block\';document.getElementById(\'buoc4a-bo-yc-' + m.id + '\').style.display=\'none\'"> Không lọt danh mục</label>';
                                 html += '<div id="buoc4a-bo-lydo-' + m.id + '" style="margin-left:24px;display:none;"><label>Lý do (nếu biết)</label><textarea name="ly_do" rows="2" style="width:100%;padding:8px;"></textarea></div></div>';
-                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Biên bản / văn bản Bộ</label><input type="file" id="vanBanBoFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc4a_van_ban_bo\',\'van_ban_file_id\')"><input type="hidden" name="van_ban_file_id" id="van_ban_file_id-' + m.id + '"></div>';
+                                html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;" for="vanBanBoFile-">Biên bản / văn bản Bộ</label><input type="file" id="vanBanBoFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc4a_van_ban_bo\',\'van_ban_file_id\')"><input type="hidden" name="van_ban_file_id" id="van_ban_file_id-' + m.id + '"></div>';
                                 html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ghi chú</label><textarea name="ghi_chu" rows="2" style="width:100%;padding:8px;"></textarea></div>';
                                 html += '<button type="submit" class="btn-step2 btn-approve">Lưu kết quả thẩm định →</button></form></div>';
                             }
@@ -626,7 +628,7 @@
                             html += '<h4 style="margin:0 0 12px 0;font-size:15px;">Sub-bước 1: Hoàn chỉnh thuyết minh theo yêu cầu cơ quan</h4>';
                             if (boYeuCau) html += '<div style="margin-bottom:12px;padding:10px;background:#fff3e0;border-radius:6px;font-size:13px;"><strong>Yêu cầu chỉnh sửa từ biên bản thẩm định:</strong><p style="margin:6px 0 0 0;white-space:pre-wrap;">' + (boYeuCau || '').replace(/</g,'&lt;') + '</p></div>';
                             html += '<form id="formBuoc5UploadTM-' + m.id + '" onsubmit="return window.submitBuoc5UploadTM(event, ' + m.id + ')" style="margin-bottom:16px;">';
-                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Upload thuyết minh hoàn chỉnh *</label><input type="file" id="tmHoanChinhFile-' + m.id + '" accept=".pdf,.doc,.docx" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc5_thuyet_minh\',\'tm_file_id\')"><input type="hidden" name="file_id" id="tm_file_id-' + m.id + '"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;" for="tmHoanChinhFile-">Upload thuyết minh hoàn chỉnh *</label><input type="file" id="tmHoanChinhFile-' + m.id + '" accept=".pdf,.doc,.docx" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc5_thuyet_minh\',\'tm_file_id\')"><input type="hidden" name="file_id" id="tm_file_id-' + m.id + '"></div>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Phiên bản</label><input type="text" name="phien_ban" placeholder="VD: v2.1" style="width:100%;max-width:120px;padding:8px;"></div>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ghi chú thay đổi</label><textarea name="ghi_chu_thay_doi" rows="2" style="width:100%;padding:8px;"></textarea></div>';
                             html += '<button type="submit" class="btn-step2 btn-supplement" style="margin-bottom:0;">Lưu thuyết minh hoàn chỉnh</button></form>';
@@ -643,7 +645,7 @@
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Số QĐ phê duyệt *</label><input type="text" name="so_qd" placeholder="VD: 1234/QĐ-BGDĐT" required style="width:100%;max-width:300px;padding:8px;"></div>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ngày ký QĐ *</label><input type="date" name="ngay_ky" required style="width:100%;max-width:200px;padding:8px;"></div>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Cơ quan ký *</label><input type="text" name="co_quan_ky" required style="width:100%;max-width:300px;padding:8px;"></div>';
-                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Upload file QĐ *</label><input type="file" id="qdFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc5_qd_phe_duyet\',\'qd_file_id\')"><input type="hidden" name="file_id" id="qd_file_id-' + m.id + '"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;" for="qdFile-">Upload file QĐ *</label><input type="file" id="qdFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc5_qd_phe_duyet\',\'qd_file_id\')"><input type="hidden" name="file_id" id="qd_file_id-' + m.id + '"></div>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Mã đề tài chính thức</label><input type="text" name="ma_de_tai_chinh_thuc" style="width:100%;max-width:200px;padding:8px;"></div>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Tổng kinh phí được duyệt (triệu đồng) *</label><input type="number" name="kinh_phi" step="0.01" required style="width:100%;max-width:150px;padding:8px;"></div>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Thời gian thực hiện *</label><input type="date" name="thoi_gian_bd" required style="padding:8px;margin-right:8px;"> đến <input type="date" name="thoi_gian_kt" required style="padding:8px;"></div>';
@@ -665,11 +667,11 @@
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Số hợp đồng *</label><input type="text" name="so_hd_ngoai" required style="width:100%;max-width:250px;padding:8px;"></div>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ngày ký *</label><input type="date" name="ngay_ky_ngoai" required style="width:100%;max-width:200px;padding:8px;"></div>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Giá trị hợp đồng (triệu đồng) *</label><input type="number" name="gia_tri_hd" step="0.01" required style="width:100%;max-width:150px;padding:8px;"></div>';
-                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Upload hợp đồng *</label><input type="file" id="hdNgoaiFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc6_hd_ngoai\',\'file_hd_ngoai_id\')"><input type="hidden" name="file_hd_ngoai_id" id="file_hd_ngoai_id-' + m.id + '"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;" for="hdNgoaiFile-">Upload hợp đồng *</label><input type="file" id="hdNgoaiFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc6_hd_ngoai\',\'file_hd_ngoai_id\')"><input type="hidden" name="file_hd_ngoai_id" id="file_hd_ngoai_id-' + m.id + '"></div>';
                             html += '<h4 style="margin:16px 0 12px 0;font-size:14px;">Hợp đồng nội bộ Viện – CN</h4>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Số hợp đồng nội bộ *</label><input type="text" name="so_hd_noi_bo" required style="width:100%;max-width:250px;padding:8px;"></div>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Ngày ký nội bộ *</label><input type="date" name="ngay_ky_noi_bo" required style="width:100%;max-width:200px;padding:8px;"></div>';
-                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Upload hợp đồng nội bộ *</label><input type="file" id="hdNoiBoFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc6_hd_noi_bo\',\'file_hd_noi_bo_id\')"><input type="hidden" name="file_hd_noi_bo_id" id="file_hd_noi_bo_id-' + m.id + '"></div>';
+                            html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;" for="hdNoiBoFile-">Upload hợp đồng nội bộ *</label><input type="file" id="hdNoiBoFile-' + m.id + '" accept=".pdf" onchange="window.uploadBuoc4aFileFromInput(event,' + m.id + ',\'buoc6_hd_noi_bo\',\'file_hd_noi_bo_id\')"><input type="hidden" name="file_hd_noi_bo_id" id="file_hd_noi_bo_id-' + m.id + '"></div>';
                             html += '<div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;">Phí quản lý (triệu đồng, mặc định 3%)</label><input type="number" name="phi_quan_ly" step="0.01" placeholder="Tự tính" style="width:100%;max-width:150px;padding:8px;"></div>';
                             html += '<button type="submit" class="btn-step2 btn-approve">Xác nhận đã ký hợp đồng →</button></form>';
                         } else {
@@ -717,7 +719,7 @@
             html += '<div class="stage-card completed" style="border-left-color:#4caf50;"><div class="stage-header"><div class="stage-icon" style="background:#4caf50;color:white;">📁</div><div class="stage-info" style="flex:1;"><p style="margin:0 0 8px 0;color:#666;font-size:14px;">Mẫu do Bộ/ĐHQG quy định. Hệ thống chỉ lưu trữ file đã nộp.</p>';
             html += '<div id="hoSoNgoaiListTimeline"></div>';
             html += '<div id="hoSoNgoaiFormTimeline" style="margin-top:15px;padding-top:15px;border-top:1px solid #e0e0e0;"><h5 style="margin-bottom:10px;font-size:14px;">Nộp hồ sơ mới</h5>';
-            html += '<form id="formHoSoNgoaiTimeline" onsubmit="return window.submitHoSoNgoaiTimeline(event)"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;"><div><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">File tài liệu (chọn nhiều file cùng lúc)</label><input type="file" id="hoSoNgoaiFileTimeline" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.csv,.zip,.rar,.7z" multiple required style="width:100%;padding:8px;"><p style="margin:6px 0 0 0;font-size:12px;color:#888;">Giữ nguyên tên tài liệu tiếng Việt khi tải về.</p></div><div><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Ngày nộp</label><input type="date" id="hoSoNgoaiDateTimeline" style="width:100%;padding:8px;"></div></div><div style="margin-bottom:12px;"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Ghi chú</label><textarea id="hoSoNgoaiNoteTimeline" rows="2" placeholder="VD: Nộp Bộ KHCN, số công văn..." style="width:100%;padding:8px;border:1px solid #e0e0e0;border-radius:6px;"></textarea></div><button type="submit" class="btn-back" style="margin:0;">Nộp hồ sơ</button></form></div></div></div>';
+            html += '<form id="formHoSoNgoaiTimeline" onsubmit="return window.submitHoSoNgoaiTimeline(event)"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;"><div><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;" for="hoSoNgoaiFileTimeline">File tài liệu (chọn nhiều file cùng lúc)</label><input type="file" id="hoSoNgoaiFileTimeline" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.csv,.zip,.rar,.7z" multiple required style="width:100%;padding:8px;"><p style="margin:6px 0 0 0;font-size:12px;color:#888;">Giữ nguyên tên tài liệu tiếng Việt khi tải về.</p></div><div><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;" for="hoSoNgoaiDateTimeline">Ngày nộp</label><input type="date" id="hoSoNgoaiDateTimeline" style="width:100%;padding:8px;"></div></div><div style="margin-bottom:12px;"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px;" for="hoSoNgoaiNoteTimeline">Ghi chú</label><textarea id="hoSoNgoaiNoteTimeline" rows="2" placeholder="VD: Nộp Bộ KHCN, số công văn..." style="width:100%;padding:8px;border:1px solid #e0e0e0;border-radius:6px;"></textarea></div><button type="submit" class="btn-back" style="margin:0;">Nộp hồ sơ</button></form></div></div></div>';
 
             contentEl.innerHTML = html;
             window._missionIdForHoSo = m.id;
@@ -742,7 +744,7 @@
                         var subDate = f.submission_date ? formatDate(f.submission_date) : '—';
                         var note = (f.note || '').trim() ? (f.note || '').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '—';
                         var safeName = (f.original_name || 'file').replace(/"/g, '');
-                        html += '<tr style="border-bottom:1px solid #eee;"><td style="padding:10px;">' + (f.original_name || '—').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</td><td style="padding:10px;">' + subDate + '</td><td style="padding:10px;">' + note + '</td><td style="padding:10px;"><button type="button" onclick="window.downloadHoSoNgoaiTimeline(' + missionId + ',' + f.id + ',\'' + safeName.replace(/'/g, "\\'") + '\')" style="font-size:12px;padding:4px 10px;cursor:pointer;border:none;background:#667eea;color:white;border-radius:6px;">Tải</button></td></tr>';
+                        html += '<tr style="border-bottom:1px solid #eee;"><td style="padding:10px;">' + (f.original_name || '—').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</td><td style="padding:10px;">' + subDate + '</td><td style="padding:10px;">' + note + '</td><td style="padding:10px;"><button type="button" onclick="window.downloadHoSoNgoaiTimeline(' + missionId + ',' + f.id + ',\'' + safeName.replace(/'/g, "\\'") + '\')" style="font-size:12px;padding:4px 10px;cursor:pointer;border:none;background:#16233d;color:white;border-radius:6px;">Tải</button></td></tr>';
                     });
                     html += '</tbody></table>';
                     listEl.innerHTML = html;

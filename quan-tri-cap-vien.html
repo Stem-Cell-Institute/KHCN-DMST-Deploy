@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
     <title>Quản trị hệ thống Đề tài cấp Viện</title>
     <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
@@ -396,8 +398,8 @@
                 <div id="linh-vuc-msg" class="msg" style="display:none;"></div>
                 <div class="add-role-form" style="margin-bottom:1rem;">
                     <div class="form-row">
-                        <div class="form-group" style="min-width:120px;"><label>Mã</label><input type="text" id="lv-code" placeholder="stem-cell"></div>
-                        <div class="form-group" style="flex:1;min-width:180px;"><label>Nội dung</label><input type="text" id="lv-label" placeholder="Tế bào gốc"></div>
+                        <div class="form-group" style="min-width:120px;"><label for="lv-code">Mã</label><input type="text" id="lv-code" placeholder="stem-cell"></div>
+                        <div class="form-group" style="flex:1;min-width:180px;"><label for="lv-label">Nội dung</label><input type="text" id="lv-label" placeholder="Tế bào gốc"></div>
                         <div class="form-group form-group-btn"><button type="button" class="btn-submit-role" id="btn-add-lv">Thêm</button></div>
                     </div>
                 </div>
@@ -408,8 +410,8 @@
                 <div id="loai-de-tai-msg" class="msg" style="display:none;"></div>
                 <div class="add-role-form" style="margin-bottom:1rem;">
                     <div class="form-row">
-                        <div class="form-group" style="min-width:120px;"><label>Mã</label><input type="text" id="ldt-code" placeholder="research"></div>
-                        <div class="form-group" style="flex:1;min-width:180px;"><label>Nội dung</label><input type="text" id="ldt-label" placeholder="Đề tài nghiên cứu"></div>
+                        <div class="form-group" style="min-width:120px;"><label for="ldt-code">Mã</label><input type="text" id="ldt-code" placeholder="research"></div>
+                        <div class="form-group" style="flex:1;min-width:180px;"><label for="ldt-label">Nội dung</label><input type="text" id="ldt-label" placeholder="Đề tài nghiên cứu"></div>
                         <div class="form-group form-group-btn"><button type="button" class="btn-submit-role" id="btn-add-ldt">Thêm</button></div>
                     </div>
                 </div>
@@ -420,8 +422,8 @@
                 <div id="don-vi-msg" class="msg" style="display:none;"></div>
                 <div class="add-role-form" style="margin-bottom:1rem;">
                     <div class="form-row">
-                        <div class="form-group" style="min-width:120px;"><label>Mã</label><input type="text" id="dv-code" placeholder="lab1"></div>
-                        <div class="form-group" style="flex:1;min-width:180px;"><label>Nội dung</label><input type="text" id="dv-label" placeholder="Phòng Lab 1"></div>
+                        <div class="form-group" style="min-width:120px;"><label for="dv-code">Mã</label><input type="text" id="dv-code" placeholder="lab1"></div>
+                        <div class="form-group" style="flex:1;min-width:180px;"><label for="dv-label">Nội dung</label><input type="text" id="dv-label" placeholder="Phòng Lab 1"></div>
                         <div class="form-group form-group-btn"><button type="button" class="btn-submit-role" id="btn-add-dv">Thêm</button></div>
                     </div>
                 </div>
@@ -432,9 +434,9 @@
                 <div id="khoan-muc-msg" class="msg" style="display:none;"></div>
                 <div class="add-role-form" style="margin-bottom:1rem;">
                     <div class="form-row">
-                        <div class="form-group" style="min-width:80px;"><label>Mã</label><input type="text" id="km-code" placeholder="1.1"></div>
-                        <div class="form-group" style="flex:1;min-width:200px;"><label>Nội dung</label><input type="text" id="km-label" placeholder="Chủ nhiệm đề tài"></div>
-                        <div class="form-group" style="min-width:100px;"><label>Mã cha (tùy chọn)</label><input type="text" id="km-parent" placeholder="1"></div>
+                        <div class="form-group" style="min-width:80px;"><label for="km-code">Mã</label><input type="text" id="km-code" placeholder="1.1"></div>
+                        <div class="form-group" style="flex:1;min-width:200px;"><label for="km-label">Nội dung</label><input type="text" id="km-label" placeholder="Chủ nhiệm đề tài"></div>
+                        <div class="form-group" style="min-width:100px;"><label for="km-parent">Mã cha (tùy chọn)</label><input type="text" id="km-parent" placeholder="1"></div>
                         <div class="form-group form-group-btn"><button type="button" class="btn-submit-role" id="btn-add-km">Thêm</button></div>
                     </div>
                 </div>

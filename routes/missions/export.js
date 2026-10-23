@@ -10,7 +10,7 @@
 
 const express = require('express');
 const XLSX = require('xlsx');
-const { buildMissionReportBuffer } = require('../services/missionReportBuilder');
+const { buildMissionReportBuffer } = require('../../services/missionReportBuilder');
 
 const MISSION_CSV_HEADER = 'code,title,principal,level,status,start_date,end_date,progress,budget';
 const MISSION_SELECT_BASIC =

@@ -82,7 +82,7 @@
 .ea-card b {
   display: block;
   font-size: 1.45rem;
-  color: var(--primary, #667eea);
+  color: var(--primary, #16233d);
   font-variant-numeric: tabular-nums;
 }
 
@@ -112,8 +112,8 @@
 }
 
 .ea-subtab.active {
-  color: var(--primary, #667eea);
-  border-bottom-color: var(--primary, #667eea);
+  color: var(--primary, #16233d);
+  border-bottom-color: var(--primary, #16233d);
 }
 
 .ea-panel {
@@ -195,7 +195,7 @@
 }
 
 .ea-h-cell:hover {
-  outline: 2px solid var(--primary, #667eea);
+  outline: 2px solid var(--primary, #16233d);
   z-index: 1;
 }
 
@@ -253,7 +253,7 @@
 .ea-maint-bar > i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: #16233d;
   border-radius: 6px;
 }
 
