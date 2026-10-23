@@ -11,19 +11,17 @@
  * code cũ, chỉ dùng cho đúng một endpoint ket-qua-hop), nên nó nhận `roleIsAny` từ
  * tham số factory thay vì từ phạm vi module của server.js.
  *
- * ⚠️ NỢ KỸ THUẬT #9 — hai endpoint dưới đây chỉ có `authMiddleware`, KHÔNG kiểm vai
- * trò và KHÔNG kiểm chủ nhiệm đề tài:
+ * NỢ KỸ THUẬT #9 — ĐÃ VÁ. Hai endpoint dưới đây trước đây chỉ có `authMiddleware`, ai đăng nhập
+ * cũng gọi được cho mission id bất kỳ:
  *     POST /api/missions/:id/buoc4a/cn-upload-thuyet-minh-chinh-sua
  *     POST /api/missions/:id/buoc5/upload-thuyet-minh
- * Bất kỳ tài khoản đã đăng nhập nào — kể cả `crd_user` (tài khoản ngoài chỉ để đặt
- * lịch phòng thí nghiệm) — đều gọi được cho mission id bất kỳ. Chúng được di chuyển
- * NGUYÊN TRẠNG ở đợt này vì refactor không được đổi hành vi; bản vá cần một quyết định
- * nghiệp vụ (ai được upload?) và `missions.principal` là tên dạng chuỗi chứ không phải
- * khóa ngoại tới `users`, nên không vá được bằng một middleware. Xem readme/
- * REFACTOR-PROGRESS.md mục #9.
+ * Nay chỉ chủ nhiệm đề tài, Thư ký Hội đồng hoặc Admin được gọi (`chuNhiemOrThuKyOrAdmin` bên dưới).
+ * Cách xác định chủ nhiệm và giới hạn của nó: xem services/missionOwnership.js. Đây là thay đổi
+ * HÀNH VI có chủ đích, tách khỏi đợt refactor 1.3 (vốn chỉ cắt–dán nguyên trạng).
  */
 
 const express = require('express');
+const { isMissionPrincipal } = require('../services/missionOwnership');
 
 module.exports = function createMissionsPheDuyetRouter({
   db,
@@ -37,6 +35,19 @@ module.exports = function createMissionsPheDuyetRouter({
   getSmtpFrom,
 }) {
 const router = express.Router();
+
+/**
+ * Chỉ chủ nhiệm đề tài, Thư ký Hội đồng hoặc Admin (nợ kỹ thuật #9).
+ * Đề tài không tồn tại cũng trả 403 với người không phận sự — để không lộ id nào có thật.
+ * Admin / Thư ký đi tiếp và vẫn nhận lỗi nghiệp vụ bình thường (400) ở handler.
+ */
+function chuNhiemOrThuKyOrAdmin(req, res, next) {
+  if (roleIsAny(req, ['admin', 'thu_ky'])) return next();
+  const id = parseInt(req.params.id, 10);
+  const mission = id ? db.prepare('SELECT id, principal, source_type, source_id FROM missions WHERE id = ?').get(id) : null;
+  if (mission && isMissionPrincipal(db, mission, req.user)) return next();
+  return res.status(403).json({ message: 'Chỉ chủ nhiệm đề tài, Thư ký Hội đồng hoặc Admin mới có quyền này' });
+}
 
 // ========== BƯỚC 4 NHÁNH A — Xét chọn tại Viện & gửi Bộ ==========
 
@@ -231,7 +242,7 @@ router.post('/missions/:id/buoc4a/chuyen-buoc5', authMiddleware, thuyKyOrAdmin, 
 });
 
 // CN upload thuyết minh chỉnh sửa (khi HĐ yêu cầu)
-router.post('/missions/:id/buoc4a/cn-upload-thuyet-minh-chinh-sua', authMiddleware, (req, res) => {
+router.post('/missions/:id/buoc4a/cn-upload-thuyet-minh-chinh-sua', authMiddleware, chuNhiemOrThuKyOrAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) return res.status(400).json({ message: 'ID không hợp lệ' });
   const b4a = db.prepare('SELECT * FROM buoc4a WHERE mission_id = ?').get(id);
@@ -324,7 +335,7 @@ router.post('/missions/:id/buoc4b/ket-qua', authMiddleware, thuyKyOrAdmin, (req,
 });
 
 // ========== BƯỚC 5 ==========
-router.post('/missions/:id/buoc5/upload-thuyet-minh', authMiddleware, (req, res) => {
+router.post('/missions/:id/buoc5/upload-thuyet-minh', authMiddleware, chuNhiemOrThuKyOrAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!id || isNaN(id)) return res.status(400).json({ message: 'ID không hợp lệ' });
   const mission = db.prepare('SELECT id, status FROM missions WHERE id = ?').get(id);
