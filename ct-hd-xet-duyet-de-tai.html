@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
     <title>CT HĐ KHCN — Xét duyệt đề tài</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
@@ -12,12 +13,12 @@
         .page-wrap { max-width: 1400px; margin: 0 auto; padding: 30px; }
         .page-header { margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
         .page-title { font-size: 24px; font-weight: 600; color: #333; }
-        .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; }
+        .btn-back { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #16233d; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; }
         .btn-back:hover { background: #5568d3; }
         .tabs { display: flex; gap: 4px; border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; }
         .tab { padding: 12px 20px; border: none; background: transparent; cursor: pointer; font-weight: 500; color: #666; border-radius: 8px 8px 0 0; }
         .tab:hover { background: #f0f0f0; color: #333; }
-        .tab.active { background: #667eea; color: white; }
+        .tab.active { background: #16233d; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .list-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; }
@@ -25,7 +26,7 @@
         .list-table th { padding: 14px 18px; text-align: left; font-weight: 600; color: #495057; background: #f8f9fa; border-bottom: 2px solid #dee2e6; font-size: 13px; }
         .list-table td { padding: 14px 18px; border-bottom: 1px solid #eee; font-size: 14px; }
         .list-table tr:hover { background: #f8f9fa; }
-        .list-table a { color: #667eea; text-decoration: none; font-weight: 500; }
+        .list-table a { color: #16233d; text-decoration: none; font-weight: 500; }
         .list-table a:hover { text-decoration: underline; }
         .badge { padding: 4px 10px; border-radius: 16px; font-size: 11px; font-weight: 600; }
         .badge-cho { background: #e3f2fd; color: #1976d2; }
@@ -34,19 +35,19 @@
         @media (max-width: 1000px) { .detail-layout { grid-template-columns: 1fr; } }
         .col-left { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .col-right { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .section-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #667eea; }
+        .section-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #16233d; }
         .cn-info { padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
         .cn-info p { margin: 0 0 6px 0; }
         .file-list { margin-top: 12px; }
         .file-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
         .file-item a { color: #1565c0; text-decoration: none; }
         .file-item a:hover { text-decoration: underline; }
-        .btn-download { padding: 6px 14px; background: #667eea; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .btn-download { padding: 6px 14px; background: #16233d; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; }
         .btn-download:hover { background: #5568d3; }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-weight: 500; margin-bottom: 6px; font-size: 13px; color: #333; }
         .form-group textarea { width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 80px; }
-        .form-group textarea:focus { outline: none; border-color: #667eea; }
+        .form-group textarea:focus { outline: none; border-color: #16233d; }
         .form-group input[type="radio"] { margin-right: 8px; }
         .radio-option { display: flex; align-items: flex-start; margin-bottom: 10px; }
         .radio-option label { margin: 0; cursor: pointer; flex: 1; }
@@ -77,7 +78,7 @@
         .ongoing-list { margin-top: 12px; }
         .ongoing-item { padding: 8px 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 6px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
         .ongoing-item .level-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: #e3f2fd; color: #1976d2; }
-        .btn-tai-thuyet-minh { padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; margin-bottom: 12px; }
+        .btn-tai-thuyet-minh { padding: 8px 16px; background: #16233d; color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; margin-bottom: 12px; }
         .btn-tai-thuyet-minh:hover { background: #5568d3; }
     </style>
 </head>
@@ -358,10 +359,10 @@
 
         function renderReviewForm(missionId, m) {
             var html = '<form id="form-step3-submit">';
-            html += '<div class="form-group"><label>Đánh giá tính khoa học & tính mới <span style="color:#c00;">*</span></label><textarea id="nhan_xet_khoa_hoc" required placeholder="Nhận xét về tính khoa học, tính mới của đề tài..."></textarea></div>';
-            html += '<div class="form-group"><label>Đánh giá tính khả thi <span style="color:#c00;">*</span></label><textarea id="nhan_xet_kha_thi" required placeholder="Nhận xét về phương pháp, nguồn lực, thời gian..."></textarea></div>';
-            html += '<div class="form-group"><label>Phù hợp định hướng KH&amp;CN của Viện <span style="color:#c00;">*</span></label><textarea id="nhan_xet_dinh_huong" required placeholder="Mức độ phù hợp với chiến lược phát triển KH&amp;CN..."></textarea></div>';
-            html += '<div class="form-group"><label>Năng lực chủ nhiệm <span style="color:#c00;">*</span></label><textarea id="nhan_xet_nang_luc" required placeholder="Nhận xét về năng lực chuyên môn, không xung đột nhiệm vụ..."></textarea></div>';
+            html += '<div class="form-group"><label for="nhan_xet_khoa_hoc">Đánh giá tính khoa học & tính mới <span style="color:#c00;">*</span></label><textarea id="nhan_xet_khoa_hoc" required placeholder="Nhận xét về tính khoa học, tính mới của đề tài..."></textarea></div>';
+            html += '<div class="form-group"><label for="nhan_xet_kha_thi">Đánh giá tính khả thi <span style="color:#c00;">*</span></label><textarea id="nhan_xet_kha_thi" required placeholder="Nhận xét về phương pháp, nguồn lực, thời gian..."></textarea></div>';
+            html += '<div class="form-group"><label for="nhan_xet_dinh_huong">Phù hợp định hướng KH&amp;CN của Viện <span style="color:#c00;">*</span></label><textarea id="nhan_xet_dinh_huong" required placeholder="Mức độ phù hợp với chiến lược phát triển KH&amp;CN..."></textarea></div>';
+            html += '<div class="form-group"><label for="nhan_xet_nang_luc">Năng lực chủ nhiệm <span style="color:#c00;">*</span></label><textarea id="nhan_xet_nang_luc" required placeholder="Nhận xét về năng lực chuyên môn, không xung đột nhiệm vụ..."></textarea></div>';
             html += '<div class="form-group"><label>Kết luận <span style="color:#c00;">*</span></label>';
             html += '<div class="radio-option"><input type="radio" name="ket_qua" value="dong_y" id="kq_dong_y"><label for="kq_dong_y">Đồng ý cho ban hành hồ sơ</label></div>';
             html += '<div class="radio-option"><input type="radio" name="ket_qua" value="dong_y_co_dieu_kien" id="kq_dong_y_dk"><label for="kq_dong_y_dk">Đồng ý có điều kiện</label><div class="conditional-field" id="cf_dieu_kien" style="display:none;"><textarea id="dieu_kien" placeholder="Điều kiện cụ thể (bắt buộc)" rows="3"></textarea></div></div>';

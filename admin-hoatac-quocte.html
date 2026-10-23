@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
 <title>Quản trị Hợp tác Quốc tế — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -277,9 +278,9 @@ textarea{resize:vertical;min-height:70px}
     <div class="card-body">
       <p style="font-size:13px;color:var(--ink-soft);line-height:1.55;margin-bottom:14px">Áp dụng cho thỏa thuận tại <b>Thỏa thuận hiệu lực</b> (có <b>Hết hạn</b>). <b>Trước hạn:</b> một email khi đang trong <b>N tháng cuối</b> trước ngày hết hạn. <b>Sau hạn:</b> nếu đã qua ngày hết hạn mà trạng thái vẫn Hiệu lực/Sắp hết hạn, có thể gửi thêm tối đa <b>M lần</b>, mỗi lần cách nhau ít nhất <b>D ngày</b>. Đặt M = 0 để không gửi sau hết hạn. Người nhận: topic <b>Cảnh báo hết hạn TT</b> (hoặc <b>Tất cả</b>). Cần SMTP.</p>
       <div class="form-row cols-4" style="align-items:flex-end;flex-wrap:wrap;gap:12px">
-        <div class="form-group"><label>Số tháng trước hết hạn (1–36)</label><input type="number" id="admin-tt-expiry-months" min="1" max="36" value="3" style="max-width:140px"></div>
-        <div class="form-group"><label>Số lần email <em>sau</em> ngày hết hạn (0–20)</label><input type="number" id="admin-tt-post-max" min="0" max="20" value="3" title="0 = không gửi nhắc sau khi đã quá hạn" style="max-width:140px"></div>
-        <div class="form-group"><label>Khoảng cách tối thiểu giữa các lần (1–90 ngày)</label><input type="number" id="admin-tt-post-min-days" min="1" max="90" value="7" style="max-width:140px"></div>
+        <div class="form-group"><label for="admin-tt-expiry-months">Số tháng trước hết hạn (1–36)</label><input type="number" id="admin-tt-expiry-months" min="1" max="36" value="3" style="max-width:140px"></div>
+        <div class="form-group"><label for="admin-tt-post-max">Số lần email <em>sau</em> ngày hết hạn (0–20)</label><input type="number" id="admin-tt-post-max" min="0" max="20" value="3" title="0 = không gửi nhắc sau khi đã quá hạn" style="max-width:140px"></div>
+        <div class="form-group"><label for="admin-tt-post-min-days">Khoảng cách tối thiểu giữa các lần (1–90 ngày)</label><input type="number" id="admin-tt-post-min-days" min="1" max="90" value="7" style="max-width:140px"></div>
         <div class="form-group"><button type="button" class="btn btn-primary btn-sm" onclick="saveThoaThuanExpirySettings()">Lưu cấu hình</button></div>
         <div class="form-group"><button type="button" class="btn btn-outline btn-sm" onclick="runThoaThuanExpiryCheck()">Chạy kiểm tra ngay</button></div>
       </div>
@@ -290,9 +291,9 @@ textarea{resize:vertical;min-height:70px}
     <div class="card-body">
       <div id="recip-add-msg" class="alert hidden"></div>
       <div class="form-row cols-4">
-        <div class="form-group"><label>Email *</label><input id="re-email" placeholder="user@sci.edu.vn" type="email"></div>
-        <div class="form-group"><label>Họ tên</label><input id="re-name" placeholder="Nguyễn Văn A"></div>
-        <div class="form-group"><label>Vai trò đặc biệt</label>
+        <div class="form-group"><label for="re-email">Email *</label><input id="re-email" placeholder="user@sci.edu.vn" type="email"></div>
+        <div class="form-group"><label for="re-name">Họ tên</label><input id="re-name" placeholder="Nguyễn Văn A"></div>
+        <div class="form-group"><label for="re-role">Vai trò đặc biệt</label>
           <select id="re-role">
             <option value="">— Không (Phòng KHCN) —</option>
             <option value="vien_truong">Viện trưởng (nhận TO:)</option>
@@ -344,9 +345,9 @@ textarea{resize:vertical;min-height:70px}
     <div class="card-body">
       <div id="tk-add-msg" class="alert hidden"></div>
       <div class="form-row cols-4">
-        <div class="form-group"><label>Email *</label><input id="tk-add-email" type="email" placeholder="user@sci.edu.vn"></div>
-        <div class="form-group"><label>Họ tên</label><input id="tk-add-fullname" placeholder="Nguyễn Văn A"></div>
-        <div class="form-group"><label>Vai trò *</label>
+        <div class="form-group"><label for="tk-add-email">Email *</label><input id="tk-add-email" type="email" placeholder="user@sci.edu.vn"></div>
+        <div class="form-group"><label for="tk-add-fullname">Họ tên</label><input id="tk-add-fullname" placeholder="Nguyễn Văn A"></div>
+        <div class="form-group"><label for="tk-add-role">Vai trò *</label>
           <select id="tk-add-role">
             <option value="researcher">Nghiên cứu viên</option>
             <option value="phong_khcn">Phòng KHCN&QHĐN</option>
@@ -359,7 +360,7 @@ textarea{resize:vertical;min-height:70px}
             <option value="thanh_vien_tham_dinh_tc">TV thẩm định TC</option>
           </select>
         </div>
-        <div class="form-group"><label>Mật khẩu (tùy chọn)</label><input id="tk-add-password" type="text" placeholder="Để trống: user tự đặt mật khẩu"></div>
+        <div class="form-group"><label for="tk-add-password">Mật khẩu (tùy chọn)</label><input id="tk-add-password" type="text" placeholder="Để trống: user tự đặt mật khẩu"></div>
       </div>
       <button type="button" class="btn btn-primary" onclick="addTkUser()">Thêm tài khoản</button>
     </div>
@@ -378,14 +379,14 @@ textarea{resize:vertical;min-height:70px}
     <div class="card-body">
       <div id="tt-msg" class="alert hidden"></div>
       <div class="form-row cols-3">
-        <div class="form-group"><label>Tên thỏa thuận *</label><input id="tt-ten" placeholder="VD: MOU hợp tác với Đại học Tokyo"></div>
-        <div class="form-group"><label>Đối tác *</label><input id="tt-doi-tac" placeholder="VD: Đại học Tokyo"></div>
-        <div class="form-group"><label>Loại *</label>
+        <div class="form-group"><label for="tt-ten">Tên thỏa thuận *</label><input id="tt-ten" placeholder="VD: MOU hợp tác với Đại học Tokyo"></div>
+        <div class="form-group"><label for="tt-doi-tac">Đối tác *</label><input id="tt-doi-tac" placeholder="VD: Đại học Tokyo"></div>
+        <div class="form-group"><label for="tt-loai">Loại *</label>
           <select id="tt-loai"><option value="MOU">MOU</option><option value="MOA">MOA</option><option value="HD_KHCN">HĐ KHCN</option><option value="LOI">LOI</option></select></div>
       </div>
       <div class="form-row cols-3">
-        <div class="form-group"><label>Quốc gia</label><input id="tt-quoc-gia" placeholder="VD: Nhật Bản"></div>
-        <div class="form-group"><label>Ngày ký *</label><input id="tt-ngay-ky" type="date"></div>
+        <div class="form-group"><label for="tt-quoc-gia">Quốc gia</label><input id="tt-quoc-gia" placeholder="VD: Nhật Bản"></div>
+        <div class="form-group"><label for="tt-ngay-ky">Ngày ký *</label><input id="tt-ngay-ky" type="date"></div>
       </div>
       <div class="form-group tt-term-mode-section">
         <span class="tt-term-mode-section-label">Kiểu thời hạn hiệu lực *</span>
@@ -403,16 +404,16 @@ textarea{resize:vertical;min-height:70px}
       </div>
       <div id="tt-panel-term-fixed" class="tt-term-panel">
         <div class="form-row cols-3">
-          <div class="form-group"><label><span id="tt-thoi-han-label">Thời hạn hiệu lực (năm) *</span></label><input id="tt-thoi-han-nam" type="number" min="1" max="99" step="1" placeholder="VD: 5"></div>
+          <div class="form-group"><label for="tt-thoi-han-nam"><span id="tt-thoi-han-label">Thời hạn hiệu lực (năm) *</span></label><input id="tt-thoi-han-nam" type="number" min="1" max="99" step="1" placeholder="VD: 5"></div>
         </div>
         <p id="tt-het-han-preview" class="tt-expiry-preview">—</p>
       </div>
       <div id="tt-panel-term-open" class="tt-term-panel tt-term-panel--open hidden">
         <p class="tt-open-term-hint">Thỏa thuận không có ngày hết hiệu lực cố định. Ghi nhận kết thúc trong module Hợp tác QT (chi tiết thỏa thuận) khi có văn bản chấm dứt.</p>
       </div>
-      <div class="form-group" style="margin-bottom:12px"><label>Ghi chú (P. KHCN)</label><textarea id="tt-staff-notes" rows="2" placeholder="Ví dụ: Tự động gia hạn hàng năm nếu không có văn bản khác" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px"></textarea></div>
+      <div class="form-group" style="margin-bottom:12px"><label for="tt-staff-notes">Ghi chú (P. KHCN)</label><textarea id="tt-staff-notes" rows="2" placeholder="Ví dụ: Tự động gia hạn hàng năm nếu không có văn bản khác" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px"></textarea></div>
       <div class="form-row cols-3">
-        <div class="form-group"><label>Trạng thái (khi thêm: hệ thống tự tính theo ngày hết hiệu lực)</label>
+        <div class="form-group"><label for="tt-trang-thai">Trạng thái (khi thêm: hệ thống tự tính theo ngày hết hiệu lực)</label>
           <select id="tt-trang-thai" disabled><option value="hieu_luc">Hiệu lực</option><option value="sap_het_han">Sắp hết hạn</option><option value="het_han">Hết hạn</option></select></div>
       </div>
       <button class="btn btn-primary" onclick="addThoaThuan()">➕ Thêm thỏa thuận</button>
@@ -432,18 +433,18 @@ textarea{resize:vertical;min-height:70px}
     <div class="card-body">
       <div id="sk-msg" class="alert hidden"></div>
       <div class="form-row cols-3">
-        <div class="form-group" style="grid-column:1/-1"><label>Tiêu đề *</label><input id="sk-tieu-de"></div>
-        <div class="form-group"><label>Loại</label><select id="sk-loai"><option value="hoi_thao">Hội thảo</option><option value="hoi_nghi">Hội nghị</option><option value="workshop">Workshop</option><option value="khac">Khác</option></select></div>
-        <div class="form-group"><label>Quốc gia</label><input id="sk-quoc-gia"></div>
-        <div class="form-group"><label>Địa điểm</label><input id="sk-dia-diem"></div>
-        <div class="form-group"><label>Đơn vị tổ chức</label><input id="sk-don-vi"></div>
-        <div class="form-group"><label>Ngày bắt đầu *</label><input id="sk-ngay-bd" type="date"></div>
-        <div class="form-group"><label>Ngày kết thúc</label><input id="sk-ngay-kt" type="date"></div>
-        <div class="form-group"><label>Hạn đăng ký</label><input id="sk-han-dk" type="date"></div>
-        <div class="form-group"><label>Kinh phí</label><input id="sk-kinh-phi" placeholder="VD: 500 USD"></div>
-        <div class="form-group"><label>Link sự kiện</label><input id="sk-link" type="url"></div>
-        <div class="form-group"><label>Trạng thái</label><select id="sk-status"><option value="sap_dien_ra">Sắp diễn ra</option><option value="dang_dien_ra">Đang diễn ra</option><option value="da_ket_thuc">Đã kết thúc</option></select></div>
-        <div class="form-group" style="grid-column:1/-1"><label>Mô tả</label><textarea id="sk-mo-ta" rows="2"></textarea></div>
+        <div class="form-group" style="grid-column:1/-1"><label for="sk-tieu-de">Tiêu đề *</label><input id="sk-tieu-de"></div>
+        <div class="form-group"><label for="sk-loai">Loại</label><select id="sk-loai"><option value="hoi_thao">Hội thảo</option><option value="hoi_nghi">Hội nghị</option><option value="workshop">Workshop</option><option value="khac">Khác</option></select></div>
+        <div class="form-group"><label for="sk-quoc-gia">Quốc gia</label><input id="sk-quoc-gia"></div>
+        <div class="form-group"><label for="sk-dia-diem">Địa điểm</label><input id="sk-dia-diem"></div>
+        <div class="form-group"><label for="sk-don-vi">Đơn vị tổ chức</label><input id="sk-don-vi"></div>
+        <div class="form-group"><label for="sk-ngay-bd">Ngày bắt đầu *</label><input id="sk-ngay-bd" type="date"></div>
+        <div class="form-group"><label for="sk-ngay-kt">Ngày kết thúc</label><input id="sk-ngay-kt" type="date"></div>
+        <div class="form-group"><label for="sk-han-dk">Hạn đăng ký</label><input id="sk-han-dk" type="date"></div>
+        <div class="form-group"><label for="sk-kinh-phi">Kinh phí</label><input id="sk-kinh-phi" placeholder="VD: 500 USD"></div>
+        <div class="form-group"><label for="sk-link">Link sự kiện</label><input id="sk-link" type="url"></div>
+        <div class="form-group"><label for="sk-status">Trạng thái</label><select id="sk-status"><option value="sap_dien_ra">Sắp diễn ra</option><option value="dang_dien_ra">Đang diễn ra</option><option value="da_ket_thuc">Đã kết thúc</option></select></div>
+        <div class="form-group" style="grid-column:1/-1"><label for="sk-mo-ta">Mô tả</label><textarea id="sk-mo-ta" rows="2"></textarea></div>
       </div>
       <button class="btn btn-primary" onclick="addSuKien()">🗓️ Thêm sự kiện</button>
     </div>
@@ -1309,15 +1310,15 @@ function buildAdminThoaThuanEditFormHtml(it){
     termBlock='<p style="grid-column:1/-1;font-size:12px;color:var(--ink-muted);margin:0">Đã ghi nhận kết thúc — không đổi loại thời hạn hoặc ngày hết hạn tại đây.</p>';
   }
   return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
-    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Tên *</label><input id="tt-edit-ten" type="text" value="'+ttInputEsc(it.ten)+'" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px"></div>'
-    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Đối tác *</label><input id="tt-edit-doi-tac" type="text" value="'+ttInputEsc(it.doi_tac)+'" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px"></div>'
-    +'<div><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Loại *</label><select id="tt-edit-loai" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px">'+loaiOpts+'</select></div>'
-    +'<div><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Quốc gia</label><input id="tt-edit-quoc-gia" type="text" value="'+ttInputEsc(it.quoc_gia)+'" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px"></div>'
-    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Loại đối tác</label><select id="tt-edit-loai-doi-tac" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px">'+ltdOpts+'</select></div>'
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-ten">Tên *</label><input id="tt-edit-ten" type="text" value="'+ttInputEsc(it.ten)+'" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px"></div>'
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-doi-tac">Đối tác *</label><input id="tt-edit-doi-tac" type="text" value="'+ttInputEsc(it.doi_tac)+'" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px"></div>'
+    +'<div><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-loai">Loại *</label><select id="tt-edit-loai" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px">'+loaiOpts+'</select></div>'
+    +'<div><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-quoc-gia">Quốc gia</label><input id="tt-edit-quoc-gia" type="text" value="'+ttInputEsc(it.quoc_gia)+'" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px"></div>'
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-loai-doi-tac">Loại đối tác</label><select id="tt-edit-loai-doi-tac" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px">'+ltdOpts+'</select></div>'
     +termBlock
-    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Trạng thái</label><select id="tt-edit-trang-thai" style="width:100%;max-width:280px;padding:8px 10px;border:2px solid var(--border);border-radius:8px">'+trOpts+'</select></div>'
-    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Ghi chú (P. KHCN)</label><textarea id="tt-edit-staff-notes" rows="2" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;resize:vertical">'+ttInputEsc(it.staff_notes)+'</textarea></div>'
-    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px">Thay bản scan (tuỳ chọn)</label><input type="file" id="tt-edit-scan-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"></div>'
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-trang-thai">Trạng thái</label><select id="tt-edit-trang-thai" style="width:100%;max-width:280px;padding:8px 10px;border:2px solid var(--border);border-radius:8px">'+trOpts+'</select></div>'
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-staff-notes">Ghi chú (P. KHCN)</label><textarea id="tt-edit-staff-notes" rows="2" style="width:100%;padding:8px 10px;border:2px solid var(--border);border-radius:8px;resize:vertical">'+ttInputEsc(it.staff_notes)+'</textarea></div>'
+    +'<div style="grid-column:1/-1"><label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px" for="tt-edit-scan-file">Thay bản scan (tuỳ chọn)</label><input type="file" id="tt-edit-scan-file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"></div>'
     +'</div>'
     +'<div style="margin-top:14px"><button type="button" class="btn btn-primary btn-sm" id="tt-btn-edit-save" onclick="submitAdminThoaThuanEditSave()">Lưu thay đổi</button></div>';
 }

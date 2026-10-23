@@ -4,25 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
 <title>Quản trị đặt lịch thiết bị CRD | Admin</title>
 <link rel="stylesheet" href="public/css/equipmentAnalytics.css" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);min-height:100vh;padding:20px;color:#e8e8f0;}
-:root{--card:#fff;--text:#1a1a2e;--muted:#5c5c7a;--border:#e0e4f0;--primary:#667eea;--danger:#e05c6a;--ok:#2e7d52;}
-a{color:#a8b4ff;}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#fafaf8;min-height:100vh;padding:20px;color:#16233d;}
+:root{--card:#fff;--text:#1a1a2e;--muted:#5c5c7a;--border:#e0e4f0;--primary:#16233d;--son:#b7281e;--ke:#d8dce5;--danger:#b7281e;--ok:#2e7d52;}
+a{color:#16233d;}
+a:hover{color:#b7281e;}
 .container{max-width:1280px;margin:0 auto;}
 .topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;}
-.topbar h1{font-size:1.35rem;font-weight:700;color:#fff;}
+.topbar h1{font-size:1.35rem;font-weight:700;color:#16233d;}
 .topbar .sub{font-size:12px;opacity:.85;margin-top:4px;}
 .btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:8px;padding:9px 16px;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:none;}
-.btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;}
-.btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);}
+.btn-primary{background:#16233d;color:#fff;}
+.btn-ghost{background:#fff;color:#16233d;border:1px solid #b9c0cf;}
 .btn-danger{background:var(--danger);color:#fff;padding:6px 12px;font-size:12px;}
 .btn-sm{padding:6px 12px;font-size:12px;}
-.card{background:var(--card);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden;}
-.tabs{display:flex;border-bottom:1px solid var(--border);flex-wrap:wrap;background:#f8f9ff;}
+.card{background:var(--card);border:1px solid var(--ke);border-radius:14px;box-shadow:0 1px 3px rgba(22,35,61,.08);overflow:hidden;}
+.tabs{display:flex;border-bottom:1px solid var(--border);flex-wrap:wrap;background:#f6f7f9;}
 .tab{border:none;background:none;padding:14px 18px;font-weight:600;font-size:13px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;font-family:inherit;}
 .tab.active{color:var(--primary);border-bottom-color:var(--primary);}
 .pane{display:none;padding:22px;}
@@ -158,15 +160,15 @@ table.data tr:hover td{background:#fafbff;}
         <div id="ea-content">
           <div class="ea-toolbar">
             <div class="ea-field">
-              <label>Từ ngày</label>
+              <label for="ea-from">Từ ngày</label>
               <input type="date" id="ea-from" />
             </div>
             <div class="ea-field">
-              <label>Đến ngày</label>
+              <label for="ea-to">Đến ngày</label>
               <input type="date" id="ea-to" />
             </div>
             <div class="ea-field">
-              <label>Thiết bị</label>
+              <label for="ea-equip">Thiết bị</label>
               <select id="ea-equip"><option value="">Tất cả thiết bị</option></select>
             </div>
             <button type="button" class="btn btn-primary btn-sm" id="ea-apply">Áp dụng</button>
@@ -299,21 +301,21 @@ table.data tr:hover td{background:#fafbff;}
   <div class="modal-box">
     <h3 id="mm-h3">Thiết bị</h3>
     <div id="mm-alert"></div>
-    <div class="field"><label>Tên *</label><input id="mm-name" placeholder="VD: SEM-7000"></div>
-    <div class="field"><label>Loại / mô tả ngắn</label><input id="mm-type" placeholder="Kính hiển vi điện tử quét"></div>
-    <div class="field"><label>Vị trí</label><input id="mm-loc" placeholder="Lab A-01"></div>
+    <div class="field"><label for="mm-name">Tên *</label><input id="mm-name" placeholder="VD: SEM-7000"></div>
+    <div class="field"><label for="mm-type">Loại / mô tả ngắn</label><input id="mm-type" placeholder="Kính hiển vi điện tử quét"></div>
+    <div class="field"><label for="mm-loc">Vị trí</label><input id="mm-loc" placeholder="Lab A-01"></div>
     <div class="grid2">
-      <div class="field"><label>Màu</label><input id="mm-color" type="color" value="#667eea" style="width:60px;height:38px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><span id="mm-color-hex" style="margin-left:8px;font-size:12px;color:var(--muted);font-family:monospace;">#667eea</span></div>
-      <div class="field"><label>Thứ tự hiển thị</label><input id="mm-sort" type="number" value="0"></div>
+      <div class="field"><label for="mm-color">Màu</label><input id="mm-color" type="color" value="#16233d" style="width:60px;height:38px;border:1px solid var(--border);border-radius:8px;cursor:pointer;"><span id="mm-color-hex" style="margin-left:8px;font-size:12px;color:var(--muted);font-family:monospace;">#16233d</span></div>
+      <div class="field"><label for="mm-sort">Thứ tự hiển thị</label><input id="mm-sort" type="number" value="0"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>Mở đặt từ (giờ 0–23)</label><input id="mm-from" type="number" min="0" max="23" value="8"></div>
-      <div class="field"><label>Đến (giờ 1–24, exclusive)</label><input id="mm-to" type="number" min="1" max="24" value="20"></div>
+      <div class="field"><label for="mm-from">Mở đặt từ (giờ 0–23)</label><input id="mm-from" type="number" min="0" max="23" value="8"></div>
+      <div class="field"><label for="mm-to">Đến (giờ 1–24, exclusive)</label><input id="mm-to" type="number" min="1" max="24" value="20"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label>Tối đa (giờ/lần)</label><input id="mm-max" type="number" min="1" max="24" value="4"></div>
+      <div class="field"><label for="mm-max">Tối đa (giờ/lần)</label><input id="mm-max" type="number" min="1" max="24" value="4"></div>
     </div>
-    <div class="field"><label>Mô tả dài</label><textarea id="mm-desc"></textarea></div>
+    <div class="field"><label for="mm-desc">Mô tả dài</label><textarea id="mm-desc"></textarea></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
       <button type="button" class="btn btn-ghost" style="color:var(--text);border:1px solid var(--border);" onclick="closeModal('modal-machine')">Huỷ</button>
       <button type="button" class="btn btn-primary btn-sm" onclick="saveMachine()">Lưu</button>
@@ -325,12 +327,12 @@ table.data tr:hover td{background:#fafbff;}
   <div class="modal-box">
     <h3 id="pm-h3">Người dùng CRD</h3>
     <div id="pm-alert"></div>
-    <div class="field"><label>Tên hiển thị *</label><input id="pm-name"></div>
-    <div class="field"><label>Email</label><input id="pm-email" type="email"></div>
-    <div class="field"><label>Vai trò</label>
+    <div class="field"><label for="pm-name">Tên hiển thị *</label><input id="pm-name"></div>
+    <div class="field"><label for="pm-email">Email</label><input id="pm-email" type="email"></div>
+    <div class="field"><label for="pm-role">Vai trò</label>
       <select id="pm-role"><option value="user">Researcher</option><option value="admin">Admin CRD (demo)</option></select>
     </div>
-    <div class="field"><label>Avatar (1–2 ký tự)</label><input id="pm-av" maxlength="2"></div>
+    <div class="field"><label for="pm-av">Avatar (1–2 ký tự)</label><input id="pm-av" maxlength="2"></div>
     <div id="pm-extras" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
       <label style="display:block;margin-bottom:8px;"><input type="checkbox" id="pm-ban"> Tạm khoá (ban) trong CRD</label>
       <label style="display:block;"><input type="checkbox" id="pm-revoked"> Gỡ quyền CRD (đồng bộ không tự tạo lại)</label>
@@ -346,8 +348,8 @@ table.data tr:hover td{background:#fafbff;}
   <div class="modal-box" style="max-width:440px;">
     <h3 id="rp-title" style="margin-bottom:14px;">🔑 Đặt lại mật khẩu</h3>
     <div id="rp-alert"></div>
-    <div class="field"><label>Email tài khoản</label><input id="rp-email" type="email" readonly style="background:#f0f0f8;cursor:not-allowed;"></div>
-    <div class="field"><label>Mật khẩu mới <span style="color:var(--danger);">*</span></label><input id="rp-password" type="text" placeholder="Nhập mật khẩu mới (≥ 6 ký tự)"></div>
+    <div class="field"><label for="rp-email">Email tài khoản</label><input id="rp-email" type="email" readonly style="background:#f0f0f8;cursor:not-allowed;"></div>
+    <div class="field"><label for="rp-password">Mật khẩu mới <span style="color:var(--danger);">*</span></label><input id="rp-password" type="text" placeholder="Nhập mật khẩu mới (≥ 6 ký tự)"></div>
     <div id="rp-hint" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button type="button" class="btn btn-ghost" style="color:var(--text);border:1px solid var(--border);" onclick="closeModal('modal-reset-pwd')">Huỷ</button>
@@ -360,16 +362,16 @@ table.data tr:hover td{background:#fafbff;}
   <div class="modal-box">
     <h3>Sửa lịch</h3>
     <div id="bm-alert"></div>
-    <div class="field"><label>Thiết bị</label><select id="bm-mid"></select></div>
-    <div class="field"><label>Người đặt</label><select id="bm-uid"></select></div>
-    <div class="field"><label>Ngày</label><input id="bm-date" type="date"></div>
+    <div class="field"><label for="bm-mid">Thiết bị</label><select id="bm-mid"></select></div>
+    <div class="field"><label for="bm-uid">Người đặt</label><select id="bm-uid"></select></div>
+    <div class="field"><label for="bm-date">Ngày</label><input id="bm-date" type="date"></div>
     <div class="grid2">
-      <div class="field"><label>Bắt đầu (số giờ, bước 0.5 = 30 phút)</label><input id="bm-sh" type="number" min="0" max="24" step="0.5"></div>
-      <div class="field"><label>Kết thúc (tương tự, VD 9.5 = 9:30)</label><input id="bm-eh" type="number" min="0" max="24" step="0.5"></div>
+      <div class="field"><label for="bm-sh">Bắt đầu (số giờ, bước 0.5 = 30 phút)</label><input id="bm-sh" type="number" min="0" max="24" step="0.5"></div>
+      <div class="field"><label for="bm-eh">Kết thúc (tương tự, VD 9.5 = 9:30)</label><input id="bm-eh" type="number" min="0" max="24" step="0.5"></div>
     </div>
-    <div class="field"><label>Nhóm nghiên cứu</label><input type="text" id="bm-rg"></div>
-    <div class="field"><label>Mục đích</label><textarea id="bm-purpose"></textarea></div>
-    <div class="field"><label>Trạng thái</label>
+    <div class="field"><label for="bm-rg">Nhóm nghiên cứu</label><input type="text" id="bm-rg"></div>
+    <div class="field"><label for="bm-purpose">Mục đích</label><textarea id="bm-purpose"></textarea></div>
+    <div class="field"><label for="bm-status">Trạng thái</label>
       <select id="bm-status"><option value="confirmed">confirmed</option><option value="completed">completed</option><option value="cancelled">cancelled</option></select>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
@@ -385,17 +387,17 @@ table.data tr:hover td{background:#fafbff;}
     <p style="font-size:12px;color:var(--muted,#666);margin:0 0 10px;">Ghi lịch sử, lưu giờ tích lũy chu kỳ, reset thanh về 0.</p>
     <div id="ea-mt-alert"></div>
     <input type="hidden" id="ea-mt-eid" />
-    <div class="field"><label>Ngày bảo trì *</label><input type="date" id="ea-mt-date" /></div>
-    <div class="field"><label>Loại</label>
+    <div class="field"><label for="ea-mt-date">Ngày bảo trì *</label><input type="date" id="ea-mt-date" /></div>
+    <div class="field"><label for="ea-mt-type">Loại</label>
       <select id="ea-mt-type">
         <option value="preventive">preventive</option>
         <option value="corrective">corrective</option>
         <option value="calibration">calibration</option>
       </select>
     </div>
-    <div class="field"><label>Thực hiện bởi</label><input type="text" id="ea-mt-by" placeholder="Họ tên / đơn vị" /></div>
-    <div class="field"><label>Chi phí (VNĐ)</label><input type="number" id="ea-mt-cost" min="0" step="0.01" /></div>
-    <div class="field"><label>Ghi chú</label><textarea id="ea-mt-notes"></textarea></div>
+    <div class="field"><label for="ea-mt-by">Thực hiện bởi</label><input type="text" id="ea-mt-by" placeholder="Họ tên / đơn vị" /></div>
+    <div class="field"><label for="ea-mt-cost">Chi phí (VNĐ)</label><input type="number" id="ea-mt-cost" min="0" step="0.01" /></div>
+    <div class="field"><label for="ea-mt-notes">Ghi chú</label><textarea id="ea-mt-notes"></textarea></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
       <button type="button" class="btn btn-ghost" style="color:var(--text);border:1px solid var(--border);" onclick="closeEaMaintModal()">Huỷ</button>
       <button type="button" class="btn btn-primary btn-sm" onclick="submitEaMaint()">Lưu</button>
@@ -614,7 +616,7 @@ function renderComplaints() {
 
 function bcPersonName(id) {
   if (!id) return '—';
-  if (id === '__crd_broadcast__') return '<span style="color:#667eea;font-weight:600;">📢 Kênh chung</span>';
+  if (id === '__crd_broadcast__') return '<span style="color:#16233d;font-weight:600;">📢 Kênh chung</span>';
   return esc(personName(id));
 }
 
@@ -714,7 +716,7 @@ function openMachineModal(id) {
   document.getElementById('mm-name').value = m ? m.name : '';
   document.getElementById('mm-type').value = m ? m.type : '';
   document.getElementById('mm-loc').value = m ? m.location : '';
-  const color = m ? m.color : '#667eea';
+  const color = m ? m.color : '#16233d';
   document.getElementById('mm-color').value = color;
   document.getElementById('mm-color-hex').textContent = color;
   document.getElementById('mm-from').value = m ? m.availFrom : 8;
@@ -963,16 +965,16 @@ function renderSysUsers() {
     if (!isDisabled && !hasCrd) statBadges.push(`<span class="badge" style="background:#f5f5f5;color:#757575;">❌ Chưa vào CRD</span>`);
 
     const roleBadge = {
-      admin:      `<span class="badge" style="background:#f3eeff;color:#764ba2;">🔑 Admin</span>`,
+      admin:      `<span class="badge" style="background:#fdf2f1;color:#8e1f17;">🔑 Admin</span>`,
       crd_user:   `<span class="badge" style="background:#fff3e0;color:#e65100;">🌐 CRD Guest</span>`,
-      researcher: `<span class="badge" style="background:#eef0ff;color:#667eea;">🔬 Researcher</span>`,
+      researcher: `<span class="badge" style="background:#f1f3f7;color:#16233d;">🔬 Researcher</span>`,
     }[u.role] || `<span class="badge" style="background:#f5f5f5;color:#757575;">${esc(u.role || '—')}</span>`;
 
     let crdCell = '—';
     if (hasCrd) {
       const crdRoleBadges = crd.personRole === 'admin'
-        ? `<span class="badge" style="background:#f3eeff;color:#764ba2;">🔑 Admin</span>`
-        : `<span class="badge" style="background:#eef0ff;color:#667eea;">👤 ${esc(crd.personRole || 'user')}</span>`;
+        ? `<span class="badge" style="background:#fdf2f1;color:#8e1f17;">🔑 Admin</span>`
+        : `<span class="badge" style="background:#f1f3f7;color:#16233d;">👤 ${esc(crd.personRole || 'user')}</span>`;
       const crdStatusBadges = [];
       if (crdBanned) crdStatusBadges.push(`<span class="badge" style="background:#fff3e0;color:#e65100;">⛔ Khoá</span>`);
       if (crdRevoke) crdStatusBadges.push(`<span class="badge" style="background:#fce4ec;color:#c2185b;">🚫 Gỡ CRD</span>`);

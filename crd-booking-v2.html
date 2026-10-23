@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
 <meta http-equiv="Pragma" content="no-cache">
 <title>Đặt lịch Thiết bị – CRD | Viện Tế bào gốc</title>
@@ -15,26 +16,31 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #fafaf8;
   min-height: 100vh;
   padding: 20px;
   color: #333;
 }
 :root {
-  --primary:   #667eea;
-  --secondary: #764ba2;
-  --grad:      linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --primary:   #16233d;
+  --secondary: #24365a;
+  /* Giữ tên token --grad vì CSS/JS bám vào, nhưng giá trị nay là MÀU ĐẶC:
+     trang chủ không dùng gradient, phân cách bằng đường kẻ và khoảng trắng. */
+  --grad:      #16233d;
+  --son:       #b7281e;   /* son đỏ: màu tín hiệu duy nhất, giống trang chủ */
+  --ke:        #d8dce5;
+  --ke-dam:    #b9c0cf;
   --white:     #ffffff;
-  --surface:   #f8f9ff;
-  --border:    #e8ecff;
+  --surface:   #f6f7f9;
+  --border:    #d8dce5;
   --text:      #333333;
   --muted:     #666666;
   --light:     #999999;
   --success:   #4caf88;
   --warning:   #f5a623;
-  --danger:    #e05c6a;
-  --shadow:    0 10px 30px rgba(102,126,234,.18);
-  --shadow-lg: 0 20px 50px rgba(102,126,234,.28);
+  --danger:    #b7281e;
+  --shadow:    0 1px 3px rgba(22,35,61,.08);
+  --shadow-lg: 0 4px 14px rgba(22,35,61,.14);
   --r:         15px;
   --r-xs:      8px;
   /* Lịch trực quan: đậm hơn mặc định */
@@ -66,9 +72,9 @@ body {
 .container { max-width: 1400px; margin: 0 auto; }
 
 /* ── Cards ──────────────────────────────────── */
-.card        { background: var(--white); border-radius: var(--r); box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s; }
+.card        { background: var(--white); border: 1px solid var(--ke); border-radius: var(--r); box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s; }
 .card:hover  { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
-.card-flat   { background: var(--white); border-radius: var(--r); box-shadow: var(--shadow); }
+.card-flat   { background: var(--white); border: 1px solid var(--ke); border-radius: var(--r); box-shadow: var(--shadow); }
 
 /* ── Buttons ────────────────────────────────── */
 .btn {
@@ -77,16 +83,16 @@ body {
   cursor: pointer; transition: all .2s; white-space: nowrap; text-decoration: none;
 }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
-.btn-primary  { background: var(--grad); color:#fff; padding:10px 20px; font-size:14px; box-shadow:0 4px 14px rgba(102,126,234,.35); }
-.btn-primary:not(:disabled):hover { transform:scale(1.04); box-shadow:0 6px 20px rgba(102,126,234,.5); }
+.btn-primary  { background: var(--grad); color:#fff; padding:10px 20px; font-size:14px; box-shadow:0 4px 14px rgba(22,35,61,.35); }
+.btn-primary:not(:disabled):hover { transform:scale(1.04); box-shadow:0 6px 20px rgba(22,35,61,.5); }
 .btn-outline  { background:transparent; color:var(--primary); border:1.5px solid var(--primary); padding:9px 18px; font-size:13px; }
 .btn-outline:hover  { background:var(--primary); color:#fff; }
 .btn-ghost    { background:transparent; color:var(--muted); border:1.5px solid var(--border); padding:9px 18px; font-size:13px; }
 .btn-ghost:hover    { border-color:var(--primary); color:var(--primary); }
 .btn-danger   { background:var(--danger); color:#fff; padding:7px 14px; font-size:12px; }
 .btn-danger:hover   { opacity:.88; }
-.btn-back     { background:rgba(255,255,255,.18); color:#fff; border:1.5px solid rgba(255,255,255,.4); padding:8px 16px; font-size:13px; border-radius:var(--r-xs); }
-.btn-back:hover     { background:rgba(255,255,255,.30); }
+.btn-back     { background:var(--white); color:#16233d; border:1.5px solid var(--ke-dam,#b9c0cf); padding:8px 16px; font-size:13px; border-radius:var(--r-xs); }
+.btn-back:hover     { background:#f1f3f7; }
 .btn-sm   { padding:6px 13px !important; font-size:12px !important; }
 .btn-full { width:100%; }
 
@@ -118,11 +124,11 @@ body {
 .badge { display:inline-flex; align-items:center; border-radius:20px; padding:3px 10px; font-size:11px; font-weight:600; }
 
 /* ── Avatar ─────────────────────────────────── */
-.avatar { border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; background:var(--grad); box-shadow:0 3px 10px rgba(102,126,234,.3); }
+.avatar { border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; flex-shrink:0; background:var(--grad); box-shadow:0 3px 10px rgba(22,35,61,.3); }
 
 /* ── Modal ──────────────────────────────────── */
 .modal-overlay {
-  position:fixed; inset:0; background:rgba(102,126,234,.22);
+  position:fixed; inset:0; background:rgba(22,35,61,.22);
   backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:1000;
   display:flex; align-items:center; justify-content:center;
   padding:16px; animation:fadeIn .2s ease;
@@ -149,11 +155,11 @@ body {
 /* ── Breadcrumb ─────────────────────────────── */
 .breadcrumb {
   display:flex; align-items:center; gap:7px;
-  font-size:12px; color:rgba(255,255,255,.75);
+  font-size:12px; color:#5a6783;
   margin-bottom:14px;
 }
-.breadcrumb a    { color:rgba(255,255,255,.9); text-decoration:none; font-weight:600; }
-.breadcrumb a:hover { color:#fff; text-decoration:underline; }
+.breadcrumb a    { color:#16233d; text-decoration:none; font-weight:600; }
+.breadcrumb a:hover { color:var(--son); text-decoration:underline; }
 .breadcrumb-sep  { opacity:.5; }
 
 /* ── Stats bar ──────────────────────────────── */
@@ -314,14 +320,14 @@ body {
   border:1.5px solid var(--border);
   border-radius:12px;
   padding:10px 12px;
-  box-shadow:0 12px 30px rgba(102,126,234,.10);
+  box-shadow:0 12px 30px rgba(22,35,61,.10);
   animation:bkPopIn .28s ease both;
 }
 .bk-activity-item--snapshot {
   border-style:dashed;
-  border-color:rgba(102,126,234,.38);
+  border-color:rgba(22,35,61,.38);
   background:linear-gradient(180deg,#fafbff 0%,var(--white) 100%);
-  box-shadow:0 8px 20px rgba(102,126,234,.08);
+  box-shadow:0 8px 20px rgba(22,35,61,.08);
 }
 .bk-activity-date-sep {
   flex-shrink:0;
@@ -411,7 +417,7 @@ body {
 }
 .bk-bar:hover { z-index: 20; }
 .tl-half    { position:absolute; top:0; height:100%; z-index:1; cursor:pointer; box-sizing:border-box; }
-.tl-half:hover { background:rgba(102,126,234,.1); }
+.tl-half:hover { background:rgba(22,35,61,.1); }
 .unavail-bg  { position:absolute; inset:0;
   background:repeating-linear-gradient(45deg,var(--tl-stripe-a) 0,var(--tl-stripe-a) 3px,var(--tl-stripe-b) 3px,var(--tl-stripe-b) 10px);
   pointer-events:none; z-index:0; }
@@ -426,7 +432,7 @@ body {
 .data-table { width:100%; border-collapse:collapse; font-size:13px; }
 .data-table th { padding:11px 15px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); background:var(--surface); border-bottom:2px solid var(--border); }
 .data-table td { padding:11px 15px; border-bottom:1px solid var(--border); vertical-align:middle; }
-.data-table tbody tr:hover { background:rgba(102,126,234,.04); }
+.data-table tbody tr:hover { background:rgba(22,35,61,.04); }
 
 /* ── Inner sub-tabs cho tab Người dùng ───────────── */
 .u-sub-tabs { display:flex; gap:0; margin-bottom:18px; border-bottom:2px solid var(--border); }
@@ -473,11 +479,11 @@ body {
 .chat-body  { display:flex; flex:1; overflow:hidden; }
 .chat-side  { width:118px; border-right:1px solid var(--border); overflow-y:auto; background:var(--surface); }
 .chat-user-item { padding:10px 6px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; transition:all .15s; border-left:3px solid transparent; }
-.chat-user-item.broadcast-item { background:linear-gradient(180deg, rgba(102,126,234,.12) 0%, rgba(118,75,162,.08) 100%); font-weight:600; }
+.chat-user-item.broadcast-item { background:linear-gradient(180deg, rgba(22,35,61,.12) 0%, rgba(118,75,162,.08) 100%); font-weight:600; }
 .chat-user-item.broadcast-item .chat-uname { font-size:8.5px; max-width:100%; line-height:1.25; }
 .chat-sender { font-size:10px; color:var(--muted); margin-bottom:2px; font-weight:600; }
 .chat-msg-wrap { position:relative; cursor:default; border-radius:6px; padding:2px 4px; transition:background .15s; }
-.chat-msg-wrap:hover { background:rgba(102,126,234,.06); }
+.chat-msg-wrap:hover { background:rgba(22,35,61,.06); }
 .chat-msg-wrap.selected { background:rgba(244,67,54,.07); border:1.5px solid rgba(244,67,54,.3); padding:1.5px 3.5px; }
 .chat-del-icon { display:none; position:absolute; top:-8px; font-size:14px; cursor:pointer; opacity:.6; transition:opacity .15s; }
 .chat-msg-wrap:hover .chat-del-icon,
@@ -485,8 +491,8 @@ body {
 .chat-del-icon:hover { opacity:1; }
 .chat-del-icon.right { right:2px; }
 .chat-del-icon.left { left:2px; }
-.chat-user-item.active     { background:rgba(102,126,234,.1); border-left-color:var(--primary); }
-.chat-user-item:hover:not(.active) { background:rgba(102,126,234,.05); }
+.chat-user-item.active     { background:rgba(22,35,61,.1); border-left-color:var(--primary); }
+.chat-user-item:hover:not(.active) { background:rgba(22,35,61,.05); }
 .chat-uname { font-size:9px; text-align:center; line-height:1.3; color:var(--muted); }
 .chat-user-item.active .chat-uname { color:var(--primary); font-weight:600; }
 .chat-msgs  { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
@@ -496,7 +502,7 @@ body {
 .chat-empty { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; color:var(--muted); text-align:center; font-size:12px; min-height:0; }
 .chat-input-wrap { flex-shrink:0; max-height:48%; overflow-y:auto; border-top:1px solid var(--border); background:var(--white); }
 .bubble     { max-width:85%; font-size:12.5px; line-height:1.5; border-radius:14px; padding:8px 12px; }
-.bubble.me  { background:var(--grad); color:#fff; border-bottom-right-radius:3px; box-shadow:0 3px 10px rgba(102,126,234,.25); }
+.bubble.me  { background:var(--grad); color:#fff; border-bottom-right-radius:3px; box-shadow:0 3px 10px rgba(22,35,61,.25); }
 .bubble.them{ background:var(--surface); color:var(--text); border-bottom-left-radius:3px; border:1px solid var(--border); }
 .chat-time  { font-size:10px; color:var(--light); margin-top:3px; }
 .bk-tag     { font-size:10px; font-weight:600; border-radius:10px; padding:2px 8px; border:1px solid; margin-bottom:3px; display:inline-block; }
@@ -507,7 +513,7 @@ body {
 .chat-input:focus { border-color:var(--primary); }
 .unread-dot { position:absolute; top:-4px; right:-4px; width:15px; height:15px; border-radius:50%; background:var(--danger); font-size:9px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; }
 .notif-btn  { position:relative; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--r-xs); padding:8px 16px; cursor:pointer; color:var(--muted); font-family:inherit; font-weight:600; font-size:13px; transition:all .2s; }
-.notif-btn.active { background:rgba(102,126,234,.1); border-color:var(--primary); color:var(--primary); }
+.notif-btn.active { background:rgba(22,35,61,.1); border-color:var(--primary); color:var(--primary); }
 .notif-badge { position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; background:var(--danger); font-size:10px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; }
 
 /* ── Booking info box ───────────────────────── */
@@ -722,15 +728,15 @@ body {
         <div id="ea-content">
           <div class="ea-toolbar">
             <div class="ea-field">
-              <label>Từ ngày</label>
+              <label for="ea-from">Từ ngày</label>
               <input type="date" id="ea-from" />
             </div>
             <div class="ea-field">
-              <label>Đến ngày</label>
+              <label for="ea-to">Đến ngày</label>
               <input type="date" id="ea-to" />
             </div>
             <div class="ea-field">
-              <label>Thiết bị</label>
+              <label for="ea-equip">Thiết bị</label>
               <select id="ea-equip"><option value="">Tất cả thiết bị</option></select>
             </div>
             <button type="button" class="btn btn-primary btn-sm" id="ea-apply">Áp dụng</button>
@@ -893,16 +899,16 @@ body {
       <div id="la-admin-form-hint" style="font-size:12px;font-weight:800;margin-bottom:8px;color:var(--text);">Thêm mới hoặc sửa mục đã chọn</div>
       <input type="hidden" id="la-edit-id" value="">
       <div class="field">
-        <label>Tiêu đề <span style="color:var(--muted);font-weight:600;">(tuỳ chọn)</span></label>
+        <label for="la-title">Tiêu đề <span style="color:var(--muted);font-weight:600;">(tuỳ chọn)</span></label>
         <input type="text" id="la-title" class="search-input" style="width:100%;box-sizing:border-box;" placeholder="VD: Nội quy đặt lịch phòng Lab" autocomplete="off">
       </div>
       <div class="field">
-        <label>Nội dung</label>
+        <label for="la-body">Nội dung</label>
         <textarea id="la-body" rows="5" style="width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;font-size:13px;line-height:1.45;" placeholder="Nội dung chi tiết, có thể xuống dòng…"></textarea>
       </div>
       <div class="grid-2">
         <div class="field">
-          <label>Thứ tự hiển thị</label>
+          <label for="la-sort">Thứ tự hiển thị</label>
           <input type="number" id="la-sort" class="search-input" style="width:100%;" value="0" title="Số nhỏ hơn đứng trước">
         </div>
         <div class="field">
@@ -936,16 +942,16 @@ body {
         📅 Ngày đặt: <strong id="bk-date-lbl" style="color:var(--text);"></strong>
       </div>
       <div class="grid-2">
-        <div class="field"><label>Giờ bắt đầu <span class="req">*</span></label><select id="bk-sh" onchange="onBkStartChange()"></select></div>
-        <div class="field"><label>Giờ kết thúc <span class="req">*</span></label><select id="bk-eh" onchange="updDuration()"></select></div>
+        <div class="field"><label for="bk-sh">Giờ bắt đầu <span class="req">*</span></label><select id="bk-sh" onchange="onBkStartChange()"></select></div>
+        <div class="field"><label for="bk-eh">Giờ kết thúc <span class="req">*</span></label><select id="bk-eh" onchange="updDuration()"></select></div>
       </div>
-      <div id="bk-dur" style="text-align:center;margin-bottom:14px;font-size:12px;color:var(--primary);background:rgba(102,126,234,.08);border-radius:var(--r-xs);padding:6px;display:none;"></div>
+      <div id="bk-dur" style="text-align:center;margin-bottom:14px;font-size:12px;color:var(--primary);background:rgba(22,35,61,.08);border-radius:var(--r-xs);padding:6px;display:none;"></div>
       <div class="field">
-        <label>Tên nhóm nghiên cứu <span class="req">*</span></label>
+        <label for="bk-research-group">Tên nhóm nghiên cứu <span class="req">*</span></label>
         <input type="text" id="bk-research-group" placeholder="VD: Nhóm Tế bào gốc — Lab A" autocomplete="organization">
       </div>
       <div class="field">
-        <label>Mục đích sử dụng <span class="req">*</span></label>
+        <label for="bk-purpose">Mục đích sử dụng <span class="req">*</span></label>
         <input type="text" id="bk-purpose" placeholder="VD: Phân tích cấu trúc mẫu vật liệu...">
       </div>
       <div id="bk-err"></div>
@@ -969,16 +975,16 @@ body {
     <div class="modal-body">
       <div id="be-info-box" style="border-radius:var(--r-xs);padding:10px 14px;margin-bottom:14px;font-size:13px;display:flex;align-items:center;gap:10px;"></div>
       <div class="grid-2">
-        <div class="field"><label>Giờ bắt đầu</label><select id="be-sh" onchange="onBeStartChange()"></select></div>
-        <div class="field"><label>Giờ kết thúc</label><select id="be-eh" onchange="updBeDuration()"></select></div>
+        <div class="field"><label for="be-sh">Giờ bắt đầu</label><select id="be-sh" onchange="onBeStartChange()"></select></div>
+        <div class="field"><label for="be-eh">Giờ kết thúc</label><select id="be-eh" onchange="updBeDuration()"></select></div>
       </div>
-      <div id="be-dur" style="text-align:center;margin-bottom:14px;font-size:12px;color:var(--primary);background:rgba(102,126,234,.08);border-radius:var(--r-xs);padding:6px;display:none;"></div>
+      <div id="be-dur" style="text-align:center;margin-bottom:14px;font-size:12px;color:var(--primary);background:rgba(22,35,61,.08);border-radius:var(--r-xs);padding:6px;display:none;"></div>
       <div class="field">
-        <label>Tên nhóm nghiên cứu <span class="req">*</span></label>
+        <label for="be-rg">Tên nhóm nghiên cứu <span class="req">*</span></label>
         <input type="text" id="be-rg" placeholder="VD: Nhóm Tế bào gốc — Lab A" autocomplete="organization">
       </div>
       <div class="field">
-        <label>Mục đích sử dụng <span class="req">*</span></label>
+        <label for="be-purpose">Mục đích sử dụng <span class="req">*</span></label>
         <input type="text" id="be-purpose">
       </div>
       <div id="be-err"></div>
@@ -1003,24 +1009,24 @@ body {
     </div>
     <div class="modal-body">
       <div class="grid-2">
-        <div class="field span-2"><label>Tên thiết bị <span class="req">*</span></label><input type="text" id="mm-name" placeholder="VD: SEM-9000"></div>
+        <div class="field span-2"><label for="mm-name">Tên thiết bị <span class="req">*</span></label><input type="text" id="mm-name" placeholder="VD: SEM-9000"></div>
         <div class="field">
-          <label>Loại thiết bị <span class="req">*</span></label>
+          <label for="mm-type">Loại thiết bị <span class="req">*</span></label>
           <input type="text" id="mm-type" placeholder="VD: Tủ thao tác vô trùng, Máy PCR…" autocomplete="off">
         </div>
-        <div class="field"><label>Vị trí</label><input type="text" id="mm-loc" placeholder="VD: Lab A-01"></div>
-        <div class="field span-2"><label>Mô tả</label><input type="text" id="mm-desc" placeholder="Mô tả ngắn về thiết bị..."></div>
+        <div class="field"><label for="mm-loc">Vị trí</label><input type="text" id="mm-loc" placeholder="VD: Lab A-01"></div>
+        <div class="field span-2"><label for="mm-desc">Mô tả</label><input type="text" id="mm-desc" placeholder="Mô tả ngắn về thiết bị..."></div>
         <div class="field">
-          <label>Màu hiển thị</label>
-          <input type="color" id="mm-color" value="#667eea" style="height:42px;padding:4px;border:1.5px solid var(--border);border-radius:var(--r-xs);width:100%;cursor:pointer;">
+          <label for="mm-color">Màu hiển thị</label>
+          <input type="color" id="mm-color" value="#16233d" style="height:42px;padding:4px;border:1.5px solid var(--border);border-radius:var(--r-xs);width:100%;cursor:pointer;">
         </div>
         <div class="field">
-          <label>Tối đa giờ/lần</label>
+          <label for="mm-maxh">Tối đa giờ/lần</label>
           <input type="number" id="mm-maxh" value="4" min="1" max="12">
           <div class="field-note">Số giờ tối đa trong 1 lần đặt</div>
         </div>
-        <div class="field"><label>Giờ mở cửa</label><select id="mm-from"></select></div>
-        <div class="field"><label>Giờ đóng cửa</label><select id="mm-to"></select>
+        <div class="field"><label for="mm-from">Giờ mở cửa</label><select id="mm-from"></select></div>
+        <div class="field"><label for="mm-to">Giờ đóng cửa</label><select id="mm-to"></select>
           <div class="field-note">Trên lịch, từ mốc này trở đi là ngoài giờ (vd đóng 22:00 → đặt được đến 21:30). Nhấn Cập nhật để lưu.</div>
         </div>
       </div>
@@ -1045,14 +1051,14 @@ body {
     <div class="modal-body">
       <input type="hidden" id="pu-edit-id" value="">
       <div id="pu-sync-note" class="field-note" style="display:none;padding:10px 12px;background:var(--surface);border-radius:var(--r-xs);margin-bottom:12px;border:1px solid var(--border);"></div>
-      <div class="field"><label>Họ và tên <span class="req">*</span></label><input type="text" id="pu-name" placeholder="Nguyễn Văn A" autocomplete="name"></div>
-      <div class="field"><label>Email</label><input type="email" id="pu-email" placeholder="Bất kỳ domain (sci.edu.vn, gmail…)" autocomplete="email"></div>
+      <div class="field"><label for="pu-name">Họ và tên <span class="req">*</span></label><input type="text" id="pu-name" placeholder="Nguyễn Văn A" autocomplete="name"></div>
+      <div class="field"><label for="pu-email">Email</label><input type="email" id="pu-email" placeholder="Bất kỳ domain (sci.edu.vn, gmail…)" autocomplete="email"></div>
       <div class="field">
-        <label>Vai trò</label>
+        <label for="pu-role">Vai trò</label>
         <select id="pu-role"></select>
         <div class="field-note">Danh sách lấy từ mục «Vai trò CRD» bên dưới (tab Người dùng).</div>
       </div>
-      <div class="field"><label>Avatar (tuỳ chọn, 1–2 ký tự)</label><input type="text" id="pu-av" maxlength="2" placeholder="Để trống = chữ cái đầu tên"></div>
+      <div class="field"><label for="pu-av">Avatar (tuỳ chọn, 1–2 ký tự)</label><input type="text" id="pu-av" maxlength="2" placeholder="Để trống = chữ cái đầu tên"></div>
       <div id="pu-admin-opts" style="display:none;border-top:1px solid var(--border);padding-top:14px;margin-top:6px;">
         <div class="field" style="margin-bottom:10px;">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
@@ -1108,11 +1114,11 @@ body {
     <div class="modal-body">
       <div id="rp-alert"></div>
       <div class="field">
-        <label>Email tài khoản</label>
+        <label for="rp-email">Email tài khoản</label>
         <input id="rp-email" type="email" readonly style="background:#f0f0f8;color:var(--muted);cursor:not-allowed;">
       </div>
       <div class="field">
-        <label>Mật khẩu mới <span style="color:var(--danger);">*</span></label>
+        <label for="rp-password">Mật khẩu mới <span style="color:var(--danger);">*</span></label>
         <input id="rp-password" type="text" placeholder="Nhập mật khẩu mới (≥ 6 ký tự)">
       </div>
       <div id="rp-hint" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
@@ -1134,17 +1140,17 @@ body {
     <div class="modal-body">
       <div id="ea-mt-alert"></div>
       <input type="hidden" id="ea-mt-eid" />
-      <div class="field"><label>Ngày bảo trì *</label><input type="date" id="ea-mt-date" /></div>
-      <div class="field"><label>Loại</label>
+      <div class="field"><label for="ea-mt-date">Ngày bảo trì *</label><input type="date" id="ea-mt-date" /></div>
+      <div class="field"><label for="ea-mt-type">Loại</label>
         <select id="ea-mt-type">
           <option value="preventive">preventive</option>
           <option value="corrective">corrective</option>
           <option value="calibration">calibration</option>
         </select>
       </div>
-      <div class="field"><label>Thực hiện bởi</label><input type="text" id="ea-mt-by" placeholder="Họ tên / đơn vị" /></div>
-      <div class="field"><label>Chi phí (VNĐ)</label><input type="number" id="ea-mt-cost" min="0" step="0.01" /></div>
-      <div class="field"><label>Ghi chú</label><textarea id="ea-mt-notes" style="min-height:72px;"></textarea></div>
+      <div class="field"><label for="ea-mt-by">Thực hiện bởi</label><input type="text" id="ea-mt-by" placeholder="Họ tên / đơn vị" /></div>
+      <div class="field"><label for="ea-mt-cost">Chi phí (VNĐ)</label><input type="number" id="ea-mt-cost" min="0" step="0.01" /></div>
+      <div class="field"><label for="ea-mt-notes">Ghi chú</label><textarea id="ea-mt-notes" style="min-height:72px;"></textarea></div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeEaMaintModal()">Huỷ</button>
         <button class="btn btn-primary" onclick="submitEaMaint()">Lưu</button>
@@ -1485,15 +1491,15 @@ function renderCrdRoleDefsPanel() {
       <p style="font-size:11px;color:var(--muted);margin:10px 0 14px;line-height:1.45;">* Quản trị: giống «Admin CRD» — không hiện trong danh sách đối tác thương lượng (nghiên cứu viên). Hai vai trò mặc định <code>user</code> / <code>admin</code> không xóa được.</p>
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding-top:4px;border-top:1px solid var(--border);">
         <div class="field" style="margin:0;min-width:120px;">
-          <label style="font-size:11px;">Mã mới (vd: tech)</label>
+          <label style="font-size:11px;" for="crd-new-slug">Mã mới (vd: tech)</label>
           <input type="text" id="crd-new-slug" class="search-input" style="padding:8px 10px;" placeholder="ky_thuat_vien" autocomplete="off">
         </div>
         <div class="field" style="margin:0;min-width:160px;">
-          <label style="font-size:11px;">Tên hiển thị</label>
+          <label style="font-size:11px;" for="crd-new-label">Tên hiển thị</label>
           <input type="text" id="crd-new-label" class="search-input" style="padding:8px 10px;" placeholder="Kỹ thuật viên" autocomplete="off">
         </div>
         <div class="field" style="margin:0;width:88px;">
-          <label style="font-size:11px;">Thứ tự</label>
+          <label style="font-size:11px;" for="crd-new-ord">Thứ tự</label>
           <input type="number" id="crd-new-ord" class="search-input" style="padding:8px 10px;" value="50">
         </div>
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;margin-bottom:8px;">
@@ -1603,8 +1609,8 @@ function initApp() {
   const av = document.getElementById('hd-avatar');
   av.textContent = currentUser.avatar || (currentUser.name || '?').charAt(0).toUpperCase();
   av.style.background = isAdmin
-    ? 'linear-gradient(135deg,#764ba2,#667eea)'
-    : 'linear-gradient(135deg,#667eea,#764ba2)';
+    ? '#24365a'
+    : '#16233d';
   document.getElementById('hd-name').textContent = currentUser.name;
   document.getElementById('hd-role').textContent = isAdmin
     ? 'Administrator'
@@ -2245,7 +2251,7 @@ function bkActivityPushSnapshotCard(booking) {
   const m = DB.machines.find(x => x.id === booking.machineId);
   const u = DB.users.find(x => x.id === booking.userId);
   const uname = (u && u.name) ? u.name : '—';
-  const dotColor = m?.color || '#667eea';
+  const dotColor = m?.color || '#16233d';
   const t1 = fmtT(booking.startH);
   const t2 = fmtT(booking.endH);
   const rg = (booking.researchGroup || '').trim();
@@ -2298,7 +2304,7 @@ function bkActivityPushItem(action, booking, oldBooking) {
   const m = DB.machines.find(x => x.id === booking.machineId);
   const u = DB.users.find(x => x.id === booking.userId);
   const uname = (u && u.name) ? u.name : '—';
-  const dotColor = m?.color || '#667eea';
+  const dotColor = m?.color || '#16233d';
 
   const actionCfg = action === 'create'
     ? { emoji: '✅', label: 'Đặt lịch' }
@@ -2502,7 +2508,7 @@ function renderTimeline() {
         [0,1].forEach(half => {
           if (halfFreeTL(m, currentDate, h, half, DB.bookings)) {
             const st = h + half * 0.5;
-            html += `<div class="tl-half" style="left:${half*50}%;width:50%;" title="${half?'Đặt từ :30':'Đặt từ :00'}" onclick="openBookingModal('${m.id}',${st})"></div>`;
+            html += `<div class="tl-half" data-a11y-bo-qua style="left:${half*50}%;width:50%;" title="${half?'Đặt từ :30':'Đặt từ :00'}" onclick="openBookingModal('${m.id}',${st})"></div>`;
           }
         });
       }
@@ -2961,7 +2967,7 @@ function openMachineModal(id) {
   document.getElementById('mm-type').value  = m?.type     || '';
   document.getElementById('mm-loc').value   = m?.location || '';
   document.getElementById('mm-desc').value  = m?.desc     || '';
-  document.getElementById('mm-color').value = m?.color    || '#667eea';
+  document.getElementById('mm-color').value = m?.color    || '#16233d';
   document.getElementById('mm-maxh').value  = m?.maxHours || 4;
   if (m) {
     const { af, at } = machineAvailBounds(m);
@@ -3158,9 +3164,9 @@ function renderUsersGrid() {
     const isAdm   = crdRoleIsAdminSlot(u.role);
     const rlbl    = crdRoleLabel(u.role);
     const synced  = String(u.id).startsWith('u_app_');
-    const avatarGrad = isAdm ? 'linear-gradient(135deg,#764ba2,#667eea)' : 'var(--grad)';
+    const avatarGrad = isAdm ? '#24365a' : 'var(--grad)';
     const roleBadge  = isAdm
-      ? `<span class="badge" style="background:#f3eeff;color:#764ba2;border:1px solid #d4b8f5;">🔑 ${escHtml(rlbl)}</span>`
+      ? `<span class="badge" style="background:#fdf2f1;color:#8e1f17;border:1px solid #e8b8b4;">🔑 ${escHtml(rlbl)}</span>`
       : `<span class="badge" style="background:#eef0ff;color:var(--primary);border:1px solid #c5caf5;">👤 ${escHtml(rlbl)}</span>`;
     const statusBadges = [];
     if (u.isBanned) statusBadges.push('<span class="badge" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;">⛔ Đã khoá</span>');
@@ -3288,7 +3294,7 @@ function renderSysUsers() {
 
     // Vai trò hệ thống
     const roleBadge = {
-      admin:        `<span class="badge" style="background:#f3eeff;color:#764ba2;border:1px solid #d4b8f5;">🔑 Admin</span>`,
+      admin:        `<span class="badge" style="background:#fdf2f1;color:#8e1f17;border:1px solid #e8b8b4;">🔑 Admin</span>`,
       crd_user:     `<span class="badge" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;">🌐 CRD Guest</span>`,
       researcher:   `<span class="badge" style="background:#eef0ff;color:var(--primary);border:1px solid #c5caf5;">🔬 Researcher</span>`,
     }[u.role] || `<span class="badge" style="background:#f5f5f5;color:#757575;">${escHtml(u.role || '—')}</span>`;
@@ -3297,7 +3303,7 @@ function renderSysUsers() {
     let crdCell = '—';
     if (hasCrd) {
       const crdRoleBadges = {
-        admin: `<span class="badge" style="background:#f3eeff;color:#764ba2;">🔑 Admin</span>`,
+        admin: `<span class="badge" style="background:#fdf2f1;color:#8e1f17;">🔑 Admin</span>`,
       }[crd.personRole] || `<span class="badge" style="background:#eef0ff;color:var(--primary);">👤 ${escHtml(crd.personRole || 'user')}</span>`;
       const crdStatusBadges = [];
       if (crdBanned) crdStatusBadges.push(`<span class="badge" style="background:#fff3e0;color:#e65100;">⛔ Khoá</span>`);
@@ -3407,7 +3413,7 @@ function renderChatSidebar() {
   const bcActive = chatSelectedUser === crdBroadcastId;
   const broadcastRow = `<div class="chat-user-item broadcast-item${bcActive ? ' active' : ''}" onclick='selectChatUser(${JSON.stringify(crdBroadcastId)})'>
       <div style="position:relative;">
-        <div class="avatar" style="width:30px;height:30px;font-size:14px;background:linear-gradient(135deg,#667eea,#764ba2);">📢</div>
+        <div class="avatar" style="width:30px;height:30px;font-size:14px;background:#16233d;">📢</div>
         ${bcUnread > 0 ? `<div class="unread-dot">${bcUnread}</div>` : ''}
       </div>
       <div class="chat-uname">Kênh chung</div>
