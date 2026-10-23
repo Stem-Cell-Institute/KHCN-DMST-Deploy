@@ -118,6 +118,68 @@ Việc phát hiện dọc đường nhưng **cố ý không làm** để giữ p
 | 8 | `data/` còn file backup `.db` cũ trên đĩa (`sci-ace-backup-20260321`, `test-unified.db`…). Đã gỡ khỏi Git và ignore, nhưng vẫn chiếm chỗ. | Đợt 0 | Rất thấp |
 | **9** | **Hai endpoint ghi không kiểm phân quyền.** `POST /api/missions/:id/buoc4a/cn-upload-thuyet-minh-chinh-sua` và `POST /api/missions/:id/buoc5/upload-thuyet-minh` chỉ có `authMiddleware` — **không kiểm vai trò, không kiểm chủ nhiệm đề tài**. Bất kỳ tài khoản đã đăng nhập nào, kể cả **`crd_user`** (tài khoản ngoài chỉ để đặt lịch phòng thí nghiệm), đều gọi được cho **mission id bất kỳ**: đánh dấu `thuyet_minh_chinh_sua_ok = 1` và kích hoạt email gửi cả danh sách Hội đồng, hoặc chèn bản ghi vào `buoc5_thuyet_minh_ls`. Đã di chuyển **nguyên trạng** ở Đợt 1.3 (refactor không được đổi hành vi) và có test ghim hiện trạng trong `tests/smoke.test.js`.<br><br>**Vì sao chưa vá:** cần quyết định nghiệp vụ — ai được upload? Chỉ chủ nhiệm, hay chủ nhiệm + thư ký? Và `missions.principal` là **tên dạng chuỗi**, không phải khóa ngoại tới `users`, nên không so khớp quyền sở hữu bằng một middleware được. Khác hẳn lỗ hổng `cn-info` (PR #7) vốn chỉ là quên một dòng.<br><br>**Giảm nhẹ:** cả hai chỉ mở trong một cửa sổ trạng thái quy trình (`thong_qua_co_chinh_sua`, hoặc đề tài đang ở Bước 5) và cần `file_id` hợp lệ của file đã upload trước đó. | Đợt 1.3 | **Bảo mật — quyền ghi, cần quyết định chính sách** |
 | ~~10~~ | ✅ **ĐÃ VÁ** — `GET /api/missions/by-code/:code` nay có `authMiddleware`. Trước đó nó trả về toàn bộ bản ghi đề tài (`budget`, `approved_budget`, `disbursed_budget`, `contract_number`, `funding_source`) cho bất kỳ ai biết mã, mà mã sinh theo mẫu `DT-<2 chữ>-<năm>-<4 số>` nên dò được. Kiểm chứng trên server thật: không token **404 → 401**. Có 2 test canh không cho lỗ hổng quay lại. | Đợt 1.4 | ✅ Đã xử lý |
+| ~~11~~ | ✅ **ĐÃ VÁ** — 3 trang (`admin-dashboard-demo.html`, `admin-quan-ly-tai-khoan.html`, `admin-system-logs-monitor.html`) không còn nạp `cdn.tailwindcss.com`. CSS nay build sẵn ra `public/css/tailwind.css` bằng `npm run build:css`. **Từ đây frontend không còn script ngoài nào** — CSP `script-src self` không chặn gì nữa. | Sửa Chart.js CSP | ✅ Đã xử lý |
+
+---
+
+## Thư viện ngoài và CSP
+
+`server.js` đặt CSP `script-src self unsafe-inline unsafe-eval` (xem `mountSecurityHeaders`), **không có
+nguồn ngoài**. Mọi `<script src="https://…">` đều bị trình duyệt chặn — trên cả máy dev lẫn production,
+vì cùng một `server.js`.
+
+### Chart.js — phục vụ nội bộ từ node_modules
+
+5 trang `.html` + `views/ytnn/dashboard.ejs` nạp Chart.js 4.4.1 từ `cdn.jsdelivr.net` nên **biểu đồ không
+vẽ được**. Đã chuyển sang phục vụ nội bộ, **không nới lỏng CSP**:
+
+- `chart.js@4.4.1` vào `dependencies` (ghim đúng bản, không dùng `^`) — `npm ci --omit=dev` của
+  `Dockerfile` vẫn cài, nên production có file.
+- Route `GET /public/vendor/chart.umd.js` trả file từ `node_modules`, đặt cạnh hai route sẵn có
+  `/public/vendor/xlsx.full.min.js` và `/public/vendor/Sortable.min.js` — **theo đúng tiền lệ**, không
+  commit file thư viện vào repo.
+
+**Đã nâng trần `.github/server-js-max-lines` 18.551 → 18.562** vì route mới thêm 11 dòng vào
+`server.js`. Guardrail này là bánh cóc chỉ cho phép file ngắn đi, nhưng đây là **vá lỗi production**,
+không phải refactor — nâng trần là cố ý và nằm trong diff để review thấy. Cách khác (gom 3 route
+`/public/vendor/*` vào `routes/vendorAssets.js`, server.js giảm ~14 dòng) là việc của một đợt riêng,
+không gộp vào commit vá lỗi.
+
+**Cạm bẫy:** URL cũ là `…/dist/chart.umd.min.js`, nhưng gói npm **không có file `.min.js`** — chỉ có
+`dist/chart.umd.js` (205 KB, đã minify sẵn). jsDelivr tự minify khi file `.min.js` không tồn tại, nên URL
+CDN vẫn chạy. Đừng "sửa" đường dẫn nội bộ thành `.min.js`: sẽ 404.
+
+Kiểm chứng trên localhost:3000 — cả 6 trang nạp được Chart.js 4.4.1, mọi `<canvas>` đều có instance,
+console sạch lỗi CSP của Chart.js. Trang Thiết bị (có dữ liệu thật) vẽ ra hình rõ ràng; Dashboard công bố
+và YTNN khởi tạo đúng nhưng **chưa có gì để vẽ** vì bảng `publications` đang 0 bản ghi (3.233 bản ghi còn
+nằm ở `publication_queue` chờ duyệt) — là tình trạng dữ liệu, không phải lỗi nạp thư viện.
+
+### Tailwind — phải build, không nạp thẳng được
+
+`cdn.tailwindcss.com` (Play CDN) **không phải thư viện mà là trình biên dịch JIT chạy trong trình
+duyệt**: nó đọc class trong DOM rồi sinh CSS tại chỗ. Vì vậy không thể bê về `node_modules` rồi phục
+vụ nội bộ như Chart.js — phải build CSS tĩnh:
+
+- `tailwindcss` `^3.4.17` vào **devDependencies**, khớp bản mà `frontend/document-workflow-ui` đang
+  dùng. Dockerfile chạy `npm ci --omit=dev` nên production **không** cài gói này — không sao, vì file
+  CSS đã build sẵn và commit vào repo.
+- Cấu hình ở `scripts/tailwind.config.js`, nguồn ở `scripts/tailwind.input.css`. Đặt trong `scripts/`
+  vì `express.static` phục vụ cả thư mục gốc, mà `scripts/` đã nằm trong danh sách chặn tải — file mới
+  thêm ở gốc thì tải về được (xem nợ #4). Đã kiểm: `GET /scripts/tailwind.config.js` → **403**.
+- `npm run build:css` → `public/css/tailwind.css` (25,7 KB đã minify). Đã gắn vào `npm run build`.
+  Build **tái lập được**: chạy hai lần cho ra file có cùng sha256.
+- 3 trang đổi từ `<script src="https://cdn.tailwindcss.com">` + khối `tailwind.config` nội tuyến sang
+  một thẻ `<link rel="stylesheet" href="/public/css/tailwind.css">`. Cấu hình nội tuyến cũ
+  (`fontFamily: Inter`, bảng màu `brand`) đã chuyển nguyên vào `scripts/tailwind.config.js`.
+
+**Vì sao đổi được an toàn:** Tailwind quét **văn bản thô** của file nên bắt được cả class nằm trong
+chuỗi JS; 3 trang này lại không ghép tên class động (`'bg-' + mau`) nên không có class nào lọt lưới.
+Đã kiểm trên trình duyệt: đối chiếu **toàn bộ class dùng trong DOM** với các rule CSS đã nạp —
+154/174/241 class, **không thiếu rule nào**. Vài tên như `btn-reset`, `content-section` không có rule,
+nhưng đó là **móc cho JS** (`closest('.btn-reset')`), trước nay vốn không có style.
+
+**Nếu sửa class trên 3 trang này thì phải chạy lại `npm run build:css`** — khác CDN cũ tự biên dịch
+lúc chạy. Class mới mà quên build thì sẽ không có style.
 
 ---
 
