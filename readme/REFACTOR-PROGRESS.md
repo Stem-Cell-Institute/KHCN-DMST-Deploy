@@ -248,7 +248,7 @@ branch `REFACTOR`, `main` không có.
   chỉnh (phiên bản bất biến, đợt ghim phiên bản). Đã mở rộng: bảng nhiều dòng + ô tổng hợp tự tính,
   mẫu mặc định theo Word của Viện, vai trò Viện trưởng, kết xuất Word/PDF, email báo nộp/trình/duyệt,
   hồ sơ trình Viện trưởng (tải tệp, gửi/gửi lại để nhắc, chỉ Viện trưởng duyệt), mời trưởng phòng bằng email, thẻ trang chủ.
-  187 test mới (từ 48 lên 235). Có email tự nhắc trước hạn (hẹn giờ trong tiến trình; thêm bảng `bcp_nhac_han`). Sửa đợt đang mở có email báo trưởng phòng các phòng chưa nộp. Chính sách tự duyệt (người nộp cũng là người duyệt): cho phép, ghi rõ (xem tài liệu module).
+  190 test mới (từ 48 lên 238). Có email tự nhắc trước hạn (hẹn giờ trong tiến trình; thêm bảng `bcp_nhac_han`). Sửa đợt đang mở có email báo trưởng phòng các phòng chưa nộp. Chính sách tự duyệt (người nộp cũng là người duyệt): cho phép, ghi rõ (xem tài liệu module).
 - **Thêm dependency `pdfkit@0.20.2`** (MIT, +19 gói gián tiếp) và 4 file font `services/fonts/Tinos-*.ttf`
   (SIL OFL, ~2,2 MB) để xuất PDF có dấu tiếng Việt. `npm audit` không đổi (5 mục, 2 high — nợ #3). Cần
   `npm ci` khi deploy; Docker `COPY . .` đã mang theo thư mục font.

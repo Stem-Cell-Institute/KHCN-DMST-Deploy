@@ -21,7 +21,7 @@ Lưu trong bảng riêng `bcp_thanh_vien`, **không đụng vào cột `users.ro
 | Vai trò | Làm được gì |
 |---|---|
 | **Người quản lý module** (`quan_ly`) | Dựng biểu mẫu, giao đợt, xem mọi báo cáo, **xác nhận** báo cáo từng phòng, yêu cầu chỉnh sửa, kết xuất Word/PDF, trình (gửi, gửi lại để nhắc) Viện trưởng — **không duyệt thay Viện trưởng**, quản lý danh mục phòng, gán trưởng phòng. Nhận email khi có phòng nộp báo cáo. |
-| **Viện trưởng** (`vien_truong`) | **Xem** mọi thứ như người quản lý (được xếp vào module "luôn") và là **người nhận và duyệt hồ sơ trình** — nhưng **KHÔNG xác nhận / yêu cầu chỉnh sửa báo cáo từng phòng và KHÔNG tải/xóa tệp, gửi hồ sơ** (việc của người quản lý module; server trả 403, giao diện không có nút). Một người giữ cả hai vai trò thì làm được cả hai. Chỉ nhận email khi hồ sơ được trình lên (không nhận thư mỗi lần một phòng nộp). |
+| **Viện trưởng** (`vien_truong`) | **Chỉ xem và duyệt**: xem tiến độ các đợt, đọc báo cáo từng phòng, kết xuất để đọc, tải tệp hồ sơ về đọc, và **duyệt hồ sơ trình**. **KHÔNG** xác nhận / yêu cầu chỉnh sửa báo cáo từng phòng, **KHÔNG** tải/xóa tệp hay gửi hồ sơ, **KHÔNG** tạo/sửa/mở/đóng/xóa đợt, **KHÔNG** quản lý biểu mẫu, phòng, phân quyền, lời mời (việc của người quản lý module; server trả 403 qua `canQuanLyModule`/`canXacNhan`, giao diện không có nút và không có tab Biểu mẫu, Phòng & phân quyền; đợt Nháp không hiện trong danh sách của ông). Một người giữ cả hai vai trò thì làm được cả hai. Chỉ nhận email khi hồ sơ được trình lên (không nhận thư mỗi lần một phòng nộp). |
 | **Trưởng phòng** (`truong_phong`, gắn một phòng) | Chỉ thấy và nhập báo cáo **của phòng mình**. |
 
 - Admin hệ thống mặc nhiên là người quản lý.

@@ -143,6 +143,13 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   const canQuanLy = (req, res, next) =>
     req.bcp.laQuanLy ? next() : loi(res, 403, 'Chỉ người quản lý module Báo cáo phòng ban mới thực hiện được.');
 
+  /**
+   * Quản lý đợt, biểu mẫu, phòng, phân quyền, lời mời: người quản lý module (và admin). Viện trưởng KHÔNG: ông xem tiến độ
+   * (GET /dot, /dot/:id, /tong-quan, kết xuất), đọc báo cáo và duyệt hồ sơ trình, nên mọi đường GHI hoặc quản trị bên dưới đều chặn ông.
+   */
+  const canQuanLyModule = (req, res, next) =>
+    req.bcp.laQuanLyModule ? next() : loi(res, 403, 'Chỉ người quản lý module mới thực hiện được. Viện trưởng xem tiến độ, đọc báo cáo và duyệt hồ sơ trình.');
+
   /** Xác nhận / yêu cầu chỉnh sửa báo cáo TỪNG PHÒNG: người quản lý module (và admin), không phải Viện trưởng. */
   const canXacNhan = (req, res, next) =>
     req.bcp.laQuanLyModule ? next() : loi(res, 403, 'Chỉ người quản lý module mới xác nhận hoặc yêu cầu chỉnh sửa báo cáo của phòng. Viện trưởng duyệt hồ sơ trình.');
@@ -186,7 +193,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   // ══ PHÒNG ══════════════════════════════════════════════════════════════════
   router.get(
     '/phong',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const phong = db
         .prepare(
@@ -202,7 +209,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   // Phải đứng trước PUT /phong/:id (khác method nên không nuốt nhau, nhưng giữ đúng quy ước).
   router.post(
     '/phong/nhap-tu-don-vi',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const co = db.prepare("SELECT 1 AS ok FROM sqlite_master WHERE type='table' AND name='units'").get();
       if (!co) return res.json({ them: 0, bo_qua: 0, ghi_chu: 'Chưa có danh mục đơn vị để nhập.' });
@@ -231,7 +238,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.post(
     '/phong',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const ten = chuoi(req.body && req.body.ten, 150);
       if (!ten) return loi(res, 400, 'Cần nhập tên phòng.');
@@ -250,7 +257,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.put(
     '/phong/:id',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
@@ -270,7 +277,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   // ══ THÀNH VIÊN (phân quyền) ═══════════════════════════════════════════════
   router.get(
     '/nguoi-dung',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const q = chuoi(req.query.q, 60);
       if (q.length < 2) return res.json({ nguoi_dung: [] });
@@ -289,7 +296,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.get(
     '/thanh-vien',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const thanh_vien = db
         .prepare(
@@ -306,7 +313,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.post(
     '/thanh-vien',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const b = req.body || {};
       const userId = docId(b.user_id);
@@ -342,7 +349,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.delete(
     '/thanh-vien/:id',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
@@ -359,7 +366,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   // ══ BIỂU MẪU ═══════════════════════════════════════════════════════════════
   router.get(
     '/mau',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const mau = db
         .prepare(
@@ -375,7 +382,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.post(
     '/mau',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const b = req.body || {};
       const ten = chuoi(b.ten, 150);
@@ -402,7 +409,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.get(
     '/mau/:id',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
@@ -420,7 +427,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   /** Sửa biểu mẫu = tạo phiên bản MỚI. Các đợt đã giao vẫn dùng phiên bản đã ghim. */
   router.put(
     '/mau/:id',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
@@ -528,7 +535,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.post(
     '/dot',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const kq = kiemTraDot(req.body || {}, { batBuocMau: true });
       if (kq.loi) return loi(res, 400, kq.loi);
@@ -587,7 +594,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.put(
     '/dot/:id',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
@@ -685,13 +692,13 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       res.json({ id, trang_thai: den });
     });
   }
-  router.post('/dot/:id/mo', canQuanLy, chuyenTrangThaiDot('nhap', 'dang_mo', 'Chỉ mở được đợt đang ở trạng thái Nháp.'));
-  router.post('/dot/:id/dong', canQuanLy, chuyenTrangThaiDot('dang_mo', 'dong', 'Chỉ đóng được đợt đang mở.'));
-  router.post('/dot/:id/mo-lai', canQuanLy, chuyenTrangThaiDot('dong', 'dang_mo', 'Chỉ mở lại được đợt đã đóng.'));
+  router.post('/dot/:id/mo', canQuanLyModule, chuyenTrangThaiDot('nhap', 'dang_mo', 'Chỉ mở được đợt đang ở trạng thái Nháp.'));
+  router.post('/dot/:id/dong', canQuanLyModule, chuyenTrangThaiDot('dang_mo', 'dong', 'Chỉ đóng được đợt đang mở.'));
+  router.post('/dot/:id/mo-lai', canQuanLyModule, chuyenTrangThaiDot('dong', 'dang_mo', 'Chỉ mở lại được đợt đã đóng.'));
 
   router.delete(
     '/dot/:id',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
@@ -1009,7 +1016,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.post(
     '/loi-moi',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const b = req.body || {};
       const email = chuoi(b.email, 200).toLowerCase();
@@ -1047,7 +1054,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.get(
     '/loi-moi',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const ds = db
         .prepare(
@@ -1092,7 +1099,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.post(
     '/loi-moi/:id/gui-lai',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
@@ -1109,7 +1116,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.delete(
     '/loi-moi/:id',
-    canQuanLy,
+    canQuanLyModule,
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');

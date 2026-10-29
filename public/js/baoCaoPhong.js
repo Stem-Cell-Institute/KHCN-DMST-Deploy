@@ -595,7 +595,9 @@
   function dungNav(muc) {
     mucNav = muc;
     var ds = [];
-    if (me.quan_ly) ds.push(['dot', 'Đợt báo cáo'], ['mau', 'Biểu mẫu'], ['phong', 'Phòng & phân quyền']);
+    if (me.quan_ly) ds.push(['dot', 'Đợt báo cáo']);
+    // Biểu mẫu và Phòng & phân quyền: chỉ người quản lý module (Viện trưởng không quản lý, chỉ xem tiến độ và duyệt hồ sơ).
+    if (me.quan_ly_module) ds.push(['mau', 'Biểu mẫu'], ['phong', 'Phòng & phân quyền']);
     if (me.phong.length) ds[viec.length ? 'unshift' : 'push'](['cua-toi', 'Báo cáo của tôi']);
     nav.replaceChildren.apply(nav, ds.map(function (m) {
       var n = m[0] === 'dot' ? soViecCanLam() : m[0] === 'cua-toi' ? viec.length : 0;
@@ -887,16 +889,18 @@
       tq = r[1];
       dungNav(mucNav);
       veDaiViec();
-      var node = [tieuDe('Đợt báo cáo', 'Mỗi đợt giao một biểu mẫu cho các phòng, kèm hạn nộp.',
-        h('button', { type: 'button', class: 'btn', onclick: function () { moFormDot(null); } }, '+ Tạo đợt báo cáo'))];
+      // Viện trưởng chỉ xem tiến độ: không có nút tạo đợt, và không cần thấy đợt còn Nháp (chưa giao cho ai).
+      var cacDot = me.quan_ly_module ? kq.dot : kq.dot.filter(function (d) { return d.trang_thai !== 'nhap'; });
+      var node = [tieuDe('Đợt báo cáo', me.quan_ly_module ? 'Mỗi đợt giao một biểu mẫu cho các phòng, kèm hạn nộp.' : 'Tiến độ nộp báo cáo của các phòng theo từng đợt.',
+        me.quan_ly_module ? h('button', { type: 'button', class: 'btn', onclick: function () { moFormDot(null); } }, '+ Tạo đợt báo cáo') : null)];
       var dai = dungDaiCanXuLy(tq);
       if (dai) node.push(dai);
-      if (!kq.dot.length) {
-        node.push(bangTrong('Chưa có đợt báo cáo nào. Bấm "Tạo đợt báo cáo" để bắt đầu.'));
+      if (!cacDot.length) {
+        node.push(bangTrong(me.quan_ly_module ? 'Chưa có đợt báo cáo nào. Bấm "Tạo đợt báo cáo" để bắt đầu.' : 'Chưa có đợt báo cáo nào đang mở.'));
       } else {
         node.push(h('div', { class: 'cuon-ngang' }, h('table', null,
           h('thead', null, h('tr', null, ['Đợt báo cáo', 'Hạn nộp', 'Trạng thái', 'Tiến độ'].map(function (t) { return h('th', { scope: 'col', text: t }); }))),
-          h('tbody', null, kq.dot.map(function (d) {
+          h('tbody', null, cacDot.map(function (d) {
             var daNop = d.da_nop + d.da_duyet;
             return h('tr', { class: d.tre_han && d.trang_thai === 'dang_mo' ? 'dong-chu-y' : '' },
               h('td', null, h('a', { href: '#/dot/' + d.id, text: d.tieu_de }), h('div', { class: 'mo', text: LOAI_DOT[d.loai] + (d.ky ? ' · ' + d.ky : '') + ' · ' + d.mau_ten })),
@@ -1216,8 +1220,9 @@
         h('p', null, nhan(TT_DOT, d.trang_thai), ' ', h('span', { class: 'con-so', text: 'Đã nộp ' + daNop + '/' + kq.bao_cao.length })),
       ];
       if (d.mo_ta) node.push(h('p', { class: 'phu', text: d.mo_ta }));
-      if (d.trang_thai === 'nhap') node.push(h('div', { class: 'luu-y' }, h('p', { text: 'Đợt đang ở trạng thái Nháp: các trưởng phòng chưa nhìn thấy. Kiểm tra lại rồi bấm "Mở đợt cho các phòng".' })));
-      node.push(h('div', { class: 'nhom-nut' }, nut));
+      if (d.trang_thai === 'nhap' && me.quan_ly_module) node.push(h('div', { class: 'luu-y' }, h('p', { text: 'Đợt đang ở trạng thái Nháp: các trưởng phòng chưa nhìn thấy. Kiểm tra lại rồi bấm "Mở đợt cho các phòng".' })));
+      // Mở/đóng/sửa/xóa đợt: chỉ người quản lý module. Viện trưởng chỉ xem.
+      if (me.quan_ly_module) node.push(h('div', { class: 'nhom-nut' }, nut));
       node.push(h('h3', { text: 'Tiến độ theo phòng' }));
       node.push.apply(node, dungBangTienDo(id, d, kq.bao_cao));
       // Viện trưởng duyệt bằng thẻ việc ở đầu trang (đã có tệp, lời nhắn, nhận xét, nút Duyệt) nên mục này chỉ hiện với ông
@@ -1737,7 +1742,7 @@
     main.replaceChildren(h('p', { class: 'tai', text: 'Đang tải…' }));
 
     var xong;
-    if (QUAN_LY[ten] && !me.quan_ly) {
+    if ((QUAN_LY[ten] && !me.quan_ly) || ((ten === 'mau' || ten === 'phong') && !me.quan_ly_module)) {
       xong = Promise.resolve(main.replaceChildren(h('h2', { text: 'Không có quyền' }), h('div', { class: 'luu-y luu-y-do' }, h('p', { text: 'Mục này chỉ dành cho người quản lý module.' }))));
     } else if (ten === 'cua-toi') xong = viewCuaToi();
     else if (ten === 'bao-cao' && Number(tham) > 0) xong = viewBaoCao(Number(tham));

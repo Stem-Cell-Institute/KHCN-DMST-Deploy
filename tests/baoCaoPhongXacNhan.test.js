@@ -118,3 +118,49 @@ test('người kiêm Viện trưởng và quản lý module thì tải/gửi h�
   assert.equal((await ung.taiTep(VT_KIEM_QL, url + '/tep', 'bao-cao.pdf', PDF_MAU)).s, 201);
   assert.equal((await ung.json(VT_KIEM_QL, 'POST', url + '/gui', {})).s, 200);
 });
+
+// ── Viện trưởng chỉ ĐỌC và DUYỆT: không quản lý đợt, biểu mẫu, phòng, phân quyền, lời mời ─────────────────────
+
+test('Viện trưởng KHÔNG tạo/sửa/mở/đóng/xóa đợt (403), và KHÔNG chạm tới biểu mẫu, phòng, phân quyền, lời mời', async () => {
+  const dot = await dotDaNop('Đợt chỉ đọc');
+  const phong = ID.phongA;
+  const cacDuongBiChan = [
+    ['POST', '/dot', { tieu_de: 'x', han_nop: '2099-12-31', mau_id: ID.mau, phong_ids: [phong] }],
+    ['PUT', `/dot/${dot.id}`, { tieu_de: 'Đổi tên', loai: 'thang', ky: '', han_nop: '2099-12-31' }],
+    ['POST', `/dot/${dot.id}/dong`, {}],
+    ['POST', `/dot/${dot.id}/mo-lai`, {}],
+    ['POST', `/dot/${dot.id}/mo`, {}],
+    ['DELETE', `/dot/${dot.id}`],
+    ['GET', '/mau'], ['GET', `/mau/${ID.mau}`], ['POST', '/mau', { ten: 'x', truong: [] }], ['PUT', `/mau/${ID.mau}`, { ten: 'x', truong: [] }],
+    ['GET', '/phong'], ['POST', '/phong', { ten: 'Phòng mới', ma: 'moi' }], ['PUT', `/phong/${phong}`, { ten: 'Đổi tên' }], ['POST', '/phong/nhap-tu-don-vi', {}],
+    ['GET', '/thanh-vien'], ['POST', '/thanh-vien', { user_id: TP_B, vai_tro: 'truong_phong', phong_id: phong }], ['DELETE', '/thanh-vien/1'],
+    ['GET', '/nguoi-dung?q=a'],
+    ['POST', '/loi-moi', { email: 'x@sci.edu.vn', phong_id: phong }], ['GET', '/loi-moi'], ['DELETE', '/loi-moi/1'], ['POST', '/loi-moi/1/gui-lai', {}],
+  ];
+  for (const [m, duong, body] of cacDuongBiChan) {
+    const r = await ung.json(VIEN_TRUONG, m, duong, body);
+    assert.equal(r.s, 403, `${m} ${duong} phải bị chặn với Viện trưởng`);
+  }
+  const ct = await ung.json(QUAN_LY, 'GET', '/dot/' + dot.id);
+  assert.equal(ct.d.dot.trang_thai, 'dang_mo', 'đợt không bị đổi');
+  assert.equal(ct.d.dot.tieu_de, 'Đợt chỉ đọc', 'tiêu đề không bị đổi');
+});
+
+test('Viện trưởng vẫn XEM được: danh sách đợt, một đợt, tổng quan, đọc báo cáo, kết xuất để đọc', async () => {
+  const dot = await dotDaNop('Đợt để xem');
+  assert.equal((await ung.json(VIEN_TRUONG, 'GET', '/dot')).s, 200);
+  assert.equal((await ung.json(VIEN_TRUONG, 'GET', '/dot/' + dot.id)).s, 200);
+  assert.equal((await ung.json(VIEN_TRUONG, 'GET', '/tong-quan')).s, 200);
+  assert.equal((await ung.json(VIEN_TRUONG, 'GET', '/bao-cao/' + dot.a)).s, 200);
+  const xuat = await ung.goi(VIEN_TRUONG, 'GET', `/dot/${dot.id}/xuat?phong=tat-ca&dinh_dang=docx`);
+  assert.equal(xuat.status, 200);
+});
+
+test('quản lý module, admin và người kiêm hai vai trò vẫn quản lý đợt/biểu mẫu/phòng bình thường', async () => {
+  for (const uid of [QUAN_LY, ADMIN, VT_KIEM_QL]) {
+    assert.equal((await ung.json(uid, 'GET', '/mau')).s, 200, 'user ' + uid + ' xem biểu mẫu');
+    assert.equal((await ung.json(uid, 'GET', '/phong')).s, 200, 'user ' + uid + ' xem phòng');
+  }
+  const r = await ung.json(VT_KIEM_QL, 'POST', '/dot', { tieu_de: 'Đợt do người kiêm tạo', loai: 'thang', ky: '', han_nop: '2099-12-31', mau_id: ID.mau, phong_ids: [ID.phongA] });
+  assert.equal(r.s, 201);
+});
