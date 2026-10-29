@@ -312,6 +312,16 @@
                 <button type="button" class="btn-access" onclick="window.location.href='quy-trinh-van-ban-noi-bo.html?v=20260417-assign-fix'">Truy cập →</button>
             </div>
 
+            <!-- 7b2. Báo cáo phòng ban (Trưởng phòng TCHC giao đợt, các trưởng phòng nộp, trình Viện trưởng) -->
+            <div class="module-card" data-module="department_reports">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4338ca" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="m9 14 2 2 4-4"></path></svg></span></div>
+                <div class="module-title">Báo cáo phòng ban</div>
+                <div class="module-description">
+                    Giao đợt báo cáo cho các phòng, trưởng phòng nhập báo cáo trực tiếp theo biểu mẫu, người quản lý duyệt, kết xuất Word/PDF và trình Viện trưởng. Chỉ người được phân quyền mới sử dụng được.
+                </div>
+                <button type="button" class="btn-access" onclick="window.location.href='bao-cao-phong.html'">Truy cập →</button>
+            </div>
+
             <!-- 7c. Quản trị thiết bị (hồ sơ, PDF, QR) -->
             <div class="module-card" data-module="equipment_stims">
                 <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg></span></div>
@@ -473,7 +483,7 @@
                 isAdmin = (u.role || '').toLowerCase() === 'admin';
             } catch (e) {}
             var LS_ORDER_KEY = 'homepage_module_order';
-            var HOMEPAGE_CODES = ['missions','ethics_ace','personnel','ip','finance','publications','cooperation','dms','document_workflow','equipment_stims','tech_transfer','facilities','ethics_integrity','reward'];
+            var HOMEPAGE_CODES = ['missions','ethics_ace','personnel','ip','finance','publications','cooperation','dms','document_workflow','department_reports','equipment_stims','tech_transfer','facilities','ethics_integrity','reward'];
             function distinctSortOrderCount(modules) {
                 var seen = {};
                 var n = 0;
