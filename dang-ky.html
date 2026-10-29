@@ -70,6 +70,7 @@
             <div class="auth-card">
                 <h2>Đăng ký tài khoản</h2>
                 <p class="note">Chỉ chấp nhận email có đuôi <strong>@sci.edu.vn</strong>. Tài khoản dùng chung cho tất cả module (Nhiệm vụ KHCN, Đề tài cấp Viện, Hội đồng đạo đức). Nếu bạn chưa có email này, vui lòng liên hệ đơn vị quản lý.<br><br>
+                <strong>Cách đăng ký:</strong> nhập email và họ tên, hệ thống sẽ gửi thư xác minh tới hộp thư đó; mở liên kết trong thư để đặt mật khẩu.<br><br>
                 <strong>Sinh viên / khách</strong> chỉ cần đặt lịch thiết bị phòng thí nghiệm CRD (email bất kỳ): <a href="crd-dang-ky.html">Đăng ký tài khoản CRD Lab Booking</a>.</p>
                 <div id="msg" class="msg"></div>
                 <form id="form-dang-ky" action="/api/register" method="POST">
@@ -79,19 +80,10 @@
                         <span class="hint" id="email-hint"></span>
                     </div>
                     <div class="form-group">
-                        <label for="password">Mật khẩu</label>
-                        <input type="password" id="password" name="password" placeholder="Ít nhất 6 ký tự" required minlength="6" autocomplete="new-password">
-                    </div>
-                    <div class="form-group">
-                        <label for="password2">Xác nhận mật khẩu</label>
-                        <input type="password" id="password2" name="password2" placeholder="Nhập lại mật khẩu" required minlength="6" autocomplete="new-password">
-                        <span class="hint" id="pass2-hint"></span>
-                    </div>
-                    <div class="form-group">
                         <label for="fullname">Họ và tên</label>
                         <input type="text" id="fullname" name="fullname" placeholder="Họ và tên đầy đủ" required>
                     </div>
-                    <button type="submit" class="btn-block btn-primary" id="btn-submit">Đăng ký</button>
+                    <button type="submit" class="btn-block btn-primary" id="btn-submit">Gửi thư xác minh</button>
                 </form>
                 <p class="auth-footer">Đã có tài khoản? <a href="dang-nhap.html">Đăng nhập</a></p>
             </div>
@@ -108,8 +100,6 @@
         const ALLOWED_DOMAIN = '@sci.edu.vn';
         const emailEl = document.getElementById('email');
         const emailHint = document.getElementById('email-hint');
-        const pass2El = document.getElementById('password2');
-        const pass2Hint = document.getElementById('pass2-hint');
         const form = document.getElementById('form-dang-ky');
         const msgEl = document.getElementById('msg');
         const btn = document.getElementById('btn-submit');
@@ -128,17 +118,6 @@
             msgEl.innerHTML = '';
         }
 
-        const ROLE_LABELS = {
-            chu_tich: 'Chủ tịch HĐKHCN',
-            thu_ky: 'Thư ký HĐKHCN',
-            thanh_vien: 'Thành viên HĐKHCN',
-            researcher: 'Nghiên cứu viên',
-            admin: 'Admin',
-            phong_khcn: 'Phòng KHCN',
-            totruong_tham_dinh_tc: 'Tổ trưởng Tổ thẩm định TC',
-            thanh_vien_tham_dinh_tc: 'Thành viên Tổ thẩm định TC'
-        };
-
         emailEl.addEventListener('blur', function() {
             const v = this.value.trim().toLowerCase();
             if (!v) { emailHint.textContent = ''; return; }
@@ -153,28 +132,12 @@
             }
         });
 
-        pass2El.addEventListener('input', function() {
-            const p1 = document.getElementById('password').value;
-            if (this.value && p1 !== this.value) {
-                pass2Hint.textContent = 'Mật khẩu không trùng khớp.';
-                pass2Hint.style.color = '#dc3545';
-                this.classList.add('error');
-            } else {
-                pass2Hint.textContent = '';
-                this.classList.remove('error');
-            }
-        });
-
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             clearMsg();
             const email = emailEl.value.trim().toLowerCase();
             if (!email.endsWith(ALLOWED_DOMAIN)) {
                 showMsg('Vui lòng sử dụng email có đuôi ' + ALLOWED_DOMAIN + '.', 'error');
-                return;
-            }
-            if (document.getElementById('password').value !== pass2El.value) {
-                showMsg('Mật khẩu xác nhận không trùng khớp.', 'error');
                 return;
             }
             btn.disabled = true;
@@ -185,28 +148,14 @@
                     credentials: 'same-origin',
                     body: JSON.stringify({
                         email,
-                        password: document.getElementById('password').value,
                         fullname: document.getElementById('fullname').value.trim()
                     })
                 });
                 const data = await res.json().catch(() => ({}));
-                if (res.ok && data.token) {
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user || {}));
-                    if (data.activated === true && data.user) {
-                        const rl = ROLE_LABELS[data.user.role] || data.user.role || '';
-                        showMsg(
-                            '✅ Kích hoạt tài khoản thành công! Bạn đã được phân vai trò ' + rl + '. Đang chuyển hướng...',
-                            'success'
-                        );
-                        setTimeout(() => { window.location.href = 'index.html'; }, 2000);
-                    } else {
-                        showMsg('Đăng ký thành công. Đang chuyển về trang chủ...', 'success');
-                        setTimeout(() => { window.location.href = 'index.html'; }, 800);
-                    }
-                } else if (res.ok) {
-                    showMsg('Đăng ký thành công. Vui lòng đăng nhập.', 'success');
-                    setTimeout(() => { window.location.href = 'dang-nhap.html?returnUrl=index.html'; }, 1200);
+                if (res.ok) {
+                    // Chưa có tài khoản/đăng nhập ở bước này: người dùng phải mở thư để xác minh và đặt mật khẩu.
+                    showMsg('✅ ' + (data.message || 'Đã gửi thư xác minh. Hãy kiểm tra hộp thư (cả mục Spam) và nhấn vào liên kết trong thư.'), 'success');
+                    form.style.display = 'none';
                 } else {
                     const baseMsg = data.message || 'Đăng ký thất bại. Email có thể đã được sử dụng.';
                     const dupHint =

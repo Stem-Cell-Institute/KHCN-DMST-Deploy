@@ -5432,81 +5432,22 @@ function userHasLoginPassword(pw) {
   return pw != null && String(pw).trim().length > 0;
 }
 
-// Đăng ký / kích hoạt (chỉ @sci.edu.vn) — tài khoản pre-created (password rỗng/NULL) được kích hoạt tại đây
-app.post('/api/register', async (req, res) => {
-  const { email, password, fullname } = req.body || {};
-  const em = (email || '').trim().toLowerCase();
-  const fn = (fullname || '').trim();
-  const pw = password;
-
-  if (!em || !fn || !pw) {
-    return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
-  }
-  if (!isSafeEmailFormat(em)) {
-    return res.status(400).json({ message: 'Email không hợp lệ.' });
-  }
-  if (!em.endsWith(ALLOWED_EMAIL_DOMAIN)) {
-    return res.status(400).json({ message: 'Chỉ chấp nhận email có đuôi ' + ALLOWED_EMAIL_DOMAIN });
-  }
-  if (fn.length < 2) {
-    return res.status(400).json({ message: 'Vui lòng nhập họ và tên (ít nhất 2 ký tự).' });
-  }
-  if (pw.length < 6) {
-    return res.status(400).json({ message: 'Mật khẩu ít nhất 6 ký tự' });
-  }
-  if (pw.length > 128) {
-    return res.status(400).json({ message: 'Mật khẩu quá dài (tối đa 128 ký tự).' });
-  }
-
-  const existing = db.prepare('SELECT id, role, password, fullname FROM users WHERE email = ?').get(em);
-
-  if (existing) {
-    if (userHasLoginPassword(existing.password)) {
-      return res.status(400).json({
-        message: 'Email này đã có tài khoản. Vui lòng đăng nhập hoặc dùng "Quên mật khẩu".',
-      });
-    }
-    let hash;
-    try {
-      hash = await bcrypt.hash(pw, 10);
-    } catch (e) {
-      return res.status(500).json({ message: 'Không thể kích hoạt tài khoản. Vui lòng thử lại.' });
-    }
-    db.prepare('UPDATE users SET password = ?, fullname = ? WHERE id = ?').run(hash, fn, existing.id);
-    const user = { id: existing.id, email: em, fullname: fn, role: existing.role };
-    if ((user.role || '').toLowerCase() === 'admin') {
-      user.isMasterAdmin = userEmailIsMasterAdmin(user.email);
-    }
-    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
-    setAuthCookie(res, token);
-    return res.status(200).json({
-      message: 'Kích hoạt tài khoản thành công! Chào mừng bạn.',
-      token,
-      user,
-      activated: true,
-    });
-  }
-
-  const role = 'researcher';
-  let hash;
-  try {
-    hash = await bcrypt.hash(pw, 10);
-  } catch (e) {
-    return res.status(500).json({ message: 'Không thể tạo tài khoản. Vui lòng thử lại.' });
-  }
-  try {
-    const ins = db.prepare('INSERT INTO users (email, password, fullname, role) VALUES (?, ?, ?, ?)').run(em, hash, fn, role);
-    const user = { id: Number(ins.lastInsertRowid), email: em, fullname: fn, role };
-    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
-    setAuthCookie(res, token);
-    return res.status(201).json({ message: 'Đăng ký thành công', token, user });
-  } catch (e) {
-    if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      return res.status(400).json({ message: 'Email này đã được sử dụng' });
-    }
-    throw e;
-  }
-});
+// Đăng ký (chỉ @sci.edu.vn) có XÁC MINH email: gửi liên kết dùng một lần, mật khẩu đặt SAU khi xác minh. Xem routes/dangKy.js
+app.use(
+  '/api/register',
+  require('./routes/dangKy')({
+    db,
+    mailSend: transporter ? (o) => transporter.sendMail({ from: getSmtpFrom(), ...o }) : null,
+    baseUrl: process.env.BASE_URL || 'http://localhost:' + PORT,
+    bcrypt,
+    jwt,
+    JWT_SECRET,
+    setAuthCookie,
+    userEmailIsMasterAdmin,
+    isSafeEmailFormat,
+    allowedDomain: ALLOWED_EMAIL_DOMAIN,
+  })
+);
 
 // Đăng nhập
 app.post('/api/login', async (req, res) => {
@@ -17657,6 +17598,7 @@ app.get('/dang-nhap.html', (req, res) => {
 const PUBLIC_HTML_AUTH = new Set([
   'dang-nhap.html',
   'dang-ky.html',
+  'xac-minh-email.html',
   'crd-dang-ky.html',
   'quen-mat-khau.html',
   'dat-lai-mat-khau.html',
