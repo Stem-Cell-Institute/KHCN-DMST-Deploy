@@ -11,7 +11,7 @@ Mã nguồn: `routes/baoCaoPhong.js` (+ `routes/baoCaoPhongTrinh.js`), `services
 
 Trưởng phòng Tổ chức Hành chính giao **đợt báo cáo** cho các phòng; mỗi trưởng phòng **nhập báo cáo
 trực tiếp trên web** theo một **biểu mẫu do người quản lý tự cấu hình** (mẫu ban đầu lấy từ "Báo cáo
-kết quả hoạt động tháng" của Viện); người quản lý **duyệt** hoặc **yêu cầu chỉnh sửa**, **kết xuất
+kết quả hoạt động tháng" của Viện); người quản lý **xác nhận** hoặc **yêu cầu chỉnh sửa**, **kết xuất
 Word/PDF**, rồi **trình Viện trưởng** duyệt. Mọi thay đổi trạng thái quan trọng có **email báo**.
 
 ## Ba vai trò
@@ -65,12 +65,18 @@ Người vừa **đăng ký** xong mà chưa nhập mã thì **chưa có quyền
 
 ## Luồng nghiệp vụ
 
+**Từ ngữ — hai việc khác nhau, hai từ khác nhau.** *Xác nhận* = người quản lý module kiểm báo cáo của **từng phòng** (nút "Xác nhận
+báo cáo", nhỏ, cạnh "Yêu cầu chỉnh sửa"; trạng thái "Đã xác nhận"). *Duyệt* = **chỉ Viện trưởng** duyệt **hồ sơ trình** gộp (nút "Duyệt hồ sơ",
+màu đỏ, to, trong thẻ việc của Viện trưởng; "Viện trưởng đã duyệt"). Chỉ đổi chữ hiển thị: tên trạng thái/đường dẫn trong mã vẫn là
+`da_duyet`, `/duyet`. Xác nhận từng phòng **không bắt buộc** trước khi trình (kết xuất được cả báo cáo "đã nộp"); nó là bước kiểm của quản lý, không thay cho
+việc Viện trưởng duyệt.
+
 ```
 Biểu mẫu ──(ghim phiên bản mới nhất)──▶ Đợt  [Nháp] ─Mở─▶ [Đang mở] ─Đóng─▶ [Đã đóng]
                                          │                    │                │
                                          └─ mỗi phòng một báo cáo ─┘     (Mở lại được)
 
-Báo cáo:  Chưa nộp ─Nộp─▶ Đã nộp ─Duyệt─▶ Đã duyệt
+Báo cáo:  Chưa nộp ─Nộp─▶ Đã nộp ─Xác nhận─▶ Đã xác nhận
    │ ▲         ▲             │                 │
    │ └─Lưu nháp (không khóa)  └─ Cần chỉnh sửa ◀─Yêu cầu sửa
    └─ sửa/lưu nháp bao nhiêu lần cũng được       (trưởng phòng sửa rồi Nộp lại)
