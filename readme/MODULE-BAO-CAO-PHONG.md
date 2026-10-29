@@ -20,8 +20,8 @@ Lưu trong bảng riêng `bcp_thanh_vien`, **không đụng vào cột `users.ro
 
 | Vai trò | Làm được gì |
 |---|---|
-| **Người quản lý module** (`quan_ly`) | Dựng biểu mẫu, giao đợt, xem mọi báo cáo, duyệt, yêu cầu chỉnh sửa, kết xuất Word/PDF, trình (gửi, gửi lại để nhắc) Viện trưởng — **không duyệt thay Viện trưởng**, quản lý danh mục phòng, gán trưởng phòng. Nhận email khi có phòng nộp báo cáo. |
-| **Viện trưởng** (`vien_truong`) | Có **mọi quyền của người quản lý** (được xếp vào module "luôn"), cộng thêm là **người nhận hồ sơ trình** và người duyệt hồ sơ đó. Chỉ nhận email khi hồ sơ được trình lên (không nhận thư mỗi lần một phòng nộp). |
+| **Người quản lý module** (`quan_ly`) | Dựng biểu mẫu, giao đợt, xem mọi báo cáo, **xác nhận** báo cáo từng phòng, yêu cầu chỉnh sửa, kết xuất Word/PDF, trình (gửi, gửi lại để nhắc) Viện trưởng — **không duyệt thay Viện trưởng**, quản lý danh mục phòng, gán trưởng phòng. Nhận email khi có phòng nộp báo cáo. |
+| **Viện trưởng** (`vien_truong`) | **Xem** mọi thứ như người quản lý (được xếp vào module "luôn") và là **người nhận và duyệt hồ sơ trình** — nhưng **KHÔNG xác nhận / yêu cầu chỉnh sửa báo cáo từng phòng và KHÔNG tải/xóa tệp, gửi hồ sơ** (việc của người quản lý module; server trả 403, giao diện không có nút). Một người giữ cả hai vai trò thì làm được cả hai. Chỉ nhận email khi hồ sơ được trình lên (không nhận thư mỗi lần một phòng nộp). |
 | **Trưởng phòng** (`truong_phong`, gắn một phòng) | Chỉ thấy và nhập báo cáo **của phòng mình**. |
 
 - Admin hệ thống mặc nhiên là người quản lý.
@@ -64,6 +64,8 @@ nhập bằng đúng email đó. Các lớp bảo vệ (đều có test, và đ�
 Người vừa **đăng ký** xong mà chưa nhập mã thì **chưa có quyền gì** ("Bạn chưa được cấp quyền" + ô nhập mã).
 
 ## Luồng nghiệp vụ
+
+**Ai xác nhận? Chỉ người quản lý module (và admin).** Viện trưởng không xác nhận hộ: ông đọc và duyệt hồ sơ. `/me` có `quan_ly_module` (admin hoặc có dòng `quan_ly`) phân biệt với `quan_ly` (gồm cả Viện trưởng).
 
 **Từ ngữ — hai việc khác nhau, hai từ khác nhau.** *Xác nhận* = người quản lý module kiểm báo cáo của **từng phòng** (nút "Xác nhận
 báo cáo", nhỏ, cạnh "Yêu cầu chỉnh sửa"; trạng thái "Đã xác nhận"). *Duyệt* = **chỉ Viện trưởng** duyệt **hồ sơ trình** gộp (nút "Duyệt hồ sơ",
@@ -187,7 +189,7 @@ có địa chỉ tuyệt đối; SMTP chưa cấu hình thì module vẫn chạy
 **Cho Viện trưởng — thẻ "Hồ sơ chờ bạn duyệt"**: mỗi hồ sơ đang chờ là một thẻ lớn ở **đầu mọi màn quản lý** (người gửi, giờ gửi, lời nhắn,
 các tệp cần đọc bấm tải được, ô nhận xét, nút "Duyệt hồ sơ" và "Xem chi tiết đợt") — Viện trưởng không phải đi tìm trong trang đợt.
 Không có nút "không duyệt": chưa đồng ý thì để đó. Thẻ là **nơi duy nhất** Viện trưởng duyệt, nên trong trang đợt mục "Hồ sơ trình"
-chỉ hiện với ông khi hồ sơ **đã duyệt** (xem kết quả và lịch sử); lúc đang chờ duyệt thì ẩn vì trùng với thẻ. Thẻ trang chủ cũng báo "Có N hồ sơ chờ bạn duyệt → Đọc và duyệt hồ sơ".
+chỉ hiện với ông khi hồ sơ **đã duyệt** (xem kết quả và lịch sử); lúc đang chờ duyệt thì ẩn vì trùng với thẻ. Dải "Cần xử lý" của Viện trưởng (không kiêm quản lý module) được **rút gọn**: chỉ "Các đợt đang mở — đã nộp x/y phòng · hạn", không đỏ, không đếm việc của quản lý, không lặp hồ sơ chờ duyệt (đã có thẻ). Thẻ trang chủ cũng báo "Có N hồ sơ chờ bạn duyệt → Đọc và duyệt hồ sơ".
 Dữ liệu từ `GET /viec-cua-toi` (trang chủ) và `GET /tong-quan` (trong module). `/viec-cua-toi` chỉ trả hồ sơ cho đúng Viện trưởng được gán;
 mọi người khác nhận danh sách rỗng. Hệ quả: người vừa là Viện trưởng vừa là quản lý module cũng không thấy công cụ gửi/tải của mục hồ sơ trình ở trang đợt.
 
@@ -263,6 +265,7 @@ Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
 - `baoCaoPhongMoi.test.js` — mời bằng email (kể cả kịch bản kẻ đăng ký giả email được mời), email mở đợt.
 - `baoCaoPhongTuDuyet.test.js` — cờ "tự duyệt" (người nộp = người duyệt), không dính lại sau chỉnh sửa/nộp lại.
 - `baoCaoPhongNhacHan.test.js` — nhắc trước hạn: đúng người/đúng mốc/đúng giờ VN, đúng một lần (chạy chồng, khởi động lại, dời hạn), SMTP hỏng.
+- `baoCaoPhongXacNhan.test.js` — ai xác nhận / tải / gửi / duyệt: Viện trưởng không xác nhận hộ, không tải/gửi hồ sơ; admin và quản lý được; người kiêm hai vai trò làm được cả hai.
 - `baoCaoPhongVienTruong.test.js` — dữ liệu thẻ việc: `/viec-cua-toi` (hồ sơ chỉ lộ cho Viện trưởng), `/tong-quan` có đủ thông tin hồ sơ chờ.
 - `baoCaoPhongSuaDot.test.js` — email khi sửa đợt đang mở: đúng người nhận, không gửi khi không đổi, tắt được, Nháp/đã đóng.
 

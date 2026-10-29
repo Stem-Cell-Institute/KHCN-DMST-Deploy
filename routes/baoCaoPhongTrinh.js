@@ -68,6 +68,10 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
     next();
   });
 
+  /** Tải/xóa tệp và gửi hồ sơ là việc của người quản lý module; Viện trưởng chỉ đọc (tải về) và duyệt. */
+  const chiQuanLyModule = (req, res, next) =>
+    req.bcp.laQuanLyModule ? next() : loi(res, 403, 'Chỉ người quản lý module mới tải tệp, xóa tệp hoặc gửi hồ sơ. Viện trưởng đọc và duyệt hồ sơ.');
+
   const layTrinh = (dotId) => db.prepare('SELECT * FROM bcp_trinh WHERE dot_id = ?').get(dotId);
   const batBuocCoTrinh = (dotId) => db.prepare('INSERT OR IGNORE INTO bcp_trinh (dot_id) VALUES (?)').run(dotId);
   const dsVienTruong = () =>
@@ -170,7 +174,7 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
     }
   }
 
-  router.post('/tep', choPhepTaiLen, (req, res) => {
+  router.post('/tep', chiQuanLyModule, choPhepTaiLen, (req, res) => {
     nhanMotTep(req, res, (err) => {
       try {
         if (err) {
@@ -202,6 +206,7 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
 
   router.delete(
     '/tep/:tid',
+    chiQuanLyModule,
     bao((req, res) => {
       const tid = docId(req.params.tid);
       if (!tid) return loi(res, 400, 'ID không hợp lệ.');
@@ -245,6 +250,7 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
   // ── Gửi (và gửi lại) / duyệt ────────────────────────────────────────────────
   router.post(
     '/gui',
+    chiQuanLyModule,
     bao((req, res) => {
       const dotId = req.dotTrinh.id;
       const soTep = db.prepare('SELECT COUNT(*) AS n FROM bcp_trinh_tep WHERE dot_id = ?').get(dotId).n;
