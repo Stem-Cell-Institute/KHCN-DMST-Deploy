@@ -9974,16 +9974,7 @@ app.get('/api/homepage-stats', (req, res) => {
     /* bảng submissions (SCI-ACE) chưa có */
   }
   /** Thẻ module «Ngân hàng tế bào & Kháng thể» */
-  let sampleStorageMini = { containers: 0, boxes: 0, samples: 0 };
-  try {
-    sampleStorageMini.containers = dbCount('SELECT COUNT(*) as c FROM nhm_containers WHERE deleted_at IS NULL');
-    sampleStorageMini.boxes = dbCount('SELECT COUNT(*) as c FROM nhm_boxes WHERE deleted_at IS NULL');
-    sampleStorageMini.samples = dbCount(
-      "SELECT COUNT(*) as c FROM nhm_tubes WHERE deleted_at IS NULL AND status IN ('in_storage','checked_out')"
-    );
-  } catch (e) {
-    /* bảng kho mẫu chưa có */
-  }
+  const sampleStorageMini = require('./routes/nganHangTeBaoKhangThe').miniStats(db);
   return res.json({
     missions,
     missionMini,
@@ -14039,29 +14030,9 @@ try {
   console.warn('[EQUIP] Không mount equipment:', e.message);
 }
 
-/** Ngân hàng tế bào & Kháng thể (tủ → giá → hộp → mẫu) — db/ngan_hang_te_bao_khang_the_schema.sql (bảng nhm_*, tên cũ «Ngân hàng mẫu») */
+/** Ngân hàng tế bào & Kháng thể — routes/nganHangTeBaoKhangThe.js (bảng nhm_*, chuyển hướng địa chỉ cũ, API) */
 try {
-  const nganHangSchemaPath = path.join(__dirname, 'db', 'ngan_hang_te_bao_khang_the_schema.sql');
-  if (fs.existsSync(nganHangSchemaPath)) {
-    db.exec(fs.readFileSync(nganHangSchemaPath, 'utf8'));
-  }
-  // Địa chỉ rút gọn + các tên cũ (để liên kết đã gửi vẫn dùng được)
-  app.get(
-    [
-      '/ngan-hang-te-bao-khang-the',
-      '/ngan-hang-te-bao-khang-the.html',
-      '/kho-mau-sinh-pham',
-      '/kho-mau-sinh-pham.html',
-      '/public/kho-mau-sinh-pham/index.html',
-      '/ngan-hang-mau',
-      '/ngan-hang-mau.html',
-      '/nganhangmau.html',
-    ],
-    (req, res) => res.redirect(302, '/public/ngan-hang-te-bao-khang-the/index.html')
-  );
-  // Đồng bộ tên hiển thị cho cơ sở dữ liệu đã có dòng homepage_modules từ tên cũ
-  db.prepare("UPDATE homepage_modules SET label = ? WHERE code = 'sample_storage' AND label <> ?").run('Ngân hàng tế bào & Kháng thể', 'Ngân hàng tế bào & Kháng thể');
-  app.use('/api/ngan-hang-te-bao-khang-the', require('./routes/nganHangTeBaoKhangThe')({ db, authMiddleware, insertUserActivityLog }));
+  require('./routes/nganHangTeBaoKhangThe').mount(app, { db, authMiddleware, insertUserActivityLog });
   console.log('[NGAN-HANG] Đã mount /api/ngan-hang-te-bao-khang-the');
 } catch (e) {
   console.warn('[NGAN-HANG] Không mount ngan-hang-te-bao-khang-the:', e.message);
