@@ -5,12 +5,14 @@
  * Nên MỌI đường ở đây đã qua canQuanLy (quản lý module, Viện trưởng, hoặc admin hệ thống).
  * Trưởng phòng không thấy hồ sơ này: đó là bộ báo cáo gộp của nhiều phòng.
  *
- * Luồng:   chua_gui ──Gửi──▶ da_gui ──Duyệt──▶ da_duyet
- *             ▲                │
- *             └───Thu hồi──────┘
+ * Luồng:   chua_gui ──Gửi──▶ da_gui ──Viện trưởng duyệt──▶ da_duyet
+ *                              │ ▲
+ *                              └─┘ Gửi lại (nhắc Viện trưởng), tải lên/xóa tệp thoải mái
  *   chua_gui : quản lý module chuẩn bị — tải lên / xóa tệp (bản kết xuất Word/PDF đã chỉnh, đã ký…)
- *   da_gui   : đã báo Viện trưởng, KHÓA tệp. Chỉ còn thu hồi (nếu gửi nhầm) hoặc duyệt.
- *   da_duyet : xong. Ghi rõ ai duyệt, và có phải duyệt THAY Viện trưởng không.
+ *   da_gui   : "CHƯA DUYỆT". Đã báo Viện trưởng; chưa duyệt thì cứ để vậy, không phải sự cố. Quản lý module có
+ *              thể kết xuất lại, đổi tệp rồi GỬI LẠI để nhắc việc. Không có "từ chối": không duyệt = chưa duyệt.
+ *   da_duyet : xong, khóa tệp. CHỈ Viện trưởng duyệt được — quản lý module và admin KHÔNG duyệt thay.
+ *   (cột duyet_thay của bảng chỉ còn để tương thích dữ liệu cũ, luôn 0.)
  *
  * Bảo mật tệp — nơi dễ sai nhất của cả module:
  *   - Chỉ nhận .pdf / .docx / .doc, VÀ kiểm byte đầu của tệp khớp loại (đuôi có thể bị đổi tên).
@@ -76,7 +78,7 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
     '/',
     bao((req, res) => {
       const dotId = req.dotTrinh.id;
-      const t = layTrinh(dotId) || { trang_thai: 'chua_gui', duyet_thay: 0 };
+      const t = layTrinh(dotId) || { trang_thai: 'chua_gui' };
       const tep = db
         .prepare(
           `SELECT f.id, f.ten_goc, f.loai, f.kich_thuoc, f.tai_luc, u.fullname AS nguoi_tai
@@ -94,7 +96,7 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
       const nguoiDuyet = t.nguoi_duyet_id ? db.prepare('SELECT fullname FROM users WHERE id = ?').get(t.nguoi_duyet_id) : null;
 
       let lyDoKhongGui = null;
-      if (t.trang_thai === 'chua_gui') {
+      if (t.trang_thai !== 'da_duyet') {
         if (tep.length === 0) lyDoKhongGui = 'Hãy tải lên ít nhất một tệp (bản kết xuất báo cáo) trước khi gửi.';
         else if (vt.length === 0) lyDoKhongGui = 'Chưa chỉ định Viện trưởng. Quản trị viên cần gán vai trò Viện trưởng trong mục Phòng & phân quyền.';
       }
@@ -106,7 +108,6 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
           nguoi_gui: nguoiGui ? nguoiGui.fullname : null,
           duyet_luc: t.duyet_luc || null,
           nguoi_duyet: nguoiDuyet ? nguoiDuyet.fullname : null,
-          duyet_thay: !!t.duyet_thay,
           nhan_xet: t.nhan_xet || null,
         },
         tep,
@@ -114,10 +115,9 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
         vien_truong: vt.map((x) => x.fullname),
         la_vien_truong: req.bcp.laVienTruong,
         co_the: {
-          tai_len: t.trang_thai === 'chua_gui' && tep.length < TOI_DA_TEP,
-          gui: t.trang_thai === 'chua_gui' && tep.length > 0 && vt.length > 0,
-          thu_hoi: t.trang_thai === 'da_gui',
-          duyet: t.trang_thai === 'da_gui',
+          tai_len: t.trang_thai !== 'da_duyet' && tep.length < TOI_DA_TEP,
+          gui: t.trang_thai !== 'da_duyet' && tep.length > 0 && vt.length > 0, // da_gui: gửi lại để nhắc
+          duyet: t.trang_thai === 'da_gui' && req.bcp.laVienTruong,
         },
         ly_do_khong_gui: lyDoKhongGui,
         toi_da_tep: TOI_DA_TEP,
@@ -130,7 +130,7 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
   /** Kiểm trạng thái TRƯỚC khi multer nhận file, để một yêu cầu bị từ chối không để lại tệp trên đĩa. */
   function choPhepTaiLen(req, res, next) {
     const t = layTrinh(req.dotTrinh.id);
-    if (t && t.trang_thai !== 'chua_gui') return loi(res, 409, t.trang_thai === 'da_duyet' ? 'Hồ sơ đã được duyệt, không thêm tệp được.' : 'Hồ sơ đã gửi. Hãy thu hồi trước nếu muốn thay đổi tệp.');
+    if (t && t.trang_thai === 'da_duyet') return loi(res, 409, 'Hồ sơ đã được duyệt, không thêm tệp được.');
     const n = db.prepare('SELECT COUNT(*) AS n FROM bcp_trinh_tep WHERE dot_id = ?').get(req.dotTrinh.id).n;
     if (n >= TOI_DA_TEP) return loi(res, 409, `Mỗi hồ sơ tối đa ${TOI_DA_TEP} tệp.`);
     next();
@@ -206,7 +206,7 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
       const tid = docId(req.params.tid);
       if (!tid) return loi(res, 400, 'ID không hợp lệ.');
       const t = layTrinh(req.dotTrinh.id);
-      if (t && t.trang_thai !== 'chua_gui') return loi(res, 409, 'Hồ sơ đã gửi hoặc đã duyệt, không xóa tệp được.');
+      if (t && t.trang_thai === 'da_duyet') return loi(res, 409, 'Hồ sơ đã được duyệt, không xóa tệp được.');
       const f = db.prepare('SELECT id, ten_goc, ten_luu FROM bcp_trinh_tep WHERE id = ? AND dot_id = ?').get(tid, req.dotTrinh.id);
       if (!f) return loi(res, 404, 'Không tìm thấy tệp.');
       db.prepare('DELETE FROM bcp_trinh_tep WHERE id = ?').run(tid);
@@ -242,7 +242,7 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
     })
   );
 
-  // ── Gửi / thu hồi / duyệt ───────────────────────────────────────────────────
+  // ── Gửi (và gửi lại) / duyệt ────────────────────────────────────────────────
   router.post(
     '/gui',
     bao((req, res) => {
@@ -252,29 +252,20 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
       if (dsVienTruong().length === 0) return loi(res, 409, 'Chưa chỉ định Viện trưởng. Quản trị viên cần gán vai trò Viện trưởng trước.');
       const loiNhan = typeof (req.body && req.body.loi_nhan) === 'string' ? req.body.loi_nhan.trim().slice(0, 1000) : '';
       batBuocCoTrinh(dotId);
-      // Điều kiện trạng thái nằm ngay trong UPDATE: bấm Gửi hai lần cũng chỉ gửi một lần.
+      const guiLai = (layTrinh(dotId) || {}).trang_thai === 'da_gui';
+      // Gửi lại (nhắc Viện trưởng) được phép khi chưa duyệt; đã duyệt thì khóa. Điều kiện nằm ngay trong UPDATE.
       const r = db
         .prepare(
           `UPDATE bcp_trinh
               SET trang_thai = 'da_gui', loi_nhan = ?, nguoi_gui_id = ?, gui_luc = ?,
-                  nguoi_duyet_id = NULL, duyet_luc = NULL, duyet_thay = 0, nhan_xet = NULL, cap_nhat_luc = datetime('now')
-            WHERE dot_id = ? AND trang_thai = 'chua_gui'`
+                  nguoi_duyet_id = NULL, duyet_luc = NULL, nhan_xet = NULL, cap_nhat_luc = datetime('now')
+            WHERE dot_id = ? AND trang_thai IN ('chua_gui','da_gui')`
         )
         .run(loiNhan || null, req.user.id, new Date().toISOString(), dotId);
-      if (r.changes === 0) return loi(res, 409, 'Hồ sơ đã được gửi rồi.');
-      ghiLichSu(dotId, 'gui', req.user.id, loiNhan);
-      guiNen(thongBao.baoDaGuiVienTruong(dotId, req.user.id));
-      res.json({ ok: true, trang_thai: 'da_gui' });
-    })
-  );
-
-  router.post(
-    '/thu-hoi',
-    bao((req, res) => {
-      const r = db.prepare("UPDATE bcp_trinh SET trang_thai = 'chua_gui', cap_nhat_luc = datetime('now') WHERE dot_id = ? AND trang_thai = 'da_gui'").run(req.dotTrinh.id);
-      if (r.changes === 0) return loi(res, 409, 'Chỉ thu hồi được hồ sơ đã gửi mà chưa duyệt.');
-      ghiLichSu(req.dotTrinh.id, 'thu_hoi', req.user.id, null);
-      res.json({ ok: true, trang_thai: 'chua_gui' });
+      if (r.changes === 0) return loi(res, 409, 'Hồ sơ đã được Viện trưởng duyệt rồi.');
+      ghiLichSu(dotId, guiLai ? 'gui_lai' : 'gui', req.user.id, loiNhan);
+      guiNen(thongBao.baoDaGuiVienTruong(dotId, req.user.id, guiLai));
+      res.json({ ok: true, trang_thai: 'da_gui', gui_lai: guiLai });
     })
   );
 
@@ -282,21 +273,20 @@ module.exports = function createTrinhRouter({ db, uploadsRoot, thongBao, guiNen,
     '/duyet',
     bao((req, res) => {
       const dotId = req.dotTrinh.id;
+      // Chỉ Viện trưởng (được gán trong module) duyệt. Quản lý module và admin hệ thống KHÔNG duyệt thay.
+      if (!req.bcp.laVienTruong) return loi(res, 403, 'Chỉ Viện trưởng mới duyệt được hồ sơ này.');
       const nhanXet = typeof (req.body && req.body.nhan_xet) === 'string' ? req.body.nhan_xet.trim().slice(0, 2000) : '';
-      // Duyệt THAY = người duyệt không phải Viện trưởng (quản lý module, hoặc admin). Ghi rõ để về sau
-      // phân biệt được "Viện trưởng đã xem và duyệt" với "quản lý duyệt hộ khi ông ấy bận".
-      const thay = req.bcp.laVienTruong ? 0 : 1;
       const r = db
         .prepare(
           `UPDATE bcp_trinh
-              SET trang_thai = 'da_duyet', nguoi_duyet_id = ?, duyet_luc = ?, duyet_thay = ?, nhan_xet = ?, cap_nhat_luc = datetime('now')
+              SET trang_thai = 'da_duyet', nguoi_duyet_id = ?, duyet_luc = ?, nhan_xet = ?, cap_nhat_luc = datetime('now')
             WHERE dot_id = ? AND trang_thai = 'da_gui'`
         )
-        .run(req.user.id, new Date().toISOString(), thay, nhanXet || null, dotId);
-      if (r.changes === 0) return loi(res, 409, 'Chỉ duyệt được hồ sơ đang ở trạng thái Đã gửi.');
-      ghiLichSu(dotId, thay ? 'duyet_thay' : 'duyet', req.user.id, nhanXet);
-      guiNen(thongBao.baoDaDuyetTrinh(dotId, req.user.id, !!thay));
-      res.json({ ok: true, trang_thai: 'da_duyet', duyet_thay: !!thay });
+        .run(req.user.id, new Date().toISOString(), nhanXet || null, dotId);
+      if (r.changes === 0) return loi(res, 409, 'Chỉ duyệt được hồ sơ đang ở trạng thái Đã gửi, chờ duyệt.');
+      ghiLichSu(dotId, 'duyet', req.user.id, nhanXet);
+      guiNen(thongBao.baoDaDuyetTrinh(dotId, req.user.id));
+      res.json({ ok: true, trang_thai: 'da_duyet' });
     })
   );
 

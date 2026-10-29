@@ -3,7 +3,7 @@
  * Test cho ba phần của module Báo cáo phòng ban được thêm sau bản đầu:
  *   1. Vai trò Viện trưởng + dải "tổng quan"
  *   2. Email báo nộp / báo trình / báo duyệt
- *   3. Hồ sơ trình Viện trưởng (tải tệp, gửi, thu hồi, duyệt, duyệt thay)
+ *   3. Hồ sơ trình Viện trưởng (tải tệp, gửi, gửi lại để nhắc, chỉ Viện trưởng duyệt)
  *   4. Kết xuất Word/PDF qua API
  *
  * Chạy trên router thật trong tiến trình (tests/helpers/baoCaoPhongApp.js) nên soi được email đã gửi và
@@ -269,68 +269,91 @@ test('admin gán Viện trưởng; Viện trưởng có đủ quyền quản lý
   assert.equal((await ung.json(ADMIN, 'POST', '/thanh-vien', { user_id: VIEN_TRUONG, vai_tro: 'vien_truong' })).s, 409);
 });
 
-test('gửi hồ sơ: email chỉ tới VIỆN TRƯỞNG; sau khi gửi thì khóa tệp', async () => {
+test('gửi hồ sơ: email chỉ tới VIỆN TRƯỞNG, ngắn gọn, KHÔNG nêu tiến độ duyệt các phòng', async () => {
   const dot = ID.dotMail;
   ung.thu.length = 0;
   const r = await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/gui`, { loi_nhan: 'Kính trình Viện trưởng xem và duyệt.' });
   assert.equal(r.s, 200, JSON.stringify(r.d));
+  assert.equal(r.d.gui_lai, false);
   await ung.doiThu(1);
   assert.equal(ung.thu.length, 1);
   assert.equal(ung.thu[0].to, 'vientruong@thu.local');
   assert.match(ung.thu[0].subject, /^\[Cần duyệt\]/);
   assert.match(ung.thu[0].text, /Kính trình Viện trưởng/);
   assert.match(ung.thu[0].text, /Báo cáo tháng 10 – đã ký\.pdf/);
-  assert.match(ung.thu[0].text, /đã nộp 2\/2 phòng/);
-
-  // đã khóa
-  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/gui`, {})).s, 409, 'bấm gửi hai lần chỉ gửi một lần');
-  assert.equal((await ung.taiTep(QUAN_LY, `/dot/${dot.id}/trinh/tep`, 'them.pdf', PDF_MAU)).s, 409);
-  assert.equal((await ung.json(QUAN_LY, 'DELETE', `/dot/${dot.id}/trinh/tep/${ID.tep1}`)).s, 409);
+  assert.match(ung.thu[0].text, /bấm "Duyệt hồ sơ"/);
+  assert.doesNotMatch(ung.thu[0].text, /Tiến độ|đã nộp \d+\/\d+|đã duyệt \d/, 'không nhắc tiến độ duyệt các phòng (dễ nhầm với việc Viện trưởng duyệt)');
 });
 
-test('thu hồi hồ sơ đã gửi → sửa được tệp → gửi lại', async () => {
+test('chưa duyệt thì KHÔNG khóa: đổi tệp được, rồi GỬI LẠI để nhắc Viện trưởng (thư [Nhắc duyệt])', async () => {
   const dot = ID.dotMail;
-  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/thu-hoi`, {})).s, 200);
-  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/thu-hoi`, {})).s, 409, 'không thu hồi được thứ chưa gửi');
   const them = await ung.taiTep(QUAN_LY, `/dot/${dot.id}/trinh/tep`, 'Bo-sung.pdf', PDF_MAU);
   assert.equal(them.s, 201);
   assert.equal((await ung.json(QUAN_LY, 'DELETE', `/dot/${dot.id}/trinh/tep/${them.d.id}`)).s, 200);
   const dir = path.join(ung.uploadsRoot, 'bao-cao-phong', String(dot.id));
   assert.equal(fs.readdirSync(dir).length, 1, 'xóa tệp phải xóa cả trên đĩa');
-  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/gui`, {})).s, 200);
-});
 
-test('quản lý duyệt THAY Viện trưởng: được ghi rõ là duyệt thay, và Viện trưởng được báo', async () => {
-  const dot = ID.dotMail;
   ung.thu.length = 0;
-  const r = await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/duyet`, { nhan_xet: 'Theo chỉ đạo qua điện thoại.' });
+  const r = await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/gui`, { loi_nhan: 'Nhắc Viện trưởng giúp, bản mới đã cập nhật.' });
   assert.equal(r.s, 200, JSON.stringify(r.d));
-  assert.equal(r.d.duyet_thay, true);
+  assert.equal(r.d.gui_lai, true);
   await ung.doiThu(1);
-  assert.deepEqual(ung.thu.map((t) => t.to).sort(), ['vientruong@thu.local'], 'báo Viện trưởng; không tự gửi cho người vừa duyệt');
-  assert.match(ung.thu[0].subject, /Đã duyệt thay Viện trưởng/);
+  assert.deepEqual(ung.thu.map((t) => t.to), ['vientruong@thu.local']);
+  assert.match(ung.thu[0].subject, /^\[Nhắc duyệt\]/);
+  assert.match(ung.thu[0].text, /vừa được gửi lại/);
 
   const st = await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/trinh`);
-  assert.equal(st.d.trinh.trang_thai, 'da_duyet');
-  assert.equal(st.d.trinh.duyet_thay, true);
-  assert.equal(st.d.trinh.nguoi_duyet, 'Nguyễn Quản Lý');
-  assert.ok(st.d.lich_su.some((h) => h.hanh_dong === 'duyet_thay'));
-  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/duyet`, {})).s, 409, 'đã duyệt rồi');
-  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/thu-hoi`, {})).s, 409, 'đã duyệt thì không thu hồi');
+  assert.equal(st.d.trinh.trang_thai, 'da_gui', 'vẫn chưa duyệt');
+  assert.deepEqual(st.d.lich_su.filter((h) => h.hanh_dong === 'gui' || h.hanh_dong === 'gui_lai').map((h) => h.hanh_dong), ['gui', 'gui_lai']);
 });
 
-test('Viện trưởng tự duyệt: KHÔNG đánh dấu duyệt thay, và người quản lý được báo', async () => {
-  const dot = await taoDot('Đợt Viện trưởng tự duyệt', [ID.phongA]);
-  assert.equal((await nop(TP_A, dot.bc[ID.phongA], 'Trần A')).s, 200);
-  assert.equal((await ung.taiTep(QUAN_LY, `/dot/${dot.id}/trinh/tep`, 'kx.pdf', PDF_MAU)).s, 201);
-  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/gui`, {})).s, 200);
+test('KHÔNG có thu hồi và KHÔNG có duyệt thay: quản lý module và admin đều bị 403 khi duyệt, hồ sơ vẫn chưa duyệt', async () => {
+  const dot = ID.dotMail;
+  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/thu-hoi`, {})).s, 404, 'đã bỏ thu hồi');
+  for (const uid of [QUAN_LY, ADMIN]) {
+    const r = await ung.json(uid, 'POST', `/dot/${dot.id}/trinh/duyet`, { nhan_xet: 'Duyệt hộ' });
+    assert.equal(r.s, 403, 'user ' + uid);
+    assert.match(r.d.message, /Chỉ Viện trưởng/);
+  }
+  const st = await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/trinh`);
+  assert.equal(st.d.trinh.trang_thai, 'da_gui');
+  assert.equal(st.d.co_the.duyet, false, 'giao diện của quản lý không có nút Duyệt');
+  assert.equal((await ung.json(VIEN_TRUONG, 'GET', `/dot/${dot.id}/trinh`)).d.co_the.duyet, true, 'Viện trưởng có nút Duyệt');
+});
+
+test('Viện trưởng duyệt: người quản lý được báo, Viện trưởng không nhận lại thư; sau đó khóa tệp và không gửi lại được', async () => {
+  const dot = ID.dotMail;
   ung.thu.length = 0;
-  const r = await ung.json(VIEN_TRUONG, 'POST', `/dot/${dot.id}/trinh/duyet`, { nhan_xet: 'Đồng ý.' });
-  assert.equal(r.s, 200);
-  assert.equal(r.d.duyet_thay, false);
+  const r = await ung.json(VIEN_TRUONG, 'POST', `/dot/${dot.id}/trinh/duyet`, { nhan_xet: 'Đã xem, đồng ý.' });
+  assert.equal(r.s, 200, JSON.stringify(r.d));
   await ung.doiThu(1);
   assert.deepEqual(ung.thu.map((t) => t.to), ['quanly@thu.local']);
   assert.match(ung.thu[0].subject, /^\[Viện trưởng đã duyệt\]/);
+  assert.match(ung.thu[0].text, /Đã xem, đồng ý\./);
+
+  const st = await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/trinh`);
+  assert.equal(st.d.trinh.trang_thai, 'da_duyet');
+  assert.equal(st.d.trinh.nguoi_duyet, 'Phạm Viện Trưởng');
+  assert.equal(st.d.trinh.duyet_thay, undefined, 'không còn khái niệm duyệt thay');
+  assert.ok(st.d.lich_su.some((h) => h.hanh_dong === 'duyet'));
+  assert.ok(!st.d.lich_su.some((h) => h.hanh_dong === 'duyet_thay'));
+
+  assert.equal((await ung.json(VIEN_TRUONG, 'POST', `/dot/${dot.id}/trinh/duyet`, {})).s, 409, 'đã duyệt rồi');
+  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/gui`, {})).s, 409, 'đã duyệt thì không gửi lại');
+  assert.equal((await ung.taiTep(QUAN_LY, `/dot/${dot.id}/trinh/tep`, 'them.pdf', PDF_MAU)).s, 409);
+  assert.equal((await ung.json(QUAN_LY, 'DELETE', `/dot/${dot.id}/trinh/tep/${ID.tep1}`)).s, 409);
+});
+
+test('đợt khác: Viện trưởng chưa duyệt thì hồ sơ cứ ở trạng thái chưa duyệt, không có gì khác xảy ra', async () => {
+  const dot = await taoDot('Đợt Viện trưởng chưa duyệt', [ID.phongA]);
+  assert.equal((await nop(TP_A, dot.bc[ID.phongA], 'Trần A')).s, 200);
+  assert.equal((await ung.taiTep(QUAN_LY, `/dot/${dot.id}/trinh/tep`, 'kx.pdf', PDF_MAU)).s, 201);
+  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/gui`, {})).s, 200);
+  const st = await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/trinh`);
+  assert.equal(st.d.trinh.trang_thai, 'da_gui');
+  assert.equal(st.d.co_the.gui, true, 'quản lý vẫn gửi lại (nhắc) được bao nhiêu lần cũng được');
+  const dot2 = await ung.json(QUAN_LY, 'GET', '/dot/' + dot.id);
+  assert.equal(dot2.d.dot.trang_thai, 'dang_mo', 'đợt không bị ảnh hưởng');
 });
 
 // ── 6. Tải tệp về ────────────────────────────────────────────────────────────

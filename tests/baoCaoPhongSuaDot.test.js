@@ -92,14 +92,15 @@ test('lịch sử đợt ghi lại việc sửa, kể cả giá trị cũ → m�
   assert.match(ls[0].ghi_chu, /Tiêu đề «Báo cáo tháng 10» → «Báo cáo tháng 10 \(điều chỉnh\)»/);
 });
 
-test('chỉ đổi hướng dẫn: thư "Cập nhật đợt báo cáo" kèm hướng dẫn mới', async () => {
+test('chỉ đổi hướng dẫn: thư "Cập nhật đợt báo cáo" báo có thay đổi, không chép nguyên văn hướng dẫn', async () => {
   const dot = await taoDotMo();
   await suaDot(dot.id, { mo_ta: 'Nộp trước 15h, kèm minh chứng.' });
   await ung.doiThu(1);
   const thu = guiNhanThuSua();
   assert.equal(thu.length, 1);
   assert.match(thu[0].subject, /^\[Cập nhật đợt báo cáo\]/);
-  assert.match(thu[0].text, /Nộp trước 15h, kèm minh chứng\./);
+  assert.match(thu[0].text, /Hướng dẫn của người quản lý: đã được cập nhật/);
+  assert.doesNotMatch(thu[0].text, /Nộp trước 15h/);
   assert.doesNotMatch(thu[0].text, /Hạn nộp:/, 'không đổi hạn thì không nhắc hạn như một thay đổi');
 });
 
@@ -195,9 +196,9 @@ test('trưởng phòng phụ trách nhiều phòng chưa nộp nhận MỘT thư
   ung.db.prepare("DELETE FROM bcp_thanh_vien WHERE user_id = ? AND phong_id = ?").run(TP_A, ID.tchc);
 });
 
-test('dữ liệu người gõ được escape trong thư, và URL lạ trong hướng dẫn không thành liên kết', async () => {
+test('dữ liệu người gõ được escape trong thư, và URL lạ trong tiêu đề không thành liên kết', async () => {
   const dot = await taoDotMo();
-  await suaDot(dot.id, { tieu_de: 'Báo cáo <script>alert(1)</script>', mo_ta: 'Xem http://doc-hai.example/x và https://eoffice.test/bao-cao-phong.html#/cua-toi' });
+  await suaDot(dot.id, { tieu_de: 'Báo cáo <script>alert(1)</script> xem http://doc-hai.example/x và https://eoffice.test/bao-cao-phong.html#/cua-toi nhé' });
   await ung.doiThu(1);
   const thu = guiNhanThuSua()[0];
   assert.ok(!thu.html.includes('<script>'), 'tiêu đề phải bị escape');

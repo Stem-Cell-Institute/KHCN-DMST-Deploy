@@ -3,8 +3,8 @@
  *
  * Ba sự kiện, ba nhóm người nhận:
  *   phòng nộp / nộp lại báo cáo     → người quản lý module (vai trò quan_ly)
- *   quản lý module trình Viện trưởng → Viện trưởng (vai trò vien_truong)
- *   Viện trưởng duyệt hồ sơ          → người quản lý module; nếu quản lý duyệt THAY thì báo cả Viện trưởng
+ *   quản lý module gửi / gửi lại hồ sơ cho Viện trưởng → Viện trưởng (vai trò vien_truong)
+ *   Viện trưởng duyệt hồ sơ          → người quản lý module (chỉ Viện trưởng mới duyệt, không ai duyệt thay)
  *   quản lý MỞ đợt báo cáo           → trưởng phòng của các phòng được giao, kèm liên kết vào đúng báo cáo của phòng họ
  *   quản lý SỬA đợt đang mở (hạn nộp / tiêu đề / hướng dẫn) → trưởng phòng của các phòng CHƯA nộp
  *   quản lý mời / gán trưởng phòng   → người được mời (kèm mã nhận lời mời nếu họ chưa có tài khoản)
@@ -143,43 +143,42 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     return guiDen(nguoiNhan('quan_ly', nguoiNopId), tieuDe, dungThu(doan, lienKet(`#/bao-cao/${b.id}`), goc));
   }
 
-  /** Quản lý module gửi hồ sơ trình Viện trưởng. */
-  async function baoDaGuiVienTruong(dotId, nguoiGuiId) {
+  /**
+   * Quản lý module gửi (hoặc GỬI LẠI để nhắc) hồ sơ cho Viện trưởng. Thư cố ý ngắn: Viện trưởng vào module
+   * đọc hồ sơ và duyệt. KHÔNG nêu tiến độ "đã duyệt x phòng" (đó là việc của quản lý với từng phòng, dễ
+   * nhầm với việc Viện trưởng duyệt hồ sơ).
+   */
+  async function baoDaGuiVienTruong(dotId, nguoiGuiId, guiLai) {
     const d = db.prepare('SELECT id, tieu_de, han_nop FROM bcp_dot WHERE id = ?').get(dotId);
     const t = db.prepare('SELECT loi_nhan, gui_luc FROM bcp_trinh WHERE dot_id = ?').get(dotId);
     if (!d || !t) return { gui: 0, loi: 0, nguoi_nhan: 0 };
     const nguoiGui = db.prepare('SELECT fullname FROM users WHERE id = ?').get(nguoiGuiId);
     const tep = db.prepare('SELECT ten_goc FROM bcp_trinh_tep WHERE dot_id = ? ORDER BY id').all(dotId);
-    const td = tienDo(dotId);
     const doan = [
-      { text: `Có hồ sơ báo cáo của đợt «${d.tieu_de}» đang chờ Viện trưởng xem và duyệt.` },
+      { text: guiLai ? `Hồ sơ báo cáo của đợt «${d.tieu_de}» vừa được gửi lại, đang chờ Viện trưởng xem và duyệt.` : `Có hồ sơ báo cáo của đợt «${d.tieu_de}» đang chờ Viện trưởng xem và duyệt.` },
       { nhan: 'Người gửi', text: (nguoiGui && nguoiGui.fullname) || '(không rõ)' },
       { nhan: 'Thời điểm gửi', text: fmtGio(t.gui_luc) },
-      { nhan: 'Tiến độ các phòng', text: `đã nộp ${td.da_nop}/${td.tong} phòng, đã duyệt ${td.da_duyet}` },
-      { nhan: `Tệp đính kèm (${tep.length})`, text: tep.map((x) => x.ten_goc).join('; ') || '(chưa có)' },
+      { nhan: `Tệp trong hồ sơ (${tep.length})`, text: tep.map((x) => x.ten_goc).join('; ') || '(chưa có)' },
     ];
     if (t.loi_nhan) doan.push({ nhan: 'Lời nhắn', text: t.loi_nhan });
-    return guiDen(nguoiNhan('vien_truong', nguoiGuiId), `[Cần duyệt] Hồ sơ báo cáo — ${d.tieu_de}`, dungThu(doan, lienKet(`#/dot/${d.id}`), goc));
+    doan.push({ text: 'Cách làm: đăng nhập eoffice, mở hồ sơ, đọc các tệp rồi bấm "Duyệt hồ sơ" nếu đồng ý.' });
+    const tieuDe = guiLai ? `[Nhắc duyệt] Hồ sơ báo cáo — ${d.tieu_de}` : `[Cần duyệt] Hồ sơ báo cáo — ${d.tieu_de}`;
+    return guiDen(nguoiNhan('vien_truong', nguoiGuiId), tieuDe, dungThu(doan, lienKet(`#/dot/${d.id}`), goc));
   }
 
-  /** Hồ sơ trình đã được duyệt (bởi Viện trưởng, hoặc quản lý module duyệt thay). */
-  async function baoDaDuyetTrinh(dotId, nguoiDuyetId, duyetThay) {
+  /** Viện trưởng đã duyệt hồ sơ. Chỉ Viện trưởng duyệt được, nên chỉ cần báo người quản lý module. */
+  async function baoDaDuyetTrinh(dotId, nguoiDuyetId) {
     const d = db.prepare('SELECT id, tieu_de FROM bcp_dot WHERE id = ?').get(dotId);
     const t = db.prepare('SELECT nhan_xet, duyet_luc FROM bcp_trinh WHERE dot_id = ?').get(dotId);
     if (!d || !t) return { gui: 0, loi: 0, nguoi_nhan: 0 };
     const nguoi = db.prepare('SELECT fullname FROM users WHERE id = ?').get(nguoiDuyetId);
     const ten = (nguoi && nguoi.fullname) || '(không rõ)';
     const doan = [
-      { text: duyetThay ? `${ten} (quản lý module) đã duyệt THAY Viện trưởng hồ sơ báo cáo của đợt «${d.tieu_de}».` : `Viện trưởng ${ten} đã duyệt hồ sơ báo cáo của đợt «${d.tieu_de}».` },
+      { text: `Viện trưởng ${ten} đã duyệt hồ sơ báo cáo của đợt «${d.tieu_de}».` },
       { nhan: 'Thời điểm', text: fmtGio(t.duyet_luc) },
     ];
     if (t.nhan_xet) doan.push({ nhan: 'Nhận xét', text: t.nhan_xet });
-    const thu = dungThu(doan, lienKet(`#/dot/${d.id}`), goc);
-    const tieuDe = duyetThay ? `[Đã duyệt thay Viện trưởng] ${d.tieu_de}` : `[Viện trưởng đã duyệt] ${d.tieu_de}`;
-    // Quản lý module luôn được báo; duyệt thay thì báo thêm Viện trưởng để ông ấy biết, không bị bất ngờ.
-    const ds = [...nguoiNhan('quan_ly', nguoiDuyetId), ...(duyetThay ? nguoiNhan('vien_truong', nguoiDuyetId) : [])];
-    const duy = [...new Map(ds.map((u) => [u.id, u])).values()];
-    return guiDen(duy, tieuDe, thu);
+    return guiDen(nguoiNhan('quan_ly', nguoiDuyetId), `[Viện trưởng đã duyệt] ${d.tieu_de}`, dungThu(doan, lienKet(`#/dot/${d.id}`), goc));
   }
 
   const homNayVN = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
@@ -229,7 +228,6 @@ function taoThongBao({ db, mailSend, baseUrl }) {
         { nhan: 'Hạn nộp', text: han },
         { nhan: 'Biểu mẫu', text: d.mau_ten },
       ];
-      if (d.mo_ta) doan.push({ nhan: 'Hướng dẫn của người quản lý', text: d.mo_ta });
       if (nhieu) doan.push({ nhan: 'Báo cáo cần nộp', text: nguoi.phong.map((p) => `${p.ten}: ${lienKet('#/bao-cao/' + p.id) || '(đăng nhập eoffice → Báo cáo của tôi)'}`).join('\n') });
       doan.push({ text: 'Cách làm: đăng nhập eoffice, mở báo cáo của phòng, điền biểu mẫu rồi bấm "Nộp báo cáo". Bạn có thể lưu nháp và quay lại sau; chỉ khi bấm Nộp thì báo cáo mới được gửi đi.' });
       const lk = nhieu ? lienKet('#/cua-toi') : lienKet('#/bao-cao/' + nguoi.phong[0].id);
@@ -285,7 +283,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       for (const x of thayDoi) {
         if (x.khoa === 'han_nop') doan.push({ nhan: 'Hạn nộp', text: `${fmtNgay(x.cu)} → ${fmtNgay(x.moi)} (${conLaiNgay(x.moi)})` });
         else if (x.khoa === 'tieu_de') doan.push({ nhan: 'Tiêu đề', text: `«${x.cu}» → «${x.moi}»` });
-        else doan.push({ nhan: 'Hướng dẫn của người quản lý (mới)', text: x.moi || '(đã xóa hướng dẫn)' });
+        else doan.push({ nhan: 'Hướng dẫn của người quản lý', text: 'đã được cập nhật, mở báo cáo của phòng để xem.' });
       }
       if (nhieu) doan.push({ nhan: 'Báo cáo cần nộp', text: nguoi.phong.map((p) => `${p.ten}: ${lienKet('#/bao-cao/' + p.id) || '(đăng nhập eoffice → Báo cáo của tôi)'}`).join('\n') });
       const lk = nhieu ? lienKet('#/cua-toi') : lienKet('#/bao-cao/' + nguoi.phong[0].id);
@@ -303,7 +301,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
    */
   async function baoLoiMoi({ email, phongTen, nguoiMoiTen, ma, hetHan }) {
     const doan = [
-      { text: `${nguoiMoiTen || 'Người quản lý module'} mời bạn làm Trưởng phòng — ${phongTen} trong module Báo cáo phòng ban của hệ thống eoffice (STIMS), để nộp báo cáo của phòng.` },
+      { text: `${nguoiMoiTen || 'Người quản lý module'} mời Trưởng phòng — ${phongTen} vào module Báo cáo phòng ban của hệ thống eoffice (STIMS), để nộp báo cáo của phòng.` },
       { text: 'Địa chỉ email này CHƯA có tài khoản eoffice. Hãy làm theo 3 bước:' },
       { nhan: 'Bước 1', text: `Đăng ký tài khoản tại ${goc ? goc + '/dang-ky.html' : 'trang Đăng ký của eoffice'} bằng CHÍNH địa chỉ email này (${email}).` },
       { nhan: 'Bước 2', text: `Đăng nhập, rồi mở ${goc ? goc + '/bao-cao-phong.html' : 'module Báo cáo phòng ban'}.` },
@@ -311,7 +309,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       { text: `Mã chỉ dùng được MỘT lần và có hiệu lực đến ${fmtNgay(String(hetHan).slice(0, 10))}. Mã chỉ có tác dụng với tài khoản đăng nhập bằng đúng địa chỉ email này. Nếu bạn không biết lời mời này, hãy bỏ qua thư.` },
     ];
     const lk = goc ? `${goc}/bao-cao-phong.html?moi=${ma}` : '';
-    return guiDen([{ email }], `[Báo cáo phòng ban] Lời mời làm Trưởng phòng — ${phongTen}`, dungThu(doan, lk, goc));
+    return guiDen([{ email }], `[Báo cáo phòng ban] Mời Trưởng phòng — ${phongTen} vào module Báo cáo phòng ban`, dungThu(doan, lk, goc));
   }
 
   /** Người ĐÃ có tài khoản được gán làm trưởng phòng: báo cho họ, kèm các đợt đang mở của phòng đó. */
@@ -326,11 +324,11 @@ function taoThongBao({ db, mailSend, baseUrl }) {
           WHERE b.phong_id = ? AND d.trang_thai = 'dang_mo' AND b.trang_thai IN ('chua_nop','can_chinh_sua') ORDER BY d.han_nop`
       )
       .all(phongId);
-    const doan = [{ text: `${(moi && moi.fullname) || 'Người quản lý module'} đã giao bạn làm Trưởng phòng — ${p.ten} trong module Báo cáo phòng ban của hệ thống eoffice. Bạn sẽ nộp báo cáo của phòng tại đây.` }];
+    const doan = [{ text: `${(moi && moi.fullname) || 'Người quản lý module'} đã thêm Trưởng phòng — ${p.ten} vào module Báo cáo phòng ban của hệ thống eoffice. Bạn sẽ nộp báo cáo của phòng tại đây.` }];
     if (dangMo.length) {
       doan.push({ nhan: 'Đang có báo cáo cần nộp', text: dangMo.map((x) => `${x.tieu_de} — hạn ${fmtNgay(x.han_nop)} (${conLaiNgay(x.han_nop)})${goc ? ': ' + lienKet('#/bao-cao/' + x.id) : ''}`).join('\n') });
     }
-    return guiDen([{ email: u.email }], `[Báo cáo phòng ban] Bạn được giao làm Trưởng phòng — ${p.ten}`, dungThu(doan, lienKet('#/cua-toi'), goc));
+    return guiDen([{ email: u.email }], `[Báo cáo phòng ban] Trưởng phòng — ${p.ten}: bạn đã được thêm vào module`, dungThu(doan, lienKet('#/cua-toi'), goc));
   }
 
   return { baoDaNop, baoDaGuiVienTruong, baoDaDuyetTrinh, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoLoiMoi, baoDuocGan, tienDo };

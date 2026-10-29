@@ -20,7 +20,7 @@ Lưu trong bảng riêng `bcp_thanh_vien`, **không đụng vào cột `users.ro
 
 | Vai trò | Làm được gì |
 |---|---|
-| **Người quản lý module** (`quan_ly`) | Dựng biểu mẫu, giao đợt, xem mọi báo cáo, duyệt, yêu cầu chỉnh sửa, kết xuất Word/PDF, trình Viện trưởng, **duyệt thay Viện trưởng**, quản lý danh mục phòng, gán trưởng phòng. Nhận email khi có phòng nộp báo cáo. |
+| **Người quản lý module** (`quan_ly`) | Dựng biểu mẫu, giao đợt, xem mọi báo cáo, duyệt, yêu cầu chỉnh sửa, kết xuất Word/PDF, trình (gửi, gửi lại để nhắc) Viện trưởng — **không duyệt thay Viện trưởng**, quản lý danh mục phòng, gán trưởng phòng. Nhận email khi có phòng nộp báo cáo. |
 | **Viện trưởng** (`vien_truong`) | Có **mọi quyền của người quản lý** (được xếp vào module "luôn"), cộng thêm là **người nhận hồ sơ trình** và người duyệt hồ sơ đó. Chỉ nhận email khi hồ sơ được trình lên (không nhận thư mỗi lần một phòng nộp). |
 | **Trưởng phòng** (`truong_phong`, gắn một phòng) | Chỉ thấy và nhập báo cáo **của phòng mình**. |
 
@@ -76,8 +76,9 @@ Báo cáo:  Chưa nộp ─Nộp─▶ Đã nộp ─Duyệt─▶ Đã duyệt
    └─ sửa/lưu nháp bao nhiêu lần cũng được       (trưởng phòng sửa rồi Nộp lại)
 
 Hồ sơ trình Viện trưởng (mỗi đợt một hồ sơ):
-   Chưa gửi ─Gửi─▶ Đã gửi ─Duyệt─▶ Đã duyệt          (Thu hồi: Đã gửi → Chưa gửi, nếu chưa duyệt)
-   (tải/xóa tệp được)  (khóa tệp)   (Viện trưởng duyệt, HOẶC quản lý duyệt thay — ghi rõ)
+   Chưa gửi ─Gửi─▶ Đã gửi (= chưa duyệt) ─Viện trưởng duyệt─▶ Đã duyệt
+                     │ ▲
+                     └─┘ Gửi lại (nhắc việc); tải/xóa tệp thoải mái cho tới khi được duyệt
 ```
 
 - **Lưu nháp không khóa**: báo cáo vẫn "Chưa nộp", sửa và lưu lại bao nhiêu lần cũng được. Chỉ **Nộp** mới
@@ -88,8 +89,11 @@ Hồ sơ trình Viện trưởng (mỗi đợt một hồ sơ):
   nộp). Tính theo **giờ Việt Nam** (server có thể chạy UTC).
 - Mọi chuyển trạng thái nằm ngay trong câu `UPDATE … WHERE trang_thai IN (…)` và kiểm `changes`: hai
   người bấm cùng lúc thì chỉ một người thắng, người kia nhận 409.
-- **Duyệt thay Viện trưởng**: người duyệt không phải Viện trưởng → hồ sơ ghi `duyet_thay = 1`, giao
-  diện hiện "duyệt THAY", và Viện trưởng nhận email để không bị bất ngờ.
+- **Hồ sơ trình: chỉ Viện trưởng duyệt, không ai duyệt thay** (quản lý module và admin hệ thống nhận 403). Viện trưởng
+  vào module đọc hồ sơ rồi bấm "Duyệt hồ sơ" = "đã xem, đồng ý" (kèm nhận xét tùy chọn). **Không có "từ chối"**: chưa
+  duyệt thì hồ sơ cứ ở trạng thái "Đã gửi, Viện trưởng chưa duyệt", không phải sự cố. Thường quản lý module kết xuất
+  lại, đổi tệp rồi **gửi lại** để nhắc (thư `[Nhắc duyệt]`, ghi `gui_lai` vào lịch sử). Hết duyệt thì khóa tệp và không
+  gửi lại được. Không còn "thu hồi". Cột `bcp_trinh.duyet_thay` chỉ còn để tương thích dữ liệu cũ, luôn 0.
 - Gửi hồ sơ cần ≥ 1 tệp **và** ≥ 1 Viện trưởng đã được gán (nếu không: 409 kèm lý do).
 
 ## Biểu mẫu tùy chỉnh
@@ -149,13 +153,12 @@ người, chạy nền, **không bao giờ làm hỏng thao tác chính** (SMTP 
 | Sự kiện | Người nhận | Nội dung chính |
 |---|---|---|
 | Phòng nộp / nộp lại báo cáo | người quản lý (không gồm người vừa nộp, không gồm Viện trưởng) | phòng nào, người nộp, giờ, **đã nộp x/y phòng**, **phòng nào chưa nộp**, hạn, liên kết. Đủ phòng → tiêu đề `[Đã đủ báo cáo]` |
-| Quản lý **mở đợt** (lần đầu: Nháp → Đang mở) | trưởng phòng của các phòng được giao (mỗi người một thư; phụ trách nhiều phòng thì một thư liệt kê liên kết từng phòng) | tiêu đề/kỳ đợt, **hạn nộp kèm "còn N ngày"**, biểu mẫu, hướng dẫn của người quản lý, **liên kết vào đúng báo cáo của phòng họ** |
+| Quản lý **mở đợt** (lần đầu: Nháp → Đang mở) | trưởng phòng của các phòng được giao (mỗi người một thư; phụ trách nhiều phòng thì một thư liệt kê liên kết từng phòng) | tiêu đề/kỳ đợt, **hạn nộp kèm "còn N ngày"**, biểu mẫu, **liên kết vào đúng báo cáo của phòng họ**. Cố ý **không chép hướng dẫn** của đợt vào thư (xem trong báo cáo) |
 | Thêm phòng vào đợt **đã mở** | chỉ trưởng phòng của phòng **mới thêm** | như trên |
-| Quản lý **sửa đợt đang mở** (đổi hạn nộp / tiêu đề / hướng dẫn) | trưởng phòng của các phòng **chưa nộp** (chưa nộp hoặc đang cần chỉnh sửa; không gồm phòng đã nộp/đã duyệt, không gồm người vừa sửa; một người một thư) | giá trị **cũ → mới** (hạn nộp kèm "còn N ngày"), liên kết vào báo cáo của phòng họ. Đổi hạn thì tiêu đề thư `[Đổi hạn nộp]`, còn lại `[Cập nhật đợt báo cáo]`. Hộp "Gửi email báo…" trong khung Sửa đợt (mặc định bật) cho phép tắt, vd. chỉ sửa chính tả |
+| Quản lý **sửa đợt đang mở** (đổi hạn nộp / tiêu đề / hướng dẫn) | trưởng phòng của các phòng **chưa nộp** (chưa nộp hoặc đang cần chỉnh sửa; không gồm phòng đã nộp/đã duyệt, không gồm người vừa sửa; một người một thư) | giá trị **cũ → mới** (hạn nộp kèm "còn N ngày"; đổi hướng dẫn thì chỉ báo "đã được cập nhật", không chép nguyên văn), liên kết vào báo cáo của phòng họ. Đổi hạn thì tiêu đề thư `[Đổi hạn nộp]`, còn lại `[Cập nhật đợt báo cáo]`. Hộp "Gửi email báo…" trong khung Sửa đợt (mặc định bật) cho phép tắt, vd. chỉ sửa chính tả |
 | Quản lý mời/gán trưởng phòng | người được mời/gán | thư mời + mã (nếu chưa có tài khoản); hoặc thư báo kèm đợt đang mở |
-| Quản lý gửi hồ sơ trình | Viện trưởng | tệp đính kèm, lời nhắn, tiến độ các phòng, liên kết |
+| Quản lý gửi / **gửi lại** hồ sơ trình | Viện trưởng | tên tệp, lời nhắn, cách làm ("bấm Duyệt hồ sơ nếu đồng ý"), liên kết. Gửi lại: `[Nhắc duyệt]`. **Cố ý không nêu tiến độ "đã duyệt x phòng"** (dễ nhầm với việc Viện trưởng duyệt) |
 | Viện trưởng duyệt | người quản lý | nhận xét |
-| Quản lý **duyệt thay** | người quản lý khác **và Viện trưởng** | nêu rõ là duyệt thay |
 
 Dữ liệu người dùng gõ được **escape** trước khi vào HTML thư. Chỉ URL thuộc **chính hệ thống** (cùng
 `BASE_URL`) mới được biến thành liên kết bấm được; URL do người dùng gõ (hướng dẫn đợt, lời nhắn) giữ dạng
@@ -241,7 +244,7 @@ Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
 - `baoCaoPhongSuaDot.test.js` — email khi sửa đợt đang mở: đúng người nhận, không gửi khi không đổi, tắt được, Nháp/đã đóng.
 
 Đã **kiểm chứng test bắt được lỗi** bằng cách cố ý phá: ranh giới phòng (4 test đỏ), kiểm byte đầu
-của tệp (4), quyền hồ sơ trình (2), cờ duyệt thay (1), kiểm email người nhận lời mời (4), giới hạn đuôi
+của tệp (4), quyền hồ sơ trình (2), chỉ Viện trưởng duyệt được (2), không duyệt lại/gửi lại sau khi duyệt (1), thư Viện trưởng không có tiến độ (1), kiểm email người nhận lời mời (4), giới hạn đuôi
 email (1), chỉ liên kết hóa URL của hệ thống (1), lưu băm thay vì mã gốc (1), điều kiện người nhận thư sửa đợt
 (phòng đã nộp 4, người vừa sửa 4), chỉ gửi khi đợt đang mở (1), cờ tắt thông báo (1), so sánh người nộp/người duyệt (2).
 
