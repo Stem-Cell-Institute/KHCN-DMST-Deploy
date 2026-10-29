@@ -1,0 +1,260 @@
+/**
+ * Lược đồ DB của module Báo cáo phòng ban (tiền tố bảng: bcp_).
+ *
+ * Chỉ THÊM bảng mới bằng CREATE TABLE IF NOT EXISTS, không ALTER bảng của module khác — nên chạy
+ * lại bao nhiêu lần cũng an toàn, và deploy lên production không động tới dữ liệu hiện có.
+ *
+ * `foreign_keys` được bật toàn cục (lib/db-bridge.js), nên khóa ngoại ở đây được thực thi
+ * thật. Mọi tham chiếu tới `users` dùng SET NULL / CASCADE để không chặn việc xóa tài khoản
+ * ở những nơi khác trong hệ thống.
+ *
+ * Mỗi câu lệnh gửi riêng một lệnh exec: chế độ Turso của db-bridge không chắc xử lý được
+ * nhiều câu lệnh trong một chuỗi.
+ *
+ * Mô hình:
+ *   bcp_phong ──< bcp_thanh_vien >── users
+ *   bcp_mau ──< bcp_mau_phien_ban        (biểu mẫu; mỗi lần sửa = một phiên bản MỚI, bất biến)
+ *   bcp_dot  ──> bcp_mau_phien_ban       (đợt ghim đúng phiên bản lúc tạo)
+ *   bcp_dot ──< bcp_bao_cao >── bcp_phong (mỗi phòng một báo cáo trong mỗi đợt)
+ *   bcp_bao_cao ──< bcp_lich_su
+ *   bcp_dot ──1 bcp_trinh ──< (bcp_trinh_tep)   (hồ sơ quản lý module trình Viện trưởng của đợt)
+ *   bcp_dot ──< bcp_dot_lich_su
+ *   bcp_phong ──< bcp_loi_moi             (lời mời trưởng phòng cho email CHƯA có tài khoản)
+ *
+ * Vì sao phiên bản biểu mẫu bất biến: người quản lý sẽ sửa biểu mẫu theo nhu cầu về sau.
+ * Nếu sửa tại chỗ thì các báo cáo ĐÃ NỘP theo mẫu cũ sẽ hiển thị sai (ô bị xóa mất, ô mới
+ * trống). Ghim đợt vào một phiên bản cố định thì báo cáo cũ luôn hiển thị đúng như lúc nộp.
+ */
+
+const { chuanHoaMau } = require('./baoCaoPhongMau');
+const { TEN_MAU_MAC_DINH, MO_TA_MAU_MAC_DINH, TRUONG_MAC_DINH } = require('./baoCaoPhongMauMacDinh');
+
+// vai_tro: 'quan_ly'      — người quản lý module (phong_id để trống)
+//          'vien_truong'  — Viện trưởng: có MỌI quyền của quan_ly, và là người nhận hồ sơ trình duyệt
+//          'truong_phong' — gắn với một phòng
+const TAO_THANH_VIEN = `CREATE TABLE IF NOT EXISTS bcp_thanh_vien (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    vai_tro TEXT NOT NULL CHECK (vai_tro IN ('quan_ly','vien_truong','truong_phong')),
+    phong_id INTEGER,
+    created_by INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (phong_id) REFERENCES bcp_phong(id),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CHECK ((vai_tro IN ('quan_ly','vien_truong') AND phong_id IS NULL) OR (vai_tro = 'truong_phong' AND phong_id IS NOT NULL))
+  )`;
+
+const CAU_LENH = [
+  `CREATE TABLE IF NOT EXISTS bcp_phong (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ma TEXT UNIQUE,
+    ten TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+
+  TAO_THANH_VIEN,
+  // Mỗi tài khoản giữ mỗi vai trò không gắn phòng một lần, và mỗi phòng một lần (truong_phong).
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_bcp_thanh_vien_vai_tro
+     ON bcp_thanh_vien(user_id, vai_tro) WHERE vai_tro IN ('quan_ly','vien_truong')`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_bcp_thanh_vien_phong
+     ON bcp_thanh_vien(user_id, phong_id) WHERE vai_tro = 'truong_phong'`,
+
+  `CREATE TABLE IF NOT EXISTS bcp_mau (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ten TEXT NOT NULL,
+    mo_ta TEXT,
+    created_by INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS bcp_mau_phien_ban (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mau_id INTEGER NOT NULL,
+    so_phien_ban INTEGER NOT NULL,
+    truong_json TEXT NOT NULL,
+    created_by INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE (mau_id, so_phien_ban),
+    FOREIGN KEY (mau_id) REFERENCES bcp_mau(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+
+  // loai: tuan | thang | quy | nam | dot_xuat.  trang_thai: nhap | dang_mo | dong
+  // han_nop: ngày (AAAA-MM-DD, giờ Việt Nam). Hết ngày đó mà chưa nộp mới tính là trễ hạn.
+  `CREATE TABLE IF NOT EXISTS bcp_dot (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tieu_de TEXT NOT NULL,
+    mo_ta TEXT,
+    loai TEXT NOT NULL DEFAULT 'thang',
+    ky TEXT,
+    han_nop TEXT NOT NULL,
+    mau_phien_ban_id INTEGER NOT NULL,
+    trang_thai TEXT NOT NULL DEFAULT 'nhap' CHECK (trang_thai IN ('nhap','dang_mo','dong')),
+    created_by INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (mau_phien_ban_id) REFERENCES bcp_mau_phien_ban(id),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+
+  // trang_thai: chua_nop | da_nop | can_chinh_sua | da_duyet
+  `CREATE TABLE IF NOT EXISTS bcp_bao_cao (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dot_id INTEGER NOT NULL,
+    phong_id INTEGER NOT NULL,
+    trang_thai TEXT NOT NULL DEFAULT 'chua_nop'
+      CHECK (trang_thai IN ('chua_nop','da_nop','can_chinh_sua','da_duyet')),
+    du_lieu_json TEXT NOT NULL DEFAULT '{}',
+    nguoi_nop_id INTEGER,
+    nop_luc TEXT,
+    nguoi_duyet_id INTEGER,
+    duyet_luc TEXT,
+    nhan_xet TEXT,
+    cap_nhat_luc TEXT DEFAULT (datetime('now')),
+    UNIQUE (dot_id, phong_id),
+    FOREIGN KEY (dot_id) REFERENCES bcp_dot(id) ON DELETE CASCADE,
+    FOREIGN KEY (phong_id) REFERENCES bcp_phong(id),
+    FOREIGN KEY (nguoi_nop_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (nguoi_duyet_id) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS ix_bcp_bao_cao_phong ON bcp_bao_cao(phong_id)`,
+
+  `CREATE TABLE IF NOT EXISTS bcp_lich_su (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bao_cao_id INTEGER NOT NULL,
+    hanh_dong TEXT NOT NULL,
+    nguoi_id INTEGER,
+    ghi_chu TEXT,
+    tao_luc TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (bao_cao_id) REFERENCES bcp_bao_cao(id) ON DELETE CASCADE,
+    FOREIGN KEY (nguoi_id) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS ix_bcp_lich_su_bao_cao ON bcp_lich_su(bao_cao_id)`,
+
+  // Hồ sơ trình Viện trưởng của MỘT đợt (mỗi đợt tối đa một dòng).
+  //   chua_gui — quản lý module đang chuẩn bị tệp (tải lên / xóa tệp được)
+  //   da_gui   — đã gửi, chờ Viện trưởng duyệt (khóa tệp; chỉ thu hồi hoặc duyệt)
+  //   da_duyet — đã duyệt. duyet_thay = 1 nếu người duyệt KHÔNG phải Viện trưởng (quản lý module
+  //              duyệt thay): ghi lại để minh bạch, không để lẫn với việc Viện trưởng tự duyệt.
+  `CREATE TABLE IF NOT EXISTS bcp_trinh (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dot_id INTEGER NOT NULL UNIQUE,
+    trang_thai TEXT NOT NULL DEFAULT 'chua_gui' CHECK (trang_thai IN ('chua_gui','da_gui','da_duyet')),
+    loi_nhan TEXT,
+    nguoi_gui_id INTEGER,
+    gui_luc TEXT,
+    nguoi_duyet_id INTEGER,
+    duyet_luc TEXT,
+    duyet_thay INTEGER NOT NULL DEFAULT 0,
+    nhan_xet TEXT,
+    cap_nhat_luc TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (dot_id) REFERENCES bcp_dot(id) ON DELETE CASCADE,
+    FOREIGN KEY (nguoi_gui_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (nguoi_duyet_id) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+
+  // Tệp lưu dưới tên NGẪU NHIÊN (ten_luu), tên người dùng đặt chỉ giữ ở ten_goc để hiển thị:
+  // không bao giờ ghép tên người dùng vào đường dẫn trên đĩa.
+  `CREATE TABLE IF NOT EXISTS bcp_trinh_tep (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dot_id INTEGER NOT NULL,
+    ten_goc TEXT NOT NULL,
+    ten_luu TEXT NOT NULL UNIQUE,
+    loai TEXT NOT NULL,
+    kich_thuoc INTEGER NOT NULL,
+    nguoi_tai_id INTEGER,
+    tai_luc TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (dot_id) REFERENCES bcp_dot(id) ON DELETE CASCADE,
+    FOREIGN KEY (nguoi_tai_id) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS ix_bcp_trinh_tep_dot ON bcp_trinh_tep(dot_id)`,
+
+  `CREATE TABLE IF NOT EXISTS bcp_dot_lich_su (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dot_id INTEGER NOT NULL,
+    hanh_dong TEXT NOT NULL,
+    nguoi_id INTEGER,
+    ghi_chu TEXT,
+    tao_luc TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (dot_id) REFERENCES bcp_dot(id) ON DELETE CASCADE,
+    FOREIGN KEY (nguoi_id) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS ix_bcp_dot_lich_su_dot ON bcp_dot_lich_su(dot_id)`,
+
+  // Lời mời trưởng phòng cho một email CHƯA có tài khoản eoffice.
+  //
+  // Vì sao có mã (ma_bam) mà không tự gắn quyền cho 'bất kỳ ai đăng ký email đó': luồng đăng ký của hệ
+  // thống KHÔNG xác minh quyền sở hữu email (ai gõ ten@sci.edu.vn cũng đăng ký và đăng nhập được ngay).
+  // Nếu lời mời tự gắn vào tài khoản mới, kẻ đăng ký trước sẽ chiếm được quyền. Nên mã được gửi tới
+  // CHÍNH hộp thư được mời: chỉ người đọc được hộp thư đó mới nhận được quyền, và vẫn phải đăng nhập
+  // bằng đúng email đó. Mã chỉ lưu dạng BĂM (sha256): lộ DB cũng không lộ mã dùng được.
+  // trang_thai: cho | da_nhan | huy. Chỉ cho vai trò truong_phong (quyền thấp nhất, một phòng).
+  `CREATE TABLE IF NOT EXISTS bcp_loi_moi (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    phong_id INTEGER NOT NULL,
+    ma_bam TEXT NOT NULL UNIQUE,
+    nguoi_moi_id INTEGER,
+    tao_luc TEXT DEFAULT (datetime('now')),
+    het_han TEXT NOT NULL,
+    trang_thai TEXT NOT NULL DEFAULT 'cho' CHECK (trang_thai IN ('cho','da_nhan','huy')),
+    nhan_luc TEXT,
+    nguoi_nhan_id INTEGER,
+    FOREIGN KEY (phong_id) REFERENCES bcp_phong(id),
+    FOREIGN KEY (nguoi_moi_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (nguoi_nhan_id) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+  // Mỗi (email, phòng) chỉ có một lời mời ĐANG CHỜ; lời mời đã nhận/hủy không cản mời lại.
+  `CREATE UNIQUE INDEX IF NOT EXISTS ux_bcp_loi_moi_cho ON bcp_loi_moi(email, phong_id) WHERE trang_thai = 'cho'`,
+];
+
+/**
+ * Bảng bcp_thanh_vien của phiên bản đầu chưa có vai trò 'vien_truong' trong ràng buộc CHECK.
+ * SQLite không sửa CHECK tại chỗ nên phải dựng lại bảng: đổi tên → tạo mới → chép dữ liệu → xóa cũ.
+ * Chỉ chạy khi gặp bảng kiểu cũ (vd. DB dev đã tạo bảng từ trước); bảng mới tạo đã có sẵn đúng dạng.
+ */
+function canDoiThanhVien(db) {
+  const r = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'bcp_thanh_vien'").get();
+  return !!r && !String(r.sql).includes("'vien_truong'");
+}
+
+function doiThanhVien(db) {
+  db.transaction(() => {
+    // Chỉ mục đi theo bảng khi đổi tên, nên phải bỏ trước kẻo trùng tên khi tạo lại.
+    db.exec('DROP INDEX IF EXISTS ux_bcp_thanh_vien_quan_ly');
+    db.exec('DROP INDEX IF EXISTS ux_bcp_thanh_vien_phong');
+    db.exec('ALTER TABLE bcp_thanh_vien RENAME TO bcp_thanh_vien_cu');
+    db.exec(TAO_THANH_VIEN);
+    db.exec(
+      `INSERT INTO bcp_thanh_vien (id, user_id, vai_tro, phong_id, created_by, created_at)
+       SELECT id, user_id, vai_tro, phong_id, created_by, created_at FROM bcp_thanh_vien_cu`
+    );
+    db.exec('DROP TABLE bcp_thanh_vien_cu');
+  })();
+}
+
+/** Nạp biểu mẫu mặc định ĐÚNG MỘT LẦN: chỉ khi chưa có biểu mẫu nào. */
+function napMauMacDinh(db) {
+  if (db.prepare('SELECT COUNT(*) AS n FROM bcp_mau').get().n > 0) return false;
+  const kq = chuanHoaMau(TRUONG_MAC_DINH);
+  // Mẫu mặc định hỏng là lỗi lập trình, không phải lỗi dữ liệu: phải ồn ào chứ không nuốt.
+  if (!kq.ok) throw new Error('Biểu mẫu mặc định không hợp lệ: ' + kq.loi.join('; '));
+  db.transaction(() => {
+    const r = db.prepare('INSERT INTO bcp_mau (ten, mo_ta, created_by) VALUES (?, ?, NULL)').run(TEN_MAU_MAC_DINH, MO_TA_MAU_MAC_DINH);
+    db.prepare('INSERT INTO bcp_mau_phien_ban (mau_id, so_phien_ban, truong_json, created_by) VALUES (?, 1, ?, NULL)').run(
+      Number(r.lastInsertRowid),
+      JSON.stringify(kq.truong)
+    );
+  })();
+  return true;
+}
+
+function ensureSchema(db) {
+  if (canDoiThanhVien(db)) doiThanhVien(db);
+  for (const sql of CAU_LENH) db.exec(sql);
+  napMauMacDinh(db);
+}
+
+module.exports = { ensureSchema, CAU_LENH, napMauMacDinh };
