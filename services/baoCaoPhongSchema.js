@@ -20,6 +20,7 @@
  *   bcp_dot ──1 bcp_trinh ──< (bcp_trinh_tep)   (hồ sơ quản lý module trình Viện trưởng của đợt)
  *   bcp_dot ──< bcp_dot_lich_su
  *   bcp_phong ──< bcp_loi_moi             (lời mời trưởng phòng cho email CHƯA có tài khoản)
+ *   bcp_bao_cao ──< bcp_nhac_han          (nhật ký email nhắc trước hạn, để không nhắc trùng)
  *
  * Vì sao phiên bản biểu mẫu bất biến: người quản lý sẽ sửa biểu mẫu theo nhu cầu về sau.
  * Nếu sửa tại chỗ thì các báo cáo ĐÃ NỘP theo mẫu cũ sẽ hiển thị sai (ô bị xóa mất, ô mới
@@ -208,6 +209,18 @@ const CAU_LENH = [
   )`,
   // Mỗi (email, phòng) chỉ có một lời mời ĐANG CHỜ; lời mời đã nhận/hủy không cản mời lại.
   `CREATE UNIQUE INDEX IF NOT EXISTS ux_bcp_loi_moi_cho ON bcp_loi_moi(email, phong_id) WHERE trang_thai = 'cho'`,
+
+  // Nhật ký nhắc hạn. loai: truoc_han (còn 1–2 ngày) | hom_nay (đúng ngày hạn). Khóa gồm CẢ han_nop: nếu người quản
+  // lý dời hạn thì hạn mới được nhắc lại từ đầu. Dòng được "giành" (INSERT OR IGNORE) TRƯỚC khi gửi nên hai tiến
+  // trình / hai lần chạy chồng nhau cũng chỉ nhắc một lần.
+  `CREATE TABLE IF NOT EXISTS bcp_nhac_han (
+    bao_cao_id INTEGER NOT NULL,
+    loai TEXT NOT NULL CHECK (loai IN ('truoc_han','hom_nay')),
+    han_nop TEXT NOT NULL,
+    tao_luc TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (bao_cao_id, loai, han_nop),
+    FOREIGN KEY (bao_cao_id) REFERENCES bcp_bao_cao(id) ON DELETE CASCADE
+  )`,
 ];
 
 /**
