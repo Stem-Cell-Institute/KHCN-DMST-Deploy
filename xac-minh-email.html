@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Mã xác minh nằm trong #fragment của URL: không gửi lên máy chủ, không lọt vào nhật ký truy cập hay Referer. -->
+    <meta name="referrer" content="no-referrer">
+    <link rel="stylesheet" href="/public/css/a11y.css">
+    <script src="/public/js/a11y.js" defer></script>
+    <title>Xác minh email - Hệ thống Viện Tế bào gốc</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .auth-page { max-width: 440px; margin: 3rem auto; padding: 0 1rem; }
+        .auth-card { background: var(--white); padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); }
+        .auth-card h2 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 1rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 0.4rem; }
+        .form-group input { width: 100%; padding: 0.75rem 1rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; }
+        .form-group input:focus { outline: none; border-color: var(--primary); }
+        .btn-block { width: 100%; padding: 1rem; font-size: 1.05rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; background: var(--primary); color: var(--white); }
+        .btn-block:hover { background: var(--primary-light); }
+        .btn-block:disabled { opacity: 0.6; cursor: not-allowed; }
+        .auth-footer { text-align: center; margin-top: 1.5rem; color: var(--gray); font-size: 0.95rem; }
+        .auth-footer a { color: var(--primary); font-weight: 500; }
+        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .msg.error { background: #f8d7da; color: #721c24; display: block; }
+        .msg.success { background: #d4edda; color: #155724; display: block; }
+        .who { margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: rgba(26, 77, 46, 0.08); border-radius: 8px; word-break: break-all; }
+        #form-hoan-tat { display: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo"><img src="images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc" style="height:72px;width:auto;display:block;"></a>
+                <div class="header-text">
+                    <h1>Xác minh email</h1>
+                    <p>Hệ thống SCI-ACE</p>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="content-page">
+        <div class="auth-page">
+            <div class="auth-card">
+                <h2>Đặt mật khẩu</h2>
+                <div id="msg" class="msg" role="alert"></div>
+                <p id="dang-kiem-tra">Đang kiểm tra liên kết xác minh...</p>
+                <form id="form-hoan-tat">
+                    <p class="who">Email: <strong id="who-email"></strong><br>Họ tên: <strong id="who-name"></strong></p>
+                    <div class="form-group">
+                        <label for="password">Mật khẩu</label>
+                        <input type="password" id="password" name="password" placeholder="Ít nhất 6 ký tự" required minlength="6" maxlength="128" autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="password2">Xác nhận mật khẩu</label>
+                        <input type="password" id="password2" name="password2" placeholder="Nhập lại mật khẩu" required minlength="6" maxlength="128" autocomplete="new-password">
+                        <span id="pass2-hint" style="font-size: 0.85rem; color: #dc3545;"></span>
+                    </div>
+                    <button type="submit" class="btn-block" id="btn-submit">Hoàn tất đăng ký</button>
+                </form>
+                <p class="auth-footer"><a href="dang-ky.html">← Đăng ký lại</a> · <a href="dang-nhap.html">Đăng nhập</a></p>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="footer-bottom"><p>&copy; 2026 Viện Tế bào gốc — Hệ thống Quản lý KHCN & ĐMST</p></div>
+        </div>
+    </footer>
+    <script>
+        const msgEl = document.getElementById('msg');
+        const formEl = document.getElementById('form-hoan-tat');
+        const checkingEl = document.getElementById('dang-kiem-tra');
+        const btn = document.getElementById('btn-submit');
+
+        function showMsg(text, type) { msgEl.textContent = text; msgEl.className = 'msg ' + type; }
+
+        // Lấy mã từ #token=... rồi xóa khỏi thanh địa chỉ (không để lại trong lịch sử trình duyệt).
+        const token = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token') || '';
+        if (token) history.replaceState(null, '', window.location.pathname);
+
+        async function post(url, body) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(body)
+            });
+            const data = await res.json().catch(() => ({}));
+            return { ok: res.ok, data };
+        }
+
+        (async function kiemTra() {
+            if (!/^[a-f0-9]{64}$/i.test(token)) {
+                checkingEl.style.display = 'none';
+                showMsg('Liên kết không hợp lệ hoặc thiếu mã. Hãy mở đúng liên kết trong thư xác minh, hoặc đăng ký lại để nhận thư mới.', 'error');
+                return;
+            }
+            try {
+                const r = await post('/api/register/kiem-tra', { token });
+                checkingEl.style.display = 'none';
+                if (!r.ok) { showMsg(r.data.message || 'Liên kết đã hết hạn hoặc không hợp lệ.', 'error'); return; }
+                document.getElementById('who-email').textContent = r.data.email;
+                document.getElementById('who-name').textContent = r.data.fullname;
+                formEl.style.display = 'block';
+                document.getElementById('password').focus();
+            } catch (e) {
+                checkingEl.style.display = 'none';
+                showMsg('Không thể kết nối máy chủ. Vui lòng thử lại sau.', 'error');
+            }
+        })();
+
+        document.getElementById('password2').addEventListener('input', function () {
+            document.getElementById('pass2-hint').textContent =
+                this.value && this.value !== document.getElementById('password').value ? 'Mật khẩu không trùng khớp.' : '';
+        });
+
+        formEl.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            if (password !== document.getElementById('password2').value) {
+                showMsg('Mật khẩu xác nhận không trùng khớp.', 'error');
+                return;
+            }
+            msgEl.className = 'msg';
+            btn.disabled = true;
+            try {
+                const r = await post('/api/register/hoan-tat', { token, password });
+                if (r.ok && r.data.token) {
+                    localStorage.setItem('token', r.data.token);
+                    localStorage.setItem('user', JSON.stringify(r.data.user || {}));
+                    formEl.style.display = 'none';
+                    showMsg((r.data.message || 'Đăng ký thành công') + ' Đang chuyển về trang chủ...', 'success');
+                    setTimeout(function () { window.location.href = 'index.html'; }, 1500);
+                } else {
+                    showMsg(r.data.message || 'Không hoàn tất được đăng ký. Vui lòng thử lại.', 'error');
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                showMsg('Không thể kết nối máy chủ. Vui lòng thử lại sau.', 'error');
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
