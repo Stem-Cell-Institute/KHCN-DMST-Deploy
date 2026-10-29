@@ -138,7 +138,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       { nhan: 'Người nộp', text: b.nguoi_nop || '(không rõ)' },
       { nhan: 'Thời điểm nộp', text: fmtGio(b.nop_luc) },
       { nhan: 'Hạn nộp của đợt', text: fmtNgay(b.han_nop) },
-      { nhan: 'Tiến độ đợt này', text: `đã nộp ${td.da_nop}/${td.tong} phòng (chờ duyệt ${td.cho_duyet}, đã duyệt ${td.da_duyet})` },
+      { nhan: 'Tiến độ đợt này', text: `đã nộp ${td.da_nop}/${td.tong} phòng (chờ xác nhận ${td.cho_duyet}, đã xác nhận ${td.da_duyet})` },
       { nhan: 'Phòng chưa nộp', text: td.chua_nop.length ? td.chua_nop.join('; ') : 'không còn — tất cả các phòng đã nộp.' },
     ];
     return guiDen(nguoiNhan('quan_ly', nguoiNopId), tieuDe, dungThu(doan, lienKet(`#/bao-cao/${b.id}`), goc));

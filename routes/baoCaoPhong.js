@@ -1,6 +1,9 @@
 /**
  * Báo cáo phòng ban — Trưởng phòng Tổ chức Hành chính giao đợt báo cáo, các trưởng phòng
- * nhập báo cáo trực tiếp theo biểu mẫu, người quản lý duyệt hoặc yêu cầu chỉnh sửa.
+ * nhập báo cáo trực tiếp theo biểu mẫu, người quản lý xác nhận hoặc yêu cầu chỉnh sửa.
+ *
+ * TỪ NGỮ: "xác nhận" = quản lý module kiểm báo cáo của TỪNG PHÒNG (trạng thái nội bộ da_duyet, đường /bao-cao/:id/duyet);
+ * "duyệt" CHỈ dành cho Viện trưởng duyệt HỒ SƠ TRÌNH. Hai việc khác nhau, nên hai từ khác nhau trên giao diện và email.
  *
  * Mount (server.js): app.use('/api/bao-cao-phong', authMiddleware, createBaoCaoPhongRouter({ db }))
  *
@@ -862,7 +865,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       return null;
     }
     if (!TRANG_THAI_SUA_DUOC.includes(n.b.trang_thai)) {
-      loi(res, 409, n.b.trang_thai === 'da_duyet' ? 'Báo cáo đã được duyệt.' : 'Báo cáo đã nộp, đang chờ duyệt.');
+      loi(res, 409, n.b.trang_thai === 'da_duyet' ? 'Báo cáo đã được xác nhận.' : 'Báo cáo đã nộp, đang chờ xác nhận.');
       return null;
     }
     return n.b;
@@ -945,7 +948,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
           ghiLichSu(id, tuDuyet ? 'tu_duyet' : 'duyet', req.user.id, nhanXet);
         }
       })();
-      if (!doi) return loi(res, 409, 'Chỉ duyệt được báo cáo đang ở trạng thái Đã nộp.');
+      if (!doi) return loi(res, 409, 'Chỉ xác nhận được báo cáo đang ở trạng thái Đã nộp.');
       res.json({ ok: true, trang_thai: 'da_duyet', tu_duyet: tuDuyet });
     })
   );
@@ -974,7 +977,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         doi = r.changes;
         if (doi) ghiLichSu(id, 'yeu_cau_chinh_sua', req.user.id, nhanXet);
       })();
-      if (!doi) return loi(res, 409, 'Chỉ yêu cầu chỉnh sửa được báo cáo đã nộp hoặc đã duyệt.');
+      if (!doi) return loi(res, 409, 'Chỉ yêu cầu chỉnh sửa được báo cáo đã nộp hoặc đã xác nhận.');
       res.json({ ok: true, trang_thai: 'can_chinh_sua' });
     })
   );

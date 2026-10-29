@@ -35,9 +35,9 @@
   // ── Nhãn hiển thị ─────────────────────────────────────────────────────────
   var TT_BAO_CAO = {
     chua_nop: ['○', 'Chưa nộp', ''],
-    da_nop: ['●', 'Đã nộp, chờ duyệt', 'nhan-nop'],
+    da_nop: ['●', 'Đã nộp, chờ xác nhận', 'nhan-nop'],
     can_chinh_sua: ['!', 'Cần chỉnh sửa', 'nhan-chu-y'],
-    da_duyet: ['✓', 'Đã duyệt', 'nhan-duyet'],
+    da_duyet: ['✓', 'Đã xác nhận', 'nhan-duyet'],
   };
   var TT_DOT = {
     nhap: ['', 'Nháp', ''],
@@ -59,8 +59,8 @@
   var HANH_DONG = {
     nop: 'Nộp báo cáo',
     nop_lai: 'Nộp lại sau chỉnh sửa',
-    duyet: 'Duyệt',
-    tu_duyet: 'Tự duyệt (người nộp cũng là người duyệt)',
+    duyet: 'Xác nhận',
+    tu_duyet: 'Tự xác nhận (người nộp cũng là người xác nhận)',
     yeu_cau_chinh_sua: 'Yêu cầu chỉnh sửa',
   };
 
@@ -114,7 +114,7 @@
     return h('span', { class: 'nhan ' + m[2] + (them ? ' ' + them : '') }, m[0] ? h('span', { 'aria-hidden': 'true', text: m[0] }) : null, m[1]);
   }
   function nhanTuDuyet() {
-    return h('span', { class: 'nhan nhan-chu-y' }, h('span', { 'aria-hidden': 'true', text: '↺' }), 'Tự duyệt');
+    return h('span', { class: 'nhan nhan-chu-y' }, h('span', { 'aria-hidden': 'true', text: '↺' }), 'Tự xác nhận');
   }
   function nhanTreHan() {
     return h('span', { class: 'nhan nhan-chu-y' }, h('span', { 'aria-hidden': 'true', text: '!' }), 'Trễ hạn');
@@ -747,11 +747,11 @@
       if (d.nhan_xet && d.trang_thai === 'can_chinh_sua') {
         node.push(h('div', { class: 'luu-y luu-y-do', role: 'status' }, h('p', null, h('strong', { text: 'Người quản lý yêu cầu chỉnh sửa:' })), h('p', { text: d.nhan_xet })));
       } else if (d.nhan_xet && d.trang_thai === 'da_duyet') {
-        node.push(h('div', { class: 'luu-y' }, h('p', null, h('strong', { text: 'Nhận xét khi duyệt:' })), h('p', { text: d.nhan_xet })));
+        node.push(h('div', { class: 'luu-y' }, h('p', null, h('strong', { text: 'Nhận xét khi xác nhận:' })), h('p', { text: d.nhan_xet })));
       }
       if (d.tu_duyet) {
         node.push(h('div', { class: 'luu-y luu-y-do', role: 'status' },
-          h('p', null, h('strong', { text: 'Tự duyệt: ' }), 'báo cáo do ' + (d.nguoi_nop || 'người nộp') + ' nộp và cũng do chính người này duyệt' + (d.duyet_luc ? ' lúc ' + fmtGio(d.duyet_luc) : '') + '.')));
+          h('p', null, h('strong', { text: 'Tự xác nhận: ' }), 'báo cáo do ' + (d.nguoi_nop || 'người nộp') + ' nộp và cũng do chính người này xác nhận' + (d.duyet_luc ? ' lúc ' + fmtGio(d.duyet_luc) : '') + '.')));
       }
 
       if (d.sua_duoc) {
@@ -821,7 +821,7 @@
     }
     var nut = [];
     if (d.duyet_duoc) {
-      nut.push(h('button', { type: 'button', class: 'btn', onclick: function () { gui('/duyet', { nhan_xet: nx.value }, d.nop_boi_toi ? 'Đã tự duyệt báo cáo.' : 'Đã duyệt báo cáo.'); } }, d.nop_boi_toi ? 'Tự duyệt báo cáo' : 'Duyệt báo cáo'));
+      nut.push(h('button', { type: 'button', class: 'btn', onclick: function () { gui('/duyet', { nhan_xet: nx.value }, d.nop_boi_toi ? 'Đã tự xác nhận báo cáo.' : 'Đã xác nhận báo cáo.'); } }, d.nop_boi_toi ? 'Tự xác nhận báo cáo' : 'Xác nhận báo cáo'));
     }
     if (d.yeu_cau_sua_duoc) {
       nut.push(h('button', {
@@ -836,7 +836,7 @@
       h('h3', { id: 'xu-ly-tieu-de', text: 'Xử lý báo cáo' }),
       h('div', { class: 'truong' },
         h('label', { for: 'nhan-xet', text: 'Nhận xét' }),
-        h('p', { class: 'tro-giup', text: 'Bắt buộc khi yêu cầu chỉnh sửa; tùy chọn khi duyệt.' }),
+        h('p', { class: 'tro-giup', text: 'Bắt buộc khi yêu cầu chỉnh sửa; tùy chọn khi xác nhận.' }),
         nx, loi),
       h('div', { class: 'nhom-nut' }, nut));
   }
@@ -852,7 +852,7 @@
     if (!t.dot_dang_mo && !t.cho_vien_truong) return null;
     var khan = t.tre_han > 0 || (t.la_vien_truong && t.cho_vien_truong > 0);
     var tom = [];
-    if (t.cho_duyet) tom.push(t.cho_duyet + ' báo cáo chờ duyệt');
+    if (t.cho_duyet) tom.push(t.cho_duyet + ' báo cáo chờ xác nhận');
     if (t.chua_nop) tom.push(t.chua_nop + ' phòng chưa nộp');
     // Trễ hạn gồm cả phòng ĐÃ nộp nhưng nộp muộn, nên có thể lớn hơn số phòng chưa nộp: tách riêng cho khỏi tưởng sai.
     if (t.tre_han) tom.push(t.tre_han + ' phòng trễ hạn (kể cả nộp muộn)');
@@ -861,7 +861,7 @@
     if (t.chi_tiet.length) {
       node.push(h('ul', { class: 'dai-dot' }, t.chi_tiet.map(function (d) {
         return h('li', null, h('a', { href: '#/dot/' + d.dot_id, text: d.tieu_de }),
-          ' — đã nộp ' + d.da_nop + '/' + d.tong + ' phòng' + (d.cho_duyet ? ', chờ duyệt ' + d.cho_duyet : '') + (d.chua_nop ? ', chưa nộp ' + d.chua_nop : '') + (d.tre_han ? ', trễ hạn ' + d.tre_han : '') + ' · hạn ' + fmtNgay(d.han_nop));
+          ' — đã nộp ' + d.da_nop + '/' + d.tong + ' phòng' + (d.cho_duyet ? ', chờ xác nhận ' + d.cho_duyet : '') + (d.chua_nop ? ', chưa nộp ' + d.chua_nop : '') + (d.tre_han ? ', trễ hạn ' + d.tre_han : '') + ' · hạn ' + fmtNgay(d.han_nop));
       })));
     }
     if (t.ho_so_cho_vien_truong.length) {
@@ -894,7 +894,7 @@
               h('td', null, nhan(TT_DOT, d.trang_thai)),
               h('td', null,
                 h('span', { class: 'con-so', text: 'Đã nộp ' + daNop + '/' + d.tong }),
-                h('div', { class: 'mo con-so', text: 'chờ duyệt ' + d.da_nop + ' · cần sửa ' + d.can_chinh_sua + ' · đã duyệt ' + d.da_duyet }),
+                h('div', { class: 'mo con-so', text: 'chờ xác nhận ' + d.da_nop + ' · cần sửa ' + d.can_chinh_sua + ' · đã xác nhận ' + d.da_duyet }),
                 d.tre_han ? nhanTreHan() : null, d.tre_han ? ' ' + d.tre_han + ' phòng' : null));
           })))));
       }
@@ -1153,13 +1153,13 @@
           h('td', null, nhan(TT_BAO_CAO, b.trang_thai), b.tre_han ? [' ', nhanTreHan()] : null, b.tu_duyet ? [' ', nhanTuDuyet()] : null),
           h('td', { text: b.nguoi_nop || '—' }),
           h('td', { class: 'con-so', text: b.nop_luc ? fmtGio(b.nop_luc) : '—' }),
-          h('td', null, d.trang_thai === 'nhap' ? null : h('a', { class: 'btn btn-nho btn-phu', href: '#/bao-cao/' + b.id }, b.trang_thai === 'da_nop' ? 'Xem và duyệt' : 'Xem')));
+          h('td', null, d.trang_thai === 'nhap' ? null : h('a', { class: 'btn btn-nho btn-phu', href: '#/bao-cao/' + b.id }, b.trang_thai === 'da_nop' ? 'Xem và xác nhận' : 'Xem')));
       }))));
     capNhat();
     if (!coXuat) return [bang];
     return [bang, h('div', { class: 'xuat-bar' },
       h('span', { class: 'xuat-nhan', text: 'Kết xuất báo cáo các phòng đã chọn:' }), aWord, aPdf, aXem, dem,
-      h('p', { class: 'mo' }, 'Chọn một hoặc nhiều phòng. Nhiều phòng sẽ gộp vào một tệp, mỗi phòng một văn bản riêng bắt đầu ở trang mới. Chỉ báo cáo đã nộp hoặc đã duyệt mới kết xuất được.'))];
+      h('p', { class: 'mo' }, 'Chọn một hoặc nhiều phòng. Nhiều phòng sẽ gộp vào một tệp, mỗi phòng một văn bản riêng bắt đầu ở trang mới. Chỉ báo cáo đã nộp hoặc đã xác nhận mới kết xuất được.'))];
   }
 
   function viewDot(id) {
