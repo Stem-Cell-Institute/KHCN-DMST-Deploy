@@ -165,6 +165,15 @@ sẽ không nhận thư; người được gán sau vẫn nhận thư báo các 
 cầu chỉnh sửa** chưa có. Cần đặt `BASE_URL` để liên kết trong thư
 có địa chỉ tuyệt đối; SMTP chưa cấu hình thì module vẫn chạy, chỉ không có thư.
 
+**Cho người nộp báo cáo — "việc của bạn" nổi bật** (người nộp thường không quen công nghệ, không tự đi tìm):
+- **Trang chủ** (`public/js/the-bao-cao-phong.js`, nạp từ `index.html`): nếu phòng của người dùng có báo cáo cần nộp /
+  chỉnh sửa, thẻ "Báo cáo phòng ban" hiện khung đỏ "Có N báo cáo cần nộp" + hạn + nút **"Làm báo cáo ngay →"** dẫn thẳng vào
+  báo cáo (nhiều báo cáo thì dẫn tới "Báo cáo của tôi"). Chỉ gọi `GET /cua-toi`; lỗi/chưa đăng nhập thì thẻ giữ nguyên.
+- **Trong module**: "Báo cáo của tôi" hiện **thẻ lớn một nút** cho từng việc (kèm lời nhắn khi bị yêu cầu chỉnh sửa); xong hết thì
+  hiện "✓ Phòng bạn đã nộp xong". Tab này có **số việc** và đứng đầu thanh điều hướng khi đang có việc.
+- **Quản lý kiêm trưởng phòng** (vd. Trưởng phòng TCHC): mọi màn quản lý có **dải đỏ trên cùng** "Phòng … cần nộp báo cáo" + nút
+  to, để việc của chính mình không chìm giữa việc quản lý. Hết việc thì dải tự mất.
+
 **Trong giao diện — "Cần xử lý"** (`GET /tong-quan`): dải đầu danh sách đợt cho biết bao nhiêu báo cáo
 chờ duyệt, bao nhiêu phòng chưa nộp / trễ hạn, bao nhiêu hồ sơ chờ Viện trưởng, kèm **từng đợt đã nộp
 x/y**; thanh điều hướng hiện số việc đang chờ riêng người đó.

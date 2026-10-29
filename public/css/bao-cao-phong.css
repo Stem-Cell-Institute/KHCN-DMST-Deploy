@@ -272,7 +272,25 @@ a.btn[aria-disabled='true'] { opacity: .5; cursor: not-allowed; pointer-events: 
 .tep-ds a { color: var(--muc); font-weight: 600; overflow-wrap: anywhere; }
 .khoi-trinh input[type='file'] { width: 100%; max-width: 560px; min-height: 44px; padding: 8px; font: inherit; border: 1px dashed var(--ke-dam); background: var(--trang); }
 
+/* ── Việc của người nộp báo cáo: thẻ lớn, một nút duy nhất ────────────────── */
+.dai-viec { max-width: var(--do-rong); margin: 0 auto; padding: 20px 20px 0; }
+.dai-viec:empty { display: none; }
+.viec-lon {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 28px;
+  margin: 0 0 18px; padding: 20px 24px;
+  border: 2px solid var(--muc); border-left: 8px solid var(--son); background: var(--son-nen);
+}
+.viec-lon.tre { border-color: var(--son); }
+.viec-chu { flex: 1 1 320px; min-width: 0; }
+.viec-chu p { margin: 0; }
+.viec-tieu { font-size: 20px; font-weight: 700; line-height: 1.3; color: var(--muc); overflow-wrap: anywhere; }
+.viec-phu { margin-top: 6px !important; font-size: 16px; color: var(--chu-phu); }
+.viec-nx { margin-top: 10px !important; padding: 8px 12px; background: var(--trang); border-left: 3px solid var(--son); font-size: 15px; }
+.btn-lon { min-height: 56px; padding: 0 30px; font-size: 18px; background: var(--son); border-color: var(--son); }
+@media (hover: hover) { .btn-lon:hover { background: var(--son-dam); border-color: var(--son-dam); } }
+@media (max-width: 640px) { .btn-lon { width: 100%; } .dai-viec { padding-top: 14px; } }
+
 @media print {
-  .mast, .dieu-huong, .nhom-nut, .btn, .thong-bao { display: none !important; }
+  .mast, .dieu-huong, .nhom-nut, .btn, .thong-bao, .dai-viec { display: none !important; }
   body { background: #fff; }
 }
