@@ -52,6 +52,7 @@
     nop: 'Nộp báo cáo',
     nop_lai: 'Nộp lại sau chỉnh sửa',
     duyet: 'Duyệt',
+    tu_duyet: 'Tự duyệt (người nộp cũng là người duyệt)',
     yeu_cau_chinh_sua: 'Yêu cầu chỉnh sửa',
   };
 
@@ -96,6 +97,9 @@
   function nhan(map, key, them) {
     var m = map[key] || ['', key, ''];
     return h('span', { class: 'nhan ' + m[2] + (them ? ' ' + them : '') }, m[0] ? h('span', { 'aria-hidden': 'true', text: m[0] }) : null, m[1]);
+  }
+  function nhanTuDuyet() {
+    return h('span', { class: 'nhan nhan-chu-y' }, h('span', { 'aria-hidden': 'true', text: '↺' }), 'Tự duyệt');
   }
   function nhanTreHan() {
     return h('span', { class: 'nhan nhan-chu-y' }, h('span', { 'aria-hidden': 'true', text: '!' }), 'Trễ hạn');
@@ -655,6 +659,10 @@
       } else if (d.nhan_xet && d.trang_thai === 'da_duyet') {
         node.push(h('div', { class: 'luu-y' }, h('p', null, h('strong', { text: 'Nhận xét khi duyệt:' })), h('p', { text: d.nhan_xet })));
       }
+      if (d.tu_duyet) {
+        node.push(h('div', { class: 'luu-y luu-y-do', role: 'status' },
+          h('p', null, h('strong', { text: 'Tự duyệt: ' }), 'báo cáo do ' + (d.nguoi_nop || 'người nộp') + ' nộp và cũng do chính người này duyệt' + (d.duyet_luc ? ' lúc ' + fmtGio(d.duyet_luc) : '') + '.')));
+      }
 
       if (d.sua_duoc) {
         form.theoDoiThayDoi();
@@ -722,7 +730,9 @@
         .catch(function (e) { loi.textContent = e.message; loi.hidden = false; });
     }
     var nut = [];
-    if (d.duyet_duoc) nut.push(h('button', { type: 'button', class: 'btn', onclick: function () { gui('/duyet', { nhan_xet: nx.value }, 'Đã duyệt báo cáo.'); } }, 'Duyệt báo cáo'));
+    if (d.duyet_duoc) {
+      nut.push(h('button', { type: 'button', class: 'btn', onclick: function () { gui('/duyet', { nhan_xet: nx.value }, d.nop_boi_toi ? 'Đã tự duyệt báo cáo.' : 'Đã duyệt báo cáo.'); } }, d.nop_boi_toi ? 'Tự duyệt báo cáo' : 'Duyệt báo cáo'));
+    }
     if (d.yeu_cau_sua_duoc) {
       nut.push(h('button', {
         type: 'button', class: 'btn btn-nguy',
@@ -1048,7 +1058,7 @@
         return h('tr', { class: b.tre_han && (b.trang_thai === 'chua_nop' || b.trang_thai === 'can_chinh_sua') ? 'dong-chu-y' : '' },
           coXuat ? h('td', { class: 'cot-chon' }, cb) : null,
           h('td', { class: 'ten-phong', text: b.phong_ten }),
-          h('td', null, nhan(TT_BAO_CAO, b.trang_thai), b.tre_han ? [' ', nhanTreHan()] : null),
+          h('td', null, nhan(TT_BAO_CAO, b.trang_thai), b.tre_han ? [' ', nhanTreHan()] : null, b.tu_duyet ? [' ', nhanTuDuyet()] : null),
           h('td', { text: b.nguoi_nop || '—' }),
           h('td', { class: 'con-so', text: b.nop_luc ? fmtGio(b.nop_luc) : '—' }),
           h('td', null, d.trang_thai === 'nhap' ? null : h('a', { class: 'btn btn-nho btn-phu', href: '#/bao-cao/' + b.id }, b.trang_thai === 'da_nop' ? 'Xem và duyệt' : 'Xem')));

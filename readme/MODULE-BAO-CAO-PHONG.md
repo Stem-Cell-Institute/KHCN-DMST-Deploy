@@ -27,6 +27,11 @@ Lưu trong bảng riêng `bcp_thanh_vien`, **không đụng vào cột `users.ro
 - Admin hệ thống mặc nhiên là người quản lý.
 - Chỉ **admin hệ thống** cấp/gỡ vai trò *người quản lý* và *Viện trưởng* (không ai tự nhân bản quyền
   của mình, và không tự chỉ định người duyệt). Người quản lý gán/gỡ *trưởng phòng* thì được.
+- **Tự duyệt**: một người có thể vừa là quản lý/Viện trưởng vừa là trưởng phòng (vd. trưởng phòng TCHC), nên có
+  thể nộp rồi tự duyệt báo cáo phòng mình. Chính sách đã chọn là **cho phép nhưng ghi rõ**: lịch sử dùng hành
+  động riêng `tu_duyet`, trang báo cáo hiện khung "Tự duyệt", danh sách đợt có nhãn "Tự duyệt", nút đổi
+  thành "Tự duyệt báo cáo". Không có cột riêng: cờ suy ra từ `nguoi_nop_id = nguoi_duyet_id` khi đang
+  `da_duyet`, nên yêu cầu chỉnh sửa/nộp lại/người khác duyệt thì cờ tự hết. Chưa ghi vào tệp Word/PDF xuất ra.
 - **`users.role = 'vien_truong'` (vai trò chung của hệ thống) KHÔNG tự cho quyền ở đây**: phải được
   gán rõ trong module. Có test canh điều này.
 - **Người quản lý không nhập hộ** báo cáo — chỉ chủ phòng mới nhập, để luôn rõ "ai khai".

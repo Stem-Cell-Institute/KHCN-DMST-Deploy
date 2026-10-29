@@ -556,7 +556,8 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       const bao_cao = db
         .prepare(
           `SELECT b.id, b.phong_id, p.ten AS phong_ten, b.trang_thai, b.nop_luc, b.duyet_luc, b.cap_nhat_luc,
-                  un.fullname AS nguoi_nop
+                  un.fullname AS nguoi_nop,
+                  (b.trang_thai = 'da_duyet' AND b.nguoi_nop_id IS NOT NULL AND b.nguoi_nop_id = b.nguoi_duyet_id) AS tu_duyet
              FROM bcp_bao_cao b
              JOIN bcp_phong p ON p.id = b.phong_id
              LEFT JOIN users un ON un.id = b.nguoi_nop_id
@@ -720,6 +721,17 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       if (!n) return loi(res, 404, 'Không tìm thấy báo cáo.');
       const { b, laChuPhong } = n;
       const homNay = ngayVN(new Date());
+      const nguoiNopDuyet = db
+        .prepare(
+          `SELECT un.fullname AS nguoi_nop, ud.fullname AS nguoi_duyet
+             FROM bcp_bao_cao b
+             LEFT JOIN users un ON un.id = b.nguoi_nop_id
+             LEFT JOIN users ud ON ud.id = b.nguoi_duyet_id
+            WHERE b.id = ?`
+        )
+        .get(id);
+      // "Tự duyệt" suy ra từ dữ liệu (không lưu cờ riêng): báo cáo đang Đã duyệt mà người nộp chính là người duyệt.
+      const tuDuyet = b.trang_thai === 'da_duyet' && b.nguoi_nop_id != null && b.nguoi_nop_id === b.nguoi_duyet_id;
       const lich_su = db
         .prepare(
           `SELECT h.hanh_dong, h.ghi_chu, h.tao_luc, u.fullname AS nguoi
@@ -735,6 +747,10 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         nhan_xet: b.nhan_xet,
         nop_luc: b.nop_luc,
         duyet_luc: b.duyet_luc,
+        nguoi_nop: nguoiNopDuyet.nguoi_nop,
+        nguoi_duyet: b.trang_thai === 'da_duyet' ? nguoiNopDuyet.nguoi_duyet : null,
+        tu_duyet: tuDuyet,
+        nop_boi_toi: b.nguoi_nop_id != null && b.nguoi_nop_id === req.user.id,
         tre_han: treHan(b, { han_nop: b.han_nop, trang_thai: b.dot_trang_thai }, homNay),
         dot: {
           id: b.dot_id,
@@ -839,6 +855,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       if (!n) return loi(res, 404, 'Không tìm thấy báo cáo.');
       const nhanXet = chuoi(req.body && req.body.nhan_xet, 2000) || null;
       let doi = 0;
+      let tuDuyet = false;
       db.transaction(() => {
         // Điều kiện trạng thái nằm ngay trong UPDATE: hai người duyệt cùng lúc thì chỉ một người thắng.
         const r = db
@@ -848,10 +865,16 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
           )
           .run(req.user.id, new Date().toISOString(), nhanXet, id);
         doi = r.changes;
-        if (doi) ghiLichSu(id, 'duyet', req.user.id, nhanXet);
+        if (doi) {
+          // Chính sách: người nộp ĐƯỢC tự duyệt (vd. trưởng phòng TCHC vừa quản lý module vừa viết báo cáo
+          // phòng mình), nhưng phải ghi rõ để người xem biết. Hành động riêng 'tu_duyet', không lẫn với 'duyet'.
+          const nop = db.prepare('SELECT nguoi_nop_id FROM bcp_bao_cao WHERE id = ?').get(id);
+          tuDuyet = nop.nguoi_nop_id != null && nop.nguoi_nop_id === req.user.id;
+          ghiLichSu(id, tuDuyet ? 'tu_duyet' : 'duyet', req.user.id, nhanXet);
+        }
       })();
       if (!doi) return loi(res, 409, 'Chỉ duyệt được báo cáo đang ở trạng thái Đã nộp.');
-      res.json({ ok: true, trang_thai: 'da_duyet' });
+      res.json({ ok: true, trang_thai: 'da_duyet', tu_duyet: tuDuyet });
     })
   );
 
