@@ -242,6 +242,29 @@ branch `REFACTOR`, `main` không có.
 > - Nợ kỹ thuật thêm:
 > ```
 
+### 2026-10-28 · module mới **Báo cáo phòng ban** · tính năng, không phải refactor
+
+- **Đã xong:** module cho Trưởng phòng Tổ chức Hành chính quản lý báo cáo của các trưởng phòng — xem
+  [MODULE-BAO-CAO-PHONG.md](MODULE-BAO-CAO-PHONG.md). Biểu mẫu nhập trực tiếp, người quản lý tự tùy
+  chỉnh (phiên bản bất biến, đợt ghim phiên bản). Đã mở rộng: bảng nhiều dòng + ô tổng hợp tự tính,
+  mẫu mặc định theo Word của Viện, vai trò Viện trưởng, kết xuất Word/PDF, email báo nộp/trình/duyệt,
+  hồ sơ trình Viện trưởng (tải tệp, gửi/gửi lại để nhắc, chỉ Viện trưởng duyệt), mời trưởng phòng bằng email, thẻ trang chủ.
+  197 test mới (từ 48 lên 245). Có email tự nhắc trước hạn (hẹn giờ trong tiến trình; thêm bảng `bcp_nhac_han`). Sửa đợt đang mở có email báo trưởng phòng các phòng chưa nộp. Chính sách tự duyệt (người nộp cũng là người duyệt): cho phép, ghi rõ (xem tài liệu module).
+- **Thêm dependency `pdfkit@0.20.2`** (MIT, +19 gói gián tiếp) và 4 file font `services/fonts/Tinos-*.ttf`
+  (SIL OFL, ~2,2 MB) để xuất PDF có dấu tiếng Việt. `npm audit` không đổi (5 mục, 2 high — nợ #3). Cần
+  `npm ci` khi deploy; Docker `COPY . .` đã mang theo thư mục font.
+- **Cần cấu hình khi deploy:** `BASE_URL` (liên kết trong email) và SMTP (`SMTP_HOST/USER/PASS`, đã dùng
+  bởi module Hội đồng); thiếu SMTP thì module vẫn chạy, chỉ không gửi thư. Tệp hồ sơ trình nằm dưới
+  thư mục uploads — phải nằm trong volume được sao lưu.
+- **Đã nâng trần `.github/server-js-max-lines` 18.562 → 18.564** vì `server.js` thêm **2 dòng**: một dòng mount
+  router và một dòng `department_reports` trong `HOMEPAGE_MODULES_DEFAULT` (thẻ trang chủ). Cùng lý do với lần nâng ở mục Chart.js: đây là tính năng mới, không phải refactor, và
+  con số nằm trong diff để review thấy. Toàn bộ logic nằm ngoài `server.js` (`routes/`, `services/`);
+  lược đồ DB tự tạo trong router nên không thêm dòng nào vào các khối `CREATE TABLE` của `server.js`.
+- **Chưa làm:** lối vào từ trang chủ (phụ thuộc `HOMEPAGE_MODULES_DEFAULT` + trang chủ công khai nên cần
+  quyết định sản phẩm), email nhắc hạn, xuất Excel tổng hợp, đính kèm tệp, vai trò chỉ-xem.
+- **Cách kiểm giao diện không đụng dữ liệu thật:** harness express + DB `:memory:` + chính router thật +
+  xác thực giả (chọn người dùng tổng hợp). Không cần tài khoản hay token nào của hệ thống.
+
 ### 2026-10-22 · `refactor/routes-missions-4` · Đợt 1.4 — **hết endpoint `/api/missions` trong `server.js`**
 
 - **Đã xong:** tách 2 router (`missionsChoXetDuyet.js`, `missionsChiTiet.js`), 11 endpoint,

@@ -2983,6 +2983,7 @@ const HOMEPAGE_MODULES_DEFAULT = [
   { code: 'reward', label: 'Quản lý Khen thưởng & Đánh giá', enabled: 0 },
   { code: 'dms', label: 'Quản lý tài liệu & hồ sơ (Hành chính)', enabled: 1 },
   { code: 'document_workflow', label: 'Quy trình văn bản nội bộ', enabled: 1 },
+  { code: 'department_reports', label: 'Báo cáo phòng ban', enabled: 1 },
 ];
 
 (function migrateHomepageModuleSortOrder() {
@@ -15749,6 +15750,7 @@ try {
 } catch (e) {
   console.warn('[ytnn] Không mount router /ytnn:', e.message);
 }
+app.use('/api/bao-cao-phong', authMiddleware, require('./routes/baoCaoPhong')({ db, uploadsRoot: appPaths.uploadsRoot(), baseUrl: process.env.BASE_URL || '', nhacTuDong: true, mailSend: (o) => (transporter ? transporter.sendMail({ from: getSmtpFrom(), ...o }) : Promise.reject(new Error('mail_not_configured'))) })); // Báo cáo phòng ban: xem routes/baoCaoPhong.js
 
 // ============================================================
 // ROUTE MỚI — CHỜ PHÒNG KHCN XỬ LÝ
