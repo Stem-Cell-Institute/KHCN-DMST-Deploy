@@ -722,6 +722,48 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     })
   );
 
+  /** Hồ sơ trình đang chờ Viện trưởng duyệt, kèm người gửi, lời nhắn và tên tệp để thẻ việc hiện đủ không cần bấm thêm. */
+  function hoSoChoVienTruong() {
+    const ds = db
+      .prepare(
+        `SELECT t.dot_id, d.tieu_de, t.gui_luc, t.loi_nhan, u.fullname AS nguoi_gui
+           FROM bcp_trinh t JOIN bcp_dot d ON d.id = t.dot_id LEFT JOIN users u ON u.id = t.nguoi_gui_id
+          WHERE t.trang_thai = 'da_gui' ORDER BY t.gui_luc`
+      )
+      .all();
+    const tep = db.prepare('SELECT id, ten_goc FROM bcp_trinh_tep WHERE dot_id = ? ORDER BY id');
+    return ds.map((x) => ({ ...x, tep: tep.all(x.dot_id) }));
+  }
+
+  /**
+   * "Việc của tôi" cho MỌI người có vai trò, nhẹ để trang chủ gọi được: báo cáo của phòng mình đang cần nộp/chỉnh sửa
+   * (trưởng phòng) và hồ sơ đang chờ mình duyệt (CHỈ Viện trưởng; người khác luôn nhận danh sách rỗng).
+   */
+  router.get(
+    '/viec-cua-toi',
+    bao((req, res) => {
+      const { phongIds, laVienTruong } = req.bcp;
+      const homNay = ngayVN(new Date());
+      let baoCao = [];
+      if (phongIds.length) {
+        baoCao = db
+          .prepare(
+            `SELECT b.id, b.trang_thai, b.nop_luc, p.ten AS phong_ten, d.id AS dot_id, d.tieu_de, d.han_nop, d.trang_thai AS dot_trang_thai
+               FROM bcp_bao_cao b JOIN bcp_dot d ON d.id = b.dot_id JOIN bcp_phong p ON p.id = b.phong_id
+              WHERE b.phong_id IN (${phongIds.map(() => '?').join(',')})
+                AND d.trang_thai = 'dang_mo' AND b.trang_thai IN ('chua_nop','can_chinh_sua')
+              ORDER BY d.han_nop, d.id`
+          )
+          .all(...phongIds)
+          .map((r) => ({
+            id: r.id, trang_thai: r.trang_thai, phong_ten: r.phong_ten, tieu_de: r.tieu_de, han_nop: r.han_nop,
+            tre_han: treHan(r, { han_nop: r.han_nop, trang_thai: r.dot_trang_thai }, homNay),
+          }));
+      }
+      res.json({ bao_cao: baoCao, ho_so_duyet: laVienTruong ? hoSoChoVienTruong() : [] });
+    })
+  );
+
   /** Nạp báo cáo + đợt + biểu mẫu đã ghim, hoặc null nếu người gọi không có quyền thấy. */
   function nap(req, id) {
     const b = db
@@ -1103,9 +1145,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       const choDuyet = db
         .prepare("SELECT COUNT(*) AS n FROM bcp_bao_cao b JOIN bcp_dot d ON d.id = b.dot_id WHERE b.trang_thai = 'da_nop' AND d.trang_thai IN ('dang_mo','dong')")
         .get().n;
-      const choVienTruong = db
-        .prepare("SELECT t.dot_id, d.tieu_de FROM bcp_trinh t JOIN bcp_dot d ON d.id = t.dot_id WHERE t.trang_thai = 'da_gui' ORDER BY t.gui_luc")
-        .all();
+      const choVienTruong = hoSoChoVienTruong();
       res.json({
         la_vien_truong: req.bcp.laVienTruong,
         dot_dang_mo: dots.length,

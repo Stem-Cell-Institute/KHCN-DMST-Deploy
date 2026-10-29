@@ -178,6 +178,13 @@ có địa chỉ tuyệt đối; SMTP chưa cấu hình thì module vẫn chạy
 - **Quản lý kiêm trưởng phòng** (vd. Trưởng phòng TCHC): mọi màn quản lý có **dải đỏ trên cùng** "Phòng … cần nộp báo cáo" + nút
   to, để việc của chính mình không chìm giữa việc quản lý. Hết việc thì dải tự mất.
 
+**Cho Viện trưởng — thẻ "Hồ sơ chờ bạn duyệt"**: mỗi hồ sơ đang chờ là một thẻ lớn ở **đầu mọi màn quản lý** (người gửi, giờ gửi, lời nhắn,
+các tệp cần đọc bấm tải được, ô nhận xét, nút "Duyệt hồ sơ" và "Xem chi tiết đợt") — Viện trưởng không phải đi tìm trong trang đợt.
+Không có nút "không duyệt": chưa đồng ý thì để đó. Trong trang đợt, mục "Hồ sơ trình" của Viện trưởng **chỉ đọc + duyệt**: không hiện công cụ
+tải/xóa tệp, lời nhắn, nút gửi (đó là việc của quản lý module). Thẻ trang chủ cũng báo "Có N hồ sơ chờ bạn duyệt → Đọc và duyệt hồ sơ".
+Dữ liệu từ `GET /viec-cua-toi` (trang chủ) và `GET /tong-quan` (trong module). `/viec-cua-toi` chỉ trả hồ sơ cho đúng Viện trưởng được gán;
+mọi người khác nhận danh sách rỗng. Hệ quả: người vừa là Viện trưởng vừa là quản lý module cũng không thấy công cụ gửi/tải ở trang đợt.
+
 **Trong giao diện — "Cần xử lý"** (`GET /tong-quan`): dải đầu danh sách đợt cho biết bao nhiêu báo cáo
 chờ duyệt, bao nhiêu phòng chưa nộp / trễ hạn, bao nhiêu hồ sơ chờ Viện trưởng, kèm **từng đợt đã nộp
 x/y**; thanh điều hướng hiện số việc đang chờ riêng người đó.
@@ -250,6 +257,7 @@ Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
 - `baoCaoPhongMoi.test.js` — mời bằng email (kể cả kịch bản kẻ đăng ký giả email được mời), email mở đợt.
 - `baoCaoPhongTuDuyet.test.js` — cờ "tự duyệt" (người nộp = người duyệt), không dính lại sau chỉnh sửa/nộp lại.
 - `baoCaoPhongNhacHan.test.js` — nhắc trước hạn: đúng người/đúng mốc/đúng giờ VN, đúng một lần (chạy chồng, khởi động lại, dời hạn), SMTP hỏng.
+- `baoCaoPhongVienTruong.test.js` — dữ liệu thẻ việc: `/viec-cua-toi` (hồ sơ chỉ lộ cho Viện trưởng), `/tong-quan` có đủ thông tin hồ sơ chờ.
 - `baoCaoPhongSuaDot.test.js` — email khi sửa đợt đang mở: đúng người nhận, không gửi khi không đổi, tắt được, Nháp/đã đóng.
 
 Đã **kiểm chứng test bắt được lỗi** bằng cách cố ý phá: ranh giới phòng (4 test đỏ), kiểm byte đầu

@@ -605,17 +605,59 @@
     }));
   }
 
-  /** Dải nổi bật trên các màn quản lý: "Phòng bạn cần nộp báo cáo" + nút to dẫn thẳng vào báo cáo. */
+  /** Nạp lại tổng quan (số việc) rồi vẽ lại các thẻ việc. */
+  function lamMoiTongQuan() {
+    if (!me || !me.quan_ly) return Promise.resolve();
+    return api('/tong-quan').then(function (r) { tq = r; dungNav(mucNav); veDaiViec(); }).catch(function () { /* giữ số liệu cũ */ });
+  }
+
+  /**
+   * Thẻ việc của VIỆN TRƯỞNG: một thẻ cho mỗi hồ sơ đang chờ ông duyệt, có đủ để quyết định ngay tại đây —
+   * ai gửi, lời nhắn, các tệp cần đọc (bấm tải), ô nhận xét và nút "Duyệt hồ sơ". Không phải đi tìm trong trang đợt.
+   * "Chưa đồng ý" không có nút riêng: cứ để hồ sơ ở trạng thái chưa duyệt.
+   */
+  function theDuyet(x) {
+    var nx = h('textarea', { id: 'vt-nx-' + x.dot_id, rows: 2, maxlength: 2000 });
+    var loi = h('p', { class: 'loi-truong', role: 'alert', hidden: true });
+    var duyet = h('button', { type: 'button', class: 'btn btn-lon' }, 'Duyệt hồ sơ');
+    duyet.addEventListener('click', function () {
+      xacNhan('Duyệt hồ sơ?', 'Xác nhận bạn đã xem và đồng ý. Hồ sơ sẽ được ghi nhận là đã duyệt, không hoàn tác được. Nếu chưa đồng ý, bạn cứ để hồ sơ ở trạng thái chưa duyệt.', 'Duyệt').then(function (ok) {
+        if (!ok) return;
+        duyet.disabled = true;
+        loi.hidden = true;
+        api('/dot/' + x.dot_id + '/trinh/duyet', { method: 'POST', body: { nhan_xet: nx.value } })
+          .then(function () { thongBao('Đã duyệt hồ sơ.'); return lamMoiTongQuan(); })
+          .then(function () { return route(); })
+          .catch(function (e) { loi.textContent = e.message; loi.hidden = false; duyet.disabled = false; });
+      });
+    });
+    return h('section', { class: 'viec-lon viec-doc', 'aria-label': 'Hồ sơ chờ bạn duyệt: ' + x.tieu_de },
+      h('div', { class: 'viec-chu' },
+        h('p', { class: 'viec-tieu', text: 'Hồ sơ chờ bạn duyệt: ' + x.tieu_de }),
+        h('p', { class: 'viec-phu', text: 'Gửi bởi ' + (x.nguoi_gui || '—') + ' lúc ' + fmtGio(x.gui_luc) }),
+        x.loi_nhan ? h('p', { class: 'viec-nx' }, h('strong', { text: 'Lời nhắn: ' }), x.loi_nhan) : null,
+        h('p', { class: 'viec-tep' }, h('strong', { text: 'Tệp cần đọc: ' }),
+          x.tep.length ? x.tep.map(function (f, i) { return [i ? ' · ' : '', h('a', { href: API + '/dot/' + x.dot_id + '/trinh/tep/' + f.id + '/tai', text: f.ten_goc })]; }) : 'chưa có tệp')),
+      h('div', { class: 'viec-hd' },
+        h('div', { class: 'truong' }, h('label', { for: 'vt-nx-' + x.dot_id, text: 'Nhận xét (tùy chọn)' }), nx, loi),
+        h('div', { class: 'nhom-nut' }, duyet, h('a', { class: 'btn btn-phu', href: '#/dot/' + x.dot_id }, 'Xem chi tiết đợt')),
+        h('p', { class: 'mo', text: 'Chưa đồng ý thì cứ để hồ sơ ở trạng thái chưa duyệt, không cần làm gì thêm.' })));
+  }
+
+  /** Dải nổi bật trên các màn quản lý: thẻ duyệt hồ sơ (Viện trưởng) và "Phòng bạn cần nộp báo cáo" + nút to. */
   function veDaiViec() {
-    if (!hienDai || !viec.length) { daiViec.replaceChildren(); return; }
+    var cacThe = [];
+    if (hienDai && me && me.vien_truong && tq && tq.ho_so_cho_vien_truong) cacThe = tq.ho_so_cho_vien_truong.map(theDuyet);
+    if (!hienDai || !viec.length) { daiViec.replaceChildren.apply(daiViec, cacThe); return; }
     var b = viec[0];
     var nhieu = viec.length > 1;
     var canSua = b.trang_thai === 'can_chinh_sua';
     var tieu = nhieu ? 'Bạn có ' + viec.length + ' báo cáo cần nộp' : (canSua ? 'Báo cáo của ' + b.phong_ten + ' cần chỉnh sửa' : b.phong_ten + ' cần nộp báo cáo');
     var phu = b.tieu_de + ' · hạn ' + fmtNgay(b.han_nop) + ' (' + conLaiNgay(b.han_nop) + ')';
-    daiViec.replaceChildren(h('section', { class: 'viec-lon' + (b.tre_han ? ' tre' : ''), 'aria-label': 'Việc của bạn' },
+    cacThe.push(h('section', { class: 'viec-lon' + (b.tre_han ? ' tre' : ''), 'aria-label': 'Việc của bạn' },
       h('div', { class: 'viec-chu' }, h('p', { class: 'viec-tieu', text: tieu }), h('p', { class: 'viec-phu', text: phu })),
       h('a', { class: 'btn btn-lon', href: nhieu ? '#/cua-toi' : '#/bao-cao/' + b.id }, nhieu ? 'Xem các báo cáo cần nộp →' : (canSua ? 'Chỉnh sửa báo cáo →' : 'Làm báo cáo ngay →'))));
+    daiViec.replaceChildren.apply(daiViec, cacThe);
   }
 
   /** Nạp báo cáo của phòng mình đang cần làm (chạy nền: lỗi ở đây không được làm hỏng trang). */
@@ -631,7 +673,7 @@
   /** Nạp lại số liệu tổng quan rồi vẽ lại thanh điều hướng. Chạy nền: lỗi ở đây không được làm hỏng trang. */
   function capNhatTongQuan() {
     if (!me || !me.quan_ly) return Promise.resolve();
-    return api('/tong-quan').then(function (r) { tq = r; dungNav(mucNav); }).catch(function () { /* thanh điều hướng vẫn dùng được không cần số đếm */ });
+    return api('/tong-quan').then(function (r) { tq = r; dungNav(mucNav); veDaiViec(); }).catch(function () { /* thanh điều hướng vẫn dùng được không cần số đếm */ });
   }
 
   function hienLoiTrang(err) {
@@ -835,6 +877,7 @@
       var kq = r[0];
       tq = r[1];
       dungNav(mucNav);
+      veDaiViec();
       var node = [tieuDe('Đợt báo cáo', 'Mỗi đợt giao một biểu mẫu cho các phòng, kèm hạn nộp.',
         h('button', { type: 'button', class: 'btn', onclick: function () { moFormDot(null); } }, '+ Tạo đợt báo cáo'))];
       var dai = dungDaiCanXuLy(tq);
@@ -969,7 +1012,7 @@
     var t = tr.trinh;
     var coThe = tr.co_the;
     var node = [h('h3', { id: 'trinh-tieu-de', text: 'Hồ sơ trình Viện trưởng' })];
-    var an = h('p', { class: 'mo' }, 'Tải lên bản kết xuất báo cáo (Word/PDF), rồi gửi cho Viện trưởng. Viện trưởng vào đây đọc và bấm "Duyệt hồ sơ" nếu đồng ý; chưa duyệt thì hồ sơ cứ ở trạng thái chưa duyệt. Bạn có thể kết xuất lại, đổi tệp và gửi lại để nhắc. ',
+    var an = h('p', { class: 'mo' }, me.vien_truong ? 'Hồ sơ do người quản lý module gửi. Đọc các tệp rồi bấm "Duyệt hồ sơ" nếu đồng ý; chưa đồng ý thì cứ để hồ sơ ở trạng thái chưa duyệt. ' : 'Tải lên bản kết xuất báo cáo (Word/PDF), rồi gửi cho Viện trưởng. Viện trưởng vào đây đọc và bấm "Duyệt hồ sơ" nếu đồng ý; chưa duyệt thì hồ sơ cứ ở trạng thái chưa duyệt. Bạn có thể kết xuất lại, đổi tệp và gửi lại để nhắc. ',
       'Người nhận: ', tr.vien_truong.length ? tr.vien_truong.join('; ') : 'chưa chỉ định Viện trưởng', '.');
     node.push(an);
     node.push(h('p', null, nhan(TT_TRINH, t.trang_thai)));
@@ -989,7 +1032,7 @@
         return h('li', null,
           h('a', { href: API + '/dot/' + dotId + '/trinh/tep/' + f.id + '/tai', text: f.ten_goc }),
           h('span', { class: 'mo', text: ' · ' + String(f.loai).toUpperCase() + ' · ' + fmtDungLuong(f.kich_thuoc) + ' · ' + (f.nguoi_tai || '—') + ' · ' + fmtGio(f.tai_luc) }),
-          t.trang_thai !== 'da_duyet' ? h('button', {
+          t.trang_thai !== 'da_duyet' && !me.vien_truong ? h('button', {
             type: 'button', class: 'btn btn-nguy btn-nho', 'aria-label': 'Xóa tệp ' + f.ten_goc,
             onclick: function () {
               xacNhan('Xóa tệp?', 'Tệp "' + f.ten_goc + '" sẽ bị xóa khỏi hồ sơ.', 'Xóa tệp', true).then(function (ok) {
@@ -1003,7 +1046,7 @@
     }
 
     // Tải lên
-    if (coThe.tai_len) {
+    if (coThe.tai_len && !me.vien_truong) {
       var inp = h('input', { type: 'file', id: 'trinh-tep', accept: '.pdf,.docx,.doc' });
       var loiTep = h('p', { class: 'loi-truong', role: 'alert', hidden: true });
       var nutTai = h('button', { type: 'button', class: 'btn btn-phu' }, 'Tải tệp lên');
@@ -1029,7 +1072,7 @@
       return p.then(function () { thongBao(thanhCong); return route(); }).catch(function (e) { loiHanhDong.textContent = e.message; loiHanhDong.hidden = false; });
     }
     var nut = [];
-    if (t.trang_thai !== 'da_duyet') {
+    if (t.trang_thai !== 'da_duyet' && !me.vien_truong) {
       var guiLai = t.trang_thai === 'da_gui';
       var loiNhan = h('textarea', { id: 'trinh-loi-nhan', rows: 2, maxlength: 1000 });
       var nutGui = h('button', { type: 'button', class: guiLai ? 'btn btn-phu' : 'btn', disabled: !coThe.gui }, guiLai ? 'Gửi lại để nhắc Viện trưởng' : 'Gửi Viện trưởng');

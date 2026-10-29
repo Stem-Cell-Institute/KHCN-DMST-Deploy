@@ -286,6 +286,15 @@ a.btn[aria-disabled='true'] { opacity: .5; cursor: not-allowed; pointer-events: 
 .viec-tieu { font-size: 20px; font-weight: 700; line-height: 1.3; color: var(--muc); overflow-wrap: anywhere; }
 .viec-phu { margin-top: 6px !important; font-size: 16px; color: var(--chu-phu); }
 .viec-nx { margin-top: 10px !important; padding: 8px 12px; background: var(--trang); border-left: 3px solid var(--son); font-size: 15px; }
+.viec-doc { flex-direction: column; align-items: stretch; }
+.viec-doc .viec-chu { flex: none; }
+.viec-phu + .viec-nx, .viec-nx + .viec-tep, .viec-phu + .viec-tep { margin-top: 10px !important; }
+.viec-tep { font-size: 15px; overflow-wrap: anywhere; }
+.viec-tep a { color: var(--muc); font-weight: 600; }
+.viec-hd { max-width: 720px; }
+.viec-hd .truong { margin-bottom: 12px; }
+.viec-hd .nhom-nut { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+.viec-hd .btn-lon { width: auto; }
 .btn-lon { min-height: 56px; padding: 0 30px; font-size: 18px; background: var(--son); border-color: var(--son); }
 @media (hover: hover) { .btn-lon:hover { background: var(--son-dam); border-color: var(--son-dam); } }
 @media (max-width: 640px) { .btn-lon { width: 100%; } .dai-viec { padding-top: 14px; } }
