@@ -6,7 +6,7 @@
  *   quản lý module gửi / gửi lại hồ sơ cho Viện trưởng → Viện trưởng (vai trò vien_truong)
  *   Viện trưởng duyệt hồ sơ          → người quản lý module (chỉ Viện trưởng mới duyệt, không ai duyệt thay)
  *   quản lý MỞ đợt báo cáo           → trưởng phòng của các phòng được giao, kèm liên kết vào đúng báo cáo của phòng họ
- *   Viện trưởng có Ý KIẾN về báo cáo của một phòng → trưởng phòng của CHÍNH phòng đó (kèm nội dung ý kiến)
+ *   Viện trưởng có Ý KIẾN về báo cáo của một phòng → trưởng phòng của CHÍNH phòng đó VÀ người quản lý module (kèm nội dung ý kiến)
  *   hệ thống TỰ nhắc trước hạn nộp (còn 1–2 ngày, và đúng ngày hạn) → trưởng phòng của các phòng CHƯA nộp
  *   quản lý SỬA đợt đang mở (hạn nộp / tiêu đề / hướng dẫn) → trưởng phòng của các phòng CHƯA nộp
  *   quản lý mời / gán trưởng phòng   → người được mời (kèm mã nhận lời mời nếu họ chưa có tài khoản)
@@ -311,7 +311,16 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       .filter((u) => EMAIL_HOP_LE.test(String(u.email || '')));
   }
 
-  /** Viện trưởng vừa gửi ý kiến về báo cáo: gửi nguyên văn cho trưởng phòng của phòng đó, kèm liên kết vào báo cáo. */
+  /**
+   * Người quản lý module cũng được báo khi Viện trưởng góp ý (để nắm và phối hợp với phòng). Loại: người vừa viết ý kiến, và
+   * người đã nhận với tư cách trưởng phòng (quản lý kiêm trưởng phòng chỉ nhận MỘT thư).
+   */
+  function nguoiNhanQuanLyYKien(nguoiVietId, daNhan) {
+    const trung = new Set((daNhan || []).map((u) => u.id));
+    return nguoiNhan('quan_ly', nguoiVietId).filter((u) => !trung.has(u.id));
+  }
+
+  /** Viện trưởng vừa gửi ý kiến về báo cáo: gửi nguyên văn cho trưởng phòng của phòng đó và người quản lý module, kèm liên kết vào báo cáo. */
   async function baoYKien(baoCaoId, nguoiVietId, noiDung) {
     const b = db
       .prepare('SELECT b.id, p.ten AS phong_ten, d.tieu_de FROM bcp_bao_cao b JOIN bcp_phong p ON p.id = b.phong_id JOIN bcp_dot d ON d.id = b.dot_id WHERE b.id = ?')
@@ -324,7 +333,9 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       { nhan: 'Ý kiến', text: noiDung },
       { text: 'Bạn có thể xem ý kiến này ngay trong báo cáo của phòng.' },
     ];
-    return guiDen(nguoiNhanYKien(baoCaoId), `[Ý kiến của Viện trưởng] ${b.phong_ten} — ${b.tieu_de}`, dungThu(doan, lienKet(`#/bao-cao/${b.id}`), goc));
+    const truongPhong = nguoiNhanYKien(baoCaoId);
+    const ds = [...truongPhong, ...nguoiNhanQuanLyYKien(nguoiVietId, truongPhong)];
+    return guiDen(ds, `[Ý kiến của Viện trưởng] ${b.phong_ten} — ${b.tieu_de}`, dungThu(doan, lienKet(`#/bao-cao/${b.id}`), goc));
   }
 
   /**
@@ -420,7 +431,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     return guiDen([{ email: u.email }], `[Báo cáo phòng ban] Trưởng phòng — ${p.ten}: bạn đã được thêm vào module`, dungThu(doan, lienKet('#/cua-toi'), goc));
   }
 
-  return { baoDaNop, baoDaGuiVienTruong, baoDaDuyetTrinh, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoNhacHan, nguoiNhanYKien, baoYKien, baoLoiMoi, baoDuocGan, tienDo };
+  return { baoDaNop, baoDaGuiVienTruong, baoDaDuyetTrinh, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoNhacHan, nguoiNhanYKien, nguoiNhanQuanLyYKien, baoYKien, baoLoiMoi, baoDuocGan, tienDo };
 }
 
 module.exports = { taoThongBao, esc };

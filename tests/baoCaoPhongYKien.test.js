@@ -52,20 +52,22 @@ test.after(async () => {
 const doi = (ms = 150) => new Promise((r) => setTimeout(r, ms));
 const thuYKien = () => ung.thu.filter((t) => /^\[Ý kiến của Viện trưởng\]/.test(t.subject));
 
-test('Viện trưởng gửi ý kiến: lưu trong báo cáo, email nguyên văn tới trưởng phòng ĐÚNG phòng, kèm liên kết vào báo cáo', async () => {
+test('Viện trưởng gửi ý kiến: lưu trong báo cáo, email nguyên văn tới trưởng phòng ĐÚNG phòng và người quản lý module, kèm liên kết', async () => {
   const r = await ung.json(VIEN_TRUONG, 'POST', `/bao-cao/${ID.bcA}/y-kien`, { noi_dung: 'Đề nghị bổ sung số liệu KPI quý 3.\nGửi lại trước thứ Sáu.' });
   assert.equal(r.s, 201, JSON.stringify(r.d));
   assert.equal(r.d.da_bao, 1);
-  await ung.doiThu(1);
+  assert.equal(r.d.da_bao_quan_ly, 1);
+  await ung.doiThu(2);
   await doi();
-  const thu = thuYKien();
-  assert.equal(thu.length, 1);
-  assert.equal(thu[0].to, 'tpa@thu.local');
+  const thu = thuYKien().filter((x) => x.to === 'tpa@thu.local');
+  assert.deepEqual(thuYKien().map((x) => x.to).sort(), ['quanly@thu.local', 'tpa@thu.local'], 'trưởng phòng A và người quản lý module, không ai khác');
   assert.match(thu[0].subject, /^\[Ý kiến của Viện trưởng\] Phòng A — Báo cáo tháng 9\/2026$/);
   assert.match(thu[0].text, /Viện trưởng Phạm Viện Trưởng có ý kiến về báo cáo của Phòng A/);
   assert.match(thu[0].text, /Đề nghị bổ sung số liệu KPI quý 3\./);
   assert.ok(thu[0].text.includes(`https://eoffice.test/bao-cao-phong.html#/bao-cao/${ID.bcA}`));
-  assert.ok(!ung.thu.some((t) => t.to === 'tpb@thu.local' || t.to === 'quanly@thu.local'), 'không gửi cho phòng khác hay người quản lý');
+  assert.ok(!ung.thu.some((x) => x.to === 'tpb@thu.local'), 'không gửi cho trưởng phòng của phòng khác');
+  assert.ok(!ung.thu.some((x) => x.to === 'vientruong@thu.local'), 'không gửi lại cho chính Viện trưởng');
+  assert.match(thuYKien().find((x) => x.to === 'quanly@thu.local').text, /Đề nghị bổ sung số liệu KPI quý 3\./, 'người quản lý nhận cùng nội dung');
 });
 
 test('ý kiến hiện trong báo cáo cho chủ phòng, quản lý, Viện trưởng; phòng khác không đọc được báo cáo nên không thấy', async () => {
@@ -112,8 +114,9 @@ test('nhiều ý kiến: giữ đủ theo thứ tự; phòng có HAI trưởng p
     ung.thu.length = 0;
     const r = await ung.json(VIEN_TRUONG, 'POST', `/bao-cao/${ID.bcA}/y-kien`, { noi_dung: 'Ý kiến thứ ba.' });
     assert.equal(r.d.da_bao, 2);
-    await ung.doiThu(2);
-    assert.deepEqual(thuYKien().map((t) => t.to).sort(), ['ngoai@thu.local', 'tpa@thu.local']);
+    assert.equal(r.d.da_bao_quan_ly, 1);
+    await ung.doiThu(3);
+    assert.deepEqual(thuYKien().map((t) => t.to).sort(), ['ngoai@thu.local', 'quanly@thu.local', 'tpa@thu.local']);
     const ds = (await ung.json(TP_A, 'GET', '/bao-cao/' + ID.bcA)).d.y_kien;
     assert.equal(ds[ds.length - 1].noi_dung, 'Ý kiến thứ ba.');
   } finally {
@@ -140,6 +143,38 @@ test('nội dung do người gõ được escape trong thư; URL lạ không th�
   }
   const ds = (await ung.json(TP_A, 'GET', '/bao-cao/' + ID.bcA)).d.y_kien;
   assert.equal(ds[ds.length - 1].noi_dung, 'Ý kiến khi SMTP hỏng', 'ý kiến vẫn được lưu dù thư không đi');
+});
+
+test('người quản lý module kiêm trưởng phòng của phòng đó chỉ nhận MỘT thư; người kiêm Viện trưởng và quản lý không nhận thư của chính mình', async () => {
+  ung.db.prepare("INSERT INTO bcp_thanh_vien (user_id, vai_tro, phong_id) VALUES (?, 'truong_phong', ?)").run(QUAN_LY, ID.phongA);
+  try {
+    await doi();
+    ung.thu.length = 0;
+    const r = await ung.json(VIEN_TRUONG, 'POST', `/bao-cao/${ID.bcA}/y-kien`, { noi_dung: 'Ý kiến cho phòng có quản lý kiêm trưởng phòng.' });
+    assert.equal(r.d.da_bao, 2, 'tpa và quản lý (với tư cách trưởng phòng)');
+    assert.equal(r.d.da_bao_quan_ly, 0, 'quản lý đã nhận rồi nên không đếm lần hai');
+    await ung.doiThu(2);
+    await doi();
+    assert.deepEqual(thuYKien().map((t) => t.to).sort(), ['quanly@thu.local', 'tpa@thu.local'], 'mỗi người đúng một thư');
+  } finally {
+    ung.db.prepare('DELETE FROM bcp_thanh_vien WHERE user_id = ? AND phong_id = ?').run(QUAN_LY, ID.phongA);
+  }
+
+  // Người vừa là Viện trưởng vừa là quản lý module (user NGOAI): tự góp ý thì không nhận thư của chính mình.
+  ung.db.prepare("INSERT INTO bcp_thanh_vien (user_id, vai_tro) VALUES (?, 'vien_truong')").run(NGOAI);
+  ung.db.prepare("INSERT INTO bcp_thanh_vien (user_id, vai_tro) VALUES (?, 'quan_ly')").run(NGOAI);
+  try {
+    await doi();
+    ung.thu.length = 0;
+    const r = await ung.json(NGOAI, 'POST', `/bao-cao/${ID.bcA}/y-kien`, { noi_dung: 'Ý kiến của người kiêm hai vai trò.' });
+    assert.equal(r.s, 201);
+    await ung.doiThu(2);
+    await doi();
+    assert.ok(!ung.thu.some((t) => t.to === 'ngoai@thu.local'), 'không gửi cho chính người viết');
+    assert.deepEqual(thuYKien().map((t) => t.to).sort(), ['quanly@thu.local', 'tpa@thu.local']);
+  } finally {
+    ung.db.prepare('DELETE FROM bcp_thanh_vien WHERE user_id = ?').run(NGOAI);
+  }
 });
 
 test('không có sửa/xóa ý kiến qua API (chỉ thêm)', async () => {

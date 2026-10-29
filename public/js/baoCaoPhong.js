@@ -833,7 +833,10 @@
       gui.disabled = true;
       api('/bao-cao/' + id + '/y-kien', { method: 'POST', body: { noi_dung: nd.value } })
         .then(function (kq) {
-          thongBao(kq.da_bao ? 'Đã gửi ý kiến. Email đã được gửi tới ' + kq.da_bao + ' trưởng phòng.' : 'Đã lưu ý kiến. Phòng này chưa có trưởng phòng nên chưa có email nào được gửi.');
+          var nhan = [];
+          if (kq.da_bao) nhan.push(kq.da_bao + ' trưởng phòng');
+          if (kq.da_bao_quan_ly) nhan.push(kq.da_bao_quan_ly + ' người quản lý module');
+          thongBao(nhan.length ? 'Đã gửi ý kiến. Email đã được gửi tới ' + nhan.join(' và ') + '.' : 'Đã lưu ý kiến. Chưa có ai nhận email vì phòng này chưa có trưởng phòng.');
           return route();
         })
         .catch(function (e) { loi.textContent = e.message; loi.hidden = false; gui.disabled = false; });
@@ -842,7 +845,7 @@
       h('h3', { id: 'y-kien-tieu-de', text: 'Ý kiến của Viện trưởng' }),
       h('div', { class: 'truong' },
         h('label', { for: 'y-kien-nd', text: 'Ý kiến về báo cáo này' }),
-        h('p', { class: 'tro-giup', text: 'Ý kiến được lưu trong báo cáo và gửi qua email cho trưởng phòng của phòng này.' }),
+        h('p', { class: 'tro-giup', text: 'Ý kiến được lưu trong báo cáo và gửi qua email cho trưởng phòng của phòng này và người quản lý module.' }),
         nd, loi),
       h('div', { class: 'nhom-nut' }, gui));
   }
