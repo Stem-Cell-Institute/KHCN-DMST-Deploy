@@ -3,10 +3,25 @@
  * Vị trí lưu trữ (tủ/bình → ngăn → giá) → hộp (lưới hàng x cột) → mẫu (ống đông lạnh, kháng thể, sinh phẩm...).
  */
 
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 
 const MANAGE_ROLES = new Set(['admin', 'manager', 'phong_khcn']);
 const HOLDING = "('in_storage','checked_out')";
+const MODULE_LABEL = 'Ngân hàng tế bào & Kháng thể';
+const SCHEMA_PATH = path.join(__dirname, '..', 'db', 'ngan_hang_te_bao_khang_the_schema.sql');
+// Địa chỉ rút gọn + các tên cũ (để liên kết đã gửi vẫn dùng được)
+const LEGACY_PATHS = [
+  '/ngan-hang-te-bao-khang-the',
+  '/ngan-hang-te-bao-khang-the.html',
+  '/kho-mau-sinh-pham',
+  '/kho-mau-sinh-pham.html',
+  '/public/kho-mau-sinh-pham/index.html',
+  '/ngan-hang-mau',
+  '/ngan-hang-mau.html',
+  '/nganhangmau.html',
+];
 
 function toInt(v) {
   const n = Number(v);
@@ -33,7 +48,7 @@ function isUniqueError(e) {
   return !!(e && /UNIQUE constraint/i.test(String(e.message || '')));
 }
 
-module.exports = function createNganHangMauRouter(deps) {
+function createNganHangMauRouter(deps) {
   const { db, authMiddleware, insertUserActivityLog } = deps;
   const router = express.Router();
   router.use(authMiddleware);
@@ -522,4 +537,34 @@ module.exports = function createNganHangMauRouter(deps) {
   });
 
   return router;
-};
+}
+
+/** Số liệu thẻ module trên trang chủ; bảng chưa có thì trả 0. */
+function miniStats(db) {
+  const count = (sql) => {
+    try {
+      return Number(db.prepare(sql).get().c) || 0;
+    } catch (e) {
+      return 0;
+    }
+  };
+  return {
+    containers: count('SELECT COUNT(*) AS c FROM nhm_containers WHERE deleted_at IS NULL'),
+    boxes: count('SELECT COUNT(*) AS c FROM nhm_boxes WHERE deleted_at IS NULL'),
+    samples: count(`SELECT COUNT(*) AS c FROM nhm_tubes WHERE deleted_at IS NULL AND status IN ${HOLDING}`),
+  };
+}
+
+/** Tạo bảng nhm_*, chuyển hướng địa chỉ cũ, đồng bộ nhãn trang chủ và mount API — gọi từ server.js. */
+function mount(app, deps) {
+  const { db } = deps;
+  if (fs.existsSync(SCHEMA_PATH)) db.exec(fs.readFileSync(SCHEMA_PATH, 'utf8'));
+  app.get(LEGACY_PATHS, (req, res) => res.redirect(302, '/public/ngan-hang-te-bao-khang-the/index.html'));
+  // Đồng bộ tên hiển thị cho cơ sở dữ liệu đã có dòng homepage_modules từ tên cũ
+  db.prepare("UPDATE homepage_modules SET label = ? WHERE code = 'sample_storage' AND label <> ?").run(MODULE_LABEL, MODULE_LABEL);
+  app.use('/api/ngan-hang-te-bao-khang-the', createNganHangMauRouter(deps));
+}
+
+module.exports = createNganHangMauRouter;
+module.exports.miniStats = miniStats;
+module.exports.mount = mount;

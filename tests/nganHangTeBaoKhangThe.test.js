@@ -206,3 +206,32 @@ test('ống đã xóa không còn giữ chỗ và nhật ký vẫn được lưu
   assert.equal(h.status, 200);
   assert.equal(h.json.history[0].action, 'delete');
 });
+
+test('miniStats: chưa có bảng thì trả 0; có bảng thì không đếm ống/hộp đã xóa', () => {
+  const empty = new Database(':memory:');
+  assert.deepEqual(createRouter.miniStats(empty), { containers: 0, boxes: 0, samples: 0 });
+  empty.close();
+  const s = createRouter.miniStats(db);
+  assert.equal(s.samples, 0);
+  assert.equal(s.boxes, 0);
+  assert.ok(s.containers >= 0);
+});
+
+test('mount: tạo bảng, chuyển hướng địa chỉ cũ, đồng bộ nhãn trang chủ', async () => {
+  const mdb = new Database(':memory:');
+  mdb.exec("CREATE TABLE homepage_modules (code TEXT PRIMARY KEY, label TEXT); INSERT INTO homepage_modules VALUES ('sample_storage', 'Ngân hàng mẫu')");
+  const app = express();
+  createRouter.mount(app, { db: mdb, authMiddleware: (req, res) => res.status(401).end() });
+  assert.equal(mdb.prepare("SELECT label FROM homepage_modules WHERE code = 'sample_storage'").get().label, 'Ngân hàng tế bào & Kháng thể');
+  assert.ok(mdb.prepare("SELECT 1 FROM sqlite_master WHERE name = 'nhm_tubes'").get());
+  const srv = await new Promise((r) => {
+    const s = http.createServer(app).listen(0, '127.0.0.1', () => r(s));
+  });
+  const url = `http://127.0.0.1:${srv.address().port}`;
+  const res = await fetch(url + '/ngan-hang-mau', { redirect: 'manual' });
+  assert.equal(res.status, 302);
+  assert.equal(res.headers.get('location'), '/public/ngan-hang-te-bao-khang-the/index.html');
+  assert.equal((await fetch(url + '/api/ngan-hang-te-bao-khang-the/meta')).status, 401);
+  srv.close();
+  mdb.close();
+});
