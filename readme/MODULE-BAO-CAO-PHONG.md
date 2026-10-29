@@ -21,7 +21,7 @@ Lưu trong bảng riêng `bcp_thanh_vien`, **không đụng vào cột `users.ro
 | Vai trò | Làm được gì |
 |---|---|
 | **Người quản lý module** (`quan_ly`) | Dựng biểu mẫu, giao đợt, xem mọi báo cáo, **xác nhận** báo cáo từng phòng, yêu cầu chỉnh sửa, kết xuất Word/PDF, trình (gửi, gửi lại để nhắc) Viện trưởng — **không duyệt thay Viện trưởng**, quản lý danh mục phòng, gán trưởng phòng. Nhận email khi có phòng nộp báo cáo. |
-| **Viện trưởng** (`vien_truong`) | **Chỉ xem và duyệt**: xem tiến độ các đợt, đọc báo cáo từng phòng, kết xuất để đọc, tải tệp hồ sơ về đọc, và **duyệt hồ sơ trình**. **KHÔNG** xác nhận / yêu cầu chỉnh sửa báo cáo từng phòng, **KHÔNG** tải/xóa tệp hay gửi hồ sơ, **KHÔNG** tạo/sửa/mở/đóng/xóa đợt, **KHÔNG** quản lý biểu mẫu, phòng, phân quyền, lời mời (việc của người quản lý module; server trả 403 qua `canQuanLyModule`/`canXacNhan`, giao diện không có nút và không có tab Biểu mẫu, Phòng & phân quyền; đợt Nháp không hiện trong danh sách của ông). Một người giữ cả hai vai trò thì làm được cả hai. Chỉ nhận email khi hồ sơ được trình lên (không nhận thư mỗi lần một phòng nộp). |
+| **Viện trưởng** (`vien_truong`) | **Xem, góp ý và duyệt**: xem tiến độ các đợt, đọc báo cáo từng phòng, **gửi ý kiến về báo cáo của từng phòng** (lưu trong báo cáo và email cho trưởng phòng của phòng đó), tải tệp hồ sơ về đọc, và **duyệt hồ sơ trình**. **KHÔNG** xác nhận / yêu cầu chỉnh sửa báo cáo từng phòng, **KHÔNG** tải/xóa tệp hay gửi hồ sơ, **KHÔNG** kết xuất Word/PDF (thanh kết xuất ẩn, `/dot/:id/xuat` trả 403), **KHÔNG** tạo/sửa/mở/đóng/xóa đợt, **KHÔNG** quản lý biểu mẫu, phòng, phân quyền, lời mời (việc của người quản lý module; server trả 403 qua `canQuanLyModule`/`canXacNhan`, giao diện không có nút và không có tab Biểu mẫu, Phòng & phân quyền; đợt Nháp không hiện trong danh sách của ông). Một người giữ cả hai vai trò thì làm được cả hai. Chỉ nhận email khi hồ sơ được trình lên (không nhận thư mỗi lần một phòng nộp). |
 | **Trưởng phòng** (`truong_phong`, gắn một phòng) | Chỉ thấy và nhập báo cáo **của phòng mình**. |
 
 - Admin hệ thống mặc nhiên là người quản lý.
@@ -165,6 +165,7 @@ người, chạy nền, **không bao giờ làm hỏng thao tác chính** (SMTP 
 | Thêm phòng vào đợt **đã mở** | chỉ trưởng phòng của phòng **mới thêm** | như trên |
 | Quản lý **sửa đợt đang mở** (đổi hạn nộp / tiêu đề / hướng dẫn) | trưởng phòng của các phòng **chưa nộp** (chưa nộp hoặc đang cần chỉnh sửa; không gồm phòng đã nộp/đã duyệt, không gồm người vừa sửa; một người một thư) | giá trị **cũ → mới** (hạn nộp kèm "còn N ngày"; đổi hướng dẫn thì chỉ báo "đã được cập nhật", không chép nguyên văn), liên kết vào báo cáo của phòng họ. Đổi hạn thì tiêu đề thư `[Đổi hạn nộp]`, còn lại `[Cập nhật đợt báo cáo]`. Hộp "Gửi email báo…" trong khung Sửa đợt (mặc định bật) cho phép tắt, vd. chỉ sửa chính tả |
 | **Tự nhắc trước hạn** (hệ thống tự chạy, không ai bấm) | trưởng phòng của phòng **chưa nộp** hoặc đang **cần chỉnh sửa**, trong đợt **đang mở**; mỗi người một thư dù phụ trách nhiều phòng; không loại ai (nhắc việc) | hạn nộp kèm "còn N ngày", lưu ý nếu đang cần chỉnh sửa, liên kết vào đúng báo cáo. Hai mốc: **còn 1–2 ngày** (`[Nhắc nộp báo cáo]`) và **đúng ngày hạn** (`[Hạn nộp hôm nay]`). Quá hạn thì không nhắc nữa |
+| **Viện trưởng gửi ý kiến** về báo cáo của một phòng | trưởng phòng của **chính phòng đó** (phòng khác, người quản lý không nhận) | **nguyên văn ý kiến** + liên kết vào báo cáo; tiêu đề `[Ý kiến của Viện trưởng] <phòng> — <đợt>` |
 | Quản lý mời/gán trưởng phòng | người được mời/gán | thư mời + mã (nếu chưa có tài khoản); hoặc thư báo kèm đợt đang mở |
 | Quản lý gửi / **gửi lại** hồ sơ trình | Viện trưởng | tên tệp, lời nhắn, cách làm ("bấm Duyệt hồ sơ nếu đồng ý"), liên kết. Gửi lại: `[Nhắc duyệt]`. **Cố ý không nêu tiến độ "đã duyệt x phòng"** (dễ nhầm với việc Viện trưởng duyệt) |
 | Viện trưởng duyệt | người quản lý | nhận xét |
@@ -185,6 +186,8 @@ có địa chỉ tuyệt đối; SMTP chưa cấu hình thì module vẫn chạy
   hiện "✓ Phòng bạn đã nộp xong". Tab này có **số việc** và đứng đầu thanh điều hướng khi đang có việc.
 - **Quản lý kiêm trưởng phòng** (vd. Trưởng phòng TCHC): mọi màn quản lý có **dải đỏ trên cùng** "Phòng … cần nộp báo cáo" + nút
   to, để việc của chính mình không chìm giữa việc quản lý. Hết việc thì dải tự mất.
+
+**Ý kiến của Viện trưởng về từng báo cáo** (`POST /bao-cao/:id/y-kien`, bảng `bcp_y_kien`): chỉ Viện trưởng gửi được (người khác 403), chỉ khi phòng đã nộp (chưa nộp → 409; đợt Nháp → 409), 1–2000 ký tự. Ý kiến **chỉ thêm, không sửa/xóa**; hiện ở đầu báo cáo cho chủ phòng, người quản lý và Viện trưởng (phòng khác không đọc được báo cáo nên không thấy). Không đổi trạng thái báo cáo. Gửi xong email nguyên văn cho các trưởng phòng của phòng đó; giao diện báo lại "Email đã được gửi tới N trưởng phòng" (hoặc nói rõ phòng chưa có trưởng phòng). Gửi thư lỗi (SMTP hỏng) không làm mất ý kiến.
 
 **Cho Viện trưởng — thẻ "Hồ sơ chờ bạn duyệt"**: mỗi hồ sơ đang chờ là một thẻ lớn ở **đầu mọi màn quản lý** (người gửi, giờ gửi, lời nhắn,
 các tệp cần đọc bấm tải được, ô nhận xét, nút "Duyệt hồ sơ" và "Xem chi tiết đợt") — Viện trưởng không phải đi tìm trong trang đợt.
@@ -265,6 +268,7 @@ Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
 - `baoCaoPhongMoi.test.js` — mời bằng email (kể cả kịch bản kẻ đăng ký giả email được mời), email mở đợt.
 - `baoCaoPhongTuDuyet.test.js` — cờ "tự duyệt" (người nộp = người duyệt), không dính lại sau chỉnh sửa/nộp lại.
 - `baoCaoPhongNhacHan.test.js` — nhắc trước hạn: đúng người/đúng mốc/đúng giờ VN, đúng một lần (chạy chồng, khởi động lại, dời hạn), SMTP hỏng.
+- `baoCaoPhongYKien.test.js` — ý kiến của Viện trưởng: chỉ Viện trưởng gửi, email đúng phòng, không lộ cho phòng khác, kiểm dữ liệu, SMTP hỏng.
 - `baoCaoPhongXacNhan.test.js` — ai xác nhận / tải / gửi / duyệt: Viện trưởng không xác nhận hộ, không tải/gửi hồ sơ; admin và quản lý được; người kiêm hai vai trò làm được cả hai.
 - `baoCaoPhongVienTruong.test.js` — dữ liệu thẻ việc: `/viec-cua-toi` (hồ sơ chỉ lộ cho Viện trưởng), `/tong-quan` có đủ thông tin hồ sơ chờ.
 - `baoCaoPhongSuaDot.test.js` — email khi sửa đợt đang mở: đúng người nhận, không gửi khi không đổi, tắt được, Nháp/đã đóng.

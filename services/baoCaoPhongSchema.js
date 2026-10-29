@@ -21,6 +21,7 @@
  *   bcp_dot ──< bcp_dot_lich_su
  *   bcp_phong ──< bcp_loi_moi             (lời mời trưởng phòng cho email CHƯA có tài khoản)
  *   bcp_bao_cao ──< bcp_nhac_han          (nhật ký email nhắc trước hạn, để không nhắc trùng)
+ *   bcp_bao_cao ──< bcp_y_kien            (ý kiến của Viện trưởng về từng báo cáo; không sửa/xóa, chỉ thêm)
  *
  * Vì sao phiên bản biểu mẫu bất biến: người quản lý sẽ sửa biểu mẫu theo nhu cầu về sau.
  * Nếu sửa tại chỗ thì các báo cáo ĐÃ NỘP theo mẫu cũ sẽ hiển thị sai (ô bị xóa mất, ô mới
@@ -221,6 +222,18 @@ const CAU_LENH = [
     PRIMARY KEY (bao_cao_id, loai, han_nop),
     FOREIGN KEY (bao_cao_id) REFERENCES bcp_bao_cao(id) ON DELETE CASCADE
   )`,
+
+  // Ý kiến của Viện trưởng về báo cáo của một phòng. Chỉ thêm (không sửa/xóa) để trưởng phòng luôn đọc đúng điều đã được thông báo qua email.
+  `CREATE TABLE IF NOT EXISTS bcp_y_kien (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bao_cao_id INTEGER NOT NULL,
+    nguoi_id INTEGER,
+    noi_dung TEXT NOT NULL,
+    tao_luc TEXT NOT NULL,
+    FOREIGN KEY (bao_cao_id) REFERENCES bcp_bao_cao(id) ON DELETE CASCADE,
+    FOREIGN KEY (nguoi_id) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS ix_bcp_y_kien_bao_cao ON bcp_y_kien(bao_cao_id)`,
 ];
 
 /**
