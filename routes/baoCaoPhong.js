@@ -20,6 +20,7 @@ const crypto = require('crypto');
 const { ensureSchema } = require('../services/baoCaoPhongSchema');
 const { chuanHoaMau, kiemTraDuLieu } = require('../services/baoCaoPhongMau');
 const { taoThongBao } = require('../services/baoCaoPhongThongBao');
+const { taoNhacHan } = require('../services/baoCaoPhongNhacHan');
 const Xuat = require('../services/baoCaoPhongXuat');
 const { contentDisposition } = require('../lib/filenames');
 const createTrinhRouter = require('./baoCaoPhongTrinh');
@@ -76,8 +77,9 @@ function treHan(bc, dot, homNay) {
  *   mailSend — gửi email (nodemailer của server.js); thiếu thì module chạy bình thường, chỉ không gửi thư.
  *   uploadsRoot — thư mục gốc lưu tệp tải lên; thiếu thì bỏ phần hồ sơ trình Viện trưởng.
  *   baseUrl — gốc địa chỉ để đặt liên kết trong email.
+ *   nhacTuDong — true thì bật hẹn giờ tự nhắc trước hạn (chỉ server thật; test gọi router.nhacHan.chayMotLan trực tiếp).
  */
-module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, baseUrl }) {
+module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, baseUrl, nhacTuDong }) {
   const router = express.Router();
 
   // Module phụ không được phép làm sập cả hệ thống đang chạy thật: nếu khởi tạo bảng lỗi
@@ -93,6 +95,8 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   const loi = (res, status, message, extra) => res.status(status).json({ message, ...(extra || {}) });
 
   const thongBao = taoThongBao({ db, mailSend, baseUrl });
+  router.nhacHan = taoNhacHan({ db, thongBao });
+  if (nhacTuDong) router.nhacHan.batDau();
   /** Thư báo chạy NỀN: không chờ, không để lỗi (SMTP, mạng…) làm hỏng thao tác chính đã thành công. */
   const guiNen = (p) => Promise.resolve(p).catch((e) => console.warn('[bao-cao-phong] thông báo lỗi:', e && e.message));
 

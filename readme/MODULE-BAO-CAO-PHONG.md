@@ -156,6 +156,7 @@ người, chạy nền, **không bao giờ làm hỏng thao tác chính** (SMTP 
 | Quản lý **mở đợt** (lần đầu: Nháp → Đang mở) | trưởng phòng của các phòng được giao (mỗi người một thư; phụ trách nhiều phòng thì một thư liệt kê liên kết từng phòng) | tiêu đề/kỳ đợt, **hạn nộp kèm "còn N ngày"**, biểu mẫu, **liên kết vào đúng báo cáo của phòng họ**. Cố ý **không chép hướng dẫn** của đợt vào thư (xem trong báo cáo) |
 | Thêm phòng vào đợt **đã mở** | chỉ trưởng phòng của phòng **mới thêm** | như trên |
 | Quản lý **sửa đợt đang mở** (đổi hạn nộp / tiêu đề / hướng dẫn) | trưởng phòng của các phòng **chưa nộp** (chưa nộp hoặc đang cần chỉnh sửa; không gồm phòng đã nộp/đã duyệt, không gồm người vừa sửa; một người một thư) | giá trị **cũ → mới** (hạn nộp kèm "còn N ngày"; đổi hướng dẫn thì chỉ báo "đã được cập nhật", không chép nguyên văn), liên kết vào báo cáo của phòng họ. Đổi hạn thì tiêu đề thư `[Đổi hạn nộp]`, còn lại `[Cập nhật đợt báo cáo]`. Hộp "Gửi email báo…" trong khung Sửa đợt (mặc định bật) cho phép tắt, vd. chỉ sửa chính tả |
+| **Tự nhắc trước hạn** (hệ thống tự chạy, không ai bấm) | trưởng phòng của phòng **chưa nộp** hoặc đang **cần chỉnh sửa**, trong đợt **đang mở**; mỗi người một thư dù phụ trách nhiều phòng; không loại ai (nhắc việc) | hạn nộp kèm "còn N ngày", lưu ý nếu đang cần chỉnh sửa, liên kết vào đúng báo cáo. Hai mốc: **còn 1–2 ngày** (`[Nhắc nộp báo cáo]`) và **đúng ngày hạn** (`[Hạn nộp hôm nay]`). Quá hạn thì không nhắc nữa |
 | Quản lý mời/gán trưởng phòng | người được mời/gán | thư mời + mã (nếu chưa có tài khoản); hoặc thư báo kèm đợt đang mở |
 | Quản lý gửi / **gửi lại** hồ sơ trình | Viện trưởng | tên tệp, lời nhắn, cách làm ("bấm Duyệt hồ sơ nếu đồng ý"), liên kết. Gửi lại: `[Nhắc duyệt]`. **Cố ý không nêu tiến độ "đã duyệt x phòng"** (dễ nhầm với việc Viện trưởng duyệt) |
 | Viện trưởng duyệt | người quản lý | nhận xét |
@@ -180,6 +181,13 @@ có địa chỉ tuyệt đối; SMTP chưa cấu hình thì module vẫn chạy
 **Trong giao diện — "Cần xử lý"** (`GET /tong-quan`): dải đầu danh sách đợt cho biết bao nhiêu báo cáo
 chờ duyệt, bao nhiêu phòng chưa nộp / trễ hạn, bao nhiêu hồ sơ chờ Viện trưởng, kèm **từng đợt đã nộp
 x/y**; thanh điều hướng hiện số việc đang chờ riêng người đó.
+
+**Nhắc trước hạn** (`services/baoCaoPhongNhacHan.js`): `server.js` truyền `nhacTuDong: true` nên router hẹn giờ chạy mỗi 30 phút
+(lần đầu sau 2 phút kể từ lúc khởi động; timer `unref`, không giữ tiến trình sống). Chỉ gửi trong **giờ làm việc theo giờ Việt Nam
+(8h–17h59)** — server có thể chạy UTC. Mỗi (báo cáo, mốc, hạn nộp) nhắc **đúng một lần**: dòng nhật ký `bcp_nhac_han` được "giành" bằng
+`INSERT OR IGNORE` trước khi gửi nên chạy chồng hay khởi động lại không nhắc đôi; dời hạn thì hạn mới được nhắc lại từ đầu; nếu mọi thư
+đều lỗi (SMTP hỏng) thì nhả dòng ra để lần sau thử lại. Muốn đổi mốc/giờ: hằng `NHAC_TRUOC_NGAY`, `GIO_BAT_DAU`, `GIO_KET_THUC` trong file đó.
+Chưa có nút tắt nhắc riêng cho từng đợt.
 
 Sửa đợt: chỉ **đợt đang mở** mới gửi thư (Nháp chưa ai thấy; đã đóng thì hạn nộp không còn ý nghĩa). Mọi lần sửa hạn/tiêu đề/hướng dẫn
 của đợt đã mở hoặc đã đóng đều ghi vào **lịch sử đợt** (`sua_dot`, kèm giá trị cũ → mới và "không gửi thông báo" nếu đã tắt). Sửa kỳ,
@@ -241,6 +249,7 @@ Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
   router thật + DB `:memory:` + hộp thư giả (`tests/helpers/baoCaoPhongApp.js`).
 - `baoCaoPhongMoi.test.js` — mời bằng email (kể cả kịch bản kẻ đăng ký giả email được mời), email mở đợt.
 - `baoCaoPhongTuDuyet.test.js` — cờ "tự duyệt" (người nộp = người duyệt), không dính lại sau chỉnh sửa/nộp lại.
+- `baoCaoPhongNhacHan.test.js` — nhắc trước hạn: đúng người/đúng mốc/đúng giờ VN, đúng một lần (chạy chồng, khởi động lại, dời hạn), SMTP hỏng.
 - `baoCaoPhongSuaDot.test.js` — email khi sửa đợt đang mở: đúng người nhận, không gửi khi không đổi, tắt được, Nháp/đã đóng.
 
 Đã **kiểm chứng test bắt được lỗi** bằng cách cố ý phá: ranh giới phòng (4 test đỏ), kiểm byte đầu
@@ -256,7 +265,7 @@ cụ phát triển không hiển thị PDF nội tuyến).
 
 ## Chưa làm (cố ý)
 
-- **Chưa email cho trưởng phòng** khi bị **yêu cầu chỉnh sửa**, và chưa có **nhắc sắp hết hạn** (đã có email khi mở đợt).
+- **Chưa email cho trưởng phòng** khi bị **yêu cầu chỉnh sửa** (đã có email khi mở đợt, khi sửa đợt và nhắc trước hạn).
 - **Chưa đính kèm tệp vào từng báo cáo phòng** (tệp hiện chỉ ở hồ sơ trình của đợt).
 - Phần đầu thư (tên Trường/Viện, "Kính gửi Viện trưởng") là **hằng số** trong `baoCaoPhongXuat.js`
   (`CO_QUAN`), chưa chỉnh được trong giao diện.

@@ -6,6 +6,7 @@
  *   quản lý module gửi / gửi lại hồ sơ cho Viện trưởng → Viện trưởng (vai trò vien_truong)
  *   Viện trưởng duyệt hồ sơ          → người quản lý module (chỉ Viện trưởng mới duyệt, không ai duyệt thay)
  *   quản lý MỞ đợt báo cáo           → trưởng phòng của các phòng được giao, kèm liên kết vào đúng báo cáo của phòng họ
+ *   hệ thống TỰ nhắc trước hạn nộp (còn 1–2 ngày, và đúng ngày hạn) → trưởng phòng của các phòng CHƯA nộp
  *   quản lý SỬA đợt đang mở (hạn nộp / tiêu đề / hướng dẫn) → trưởng phòng của các phòng CHƯA nộp
  *   quản lý mời / gán trưởng phòng   → người được mời (kèm mã nhận lời mời nếu họ chưa có tài khoản)
  *
@@ -296,6 +297,63 @@ function taoThongBao({ db, mailSend, baseUrl }) {
   }
 
   /**
+   * Nhắc nộp báo cáo. `muc` = [{ bao_cao_id, loai: 'truoc_han'|'hom_nay' }]; `homNay` = 'YYYY-MM-DD' (giờ Việt Nam).
+   * Mỗi trưởng phòng MỘT thư dù phụ trách nhiều phòng. Không loại ai (đây là nhắc việc, kể cả quản lý kiêm trưởng
+   * phòng cũng cần): người đã nộp được lọc từ trước ở nơi chọn mục cần nhắc.
+   */
+  async function baoNhacHan(muc, homNay) {
+    const kq = { gui: 0, loi: 0, nguoi_nhan: 0 };
+    if (!muc || !muc.length) return kq;
+    const loaiCua = new Map(muc.map((m) => [m.bao_cao_id, m.loai]));
+    const rows = db
+      .prepare(
+        `SELECT u.id AS user_id, u.email, b.id AS bao_cao_id, b.trang_thai, p.ten AS phong_ten, d.tieu_de, d.han_nop
+           FROM bcp_bao_cao b
+           JOIN bcp_phong p ON p.id = b.phong_id
+           JOIN bcp_dot d ON d.id = b.dot_id
+           JOIN bcp_thanh_vien t ON t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong'
+           JOIN users u ON u.id = t.user_id
+          WHERE b.id IN (${muc.map(() => '?').join(',')}) ORDER BY u.id, d.han_nop, p.ten`
+      )
+      .all(...muc.map((m) => m.bao_cao_id))
+      .filter((r) => EMAIL_HOP_LE.test(String(r.email || '')));
+    const theoNguoi = new Map();
+    for (const r of rows) {
+      if (!theoNguoi.has(r.user_id)) theoNguoi.set(r.user_id, { email: r.email, muc: [] });
+      theoNguoi.get(r.user_id).muc.push(r);
+    }
+    kq.nguoi_nhan = theoNguoi.size;
+    const ngayConLai = (han) => Math.round((Date.parse(han + 'T00:00:00Z') - Date.parse(homNay + 'T00:00:00Z')) / 86400000);
+    const cum = (han) => {
+      const n = ngayConLai(han);
+      return n > 0 ? `còn ${n} ngày` : n === 0 ? 'hết hạn trong hôm nay' : `đã quá hạn ${-n} ngày`;
+    };
+    for (const nguoi of theoNguoi.values()) {
+      const homNayCo = nguoi.muc.some((m) => loaiCua.get(m.bao_cao_id) === 'hom_nay');
+      const nhieu = nguoi.muc.length > 1;
+      const m0 = nguoi.muc[0];
+      const doan = [];
+      if (!nhieu) {
+        doan.push({ text: `${m0.phong_ten} chưa nộp báo cáo của đợt «${m0.tieu_de}».` });
+        doan.push({ nhan: 'Hạn nộp', text: `${fmtNgay(m0.han_nop)} (${cum(m0.han_nop)})` });
+        if (m0.trang_thai === 'can_chinh_sua') doan.push({ text: 'Báo cáo đang cần chỉnh sửa theo yêu cầu của người quản lý, bạn cần sửa rồi nộp lại.' });
+      } else {
+        doan.push({ text: `Bạn có ${nguoi.muc.length} báo cáo chưa nộp sắp đến hạn:` });
+        doan.push({ text: nguoi.muc.map((m) => `• ${m.phong_ten} — «${m.tieu_de}», hạn ${fmtNgay(m.han_nop)} (${cum(m.han_nop)})${goc ? ': ' + lienKet('#/bao-cao/' + m.bao_cao_id) : ''}`).join('\n') });
+      }
+      doan.push({ text: 'Cách làm: đăng nhập eoffice, mở báo cáo của phòng, điền biểu mẫu rồi bấm "Nộp báo cáo". Bạn có thể lưu nháp và quay lại sau.' });
+      const lk = nhieu ? lienKet('#/cua-toi') : lienKet('#/bao-cao/' + m0.bao_cao_id);
+      const tieuDe = homNayCo
+        ? `[Hạn nộp hôm nay] ${nhieu ? nguoi.muc.length + ' báo cáo chưa nộp' : m0.tieu_de}`
+        : `[Nhắc nộp báo cáo] ${nhieu ? nguoi.muc.length + ' báo cáo sắp đến hạn' : m0.tieu_de + ' — ' + cum(m0.han_nop) + ' (hạn ' + fmtNgay(m0.han_nop) + ')'}`;
+      const t = await guiDen([{ email: nguoi.email }], tieuDe, dungThu(doan, lk, goc));
+      kq.gui += t.gui;
+      kq.loi += t.loi;
+    }
+    return kq;
+  }
+
+  /**
    * Mời một email CHƯA có tài khoản làm trưởng phòng. Thư chứa MÃ DÙNG MỘT LẦN: đó là bằng chứng người
    * nhận đọc được hộp thư này (đăng ký tài khoản của hệ thống không xác minh email — xem baoCaoPhongSchema.js).
    */
@@ -331,7 +389,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     return guiDen([{ email: u.email }], `[Báo cáo phòng ban] Trưởng phòng — ${p.ten}: bạn đã được thêm vào module`, dungThu(doan, lienKet('#/cua-toi'), goc));
   }
 
-  return { baoDaNop, baoDaGuiVienTruong, baoDaDuyetTrinh, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoLoiMoi, baoDuocGan, tienDo };
+  return { baoDaNop, baoDaGuiVienTruong, baoDaDuyetTrinh, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoNhacHan, baoLoiMoi, baoDuocGan, tienDo };
 }
 
 module.exports = { taoThongBao, esc };

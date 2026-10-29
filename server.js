@@ -15809,7 +15809,7 @@ try {
 } catch (e) {
   console.warn('[ytnn] Không mount router /ytnn:', e.message);
 }
-app.use('/api/bao-cao-phong', authMiddleware, require('./routes/baoCaoPhong')({ db, uploadsRoot: appPaths.uploadsRoot(), baseUrl: process.env.BASE_URL || '', mailSend: (o) => (transporter ? transporter.sendMail({ from: getSmtpFrom(), ...o }) : Promise.reject(new Error('mail_not_configured'))) })); // Báo cáo phòng ban: xem routes/baoCaoPhong.js
+app.use('/api/bao-cao-phong', authMiddleware, require('./routes/baoCaoPhong')({ db, uploadsRoot: appPaths.uploadsRoot(), baseUrl: process.env.BASE_URL || '', nhacTuDong: true, mailSend: (o) => (transporter ? transporter.sendMail({ from: getSmtpFrom(), ...o }) : Promise.reject(new Error('mail_not_configured'))) })); // Báo cáo phòng ban: xem routes/baoCaoPhong.js
 
 // ============================================================
 // ROUTE MỚI — CHỜ PHÒNG KHCN XỬ LÝ

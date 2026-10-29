@@ -56,6 +56,9 @@ async function dungUngDung(tuyChon = {}) {
     return { ok: true };
   };
 
+  const router = createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, baseUrl: 'https://eoffice.test' });
+  ung.nhacHan = router.nhacHan; // bộ nhắc hạn: test gọi chayMotLan(thờiGian) trực tiếp, không bật hẹn giờ
+
   const app = express();
   app.use(express.json({ limit: '1mb' }));
   app.use(
@@ -66,7 +69,7 @@ async function dungUngDung(tuyChon = {}) {
       req.user = { id: u.id, email: u.email, fullname: u.fullname, role: u.role };
       next();
     },
-    createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, baseUrl: 'https://eoffice.test' })
+    router
   );
 
   const server = http.createServer(app);
