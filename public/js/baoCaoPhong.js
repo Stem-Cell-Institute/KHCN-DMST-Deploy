@@ -20,6 +20,14 @@
   var hop = document.getElementById('hop-thoai');
 
   var me = null;
+  // Báo cáo của phòng MÌNH đang cần nộp / chỉnh sửa (mọi vai trò có phòng, kể cả quản lý kiêm trưởng phòng).
+  // Dải "việc của bạn" dựa vào đây để người không quen công nghệ thấy ngay việc phải làm, không phải đi tìm.
+  var viec = [];
+  var hienDai = false;
+  var daiViec = document.createElement('div');
+  daiViec.id = 'viec-cua-toi';
+  daiViec.className = 'dai-viec';
+  main.parentNode.insertBefore(daiViec, main);
   var dirty = false; // có thay đổi chưa lưu
   var hashHienTai = '';
   var khoiPhucHash = false;
@@ -83,6 +91,13 @@
 
   function fmtNgay(s) {
     return s ? String(s).split('-').reverse().join('/') : '';
+  }
+  /** "còn N ngày" / "hết hạn trong hôm nay" / "đã quá hạn N ngày", theo ngày Việt Nam. */
+  function conLaiNgay(han) {
+    var homNay = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+    var n = Math.round((Date.parse(han + 'T00:00:00Z') - Date.parse(homNay + 'T00:00:00Z')) / 86400000);
+    if (isNaN(n)) return '';
+    return n > 0 ? 'còn ' + n + ' ngày' : n === 0 ? 'hết hạn trong hôm nay' : 'đã quá hạn ' + (-n) + ' ngày';
   }
   function fmtGio(s) {
     if (!s) return '';
@@ -581,13 +596,36 @@
     mucNav = muc;
     var ds = [];
     if (me.quan_ly) ds.push(['dot', 'Đợt báo cáo'], ['mau', 'Biểu mẫu'], ['phong', 'Phòng & phân quyền']);
-    if (me.phong.length) ds.push(['cua-toi', 'Báo cáo của tôi']);
+    if (me.phong.length) ds[viec.length ? 'unshift' : 'push'](['cua-toi', 'Báo cáo của tôi']);
     nav.replaceChildren.apply(nav, ds.map(function (m) {
-      var n = m[0] === 'dot' ? soViecCanLam() : 0;
+      var n = m[0] === 'dot' ? soViecCanLam() : m[0] === 'cua-toi' ? viec.length : 0;
       return h('a', { href: '#/' + m[0], 'aria-current': m[0] === muc ? 'page' : null },
         m[1],
         n > 0 ? [h('span', { class: 'nav-so', 'aria-hidden': 'true', text: String(n) }), h('span', { class: 'sr-only', text: ', ' + n + ' việc cần xử lý' })] : null);
     }));
+  }
+
+  /** Dải nổi bật trên các màn quản lý: "Phòng bạn cần nộp báo cáo" + nút to dẫn thẳng vào báo cáo. */
+  function veDaiViec() {
+    if (!hienDai || !viec.length) { daiViec.replaceChildren(); return; }
+    var b = viec[0];
+    var nhieu = viec.length > 1;
+    var canSua = b.trang_thai === 'can_chinh_sua';
+    var tieu = nhieu ? 'Bạn có ' + viec.length + ' báo cáo cần nộp' : (canSua ? 'Báo cáo của ' + b.phong_ten + ' cần chỉnh sửa' : b.phong_ten + ' cần nộp báo cáo');
+    var phu = b.tieu_de + ' · hạn ' + fmtNgay(b.han_nop) + ' (' + conLaiNgay(b.han_nop) + ')';
+    daiViec.replaceChildren(h('section', { class: 'viec-lon' + (b.tre_han ? ' tre' : ''), 'aria-label': 'Việc của bạn' },
+      h('div', { class: 'viec-chu' }, h('p', { class: 'viec-tieu', text: tieu }), h('p', { class: 'viec-phu', text: phu })),
+      h('a', { class: 'btn btn-lon', href: nhieu ? '#/cua-toi' : '#/bao-cao/' + b.id }, nhieu ? 'Xem các báo cáo cần nộp →' : (canSua ? 'Chỉnh sửa báo cáo →' : 'Làm báo cáo ngay →'))));
+  }
+
+  /** Nạp báo cáo của phòng mình đang cần làm (chạy nền: lỗi ở đây không được làm hỏng trang). */
+  function capNhatViec() {
+    if (!me || !me.phong.length) { viec = []; veDaiViec(); return Promise.resolve(); }
+    return api('/cua-toi').then(function (r) {
+      viec = r.bao_cao.filter(function (x) { return x.sua_duoc; }).sort(function (a, c) { return a.han_nop < c.han_nop ? -1 : a.han_nop > c.han_nop ? 1 : 0; });
+      dungNav(mucNav);
+      veDaiViec();
+    }).catch(function () { /* không có dải việc thì vẫn dùng được module */ });
   }
 
   /** Nạp lại số liệu tổng quan rồi vẽ lại thanh điều hướng. Chạy nền: lỗi ở đây không được làm hỏng trang. */
@@ -632,9 +670,20 @@
                 b.sua_duoc ? (b.trang_thai === 'can_chinh_sua' ? 'Chỉnh sửa' : 'Nhập báo cáo') : 'Xem')));
           }))));
       }
+      // Việc phải làm hiện thành THẺ LỚN với một nút duy nhất ("Làm báo cáo ngay"): người nộp không cần hiểu bảng hay tìm nút.
+      function theViec(b) {
+        var canSua = b.trang_thai === 'can_chinh_sua';
+        return h('section', { class: 'viec-lon' + (b.tre_han ? ' tre' : ''), 'aria-label': b.tieu_de },
+          h('div', { class: 'viec-chu' },
+            h('p', { class: 'viec-tieu', text: (canSua ? 'Cần chỉnh sửa: ' : 'Cần nộp: ') + b.tieu_de }),
+            h('p', { class: 'viec-phu', text: b.phong_ten + ' · hạn ' + fmtNgay(b.han_nop) + ' (' + conLaiNgay(b.han_nop) + ')' }),
+            canSua && b.nhan_xet ? h('p', { class: 'viec-nx' }, h('strong', { text: 'Người quản lý nhắn: ' }), b.nhan_xet) : null),
+          h('a', { class: 'btn btn-lon', href: '#/bao-cao/' + b.id }, canSua ? 'Chỉnh sửa báo cáo →' : 'Làm báo cáo ngay →'));
+      }
       var node = [tieuDe('Báo cáo của tôi', 'Các đợt báo cáo được giao cho phòng của bạn.')];
       if (!ds.length) node.push(bangTrong('Chưa có đợt báo cáo nào được giao cho phòng của bạn.'));
-      if (canLam.length) node.push(h('h3', { text: 'Cần nộp hoặc chỉnh sửa (' + canLam.length + ')' }), bang(canLam));
+      if (canLam.length) { node.push(h('h3', { text: 'Việc của bạn (' + canLam.length + ')' })); canLam.forEach(function (b) { node.push(theViec(b)); }); }
+      else if (ds.length) node.push(h('div', { class: 'luu-y', role: 'status' }, h('p', null, h('strong', { text: '✓ Phòng bạn đã nộp xong. ' }), 'Hiện không có báo cáo nào cần bạn làm.')));
       if (con.length) node.push(h('h3', { text: 'Đã nộp và các đợt khác' }), bang(con));
       main.replaceChildren.apply(main, node);
     });
@@ -1643,6 +1692,8 @@
 
     hashHienTai = location.hash;
     dirty = false;
+    hienDai = ten === 'dot' || ten === 'mau' || ten === 'phong';
+    veDaiViec();
     dungNav(ten === 'bao-cao' ? 'dot' : ten);
     main.replaceChildren(h('p', { class: 'tai', text: 'Đang tải…' }));
 
@@ -1658,6 +1709,7 @@
 
     // Danh sách đợt tự nạp tổng quan; các màn khác nạp nền để số đếm trên thanh điều hướng luôn mới.
     if (!(ten === 'dot' && !tham)) capNhatTongQuan();
+    capNhatViec();
     return xong.catch(hienLoiTrang).then(function () {
       var h2 = main.querySelector('h2');
       document.title = (h2 ? h2.textContent + ' — ' : '') + 'Báo cáo phòng ban - STIMS';
