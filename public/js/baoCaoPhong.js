@@ -830,6 +830,13 @@
       var fKy = h('input', { type: 'text', id: 'd-ky', maxlength: 50, placeholder: 'VD: 10/2026 hoặc Quý 3/2026', value: dot.ky || '' });
       var fHan = h('input', { type: 'date', id: 'd-han', value: dot.han_nop || '' });
       var fMoTa = h('textarea', { id: 'd-mo-ta', rows: 3, maxlength: 2000, value: dot.mo_ta || '' });
+      // Chỉ hiện khi sửa đợt ĐANG MỞ: đổi hạn nộp / tiêu đề / hướng dẫn sẽ báo trưởng phòng các phòng chưa nộp.
+      var cbBao = h('input', { type: 'checkbox', id: 'd-bao', checked: true });
+      cbBao.checked = true;
+      var hopBao = cu && dot.trang_thai === 'dang_mo'
+        ? h('div', { class: 'truong' }, h('label', { class: 'dong-tick', for: 'd-bao' }, cbBao, 'Gửi email báo trưởng phòng các phòng chưa nộp nếu đổi hạn nộp, tiêu đề hoặc hướng dẫn'),
+            h('p', { class: 'tro-giup', text: 'Phòng đã nộp không nhận thư. Bỏ chọn nếu chỉ sửa lỗi chính tả.' }))
+        : null;
       var fMau = h('select', { id: 'd-mau', disabled: khoa, value: String(dot.mau_id || maus[0].id) },
         maus.map(function (m) { return h('option', { value: String(m.id), text: m.ten + ' (phiên bản ' + m.so_phien_ban + ')' }); }));
       var hop_phong = phongs.map(function (p) {
@@ -849,6 +856,7 @@
           h('div', { class: 'truong' }, h('label', { for: 'd-ky', text: 'Kỳ báo cáo' }), fKy)),
         h('div', { class: 'truong' }, h('label', { for: 'd-han' }, 'Hạn nộp ', h('span', { class: 'bat-buoc', 'aria-hidden': 'true', text: '*' })), fHan),
         h('div', { class: 'truong' }, h('label', { for: 'd-mo-ta', text: 'Hướng dẫn / ghi chú cho các phòng' }), fMoTa),
+        hopBao,
         h('div', { class: 'truong' }, h('label', { for: 'd-mau', text: 'Biểu mẫu' }),
           khoa ? h('p', { class: 'tro-giup', text: 'Đợt đã mở nên không đổi được biểu mẫu.' }) : h('p', { class: 'tro-giup', text: 'Đợt dùng phiên bản mới nhất của biểu mẫu tại thời điểm tạo.' }), fMau),
         h('fieldset', { class: 'nhom' }, h('legend', { text: 'Giao cho các phòng *' }),
@@ -866,8 +874,9 @@
           if (!phong_ids.length) throw new Error('Cần chọn ít nhất một phòng.');
           var body = { tieu_de: fTieuDe.value, loai: fLoai.value, ky: fKy.value, han_nop: fHan.value, mo_ta: fMoTa.value, phong_ids: phong_ids };
           if (!khoa) body.mau_id = Number(fMau.value);
+          if (hopBao && !cbBao.checked) body.khong_thong_bao = true;
           return api(cu ? '/dot/' + dotId : '/dot', { method: cu ? 'PUT' : 'POST', body: body }).then(function (kq) {
-            thongBao(cu ? 'Đã lưu đợt báo cáo.' : 'Đã tạo đợt báo cáo ở trạng thái Nháp.');
+            thongBao(cu ? 'Đã lưu đợt báo cáo.' + (kq.da_bao ? ' Đã gửi email báo ' + kq.da_bao + ' trưởng phòng chưa nộp.' : '') : 'Đã tạo đợt báo cáo ở trạng thái Nháp.');
             location.hash = '#/dot/' + (cu ? dotId : kq.id);
             if (cu) return route();
           });
@@ -878,7 +887,7 @@
 
   var HANH_DONG_DOT = {
     tai_tep: 'Tải tệp lên', xoa_tep: 'Xóa tệp', gui: 'Gửi Viện trưởng', thu_hoi: 'Thu hồi hồ sơ',
-    duyet: 'Viện trưởng duyệt', duyet_thay: 'Duyệt thay Viện trưởng', xuat: 'Kết xuất báo cáo',
+    duyet: 'Viện trưởng duyệt', duyet_thay: 'Duyệt thay Viện trưởng', xuat: 'Kết xuất báo cáo', sua_dot: 'Sửa đợt báo cáo',
   };
   var TT_TRINH = {
     chua_gui: ['○', 'Chưa gửi', ''],

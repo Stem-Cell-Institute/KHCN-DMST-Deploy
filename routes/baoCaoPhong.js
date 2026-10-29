@@ -576,7 +576,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
-      const cu = db.prepare('SELECT id, trang_thai FROM bcp_dot WHERE id = ?').get(id);
+      const cu = db.prepare('SELECT id, trang_thai, tieu_de, mo_ta, han_nop FROM bcp_dot WHERE id = ?').get(id);
       if (!cu) return loi(res, 404, 'Không tìm thấy đợt báo cáo.');
       const kq = kiemTraDot(req.body || {}, { batBuocMau: false });
       if (kq.loi) return loi(res, 400, kq.loi);
@@ -585,6 +585,17 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       if (g.mau_id && cu.trang_thai !== 'nhap') {
         return loi(res, 409, 'Chỉ đổi được biểu mẫu khi đợt còn ở trạng thái Nháp.');
       }
+
+      // Những thay đổi người ta SẼ thấy: hạn nộp, tiêu đề, hướng dẫn. Đợt Nháp chưa ai thấy nên không tính.
+      const thayDoi = [];
+      if (cu.trang_thai !== 'nhap') {
+        if (cu.han_nop !== g.han_nop) thayDoi.push({ khoa: 'han_nop', cu: cu.han_nop, moi: g.han_nop });
+        if (cu.tieu_de !== g.tieu_de) thayDoi.push({ khoa: 'tieu_de', cu: cu.tieu_de, moi: g.tieu_de });
+        if ((cu.mo_ta || null) !== g.mo_ta) thayDoi.push({ khoa: 'mo_ta', cu: cu.mo_ta, moi: g.mo_ta });
+      }
+      // Chỉ báo khi đợt ĐANG MỞ (đợt đã đóng thì hạn nộp không còn ý nghĩa). Người quản lý có thể tắt.
+      const khongBao = req.body && req.body.khong_thong_bao === true;
+      const seBao = cu.trang_thai === 'dang_mo' && thayDoi.length > 0 && !khongBao;
 
       let hienCo = [];
       if (g.phong_ids) {
@@ -616,13 +627,28 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
             if (!g.phong_ids.includes(pid)) db.prepare('DELETE FROM bcp_bao_cao WHERE dot_id = ? AND phong_id = ?').run(id, pid);
           }
         }
+        if (thayDoi.length) {
+          const ngay = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(s || '') ? s.split('-').reverse().join('/') : s);
+          const tom = thayDoi
+            .map((x) => (x.khoa === 'han_nop' ? `Hạn nộp ${ngay(x.cu)} → ${ngay(x.moi)}` : x.khoa === 'tieu_de' ? `Tiêu đề «${x.cu}» → «${x.moi}»` : 'Hướng dẫn đã sửa'))
+            .join('; ');
+          db.prepare('INSERT INTO bcp_dot_lich_su (dot_id, hanh_dong, nguoi_id, ghi_chu) VALUES (?,?,?,?)').run(
+            id, 'sua_dot', req.user.id, tom + (cu.trang_thai === 'dang_mo' ? (khongBao ? ' (không gửi thông báo)' : '') : '')
+          );
+        }
       })();
       // Thêm phòng vào đợt ĐÃ mở: báo riêng trưởng phòng của các phòng mới thêm (đợt Nháp thì chưa ai thấy).
       if (cu.trang_thai === 'dang_mo' && g.phong_ids) {
         const moiThem = g.phong_ids.filter((p) => !hienCo.includes(p));
         if (moiThem.length) guiNen(thongBao.baoMoDot(id, moiThem));
       }
-      res.json({ id });
+      // Số người sẽ nhận thư (đếm đồng bộ để giao diện báo lại; việc gửi vẫn chạy nền, không chặn thao tác).
+      let daBao = 0;
+      if (seBao) {
+        daBao = thongBao.nguoiNhanSuaDot(id, req.user.id).length;
+        guiNen(thongBao.baoSuaDot(id, thayDoi, req.user.id));
+      }
+      res.json({ id, da_bao: daBao });
     })
   );
 

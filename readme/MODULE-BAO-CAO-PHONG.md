@@ -151,6 +151,7 @@ người, chạy nền, **không bao giờ làm hỏng thao tác chính** (SMTP 
 | Phòng nộp / nộp lại báo cáo | người quản lý (không gồm người vừa nộp, không gồm Viện trưởng) | phòng nào, người nộp, giờ, **đã nộp x/y phòng**, **phòng nào chưa nộp**, hạn, liên kết. Đủ phòng → tiêu đề `[Đã đủ báo cáo]` |
 | Quản lý **mở đợt** (lần đầu: Nháp → Đang mở) | trưởng phòng của các phòng được giao (mỗi người một thư; phụ trách nhiều phòng thì một thư liệt kê liên kết từng phòng) | tiêu đề/kỳ đợt, **hạn nộp kèm "còn N ngày"**, biểu mẫu, hướng dẫn của người quản lý, **liên kết vào đúng báo cáo của phòng họ** |
 | Thêm phòng vào đợt **đã mở** | chỉ trưởng phòng của phòng **mới thêm** | như trên |
+| Quản lý **sửa đợt đang mở** (đổi hạn nộp / tiêu đề / hướng dẫn) | trưởng phòng của các phòng **chưa nộp** (chưa nộp hoặc đang cần chỉnh sửa; không gồm phòng đã nộp/đã duyệt, không gồm người vừa sửa; một người một thư) | giá trị **cũ → mới** (hạn nộp kèm "còn N ngày"), liên kết vào báo cáo của phòng họ. Đổi hạn thì tiêu đề thư `[Đổi hạn nộp]`, còn lại `[Cập nhật đợt báo cáo]`. Hộp "Gửi email báo…" trong khung Sửa đợt (mặc định bật) cho phép tắt, vd. chỉ sửa chính tả |
 | Quản lý mời/gán trưởng phòng | người được mời/gán | thư mời + mã (nếu chưa có tài khoản); hoặc thư báo kèm đợt đang mở |
 | Quản lý gửi hồ sơ trình | Viện trưởng | tệp đính kèm, lời nhắn, tiến độ các phòng, liên kết |
 | Viện trưởng duyệt | người quản lý | nhận xét |
@@ -167,6 +168,11 @@ có địa chỉ tuyệt đối; SMTP chưa cấu hình thì module vẫn chạy
 **Trong giao diện — "Cần xử lý"** (`GET /tong-quan`): dải đầu danh sách đợt cho biết bao nhiêu báo cáo
 chờ duyệt, bao nhiêu phòng chưa nộp / trễ hạn, bao nhiêu hồ sơ chờ Viện trưởng, kèm **từng đợt đã nộp
 x/y**; thanh điều hướng hiện số việc đang chờ riêng người đó.
+
+Sửa đợt: chỉ **đợt đang mở** mới gửi thư (Nháp chưa ai thấy; đã đóng thì hạn nộp không còn ý nghĩa). Mọi lần sửa hạn/tiêu đề/hướng dẫn
+của đợt đã mở hoặc đã đóng đều ghi vào **lịch sử đợt** (`sua_dot`, kèm giá trị cũ → mới và "không gửi thông báo" nếu đã tắt). Sửa kỳ,
+loại đợt hay thêm phòng không thuộc nhóm này (thêm phòng có thư riêng, xem bảng). `PUT /dot/:id` trả `da_bao` = số người sẽ
+nhận thư; giao diện hiện "Đã gửi email báo N trưởng phòng chưa nộp".
 
 ## Hồ sơ trình Viện trưởng — bảo mật tệp
 
@@ -222,10 +228,13 @@ Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
 - `baoCaoPhongTrinh.test.js` — vai trò Viện trưởng, email, hồ sơ trình, tệp, kết xuất qua API; chạy trên
   router thật + DB `:memory:` + hộp thư giả (`tests/helpers/baoCaoPhongApp.js`).
 - `baoCaoPhongMoi.test.js` — mời bằng email (kể cả kịch bản kẻ đăng ký giả email được mời), email mở đợt.
+- `baoCaoPhongTuDuyet.test.js` — cờ "tự duyệt" (người nộp = người duyệt), không dính lại sau chỉnh sửa/nộp lại.
+- `baoCaoPhongSuaDot.test.js` — email khi sửa đợt đang mở: đúng người nhận, không gửi khi không đổi, tắt được, Nháp/đã đóng.
 
 Đã **kiểm chứng test bắt được lỗi** bằng cách cố ý phá: ranh giới phòng (4 test đỏ), kiểm byte đầu
 của tệp (4), quyền hồ sơ trình (2), cờ duyệt thay (1), kiểm email người nhận lời mời (4), giới hạn đuôi
-email (1), chỉ liên kết hóa URL của hệ thống (1), lưu băm thay vì mã gốc (1).
+email (1), chỉ liên kết hóa URL của hệ thống (1), lưu băm thay vì mã gốc (1), điều kiện người nhận thư sửa đợt
+(phòng đã nộp 4, người vừa sửa 4), chỉ gửi khi đợt đang mở (1), cờ tắt thông báo (1), so sánh người nộp/người duyệt (2).
 
 ## Cách xem giao diện không đụng dữ liệu thật
 

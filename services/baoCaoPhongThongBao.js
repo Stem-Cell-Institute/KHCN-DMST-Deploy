@@ -6,6 +6,7 @@
  *   quản lý module trình Viện trưởng → Viện trưởng (vai trò vien_truong)
  *   Viện trưởng duyệt hồ sơ          → người quản lý module; nếu quản lý duyệt THAY thì báo cả Viện trưởng
  *   quản lý MỞ đợt báo cáo           → trưởng phòng của các phòng được giao, kèm liên kết vào đúng báo cáo của phòng họ
+ *   quản lý SỬA đợt đang mở (hạn nộp / tiêu đề / hướng dẫn) → trưởng phòng của các phòng CHƯA nộp
  *   quản lý mời / gán trưởng phòng   → người được mời (kèm mã nhận lời mời nếu họ chưa có tài khoản)
  *
  * Viện trưởng chỉ nhận thư khi hồ sơ được trình lên, KHÔNG nhận thư mỗi lần một phòng nộp: ông ấy
@@ -240,6 +241,63 @@ function taoThongBao({ db, mailSend, baseUrl }) {
   }
 
   /**
+   * Người nhận thư "đợt được sửa": trưởng phòng của các phòng CHƯA nộp (chưa nộp hoặc đang cần chỉnh sửa).
+   * Phòng đã nộp / đã duyệt không bị làm phiền. Loại người vừa sửa (họ biết rồi). Mỗi người một mục, kèm
+   * các báo cáo cần nộp của họ. Tách riêng để route đếm được số người sẽ nhận mà không cần gửi.
+   */
+  function nguoiNhanSuaDot(dotId, boQuaUserId) {
+    const rows = db
+      .prepare(
+        `SELECT u.id, u.email, u.fullname, b.id AS bao_cao_id, p.ten AS phong_ten
+           FROM bcp_bao_cao b
+           JOIN bcp_phong p ON p.id = b.phong_id
+           JOIN bcp_thanh_vien t ON t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong'
+           JOIN users u ON u.id = t.user_id
+          WHERE b.dot_id = ? AND b.trang_thai IN ('chua_nop','can_chinh_sua') ORDER BY u.id, p.ten`
+      )
+      .all(dotId)
+      .filter((r) => r.id !== boQuaUserId && EMAIL_HOP_LE.test(String(r.email || '')));
+    const theoNguoi = new Map();
+    for (const r of rows) {
+      if (!theoNguoi.has(r.id)) theoNguoi.set(r.id, { email: r.email, ten: r.fullname, phong: [] });
+      theoNguoi.get(r.id).phong.push({ id: r.bao_cao_id, ten: r.phong_ten });
+    }
+    return [...theoNguoi.values()];
+  }
+
+  /**
+   * Quản lý sửa đợt ĐANG MỞ. `thayDoi` = [{ khoa: 'han_nop'|'tieu_de'|'mo_ta', cu, moi }].
+   * Thư nêu rõ giá trị cũ → mới (đặc biệt hạn nộp, vì phòng có thể đang tính theo hạn cũ).
+   */
+  async function baoSuaDot(dotId, thayDoi, nguoiSuaId) {
+    const d = db.prepare('SELECT id, tieu_de, han_nop FROM bcp_dot WHERE id = ?').get(dotId);
+    if (!d || !thayDoi || !thayDoi.length) return { gui: 0, loi: 0, nguoi_nhan: 0 };
+    const nguoiSua = db.prepare('SELECT fullname FROM users WHERE id = ?').get(nguoiSuaId);
+    const doiHan = thayDoi.find((x) => x.khoa === 'han_nop');
+    const kq = { gui: 0, loi: 0, nguoi_nhan: 0 };
+    const ds = nguoiNhanSuaDot(dotId, nguoiSuaId);
+    kq.nguoi_nhan = ds.length;
+    for (const nguoi of ds) {
+      const nhieu = nguoi.phong.length > 1;
+      const doan = [
+        { text: `${(nguoiSua && nguoiSua.fullname) || 'Người quản lý module'} vừa cập nhật đợt báo cáo «${d.tieu_de}». ${nhieu ? 'Các phòng bạn phụ trách' : nguoi.phong[0].ten} chưa nộp báo cáo, hãy xem thay đổi dưới đây.` },
+      ];
+      for (const x of thayDoi) {
+        if (x.khoa === 'han_nop') doan.push({ nhan: 'Hạn nộp', text: `${fmtNgay(x.cu)} → ${fmtNgay(x.moi)} (${conLaiNgay(x.moi)})` });
+        else if (x.khoa === 'tieu_de') doan.push({ nhan: 'Tiêu đề', text: `«${x.cu}» → «${x.moi}»` });
+        else doan.push({ nhan: 'Hướng dẫn của người quản lý (mới)', text: x.moi || '(đã xóa hướng dẫn)' });
+      }
+      if (nhieu) doan.push({ nhan: 'Báo cáo cần nộp', text: nguoi.phong.map((p) => `${p.ten}: ${lienKet('#/bao-cao/' + p.id) || '(đăng nhập eoffice → Báo cáo của tôi)'}`).join('\n') });
+      const lk = nhieu ? lienKet('#/cua-toi') : lienKet('#/bao-cao/' + nguoi.phong[0].id);
+      const tieuDe = doiHan ? `[Đổi hạn nộp] ${d.tieu_de} — hạn mới ${fmtNgay(d.han_nop)}` : `[Cập nhật đợt báo cáo] ${d.tieu_de}`;
+      const t = await guiDen([{ email: nguoi.email }], tieuDe, dungThu(doan, lk, goc));
+      kq.gui += t.gui;
+      kq.loi += t.loi;
+    }
+    return kq;
+  }
+
+  /**
    * Mời một email CHƯA có tài khoản làm trưởng phòng. Thư chứa MÃ DÙNG MỘT LẦN: đó là bằng chứng người
    * nhận đọc được hộp thư này (đăng ký tài khoản của hệ thống không xác minh email — xem baoCaoPhongSchema.js).
    */
@@ -275,7 +333,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     return guiDen([{ email: u.email }], `[Báo cáo phòng ban] Bạn được giao làm Trưởng phòng — ${p.ten}`, dungThu(doan, lienKet('#/cua-toi'), goc));
   }
 
-  return { baoDaNop, baoDaGuiVienTruong, baoDaDuyetTrinh, baoMoDot, baoLoiMoi, baoDuocGan, tienDo };
+  return { baoDaNop, baoDaGuiVienTruong, baoDaDuyetTrinh, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoLoiMoi, baoDuocGan, tienDo };
 }
 
 module.exports = { taoThongBao, esc };
