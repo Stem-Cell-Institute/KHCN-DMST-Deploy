@@ -124,14 +124,17 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     if (!u || !u.id) return loi(res, 401, 'Chưa đăng nhập');
     const laAdmin = String(u.role || '').toLowerCase() === 'admin';
     const rows = db.prepare('SELECT vai_tro, phong_id FROM bcp_thanh_vien WHERE user_id = ?').all(u.id);
-    // Viện trưởng có MỌI quyền của người quản lý module (được xếp vào module "luôn"), cộng thêm vai
-    // trò người nhận hồ sơ trình duyệt. Vai trò chung users.role = 'vien_truong' KHÔNG tự cho quyền ở
+    // Viện trưởng xem và quản lý chung như người quản lý (laQuanLy: xếp vào module "luôn") và là người DUYỆT hồ sơ
+    // trình, nhưng KHÔNG phải người xác nhận báo cáo từng phòng hay tải/gửi hồ sơ: đó là việc của người quản lý module
+    // (laQuanLyModule = admin hoặc có dòng quan_ly). Vai trò chung users.role = 'vien_truong' KHÔNG tự cho quyền ở
     // đây: phải được gán rõ trong bcp_thanh_vien.
     const laVienTruong = rows.some((r) => r.vai_tro === 'vien_truong');
+    const laQuanLyModule = laAdmin || rows.some((r) => r.vai_tro === 'quan_ly');
     req.bcp = {
       laAdmin,
       laVienTruong,
-      laQuanLy: laAdmin || laVienTruong || rows.some((r) => r.vai_tro === 'quan_ly'),
+      laQuanLyModule,
+      laQuanLy: laAdmin || laVienTruong || laQuanLyModule,
       phongIds: rows.filter((r) => r.vai_tro === 'truong_phong').map((r) => r.phong_id),
     };
     next();
@@ -139,6 +142,10 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   const canQuanLy = (req, res, next) =>
     req.bcp.laQuanLy ? next() : loi(res, 403, 'Chỉ người quản lý module Báo cáo phòng ban mới thực hiện được.');
+
+  /** Xác nhận / yêu cầu chỉnh sửa báo cáo TỪNG PHÒNG: người quản lý module (và admin), không phải Viện trưởng. */
+  const canXacNhan = (req, res, next) =>
+    req.bcp.laQuanLyModule ? next() : loi(res, 403, 'Chỉ người quản lý module mới xác nhận hoặc yêu cầu chỉnh sửa báo cáo của phòng. Viện trưởng duyệt hồ sơ trình.');
 
   function ghiLichSu(baoCaoId, hanhDong, nguoiId, ghiChu) {
     db.prepare('INSERT INTO bcp_lich_su (bao_cao_id, hanh_dong, nguoi_id, ghi_chu) VALUES (?,?,?,?)').run(
@@ -158,7 +165,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   router.get(
     '/me',
     bao((req, res) => {
-      const { laQuanLy, laAdmin, laVienTruong, phongIds } = req.bcp;
+      const { laQuanLy, laQuanLyModule, laAdmin, laVienTruong, phongIds } = req.bcp;
       let phong = [];
       if (phongIds.length) {
         phong = db
@@ -167,6 +174,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       }
       res.json({
         quan_ly: laQuanLy,
+        quan_ly_module: laQuanLyModule, // người xác nhận báo cáo từng phòng, tải/gửi hồ sơ (admin hoặc quan_ly), khác Viện trưởng
         la_admin: laAdmin,
         vien_truong: laVienTruong,
         phong,
@@ -841,9 +849,9 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         lich_su,
         // Cờ cho giao diện; server vẫn kiểm lại ở từng thao tác.
         sua_duoc: laChuPhong && b.dot_trang_thai === 'dang_mo' && TRANG_THAI_SUA_DUOC.includes(b.trang_thai),
-        duyet_duoc: req.bcp.laQuanLy && b.trang_thai === 'da_nop',
+        duyet_duoc: req.bcp.laQuanLyModule && b.trang_thai === 'da_nop',
         yeu_cau_sua_duoc:
-          req.bcp.laQuanLy && b.dot_trang_thai === 'dang_mo' && (b.trang_thai === 'da_nop' || b.trang_thai === 'da_duyet'),
+          req.bcp.laQuanLyModule && b.dot_trang_thai === 'dang_mo' && (b.trang_thai === 'da_nop' || b.trang_thai === 'da_duyet'),
       });
     })
   );
@@ -922,7 +930,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.post(
     '/bao-cao/:id/duyet',
-    canQuanLy,
+    canXacNhan,
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
@@ -955,7 +963,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
   router.post(
     '/bao-cao/:id/yeu-cau-chinh-sua',
-    canQuanLy,
+    canXacNhan,
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');

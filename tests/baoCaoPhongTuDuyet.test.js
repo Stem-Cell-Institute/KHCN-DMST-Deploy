@@ -105,12 +105,12 @@ test('yêu cầu chỉnh sửa rồi nộp lại: cờ tự duyệt không dính
   await nop(QUAN_LY, ID.bcTchc, 'Quản Lý');
   assert.equal((await ung.json(QUAN_LY, 'GET', '/bao-cao/' + ID.bcTchc)).d.tu_duyet, false, 'đã nộp lại, chưa duyệt');
 
-  const r = await ung.json(VIEN_TRUONG, 'POST', `/bao-cao/${ID.bcTchc}/duyet`, {});
+  const r = await ung.json(1, 'POST', `/bao-cao/${ID.bcTchc}/duyet`, {}); // admin: người xác nhận KHÁC (Viện trưởng không xác nhận)
   assert.equal(r.s, 200);
   assert.equal(r.d.tu_duyet, false);
   const ct = await ung.json(QUAN_LY, 'GET', '/bao-cao/' + ID.bcTchc);
   assert.equal(ct.d.tu_duyet, false);
-  assert.equal(ct.d.nguoi_duyet, 'Phạm Viện Trưởng');
+  assert.equal(ct.d.nguoi_duyet, 'Quản Trị');
   assert.deepEqual(lichSu(ID.bcTchc), ['nop', 'tu_duyet', 'yeu_cau_chinh_sua', 'nop_lai', 'duyet']);
 });
 
