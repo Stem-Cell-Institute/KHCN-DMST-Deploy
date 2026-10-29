@@ -621,7 +621,7 @@
     var loi = h('p', { class: 'loi-truong', role: 'alert', hidden: true });
     var duyet = h('button', { type: 'button', class: 'btn btn-lon' }, 'Duyệt hồ sơ');
     duyet.addEventListener('click', function () {
-      xacNhan('Duyệt hồ sơ?', 'Xác nhận bạn đã xem và đồng ý. Hồ sơ sẽ được ghi nhận là đã duyệt, không hoàn tác được. Nếu chưa đồng ý, bạn cứ để hồ sơ ở trạng thái chưa duyệt.', 'Duyệt').then(function (ok) {
+      xacNhan('Duyệt hồ sơ?', 'Xác nhận đã xem và đồng ý hồ sơ. Hồ sơ sẽ được ghi nhận là đã duyệt và không thể hoàn tác.', 'Duyệt').then(function (ok) {
         if (!ok) return;
         duyet.disabled = true;
         loi.hidden = true;
@@ -640,8 +640,7 @@
           x.tep.length ? x.tep.map(function (f, i) { return [i ? ' · ' : '', h('a', { href: API + '/dot/' + x.dot_id + '/trinh/tep/' + f.id + '/tai', text: f.ten_goc })]; }) : 'chưa có tệp')),
       h('div', { class: 'viec-hd' },
         h('div', { class: 'truong' }, h('label', { for: 'vt-nx-' + x.dot_id, text: 'Nhận xét (tùy chọn)' }), nx, loi),
-        h('div', { class: 'nhom-nut' }, duyet, h('a', { class: 'btn btn-phu', href: '#/dot/' + x.dot_id }, 'Xem chi tiết đợt')),
-        h('p', { class: 'mo', text: 'Chưa đồng ý thì cứ để hồ sơ ở trạng thái chưa duyệt, không cần làm gì thêm.' })));
+        h('div', { class: 'nhom-nut' }, duyet, h('a', { class: 'btn btn-phu', href: '#/dot/' + x.dot_id }, 'Xem chi tiết đợt'))));
   }
 
   /** Dải nổi bật trên các màn quản lý: thẻ duyệt hồ sơ (Viện trưởng) và "Phòng bạn cần nộp báo cáo" + nút to. */
@@ -1012,7 +1011,7 @@
     var t = tr.trinh;
     var coThe = tr.co_the;
     var node = [h('h3', { id: 'trinh-tieu-de', text: 'Hồ sơ trình Viện trưởng' })];
-    var an = h('p', { class: 'mo' }, me.vien_truong ? 'Hồ sơ do người quản lý module gửi. Đọc các tệp rồi bấm "Duyệt hồ sơ" nếu đồng ý; chưa đồng ý thì cứ để hồ sơ ở trạng thái chưa duyệt. ' : 'Tải lên bản kết xuất báo cáo (Word/PDF), rồi gửi cho Viện trưởng. Viện trưởng vào đây đọc và bấm "Duyệt hồ sơ" nếu đồng ý; chưa duyệt thì hồ sơ cứ ở trạng thái chưa duyệt. Bạn có thể kết xuất lại, đổi tệp và gửi lại để nhắc. ',
+    var an = h('p', { class: 'mo' }, me.vien_truong ? 'Hồ sơ do người quản lý module gửi. Xin đọc các tệp và bấm "Duyệt hồ sơ" nếu đồng ý. ' : 'Tải lên bản kết xuất báo cáo (Word/PDF), rồi gửi cho Viện trưởng. Viện trưởng vào đây đọc và bấm "Duyệt hồ sơ" nếu đồng ý; hồ sơ chưa được duyệt sẽ giữ trạng thái "chưa duyệt". Bạn có thể kết xuất lại, đổi tệp và gửi lại để nhắc. ',
       'Người nhận: ', tr.vien_truong.length ? tr.vien_truong.join('; ') : 'chưa chỉ định Viện trưởng', '.');
     node.push(an);
     node.push(h('p', null, nhan(TT_TRINH, t.trang_thai)));
@@ -1090,7 +1089,7 @@
       var nx = h('textarea', { id: 'trinh-nhan-xet', rows: 2, maxlength: 2000 });
       node.push(h('div', { class: 'truong' }, h('label', { for: 'trinh-nhan-xet', text: 'Nhận xét (tùy chọn)' }), nx));
       nut.push(h('button', { type: 'button', class: 'btn', onclick: function () {
-        xacNhan('Duyệt hồ sơ?', 'Xác nhận bạn đã xem và đồng ý. Hồ sơ sẽ được ghi nhận là đã duyệt, không hoàn tác được. Nếu chưa đồng ý, bạn cứ để hồ sơ ở trạng thái chưa duyệt.', 'Duyệt')
+        xacNhan('Duyệt hồ sơ?', 'Xác nhận đã xem và đồng ý hồ sơ. Hồ sơ sẽ được ghi nhận là đã duyệt và không thể hoàn tác.', 'Duyệt')
           .then(function (ok) { if (ok) chay(api('/dot/' + dotId + '/trinh/duyet', { method: 'POST', body: { nhan_xet: nx.value } }), 'Đã duyệt hồ sơ.'); });
       } }, 'Duyệt hồ sơ'));
     } else if (t.trang_thai === 'da_gui') {
