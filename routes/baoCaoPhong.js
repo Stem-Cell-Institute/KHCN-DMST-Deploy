@@ -996,10 +996,11 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       if (!noiDung) return loi(res, 400, 'Cần nhập nội dung ý kiến.');
       if (noiDung.length > 2000) return loi(res, 400, 'Ý kiến tối đa 2000 ký tự.');
       const r = db.prepare('INSERT INTO bcp_y_kien (bao_cao_id, nguoi_id, noi_dung, tao_luc) VALUES (?,?,?,?)').run(id, req.user.id, noiDung, new Date().toISOString());
-      // Số trưởng phòng sẽ nhận thư (đếm đồng bộ để giao diện báo lại; việc gửi chạy nền).
-      const daBao = thongBao.nguoiNhanYKien(id).length;
+      // Số người sẽ nhận thư (đếm đồng bộ để giao diện báo lại; việc gửi chạy nền): trưởng phòng của phòng đó, và người quản lý module.
+      const truongPhong = thongBao.nguoiNhanYKien(id);
+      const quanLy = thongBao.nguoiNhanQuanLyYKien(req.user.id, truongPhong);
       guiNen(thongBao.baoYKien(id, req.user.id, noiDung));
-      res.status(201).json({ id: Number(r.lastInsertRowid), da_bao: daBao });
+      res.status(201).json({ id: Number(r.lastInsertRowid), da_bao: truongPhong.length, da_bao_quan_ly: quanLy.length });
     })
   );
 
