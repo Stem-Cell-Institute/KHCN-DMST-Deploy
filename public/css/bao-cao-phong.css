@@ -291,6 +291,9 @@ a.btn[aria-disabled='true'] { opacity: .5; cursor: not-allowed; pointer-events: 
 .viec-phu + .viec-nx, .viec-nx + .viec-tep, .viec-phu + .viec-tep { margin-top: 10px !important; }
 .viec-tep { font-size: 15px; overflow-wrap: anywhere; }
 .viec-tep a { color: var(--muc); font-weight: 600; }
+.y-kien + .y-kien { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ke-dam); }
+.y-kien p { margin: 0; }
+.y-kien-nd { white-space: pre-wrap; overflow-wrap: anywhere; }
 .viec-hd { max-width: 720px; }
 .viec-hd .truong { margin-bottom: 12px; }
 .viec-hd .nhom-nut { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }

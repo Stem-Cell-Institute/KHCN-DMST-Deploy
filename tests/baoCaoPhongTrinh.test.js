@@ -401,7 +401,7 @@ test('tải tệp hồ sơ: dòng DB có tên lưu độc hại (../) cũng khô
 
 test('kết xuất: trưởng phòng và người ngoài không xuất được', async () => {
   const dot = ID.dotMail;
-  for (const uid of [TP_A, NGOAI, VT_CHUNG]) {
+  for (const uid of [TP_A, NGOAI, VT_CHUNG, VIEN_TRUONG]) { // Viện trưởng đọc báo cáo, không kết xuất (việc của quản lý module)
     assert.equal((await ung.goi(uid, 'GET', `/dot/${dot.id}/xuat?phong=${ID.phongA}&dinh_dang=docx`)).status, 403);
   }
   assert.equal((await ung.goi(null, 'GET', `/dot/${dot.id}/xuat`)).status, 401);
@@ -431,7 +431,7 @@ test('kết xuất Word: một phòng, nhiều phòng, tất cả; có tên tệ
 });
 
 test('kết xuất PDF: đúng chữ ký %PDF, nhúng font Tinos (để có dấu tiếng Việt)', async () => {
-  const r = await ung.goi(VIEN_TRUONG, 'GET', `/dot/${ID.dotMail.id}/xuat?phong=${ID.phongA}&dinh_dang=pdf`);
+  const r = await ung.goi(QUAN_LY, 'GET', `/dot/${ID.dotMail.id}/xuat?phong=${ID.phongA}&dinh_dang=pdf`);
   assert.equal(r.status, 200);
   assert.equal(r.headers.get('content-type'), 'application/pdf');
   const buf = Buffer.from(await r.arrayBuffer());
@@ -471,5 +471,5 @@ test('kết xuất được ghi vào lịch sử đợt (ai xuất, định dạ
   const st = await ung.json(QUAN_LY, 'GET', `/dot/${ID.dotMail.id}/trinh`);
   const xuat = st.d.lich_su.filter((h) => h.hanh_dong === 'xuat');
   assert.ok(xuat.length >= 3);
-  assert.ok(xuat.some((h) => /^PDF:/.test(h.ghi_chu) && h.nguoi === 'Phạm Viện Trưởng'));
+  assert.ok(xuat.some((h) => /^PDF:/.test(h.ghi_chu) && h.nguoi === 'Nguyễn Quản Lý'));
 });

@@ -829,6 +829,13 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
             WHERE h.bao_cao_id = ? ORDER BY h.id`
         )
         .all(id);
+      const y_kien = db
+        .prepare(
+          `SELECT k.id, k.noi_dung, k.tao_luc, u.fullname AS nguoi
+             FROM bcp_y_kien k LEFT JOIN users u ON u.id = k.nguoi_id
+            WHERE k.bao_cao_id = ? ORDER BY k.id`
+        )
+        .all(id);
       res.json({
         id: b.id,
         phong_id: b.phong_id,
@@ -856,6 +863,9 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         lich_su,
         // Cờ cho giao diện; server vẫn kiểm lại ở từng thao tác.
         sua_duoc: laChuPhong && b.dot_trang_thai === 'dang_mo' && TRANG_THAI_SUA_DUOC.includes(b.trang_thai),
+        y_kien,
+        // Chỉ Viện trưởng gửi được ý kiến, và chỉ khi phòng đã nộp (bản nháp chưa phải báo cáo để góp ý).
+        y_kien_duoc: req.bcp.laVienTruong && b.dot_trang_thai !== 'nhap' && b.trang_thai !== 'chua_nop',
         duyet_duoc: req.bcp.laQuanLyModule && b.trang_thai === 'da_nop',
         yeu_cau_sua_duoc:
           req.bcp.laQuanLyModule && b.dot_trang_thai === 'dang_mo' && (b.trang_thai === 'da_nop' || b.trang_thai === 'da_duyet'),
@@ -965,6 +975,31 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       })();
       if (!doi) return loi(res, 409, 'Chỉ xác nhận được báo cáo đang ở trạng thái Đã nộp.');
       res.json({ ok: true, trang_thai: 'da_duyet', tu_duyet: tuDuyet });
+    })
+  );
+
+  /**
+   * Ý kiến của Viện trưởng về báo cáo của MỘT phòng. Không đổi trạng thái báo cáo; chỉ ghi lại và gửi email cho trưởng phòng
+   * của phòng đó. Mọi người xem được báo cáo (chủ phòng, quản lý, Viện trưởng) đều đọc được ý kiến ngay trong báo cáo.
+   */
+  router.post(
+    '/bao-cao/:id/y-kien',
+    bao((req, res) => {
+      if (!req.bcp.laVienTruong) return loi(res, 403, 'Chỉ Viện trưởng mới gửi được ý kiến về báo cáo của phòng.');
+      const id = docId(req.params.id);
+      if (!id) return loi(res, 400, 'ID không hợp lệ.');
+      const n = nap(req, id);
+      if (!n) return loi(res, 404, 'Không tìm thấy báo cáo.');
+      if (n.b.dot_trang_thai === 'nhap') return loi(res, 409, 'Đợt báo cáo chưa mở.');
+      if (n.b.trang_thai === 'chua_nop') return loi(res, 409, 'Phòng chưa nộp báo cáo nên chưa thể gửi ý kiến.');
+      const noiDung = typeof (req.body && req.body.noi_dung) === 'string' ? req.body.noi_dung.trim() : '';
+      if (!noiDung) return loi(res, 400, 'Cần nhập nội dung ý kiến.');
+      if (noiDung.length > 2000) return loi(res, 400, 'Ý kiến tối đa 2000 ký tự.');
+      const r = db.prepare('INSERT INTO bcp_y_kien (bao_cao_id, nguoi_id, noi_dung, tao_luc) VALUES (?,?,?,?)').run(id, req.user.id, noiDung, new Date().toISOString());
+      // Số trưởng phòng sẽ nhận thư (đếm đồng bộ để giao diện báo lại; việc gửi chạy nền).
+      const daBao = thongBao.nguoiNhanYKien(id).length;
+      guiNen(thongBao.baoYKien(id, req.user.id, noiDung));
+      res.status(201).json({ id: Number(r.lastInsertRowid), da_bao: daBao });
     })
   );
 
@@ -1188,7 +1223,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   };
   router.get(
     '/dot/:id/xuat',
-    canQuanLy,
+    canQuanLyModule,
     bao(async (req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');

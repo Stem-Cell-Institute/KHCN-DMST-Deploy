@@ -146,14 +146,14 @@ test('Viện trưởng KHÔNG tạo/sửa/mở/đóng/xóa đợt (403), và KH�
   assert.equal(ct.d.dot.tieu_de, 'Đợt chỉ đọc', 'tiêu đề không bị đổi');
 });
 
-test('Viện trưởng vẫn XEM được: danh sách đợt, một đợt, tổng quan, đọc báo cáo, kết xuất để đọc', async () => {
+test('Viện trưởng vẫn XEM được danh sách đợt, một đợt, tổng quan, đọc báo cáo — nhưng KHÔNG kết xuất (thanh kết xuất là việc của quản lý)', async () => {
   const dot = await dotDaNop('Đợt để xem');
   assert.equal((await ung.json(VIEN_TRUONG, 'GET', '/dot')).s, 200);
   assert.equal((await ung.json(VIEN_TRUONG, 'GET', '/dot/' + dot.id)).s, 200);
   assert.equal((await ung.json(VIEN_TRUONG, 'GET', '/tong-quan')).s, 200);
   assert.equal((await ung.json(VIEN_TRUONG, 'GET', '/bao-cao/' + dot.a)).s, 200);
-  const xuat = await ung.goi(VIEN_TRUONG, 'GET', `/dot/${dot.id}/xuat?phong=tat-ca&dinh_dang=docx`);
-  assert.equal(xuat.status, 200);
+  assert.equal((await ung.goi(VIEN_TRUONG, 'GET', `/dot/${dot.id}/xuat?phong=tat-ca&dinh_dang=docx`)).status, 403);
+  assert.equal((await ung.goi(QUAN_LY, 'GET', `/dot/${dot.id}/xuat?phong=tat-ca&dinh_dang=docx`)).status, 200, 'quản lý vẫn kết xuất được');
 });
 
 test('quản lý module, admin và người kiêm hai vai trò vẫn quản lý đợt/biểu mẫu/phòng bình thường', async () => {

@@ -756,6 +756,15 @@
           h('p', null, h('strong', { text: 'Tự xác nhận: ' }), 'báo cáo do ' + (d.nguoi_nop || 'người nộp') + ' nộp và cũng do chính người này xác nhận' + (d.duyet_luc ? ' lúc ' + fmtGio(d.duyet_luc) : '') + '.')));
       }
 
+      // Ý kiến của Viện trưởng: hiện ngay đầu báo cáo để trưởng phòng đọc trước khi chỉnh sửa.
+      if (d.y_kien.length) {
+        node.push(h('section', { class: 'luu-y', 'aria-label': 'Ý kiến của Viện trưởng' },
+          h('p', null, h('strong', { text: 'Ý kiến của Viện trưởng' })),
+          d.y_kien.map(function (k) {
+            return h('div', { class: 'y-kien' }, h('p', { class: 'y-kien-nd', text: k.noi_dung }), h('p', { class: 'mo', text: (k.nguoi || 'Viện trưởng') + ' · ' + fmtGio(k.tao_luc) }));
+          })));
+      }
+
       if (d.sua_duoc) {
         form.theoDoiThayDoi();
         var luu = h('button', { type: 'button', class: 'btn btn-phu' }, 'Lưu nháp');
@@ -793,6 +802,7 @@
         if (d.nop_luc) node.push(h('p', { class: 'mo', text: 'Nộp lúc ' + fmtGio(d.nop_luc) }));
       }
 
+      if (d.y_kien_duoc) node.push(khoiYKien(id));
       if (d.duyet_duoc || d.yeu_cau_sua_duoc) node.push(khoiXuLy(id, d));
 
       if (d.lich_su.length) {
@@ -810,6 +820,31 @@
       form.hienLoi(e.data.loi);
       thongBao(tienTo + ' ' + (e.data.message || 'Có ô chưa hợp lệ.'), 'loi');
     } else thongBao(e.message, 'loi');
+  }
+
+  /** Viện trưởng góp ý về báo cáo của phòng: ý kiến lưu trong báo cáo và gửi email cho trưởng phòng của phòng đó. */
+  function khoiYKien(id) {
+    var nd = h('textarea', { id: 'y-kien-nd', rows: 4, maxlength: 2000 });
+    var loi = h('p', { class: 'loi-truong', role: 'alert', hidden: true });
+    var gui = h('button', { type: 'button', class: 'btn' }, 'Gửi ý kiến');
+    gui.addEventListener('click', function () {
+      loi.hidden = true;
+      if (!nd.value.trim()) { loi.textContent = 'Hãy nhập nội dung ý kiến.'; loi.hidden = false; nd.focus(); return; }
+      gui.disabled = true;
+      api('/bao-cao/' + id + '/y-kien', { method: 'POST', body: { noi_dung: nd.value } })
+        .then(function (kq) {
+          thongBao(kq.da_bao ? 'Đã gửi ý kiến. Email đã được gửi tới ' + kq.da_bao + ' trưởng phòng.' : 'Đã lưu ý kiến. Phòng này chưa có trưởng phòng nên chưa có email nào được gửi.');
+          return route();
+        })
+        .catch(function (e) { loi.textContent = e.message; loi.hidden = false; gui.disabled = false; });
+    });
+    return h('section', { 'aria-labelledby': 'y-kien-tieu-de' },
+      h('h3', { id: 'y-kien-tieu-de', text: 'Ý kiến của Viện trưởng' }),
+      h('div', { class: 'truong' },
+        h('label', { for: 'y-kien-nd', text: 'Ý kiến về báo cáo này' }),
+        h('p', { class: 'tro-giup', text: 'Ý kiến được lưu trong báo cáo và gửi qua email cho trưởng phòng của phòng này.' }),
+        nd, loi),
+      h('div', { class: 'nhom-nut' }, gui));
   }
 
   function khoiXuLy(id, d) {
@@ -1118,7 +1153,7 @@
   function dungBangTienDo(dotId, d, baoCao) {
     var daNop = function (b) { return b.trang_thai === 'da_nop' || b.trang_thai === 'da_duyet'; };
     var chon = {};
-    var coXuat = d.trang_thai !== 'nhap';
+    var coXuat = d.trang_thai !== 'nhap' && me.quan_ly_module; // Viện trưởng đọc, không kết xuất
     var dem = h('span', { class: 'mo', 'aria-live': 'polite' });
     var aWord = h('a', { class: 'btn btn-phu btn-nho', 'aria-disabled': 'true' }, 'Tải Word (.docx)');
     var aPdf = h('a', { class: 'btn btn-phu btn-nho', 'aria-disabled': 'true' }, 'Tải PDF');
