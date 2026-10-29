@@ -186,10 +186,10 @@ có địa chỉ tuyệt đối; SMTP chưa cấu hình thì module vẫn chạy
 
 **Cho Viện trưởng — thẻ "Hồ sơ chờ bạn duyệt"**: mỗi hồ sơ đang chờ là một thẻ lớn ở **đầu mọi màn quản lý** (người gửi, giờ gửi, lời nhắn,
 các tệp cần đọc bấm tải được, ô nhận xét, nút "Duyệt hồ sơ" và "Xem chi tiết đợt") — Viện trưởng không phải đi tìm trong trang đợt.
-Không có nút "không duyệt": chưa đồng ý thì để đó. Trong trang đợt, mục "Hồ sơ trình" của Viện trưởng **chỉ đọc + duyệt**: không hiện công cụ
-tải/xóa tệp, lời nhắn, nút gửi (đó là việc của quản lý module). Thẻ trang chủ cũng báo "Có N hồ sơ chờ bạn duyệt → Đọc và duyệt hồ sơ".
+Không có nút "không duyệt": chưa đồng ý thì để đó. Thẻ là **nơi duy nhất** Viện trưởng duyệt, nên trong trang đợt mục "Hồ sơ trình"
+chỉ hiện với ông khi hồ sơ **đã duyệt** (xem kết quả và lịch sử); lúc đang chờ duyệt thì ẩn vì trùng với thẻ. Thẻ trang chủ cũng báo "Có N hồ sơ chờ bạn duyệt → Đọc và duyệt hồ sơ".
 Dữ liệu từ `GET /viec-cua-toi` (trang chủ) và `GET /tong-quan` (trong module). `/viec-cua-toi` chỉ trả hồ sơ cho đúng Viện trưởng được gán;
-mọi người khác nhận danh sách rỗng. Hệ quả: người vừa là Viện trưởng vừa là quản lý module cũng không thấy công cụ gửi/tải ở trang đợt.
+mọi người khác nhận danh sách rỗng. Hệ quả: người vừa là Viện trưởng vừa là quản lý module cũng không thấy công cụ gửi/tải của mục hồ sơ trình ở trang đợt.
 
 **Trong giao diện — "Cần xử lý"** (`GET /tong-quan`): dải đầu danh sách đợt cho biết bao nhiêu báo cáo
 chờ duyệt, bao nhiêu phòng chưa nộp / trễ hạn, bao nhiêu hồ sơ chờ Viện trưởng, kèm **từng đợt đã nộp

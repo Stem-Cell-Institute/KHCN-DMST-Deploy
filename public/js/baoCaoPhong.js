@@ -1011,7 +1011,7 @@
     var t = tr.trinh;
     var coThe = tr.co_the;
     var node = [h('h3', { id: 'trinh-tieu-de', text: 'Hồ sơ trình Viện trưởng' })];
-    var an = h('p', { class: 'mo' }, me.vien_truong ? 'Hồ sơ do người quản lý module gửi. Xin đọc các tệp và bấm "Duyệt hồ sơ" nếu đồng ý. ' : 'Tải lên bản kết xuất báo cáo (Word/PDF), rồi gửi cho Viện trưởng. Viện trưởng vào đây đọc và bấm "Duyệt hồ sơ" nếu đồng ý; hồ sơ chưa được duyệt sẽ giữ trạng thái "chưa duyệt". Bạn có thể kết xuất lại, đổi tệp và gửi lại để nhắc. ',
+    var an = h('p', { class: 'mo' }, 'Tải lên bản kết xuất báo cáo (Word/PDF), rồi gửi cho Viện trưởng. Viện trưởng vào đây đọc và bấm "Duyệt hồ sơ" nếu đồng ý; hồ sơ chưa được duyệt sẽ giữ trạng thái "chưa duyệt". Bạn có thể kết xuất lại, đổi tệp và gửi lại để nhắc. ',
       'Người nhận: ', tr.vien_truong.length ? tr.vien_truong.join('; ') : 'chưa chỉ định Viện trưởng', '.');
     node.push(an);
     node.push(h('p', null, nhan(TT_TRINH, t.trang_thai)));
@@ -1031,7 +1031,7 @@
         return h('li', null,
           h('a', { href: API + '/dot/' + dotId + '/trinh/tep/' + f.id + '/tai', text: f.ten_goc }),
           h('span', { class: 'mo', text: ' · ' + String(f.loai).toUpperCase() + ' · ' + fmtDungLuong(f.kich_thuoc) + ' · ' + (f.nguoi_tai || '—') + ' · ' + fmtGio(f.tai_luc) }),
-          t.trang_thai !== 'da_duyet' && !me.vien_truong ? h('button', {
+          t.trang_thai !== 'da_duyet' ? h('button', {
             type: 'button', class: 'btn btn-nguy btn-nho', 'aria-label': 'Xóa tệp ' + f.ten_goc,
             onclick: function () {
               xacNhan('Xóa tệp?', 'Tệp "' + f.ten_goc + '" sẽ bị xóa khỏi hồ sơ.', 'Xóa tệp', true).then(function (ok) {
@@ -1045,7 +1045,7 @@
     }
 
     // Tải lên
-    if (coThe.tai_len && !me.vien_truong) {
+    if (coThe.tai_len) {
       var inp = h('input', { type: 'file', id: 'trinh-tep', accept: '.pdf,.docx,.doc' });
       var loiTep = h('p', { class: 'loi-truong', role: 'alert', hidden: true });
       var nutTai = h('button', { type: 'button', class: 'btn btn-phu' }, 'Tải tệp lên');
@@ -1071,7 +1071,7 @@
       return p.then(function () { thongBao(thanhCong); return route(); }).catch(function (e) { loiHanhDong.textContent = e.message; loiHanhDong.hidden = false; });
     }
     var nut = [];
-    if (t.trang_thai !== 'da_duyet' && !me.vien_truong) {
+    if (t.trang_thai !== 'da_duyet') {
       var guiLai = t.trang_thai === 'da_gui';
       var loiNhan = h('textarea', { id: 'trinh-loi-nhan', rows: 2, maxlength: 1000 });
       var nutGui = h('button', { type: 'button', class: guiLai ? 'btn btn-phu' : 'btn', disabled: !coThe.gui }, guiLai ? 'Gửi lại để nhắc Viện trưởng' : 'Gửi Viện trưởng');
@@ -1085,14 +1085,7 @@
       nut.push(nutGui);
       if (tr.ly_do_khong_gui) node.push(h('p', { class: 'mo', text: tr.ly_do_khong_gui }));
     }
-    if (coThe.duyet) {
-      var nx = h('textarea', { id: 'trinh-nhan-xet', rows: 2, maxlength: 2000 });
-      node.push(h('div', { class: 'truong' }, h('label', { for: 'trinh-nhan-xet', text: 'Nhận xét (tùy chọn)' }), nx));
-      nut.push(h('button', { type: 'button', class: 'btn', onclick: function () {
-        xacNhan('Duyệt hồ sơ?', 'Xác nhận đã xem và đồng ý hồ sơ. Hồ sơ sẽ được ghi nhận là đã duyệt và không thể hoàn tác.', 'Duyệt')
-          .then(function (ok) { if (ok) chay(api('/dot/' + dotId + '/trinh/duyet', { method: 'POST', body: { nhan_xet: nx.value } }), 'Đã duyệt hồ sơ.'); });
-      } }, 'Duyệt hồ sơ'));
-    } else if (t.trang_thai === 'da_gui') {
+    if (t.trang_thai === 'da_gui') {
       node.push(h('p', { class: 'mo', text: 'Đang chờ Viện trưởng duyệt. Chỉ Viện trưởng duyệt được hồ sơ này.' }));
     }
     if (nut.length) node.push(h('div', { class: 'nhom-nut' }, nut));
@@ -1217,7 +1210,9 @@
       node.push(h('div', { class: 'nhom-nut' }, nut));
       node.push(h('h3', { text: 'Tiến độ theo phòng' }));
       node.push.apply(node, dungBangTienDo(id, d, kq.bao_cao));
-      if (trinh) node.push(khoiTrinh(id, trinh));
+      // Viện trưởng duyệt bằng thẻ việc ở đầu trang (đã có tệp, lời nhắn, nhận xét, nút Duyệt) nên mục này chỉ hiện với ông
+      // khi hồ sơ ĐÃ duyệt (để xem kết quả và lịch sử): hiện lúc đang chờ duyệt là trùng với thẻ.
+      if (trinh && !(me.vien_truong && trinh.trinh.trang_thai !== 'da_duyet')) node.push(khoiTrinh(id, trinh));
       main.replaceChildren.apply(main, node);
     });
   }
