@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/public/css/a11y.css">
+  <script src="/public/js/a11y.js" defer></script>
+  <title>Báo cáo phòng ban - STIMS</title>
+  <meta name="description" content="Giao đợt báo cáo cho các phòng, nhập báo cáo trực tiếp theo biểu mẫu, duyệt và theo dõi tiến độ nộp.">
+  <link rel="stylesheet" href="/public/css/bao-cao-phong.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Bỏ qua, tới nội dung chính</a>
+
+  <header class="mast">
+    <div class="khung">
+      <a class="ve-trang-chu" href="/index.html">← Trang chủ</a>
+      <p class="mast-nhan">STIMS · Viện Tế bào gốc</p>
+      <h1>Báo cáo phòng ban</h1>
+    </div>
+    <nav class="dieu-huong" id="dieu-huong" aria-label="Các mục của module Báo cáo phòng ban"></nav>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <p class="tai">Đang tải…</p>
+  </main>
+
+  <!-- Vùng đọc cho trình đọc màn hình + thông báo nhìn thấy được -->
+  <div id="live" class="sr-only" role="status" aria-live="polite"></div>
+  <div id="thong-bao" class="thong-bao" hidden></div>
+
+  <dialog id="hop-thoai" aria-labelledby="hop-thoai-tieu-de"></dialog>
+
+  <script src="/public/js/baoCaoPhong.js" defer></script>
+</body>
+</html>
