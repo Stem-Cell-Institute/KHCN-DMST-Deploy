@@ -935,13 +935,13 @@
   }
 
   var HANH_DONG_DOT = {
-    tai_tep: 'Tải tệp lên', xoa_tep: 'Xóa tệp', gui: 'Gửi Viện trưởng', thu_hoi: 'Thu hồi hồ sơ',
+    tai_tep: 'Tải tệp lên', xoa_tep: 'Xóa tệp', gui: 'Gửi Viện trưởng', gui_lai: 'Gửi lại Viện trưởng (nhắc duyệt)', thu_hoi: 'Thu hồi hồ sơ',
     duyet: 'Viện trưởng duyệt', duyet_thay: 'Duyệt thay Viện trưởng', xuat: 'Kết xuất báo cáo', sua_dot: 'Sửa đợt báo cáo',
   };
   var TT_TRINH = {
     chua_gui: ['○', 'Chưa gửi', ''],
-    da_gui: ['●', 'Đã gửi, chờ Viện trưởng duyệt', 'nhan-nop'],
-    da_duyet: ['✓', 'Đã duyệt', 'nhan-duyet'],
+    da_gui: ['●', 'Đã gửi, Viện trưởng chưa duyệt', 'nhan-nop'],
+    da_duyet: ['✓', 'Viện trưởng đã duyệt', 'nhan-duyet'],
   };
 
   function fmtDungLuong(b) {
@@ -964,12 +964,12 @@
       });
   }
 
-  /** Mục "Hồ sơ trình Viện trưởng" của một đợt: tệp do quản lý module tải lên, gửi, thu hồi, duyệt. */
+  /** Mục "Hồ sơ trình Viện trưởng" của một đợt: quản lý module tải tệp lên, gửi (và gửi lại để nhắc); chỉ Viện trưởng duyệt. */
   function khoiTrinh(dotId, tr) {
     var t = tr.trinh;
     var coThe = tr.co_the;
     var node = [h('h3', { id: 'trinh-tieu-de', text: 'Hồ sơ trình Viện trưởng' })];
-    var an = h('p', { class: 'mo' }, 'Tải lên bản kết xuất báo cáo (Word/PDF) đã chỉnh sửa hoặc đã ký, rồi gửi cho Viện trưởng xem và duyệt. ',
+    var an = h('p', { class: 'mo' }, 'Tải lên bản kết xuất báo cáo (Word/PDF), rồi gửi cho Viện trưởng. Viện trưởng vào đây đọc và bấm "Duyệt hồ sơ" nếu đồng ý; chưa duyệt thì hồ sơ cứ ở trạng thái chưa duyệt. Bạn có thể kết xuất lại, đổi tệp và gửi lại để nhắc. ',
       'Người nhận: ', tr.vien_truong.length ? tr.vien_truong.join('; ') : 'chưa chỉ định Viện trưởng', '.');
     node.push(an);
     node.push(h('p', null, nhan(TT_TRINH, t.trang_thai)));
@@ -979,8 +979,7 @@
     }
     if (t.trang_thai === 'da_duyet') {
       node.push(h('div', { class: 'luu-y' },
-        h('p', null, h('strong', { text: t.duyet_thay ? 'Đã được duyệt THAY Viện trưởng' : 'Viện trưởng đã duyệt' }), ' — ' + (t.nguoi_duyet || '—') + ' · ' + fmtGio(t.duyet_luc)),
-        t.duyet_thay ? h('p', { class: 'mo', text: 'Người duyệt là quản lý module, không phải Viện trưởng. Việc này được ghi lại và Viện trưởng đã được báo qua email.' }) : null,
+        h('p', null, h('strong', { text: 'Viện trưởng đã duyệt' }), ' — ' + (t.nguoi_duyet || '—') + ' · ' + fmtGio(t.duyet_luc)),
         t.nhan_xet ? h('p', { text: 'Nhận xét: ' + t.nhan_xet }) : null));
     }
 
@@ -990,7 +989,7 @@
         return h('li', null,
           h('a', { href: API + '/dot/' + dotId + '/trinh/tep/' + f.id + '/tai', text: f.ten_goc }),
           h('span', { class: 'mo', text: ' · ' + String(f.loai).toUpperCase() + ' · ' + fmtDungLuong(f.kich_thuoc) + ' · ' + (f.nguoi_tai || '—') + ' · ' + fmtGio(f.tai_luc) }),
-          t.trang_thai === 'chua_gui' ? h('button', {
+          t.trang_thai !== 'da_duyet' ? h('button', {
             type: 'button', class: 'btn btn-nguy btn-nho', 'aria-label': 'Xóa tệp ' + f.ten_goc,
             onclick: function () {
               xacNhan('Xóa tệp?', 'Tệp "' + f.ten_goc + '" sẽ bị xóa khỏi hồ sơ.', 'Xóa tệp', true).then(function (ok) {
@@ -1023,43 +1022,36 @@
         inp, loiTep), h('div', { class: 'nhom-nut' }, nutTai));
     }
 
-    // Gửi / thu hồi / duyệt
+    // Gửi (và gửi lại) / duyệt
     var loiHanhDong = h('p', { class: 'loi-truong', role: 'alert', hidden: true });
     function chay(p, thanhCong) {
       loiHanhDong.hidden = true;
       return p.then(function () { thongBao(thanhCong); return route(); }).catch(function (e) { loiHanhDong.textContent = e.message; loiHanhDong.hidden = false; });
     }
     var nut = [];
-    if (t.trang_thai === 'chua_gui') {
+    if (t.trang_thai !== 'da_duyet') {
+      var guiLai = t.trang_thai === 'da_gui';
       var loiNhan = h('textarea', { id: 'trinh-loi-nhan', rows: 2, maxlength: 1000 });
-      var nutGui = h('button', { type: 'button', class: 'btn', disabled: !coThe.gui }, 'Gửi Viện trưởng');
+      var nutGui = h('button', { type: 'button', class: guiLai ? 'btn btn-phu' : 'btn', disabled: !coThe.gui }, guiLai ? 'Gửi lại để nhắc Viện trưởng' : 'Gửi Viện trưởng');
       nutGui.addEventListener('click', function () {
-        xacNhan('Gửi hồ sơ cho Viện trưởng?',
-          'Hồ sơ gồm ' + tr.tep.length + ' tệp sẽ được gửi tới ' + tr.vien_truong.join('; ') + ', kèm email thông báo. Sau khi gửi bạn không sửa được tệp, nhưng có thể thu hồi nếu chưa được duyệt.', 'Gửi')
-          .then(function (ok) { if (ok) chay(api('/dot/' + dotId + '/trinh/gui', { method: 'POST', body: { loi_nhan: loiNhan.value } }), 'Đã gửi hồ sơ cho Viện trưởng.'); });
+        xacNhan(guiLai ? 'Gửi lại hồ sơ cho Viện trưởng?' : 'Gửi hồ sơ cho Viện trưởng?',
+          'Hồ sơ gồm ' + tr.tep.length + ' tệp sẽ được gửi tới ' + tr.vien_truong.join('; ') + ', kèm email ' + (guiLai ? 'nhắc duyệt' : 'thông báo') + '.', guiLai ? 'Gửi lại' : 'Gửi')
+          .then(function (ok) { if (ok) chay(api('/dot/' + dotId + '/trinh/gui', { method: 'POST', body: { loi_nhan: loiNhan.value } }), guiLai ? 'Đã gửi lại hồ sơ cho Viện trưởng.' : 'Đã gửi hồ sơ cho Viện trưởng.'); });
       });
       node.push(h('div', { class: 'truong' },
         h('label', { for: 'trinh-loi-nhan', text: 'Lời nhắn gửi Viện trưởng (tùy chọn)' }), loiNhan));
       nut.push(nutGui);
       if (tr.ly_do_khong_gui) node.push(h('p', { class: 'mo', text: tr.ly_do_khong_gui }));
     }
-    if (coThe.thu_hoi) {
-      nut.push(h('button', { type: 'button', class: 'btn btn-phu', onclick: function () {
-        xacNhan('Thu hồi hồ sơ?', 'Hồ sơ trở về trạng thái chưa gửi để bạn chỉnh tệp. Viện trưởng sẽ không còn thấy nó chờ duyệt.', 'Thu hồi')
-          .then(function (ok) { if (ok) chay(api('/dot/' + dotId + '/trinh/thu-hoi', { method: 'POST', body: {} }), 'Đã thu hồi hồ sơ.'); });
-      } }, 'Thu hồi'));
-    }
     if (coThe.duyet) {
       var nx = h('textarea', { id: 'trinh-nhan-xet', rows: 2, maxlength: 2000 });
-      var thay = !tr.la_vien_truong;
       node.push(h('div', { class: 'truong' }, h('label', { for: 'trinh-nhan-xet', text: 'Nhận xét (tùy chọn)' }), nx));
-      if (thay) node.push(h('p', { class: 'mo', text: 'Bạn không phải Viện trưởng. Nếu Viện trưởng chưa kịp duyệt, bạn có thể duyệt thay: việc này được ghi lại rõ là duyệt thay và Viện trưởng sẽ nhận email.' }));
       nut.push(h('button', { type: 'button', class: 'btn', onclick: function () {
-        xacNhan(thay ? 'Duyệt THAY Viện trưởng?' : 'Duyệt hồ sơ?',
-          thay ? 'Bạn đang duyệt thay Viện trưởng. Hành động này sẽ được ghi lại với tên bạn, và Viện trưởng sẽ nhận thông báo. Không hoàn tác được.' : 'Hồ sơ sẽ được ghi nhận là đã duyệt. Không hoàn tác được.',
-          thay ? 'Duyệt thay' : 'Duyệt')
-          .then(function (ok) { if (ok) chay(api('/dot/' + dotId + '/trinh/duyet', { method: 'POST', body: { nhan_xet: nx.value } }), thay ? 'Đã duyệt thay Viện trưởng.' : 'Đã duyệt hồ sơ.'); });
-      } }, thay ? 'Duyệt thay Viện trưởng' : 'Duyệt hồ sơ'));
+        xacNhan('Duyệt hồ sơ?', 'Xác nhận bạn đã xem và đồng ý. Hồ sơ sẽ được ghi nhận là đã duyệt, không hoàn tác được. Nếu chưa đồng ý, bạn cứ để hồ sơ ở trạng thái chưa duyệt.', 'Duyệt')
+          .then(function (ok) { if (ok) chay(api('/dot/' + dotId + '/trinh/duyet', { method: 'POST', body: { nhan_xet: nx.value } }), 'Đã duyệt hồ sơ.'); });
+      } }, 'Duyệt hồ sơ'));
+    } else if (t.trang_thai === 'da_gui') {
+      node.push(h('p', { class: 'mo', text: 'Đang chờ Viện trưởng duyệt. Chỉ Viện trưởng duyệt được hồ sơ này.' }));
     }
     if (nut.length) node.push(h('div', { class: 'nhom-nut' }, nut));
     node.push(loiHanhDong);

@@ -52,7 +52,9 @@ test('mời email ĐÃ có tài khoản: gán luôn làm trưởng phòng và g�
   assert.equal(me.d.phong[0].id, ID.phongA);
   assert.equal(await ung.doiThu(1), 1);
   assert.equal(ung.thu[0].to, 'co.tai.khoan@sci.edu.vn');
-  assert.match(ung.thu[0].subject, /được giao làm Trưởng phòng — Phòng A/);
+  assert.match(ung.thu[0].subject, /Trưởng phòng — Phòng A: bạn đã được thêm vào module/);
+  assert.match(ung.thu[0].text, /đã thêm Trưởng phòng — Phòng A vào module/);
+  assert.doesNotMatch(ung.thu[0].text, /giao bạn làm|làm Trưởng phòng/, 'không viết như thể bổ nhiệm bạn làm trưởng phòng');
 });
 
 test('mời lại người đã là trưởng phòng của phòng đó thì 409', async () => {
@@ -68,6 +70,9 @@ test('mời email CHƯA có tài khoản: tạo lời mời chờ, thư có hư�
   await ung.doiThu(1);
   const thu = ung.thu[0];
   assert.equal(thu.to, 'moi.hoan.toan@sci.edu.vn');
+  assert.match(thu.subject, /^\[Báo cáo phòng ban\] Mời Trưởng phòng — Phòng B vào module Báo cáo phòng ban$/);
+  assert.match(thu.text, /mời Trưởng phòng — Phòng B vào module Báo cáo phòng ban/);
+  assert.doesNotMatch(thu.text, /mời bạn làm Trưởng phòng/);
   assert.match(thu.text, /CHƯA có tài khoản eoffice/);
   assert.match(thu.text, /https:\/\/eoffice\.test\/dang-ky\.html/);
   assert.match(thu.text, /bằng CHÍNH địa chỉ email này \(moi\.hoan\.toan@sci\.edu\.vn\)/);
@@ -88,8 +93,8 @@ test('liên kết trong thư mời là liên kết của CHÍNH hệ thống, b�
   assert.match(thu.html, /<a href="https:\/\/eoffice\.test\/dang-ky\.html"/);
   assert.match(thu.html, /<a href="https:\/\/eoffice\.test\/bao-cao-phong\.html\?moi=[a-f0-9]{32}"/);
 
-  // Hướng dẫn của đợt do người quản lý gõ: URL lạ không được thành liên kết trong email của hệ thống.
-  const dot = await ung.json(QUAN_LY, 'POST', '/dot', { tieu_de: 'Đợt lừa đảo', han_nop: '2099-12-31', mau_id: ID.mau, phong_ids: [ID.phongA], mo_ta: 'Đăng nhập tại http://trang-gia-mao.example/dang-nhap để nộp' });
+  // Tiêu đề đợt do người quản lý gõ: URL lạ không được thành liên kết trong email của hệ thống.
+  const dot = await ung.json(QUAN_LY, 'POST', '/dot', { tieu_de: 'Đợt lừa đảo đăng nhập tại http://trang-gia-mao.example/dang-nhap để nộp', han_nop: '2099-12-31', mau_id: ID.mau, phong_ids: [ID.phongA] });
   ung.thu.length = 0;
   await ung.json(QUAN_LY, 'POST', `/dot/${dot.d.id}/mo`, {});
   await ung.doiThu(1);
@@ -267,7 +272,7 @@ async function dotMoi(tieuDe, phongIds, thamSo = {}) {
   return r.d.id;
 }
 
-test('mở đợt: email tới trưởng phòng CÁC PHÒNG ĐƯỢC GIAO, kèm hạn nộp, hướng dẫn và liên kết vào đúng báo cáo của họ', async () => {
+test('mở đợt: email tới trưởng phòng CÁC PHÒNG ĐƯỢC GIAO, kèm hạn nộp và liên kết vào đúng báo cáo của họ (không chép hướng dẫn)', async () => {
   const dot = await dotMoi('Báo cáo tháng 10/2026', [ID.phongA], { mo_mo_ta: 'x', mo_ta: 'Nộp trước ngày 5, dùng mẫu mới.' });
   const bcA = (await ung.json(QUAN_LY, 'GET', '/dot/' + dot)).d.bao_cao[0].id;
   ung.thu.length = 0;
@@ -282,7 +287,7 @@ test('mở đợt: email tới trưởng phòng CÁC PHÒNG ĐƯỢC GIAO, kèm 
   assert.match(thu.subject, /^\[Cần nộp báo cáo\] Báo cáo tháng 10\/2026 — hạn 31\/12\/2099/);
   assert.match(thu.text, /Phòng A cần nộp báo cáo/);
   assert.match(thu.text, /Hạn nộp: 31\/12\/2099 \(còn \d+ ngày\)/);
-  assert.match(thu.text, /Hướng dẫn của người quản lý: Nộp trước ngày 5, dùng mẫu mới\./);
+  assert.doesNotMatch(thu.text, /Hướng dẫn của người quản lý|Nộp trước ngày 5/, 'hướng dẫn xem trong báo cáo, không chép vào email');
   assert.match(thu.text, new RegExp(`https://eoffice\\.test/bao-cao-phong\\.html#/bao-cao/${bcA}\\b`), 'liên kết đi thẳng tới báo cáo của phòng họ');
   assert.match(thu.html, new RegExp(`<a href="https://eoffice\\.test/bao-cao-phong\\.html#/bao-cao/${bcA}"`));
 });
@@ -340,12 +345,13 @@ test('email KHÔNG làm hỏng việc mở đợt: SMTP lỗi thì đợt vẫn 
   ung.cheDoMail = null;
 });
 
-test('dữ liệu người dùng gõ (tiêu đề, hướng dẫn, tên phòng) được escape trong thư mở đợt', async () => {
+test('dữ liệu người dùng gõ (tiêu đề) được escape trong thư mở đợt; hướng dẫn không có trong thư', async () => {
   const dot = await dotMoi('<img src=x onerror=alert(1)> Đợt', [ID.phongA], { mo_ta: '<script>alert(2)</script>' });
   ung.thu.length = 0;
   await ung.json(QUAN_LY, 'POST', `/dot/${dot}/mo`, {});
   await ung.doiThu(1);
   const html = ung.thu[0].html;
   assert.ok(!html.includes('<img src=x') && !html.includes('<script>'), 'không được lọt thẻ HTML thô');
-  assert.ok(html.includes('&lt;img') && html.includes('&lt;script&gt;'));
+  assert.ok(html.includes('&lt;img'));
+  assert.ok(!html.includes('alert(2)'), 'hướng dẫn không được đưa vào email');
 });
