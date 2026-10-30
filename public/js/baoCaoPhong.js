@@ -44,6 +44,8 @@
     dang_mo: ['●', 'Đang mở', 'nhan-mo'],
     dong: ['', 'Đã đóng', ''],
   };
+  // Chức danh người phụ trách báo cáo của phòng (khớp services/baoCaoPhongChucDanh.js). Đều là vai trò truong_phong về quyền.
+  var CHUC_DANH = { truong_phong: 'Trưởng phòng', pho_truong_phong: 'Phó trưởng phòng', quyen_truong_phong: 'Quyền trưởng phòng', ke_toan: 'Kế toán' };
   var LOAI_DOT = { tuan: 'Tuần', thang: 'Tháng', quy: 'Quý', nam: 'Năm', dot_xuat: 'Đột xuất' };
   var KIEU_O = {
     text: 'Văn bản ngắn',
@@ -1645,7 +1647,7 @@
       });
       node.push(h('h3', { text: 'Các phòng' }),
         phongs.length ? h('div', { class: 'cuon-ngang' }, h('table', null,
-          h('thead', null, h('tr', null, ['Phòng', 'Trưởng phòng', 'Số đợt đã giao', 'Trạng thái', ''].map(function (t) { return h('th', { scope: 'col', text: t }); }))),
+          h('thead', null, h('tr', null, ['Phòng', 'Người phụ trách', 'Số đợt đã giao', 'Trạng thái', ''].map(function (t) { return h('th', { scope: 'col', text: t }); }))),
           h('tbody', null, phongs.map(function (p) {
             return h('tr', null,
               h('td', { text: p.ten }), h('td', { class: 'con-so', text: String(p.so_truong_phong) }), h('td', { class: 'con-so', text: String(p.so_dot) }),
@@ -1661,37 +1663,39 @@
         h('h3', { text: 'Thêm phòng' }), formThem);
 
       // — Mời trưởng phòng bằng email
+      var cdMoi = h('select', { id: 'moi-chuc-danh' }, Object.keys(CHUC_DANH).map(function (k) { return h('option', { value: k, text: CHUC_DANH[k] }); }));
       var emailMoi = h('input', { type: 'email', id: 'moi-email', placeholder: 'vd: nguyenvan@sci.edu.vn', autocomplete: 'off', spellcheck: 'false' });
       var phMoi = h('select', { id: 'moi-phong' }, phongs.filter(function (p) { return p.active; }).map(function (p) { return h('option', { value: String(p.id), text: p.ten }); }));
       var loiMoiEl = h('p', { class: 'loi-truong', role: 'alert', hidden: true });
       var formMoi = h('form', { novalidate: true },
-        h('p', { class: 'tro-giup' }, 'Nhập email @sci.edu.vn của người cần giao làm trưởng phòng. Đã có tài khoản eoffice thì được gán ngay và nhận thư báo. Chưa có thì hệ thống gửi thư mời kèm hướng dẫn đăng ký và một mã nhận lời mời (hiệu lực 14 ngày): quyền chỉ được cấp khi họ đăng nhập bằng đúng email đó và nhập mã.'),
+        h('p', { class: 'tro-giup' }, 'Nhập email @sci.edu.vn của người được giao nộp báo cáo cho phòng (trưởng phòng, phó trưởng phòng, quyền trưởng phòng hoặc kế toán). Đã có tài khoản eoffice thì được gán ngay và nhận thư báo. Chưa có thì hệ thống gửi thư mời kèm hướng dẫn đăng ký và một mã nhận lời mời (hiệu lực 14 ngày): quyền chỉ được cấp khi họ đăng nhập bằng đúng email đó và nhập mã.'),
         h('div', { class: 'luoi-2' },
           h('div', { class: 'truong' }, h('label', { for: 'moi-email', text: 'Email người được mời' }), emailMoi),
-          h('div', { class: 'truong' }, h('label', { for: 'moi-phong', text: 'Làm trưởng phòng của' }), phMoi)),
+          h('div', { class: 'truong' }, h('label', { for: 'moi-chuc-danh', text: 'Chức danh' }), cdMoi),
+          h('div', { class: 'truong' }, h('label', { for: 'moi-phong', text: 'Thuộc phòng' }), phMoi)),
         loiMoiEl,
         h('div', { class: 'nhom-nut' }, h('button', { type: 'submit', class: 'btn' }, 'Gán hoặc gửi lời mời')));
       formMoi.addEventListener('submit', function (e) {
         e.preventDefault();
         loiMoiEl.hidden = true;
         if (!emailMoi.value.trim()) { loiMoiEl.textContent = 'Hãy nhập email.'; loiMoiEl.hidden = false; emailMoi.focus(); return; }
-        api('/loi-moi', { method: 'POST', body: { email: emailMoi.value, phong_id: Number(phMoi.value) } }).then(function (k) {
+        api('/loi-moi', { method: 'POST', body: { email: emailMoi.value, phong_id: Number(phMoi.value), chuc_danh: cdMoi.value } }).then(function (k) {
           thongBao(k.ket_qua === 'da_gan'
-            ? 'Đã gán ' + (k.fullname || 'người này') + ' làm trưởng phòng (đã có tài khoản eoffice) và gửi thư báo.'
+            ? 'Đã gán ' + (k.fullname || 'người này') + ' làm ' + CHUC_DANH[cdMoi.value].toLowerCase() + ' (đã có tài khoản eoffice) và gửi thư báo.'
             : 'Email này chưa có tài khoản eoffice. Đã gửi thư mời kèm hướng dẫn đăng ký và mã nhận lời mời.');
           return route();
         }).catch(function (er) { loiMoiEl.textContent = er.message; loiMoiEl.hidden = false; emailMoi.focus(); });
       });
-      node.push(h('h3', { text: 'Mời trưởng phòng bằng email' }), formMoi);
+      node.push(h('h3', { text: 'Mời người phụ trách phòng bằng email' }), formMoi);
 
       if (loiMoi.length) {
         node.push(h('h3', { text: 'Lời mời đang chờ (' + loiMoi.length + ')' }),
           h('p', { class: 'mo', text: 'Các email này chưa có tài khoản eoffice, hoặc đã nhận thư nhưng chưa nhập mã.' }),
           h('div', { class: 'cuon-ngang' }, h('table', null,
-            h('thead', null, h('tr', null, ['Email', 'Phòng', 'Mời bởi', 'Hết hạn', ''].map(function (t) { return h('th', { scope: 'col', text: t }); }))),
+            h('thead', null, h('tr', null, ['Email', 'Chức danh', 'Phòng', 'Mời bởi', 'Hết hạn', ''].map(function (t) { return h('th', { scope: 'col', text: t }); }))),
             h('tbody', null, loiMoi.map(function (l) {
               return h('tr', null,
-                h('td', { text: l.email }), h('td', { class: 'ten-phong', text: l.phong_ten }), h('td', { text: l.nguoi_moi || '—' }),
+                h('td', { text: l.email }), h('td', { text: CHUC_DANH[l.chuc_danh] || CHUC_DANH.truong_phong }), h('td', { class: 'ten-phong', text: l.phong_ten }), h('td', { text: l.nguoi_moi || '—' }),
                 h('td', { class: 'con-so' }, fmtNgay(String(l.het_han).slice(0, 10)), l.het_han_roi ? [' ', h('span', { class: 'nhan nhan-chu-y', text: 'Đã hết hạn' })] : null),
                 h('td', null, h('div', { class: 'nhom-nut' },
                   h('button', { type: 'button', class: 'btn btn-phu btn-nho', 'aria-label': 'Gửi lại lời mời cho ' + l.email, onclick: function () {
@@ -1714,11 +1718,11 @@
           var khongGo = t.vai_tro !== 'truong_phong' && !me.la_admin;
           return h('tr', null,
             h('td', null, t.fullname || '(chưa có tên)', h('div', { class: 'mo', text: t.email })),
-            h('td', { text: vaiTroTen[t.vai_tro] }), h('td', { text: t.phong_ten || '—' }),
+            h('td', { text: t.vai_tro === 'truong_phong' ? (CHUC_DANH[t.chuc_danh] || CHUC_DANH.truong_phong) : vaiTroTen[t.vai_tro] }), h('td', { text: t.phong_ten || '—' }),
             h('td', null, khongGo ? h('span', { class: 'mo', text: 'Chỉ quản trị viên gỡ được' }) : h('button', {
               type: 'button', class: 'btn btn-nguy btn-nho', 'aria-label': 'Gỡ vai trò của ' + (t.fullname || t.email),
               onclick: function () {
-                xacNhan('Gỡ vai trò?', (t.fullname || t.email) + ' sẽ không còn quyền ' + vaiTroTen[t.vai_tro].toLowerCase() + (t.phong_ten ? ' của ' + t.phong_ten : '') + '.', 'Gỡ vai trò', true).then(function (ok) {
+                xacNhan('Gỡ vai trò?', (t.fullname || t.email) + ' sẽ không còn quyền ' + (t.vai_tro === 'truong_phong' ? (CHUC_DANH[t.chuc_danh] || CHUC_DANH.truong_phong) : vaiTroTen[t.vai_tro]).toLowerCase() + (t.phong_ten ? ' của ' + t.phong_ten : '') + '.', 'Gỡ vai trò', true).then(function (ok) {
                   if (ok) api('/thanh-vien/' + t.id, { method: 'DELETE' }).then(function () { thongBao('Đã gỡ vai trò.'); return route(); }).catch(function (e) { thongBao(e.message, 'loi'); });
                 });
               },
@@ -1727,12 +1731,13 @@
 
       var q = h('input', { type: 'search', id: 'nd-q', placeholder: 'Gõ ít nhất 2 ký tự của tên hoặc email' });
       var chon = h('select', { id: 'nd-chon', disabled: true }, h('option', { value: '', text: '— Chưa tìm —' }));
-      var vt = h('select', { id: 'nd-vai-tro' }, h('option', { value: 'truong_phong', text: 'Trưởng phòng' }), me.la_admin ? h('option', { value: 'quan_ly', text: 'Người quản lý module' }) : null, me.la_admin ? h('option', { value: 'vien_truong', text: 'Viện trưởng' }) : null);
+      // Chức danh trong phòng (đều là vai trò truong_phong) rồi tới vai trò toàn module (chỉ admin cấp).
+      var vt = h('select', { id: 'nd-vai-tro' }, Object.keys(CHUC_DANH).map(function (k) { return h('option', { value: k, text: CHUC_DANH[k] }); }), me.la_admin ? h('option', { value: 'quan_ly', text: 'Người quản lý module' }) : null, me.la_admin ? h('option', { value: 'vien_truong', text: 'Viện trưởng' }) : null);
       var ph = h('select', { id: 'nd-phong' }, phongs.filter(function (p) { return p.active; }).map(function (p) { return h('option', { value: String(p.id), text: p.ten }); }));
       var hangPhong = h('div', { class: 'truong' }, h('label', { for: 'nd-phong', text: 'Phòng' }), ph);
-      vt.addEventListener('change', function () { hangPhong.hidden = vt.value !== 'truong_phong'; });
+      vt.addEventListener('change', function () { hangPhong.hidden = !CHUC_DANH[vt.value]; });
       var tim = h('form', { class: 'truong', novalidate: true }, h('label', { for: 'nd-q', text: 'Tìm người dùng' }),
-        h('p', { class: 'tro-giup', text: 'Dùng để gán vai trò Người quản lý / Viện trưởng (chỉ quản trị viên) hoặc trưởng phòng cho người ĐÃ CÓ tài khoản eoffice. Muốn mời người chưa có tài khoản, dùng mục "Mời trưởng phòng bằng email" ở trên.' }), q,
+        h('p', { class: 'tro-giup', text: 'Dùng để gán vai trò Người quản lý / Viện trưởng (chỉ quản trị viên) hoặc chức danh trong phòng cho người ĐÃ CÓ tài khoản eoffice. Muốn mời người chưa có tài khoản, dùng mục "Mời người phụ trách phòng bằng email" ở trên.' }), q,
         h('div', { class: 'nhom-nut' }, h('button', { type: 'submit', class: 'btn btn-phu' }, 'Tìm')));
       tim.addEventListener('submit', function (e) {
         e.preventDefault();
@@ -1751,8 +1756,9 @@
       them.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!chon.value) { thongBao('Hãy tìm và chọn một người dùng trước.', 'loi'); q.focus(); return; }
-        var body = { user_id: Number(chon.value), vai_tro: vt.value };
-        if (vt.value === 'truong_phong') body.phong_id = Number(ph.value);
+        var laChucDanh = !!CHUC_DANH[vt.value];
+        var body = { user_id: Number(chon.value), vai_tro: laChucDanh ? 'truong_phong' : vt.value };
+        if (laChucDanh) { body.chuc_danh = vt.value; body.phong_id = Number(ph.value); }
         api('/thanh-vien', { method: 'POST', body: body }).then(function () { thongBao('Đã phân quyền.'); return route(); }).catch(function (er) { thongBao(er.message, 'loi'); });
       });
       node.push(h('h3', { text: 'Thêm phân quyền' }), tim, them);
@@ -1837,7 +1843,7 @@
       function nhanMa() {
         loiMa.hidden = true;
         return api('/loi-moi/nhan', { method: 'POST', body: { ma: inpMa.value } }).then(function (k) {
-          thongBao('Đã nhận lời mời: bạn là trưởng phòng — ' + k.phong.ten + '.');
+          thongBao('Đã nhận lời mời: bạn là ' + (CHUC_DANH[k.chuc_danh] || CHUC_DANH.truong_phong).toLowerCase() + ' — ' + k.phong.ten + '.');
           try { history.replaceState(null, '', location.pathname + '#/cua-toi'); } catch (_) { location.hash = '#/cua-toi'; }
           return api('/me').then(function (m) { me = m; return route(); });
         }).catch(function (er) { loiMa.textContent = er.message; loiMa.hidden = false; inpMa.focus(); });
@@ -1847,7 +1853,7 @@
         h('h2', { text: 'Bạn chưa được cấp quyền' }),
         h('div', { class: 'luu-y' }, h('p', { text: 'Tài khoản của bạn chưa được phân quyền sử dụng module Báo cáo phòng ban. Vui lòng liên hệ Trưởng phòng Tổ chức Hành chính hoặc quản trị viên hệ thống để được cấp quyền.' })),
         h('h3', { text: 'Có thư mời?' }),
-        h('p', { class: 'phu', text: 'Nếu bạn nhận được email mời làm trưởng phòng, nhập mã trong thư vào đây.' }),
+        h('p', { class: 'phu', text: 'Nếu bạn nhận được email mời vào module, nhập mã trong thư vào đây.' }),
         formMa);
       if (maSan) nhanMa(); // mở bằng liên kết trong thư: thử nhận luôn, khỏi bắt gõ lại
       return;
