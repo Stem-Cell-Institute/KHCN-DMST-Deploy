@@ -17,7 +17,7 @@ Kế hoạch & quy ước: [KE-HOACH-REFACTOR.md](KE-HOACH-REFACTOR.md)
 | └ 1.2 | `files`, `cn-info`, bước 2–3, `reset-ve-buoc3` | 13 | ✅ Đã merge (`1fe9748`, PR #8) · −345 dòng | ~~`refactor/routes-missions-2`~~ |
 | └ 1.3 | bước 4a / 4b / 5 / 6 | 13 | ✅ Đã merge (`500975a`, PR #9) · −337 dòng | ~~`refactor/routes-missions-3`~~ |
 | └ 1.4 | `cho-ct-hd` + `by-code`, `:id`, hồ sơ ngoài, sản phẩm — **2 router** | 11 | ✅ Đã merge (`6ae4cc2`, PR #10) · −283 dòng | ~~`refactor/routes-missions-4`~~ |
-| └ 1.5 | Gom 7 file `routes/missions*` → `routes/missions/` — **chỉ di chuyển file** | 0 | 🔵 Chờ review (PR 1.5) | `refactor/gom-routes-missions` |
+| └ 1.5 | Gom 7 file `routes/missions*` → `routes/missions/` — **chỉ di chuyển file** | 0 | ✅ Đã nằm trong `main` (`5685f42`, vào cùng PR #14) | `refactor/gom-routes-missions` còn trên GitHub, xóa được |
 
 **Đợt 1 đã khép.** `server.js` không còn endpoint `/api/missions` nào; 40 endpoint nằm trong 7 file
 dưới `routes/missions/` (§2.3 kế hoạch — domain vượt 3 file thì tách thư mục con).
@@ -39,7 +39,7 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 > đó trả 400 và không gọi `next()`. Gộp lại rồi mount một lần sẽ đặt `:id` cùng vị trí với
 > `export.js` và `core.js` — `/api/missions/export` và `/stats` sẽ bị nuốt. Bảy mount riêng ở bảy vị
 > trí là **điều kiện đúng đắn**, không phải nợ kỹ thuật.
-| 2 | `crd` | 36 | ⬜ Chưa bắt đầu | — |
+| 2 | `crd` | 36 | 🟡 **Lưới test đã xong** (`tests/crd.test.js`, 31 test, kiểm đột biến 21/21) — **chờ tách** | `test/luoi-crd` |
 | 3 | `submissions` + `publications` | 36 | ⬜ Chưa bắt đầu | — |
 | 4 | `cap-vien` | 47 | ⬜ Chưa bắt đầu | — |
 | 5 | `cooperation` + `htqt` + `events` | 84 | ⬜ Chưa bắt đầu | — |
@@ -48,13 +48,36 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 
 Ký hiệu: ⬜ chưa bắt đầu · 🟡 đang làm · 🔵 chờ review/merge · ✅ đã merge + deploy ổn định
 
-**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **18.551** hiện tại → *mục tiêu < 300*
+**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **18.506** (đo bằng `wc -l` như CI, ngày 30/10/2026, `f3bee8c`) → *mục tiêu < 300*. Route khai báo thẳng trong `server.js`: 360 → **320**. Tính năng mới từ 23/10 (Báo cáo phòng ban, xác minh email) nằm ở file riêng nên `server.js` không phình.
 
 Đã cắt **1.285 dòng** (6,6% chặng đường). Trần hiện tại nằm ở `.github/server-js-max-lines`, CI đỏ
 nếu file dài ra. Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
 
 ---
 
+## Lưới an toàn theo miền (đo 30/10/2026)
+
+Điều kiện tiên quyết của mỗi đợt là có test chạy **xanh trên code cũ** (§4 kế hoạch). Số đo thật, đếm số lần
+đường dẫn miền đó xuất hiện trong `tests/` (không tính test của tính năng mới):
+
+| Đợt | Miền | Route còn trong `server.js` | Lưới test | Trạng thái |
+|---|---|---|---|---|
+| 2 | `/api/crd` | 36 | ✅ `tests/crd.test.js` — 31 test: bảng phân quyền đối chiếu route thật, đặt lịch, trùng lịch, chat, khiếu nại, quản trị. **21/21 đột biến bị bắt** (xem bên dưới) | **Sẵn sàng tách** |
+| 3 | `/api/submissions` + `/api/publications` | 36 | ❌ 0 test | Cần dựng lưới trước |
+| 4 | `/api/cap-vien` | 49 | ❌ 0 test | Cần dựng lưới trước (có DB riêng) |
+| 5 | `/api/cooperation` + `/api/htqt` + `/api/events` | 84 | ⚠️ 4 test nhưng chỉ chạm 2/84 route (dashboard-stats, tat-ca-de-xuat) | Cần dựng lưới trước, **rủi ro cao** |
+| 6 | `/api/admin` | 84 | ⚠️ 2 test kiểm ranh giới quyền, chạm 2/84 route | Cần dựng lưới trước, **rủi ro cao** |
+
+**Công cụ chung cho mọi đợt:** `npm run route:snapshot` + `npm run route:compare` — ảnh hành vi (mã trạng thái + nội dung) của
+toàn bộ route, chụp trước/sau khi cắt–dán. Bắt được route đổi quyền / đổi mã lỗi / mất mà `diff` route-inventory không
+thấy. Kiểm chứng: 3/3 kiểu phá (mở toang quyền, mất route, đổi nội dung) bị báo. **Không thay được test nghiệp vụ** cho route
+ghi — nó chỉ gọi route ghi khi không token.
+
+**Kiểm đột biến cho `tests/crd.test.js`:** 20 chỗ phá có chủ ý trong `server.js` (liền kề bị coi là trùng, bỏ `adminOnly`, bỏ kiểm
+tra chủ lịch, bỏ giới hạn giờ, bỏ băm mật khẩu, đổi burst kênh chung…) + 1 đột biến **thứ tự route** (đưa `machines/reorder` xuống sau
+`machines/:id`). Lần đầu có **1 đột biến sống sót** — thống kê loại lịch đã hủy chưa được canh — đã bổ sung test rồi đạt 21/21.
+
+---
 ## ✅ Mốc gốc đã có
 
 Môi trường đã thông (Node 20.20.0, `npm ci` sạch):
@@ -241,6 +264,14 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-10-30 · test/luoi-crd · Đợt 2 (chuẩn bị — chưa tách route nào)
+
+- **Đã xong:** lưới test cho miền CRD — `tests/crd.test.js` (31 test) + `tests/helpers/users.js`; `startTestServer` nhận `{ port, env }` để các file test chạy song song. Công cụ `route:snapshot` / `route:compare` (xem mục "Lưới an toàn theo miền"). Sửa số liệu lỗi thời của sổ này (18.551 → 18.506 dòng; Đợt 1.5 đã merge).
+- **Đang dở:** không. `server.js` **chưa bị đụng** — PR này chỉ thêm test, công cụ và tài liệu.
+- **Cạm bẫy phát hiện:** (1) Node chạy các file test song song: hai file cùng `startTestServer()` sẽ đụng cổng 3199 — mỗi file phải chọn cổng riêng. (2) Route `PUT /api/crd/admin/machines/reorder` phải đứng TRƯỚC `PUT /api/crd/admin/machines/:id`, nếu không `:id` nuốt nó — đã có test canh. (3) `DELETE /api/crd/admin/chats/:id` có đường dẫn `admin` nhưng **không** qua `adminOnly`: việc kiểm quyền (Admin hệ thống, hoặc vai trò CRD có cờ quản trị với tin kênh chung) nằm **trong handler** — khi tách phải mang theo logic đó, đừng thay bằng middleware `adminOnly` (sẽ chặn nhầm người kiểm duyệt CRD). (4) `POST /api/crd/chats` tăng bộ đếm giới hạn kênh chung TRƯỚC khi kiểm tra booking đính kèm, nên một lần đính kèm sai cũng tốn một lượt trong burst 3 — hành vi hiện tại, đã ghim.
+- **Phiên sau làm:** Đợt 2 — tách 36 route CRD ra `routes/crd.js` (hoặc `routes/crd/` nếu vượt 3 file). Quy trình §4: chụp `route:snapshot` trước; `tests/crd.test.js` phải xanh **trước và sau**; `route:compare` phải GIỐNG NHAU. Hàm CRD dùng chung (`crdEnsurePersonForAppUser`, `crdBookingOverlaps`, hàm `...ToClient`, hằng số kênh chung và bộ đếm giới hạn tốc độ) cần quyết định nằm ở `services/` hay truyền qua factory — bộ đếm giới hạn là **trạng thái trong bộ nhớ**, phải giữ đúng MỘT bản duy nhất.
+- **Nợ kỹ thuật thêm:** các miền Đợt 3–6 chưa có test (bảng ở mục "Lưới an toàn theo miền"). Khuyến nghị dựng lưới của từng miền **ngay trước đợt của nó**, không dựng một lần cho tất cả.
 
 ### 2026-10-28 · module mới **Báo cáo phòng ban** · tính năng, không phải refactor
 
