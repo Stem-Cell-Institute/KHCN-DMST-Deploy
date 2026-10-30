@@ -2977,6 +2977,7 @@ const HOMEPAGE_MODULES_DEFAULT = [
   { code: 'publications', label: 'Quản lý Công bố Khoa học', enabled: 0 },
   { code: 'cooperation', label: 'Quản lý Hợp tác', enabled: 1 },
   { code: 'equipment_stims', label: 'Quản trị thiết bị', enabled: 1 },
+  { code: 'sample_storage', label: 'Ngân hàng tế bào & Kháng thể', enabled: 1 },
   { code: 'tech_transfer', label: 'Quản lý Chuyển giao Công nghệ', enabled: 0 },
   { code: 'facilities', label: 'CRD Lab Booking', enabled: 1 },
   { code: 'ethics_integrity', label: 'Đạo đức và Liêm chính khoa học', enabled: 0 },
@@ -9914,6 +9915,8 @@ app.get('/api/homepage-stats', (req, res) => {
   } catch (e) {
     /* bảng submissions (SCI-ACE) chưa có */
   }
+  /** Thẻ module «Ngân hàng tế bào & Kháng thể» */
+  const sampleStorageMini = require('./routes/nganHangTeBaoKhangThe').miniStats(db);
   return res.json({
     missions,
     missionMini,
@@ -9926,6 +9929,7 @@ app.get('/api/homepage-stats', (req, res) => {
     facilities,
     dmsMini,
     equipmentMini,
+    sampleStorageMini,
     documentWorkflowMini,
     aceMini,
   });
@@ -13966,6 +13970,14 @@ try {
   console.log('[EQUIP] Đã mount /api/equipment');
 } catch (e) {
   console.warn('[EQUIP] Không mount equipment:', e.message);
+}
+
+/** Ngân hàng tế bào & Kháng thể — routes/nganHangTeBaoKhangThe.js (bảng nhm_*, chuyển hướng địa chỉ cũ, API) */
+try {
+  require('./routes/nganHangTeBaoKhangThe').mount(app, { db, authMiddleware, insertUserActivityLog });
+  console.log('[NGAN-HANG] Đã mount /api/ngan-hang-te-bao-khang-the');
+} catch (e) {
+  console.warn('[NGAN-HANG] Không mount ngan-hang-te-bao-khang-the:', e.message);
 }
 
 /** Quy trình ban hành văn bản hành chính nội bộ (9 bước) */

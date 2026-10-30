@@ -346,6 +346,30 @@
                 <button type="button" class="btn-access" onclick="window.location.href='public/equipment/index.html'">Truy cập →</button>
             </div>
 
+            <!-- 7d. Ngân hàng tế bào & Kháng thể -->
+            <div class="module-card" data-module="sample_storage">
+                <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m4.93 4.93 14.14 14.14"/><path d="M2 12h20"/><path d="m19.07 4.93-14.14 14.14"/><path d="m9 3 3 2 3-2"/><path d="m9 21 3-2 3 2"/></svg></span></div>
+                <div class="module-title">Ngân hàng tế bào &amp; Kháng thể</div>
+                <div class="module-description">
+                    Quản lý ngân hàng tế bào và kháng thể (dòng tế bào, tế bào gốc, huyết thanh, DNA/RNA…): sơ đồ tủ -80°C, tủ lạnh, bình nitơ lỏng đến giá và hộp, vị trí từng mẫu, lịch sử di chuyển và phân quyền thao tác.
+                </div>
+                <div class="module-stats">
+                    <div class="mini-stat" data-stat="sampleStorageMini" data-facility-key="containers">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Thiết bị &amp; vị trí lưu trữ</div>
+                    </div>
+                    <div class="mini-stat" data-stat="sampleStorageMini" data-facility-key="boxes">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Hộp lưu trữ</div>
+                    </div>
+                    <div class="mini-stat" data-stat="sampleStorageMini" data-facility-key="samples">
+                        <div class="mini-stat-number">—</div>
+                        <div class="mini-stat-label">Mẫu đang lưu</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-access" onclick="window.location.href='public/ngan-hang-te-bao-khang-the/index.html'">Truy cập →</button>
+            </div>
+
             <!-- 8. Quản lý Chuyển giao Công nghệ -->
             <div class="module-card module-card--disabled" data-module="tech_transfer">
                 <div class="module-icon" aria-hidden="true"><span class="module-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 4 7l4 4"></path><path d="M4 7h16"></path><path d="m16 21 4-4-4-4"></path><path d="M20 17H4"></path></svg></span></div>
@@ -484,7 +508,7 @@
                 isAdmin = (u.role || '').toLowerCase() === 'admin';
             } catch (e) {}
             var LS_ORDER_KEY = 'homepage_module_order';
-            var HOMEPAGE_CODES = ['missions','ethics_ace','personnel','ip','finance','publications','cooperation','dms','document_workflow','department_reports','equipment_stims','tech_transfer','facilities','ethics_integrity','reward'];
+            var HOMEPAGE_CODES = ['missions','ethics_ace','personnel','ip','finance','publications','cooperation','dms','document_workflow','department_reports','equipment_stims','sample_storage','tech_transfer','facilities','ethics_integrity','reward'];
             function distinctSortOrderCount(modules) {
                 var seen = {};
                 var n = 0;

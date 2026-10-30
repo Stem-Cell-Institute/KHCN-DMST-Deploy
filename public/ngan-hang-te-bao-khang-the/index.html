@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ngân hàng tế bào &amp; Kháng thể — STIMS</title>
+  <link rel="stylesheet" href="/public/css/a11y.css" />
+  <script src="/public/js/a11y.js" defer></script>
+  <!-- Cùng bộ chữ và măng-sét với trang chủ (xem readme/GIAO-DIEN-TRANG-CHU.md) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="/public/css/trang-chu.css" />
+  <link rel="stylesheet" href="/public/ngan-hang-te-bao-khang-the/ngan-hang-te-bao-khang-the.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-logo">
+        <a href="/index.html" class="header-home-link" title="Về trang chủ" aria-label="Về trang chủ">
+          <img src="/images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc" />
+        </a>
+      </div>
+      <div class="header-text">
+        <h1>Ngân hàng tế bào &amp; Kháng thể</h1>
+        <p class="header-stims-subtitle">STIMS — Science, Technology &amp; Innovation Management System</p>
+        <p class="header-institution">Viện Tế bào gốc - Trường ĐHKHTN, ĐHQG TP.HCM</p>
+      </div>
+      <div id="auth-status" class="nhm-auth"></div>
+    </div>
+  </header>
+
+  <div class="nhm-shell">
+    <details class="nhm-rail" open>
+      <summary>Sơ đồ kho lưu trữ</summary>
+      <button type="button" class="nhm-rail-add nhm-hide" id="nhm-add-root">+ Thêm thiết bị lưu trữ</button>
+      <div id="nhm-tree" class="nhm-tree" aria-label="Sơ đồ kho lưu trữ"><div class="nhm-loading">Đang tải…</div></div>
+    </details>
+    <main class="nhm-main">
+      <div id="nhm-msg" class="nhm-msg" role="status" aria-live="polite"></div>
+      <section class="nhm-detail" id="nhm-detail" aria-live="polite">
+        <p class="nhm-muted">Chọn một thiết bị, vị trí lưu trữ hoặc hộp ở bên trái.</p>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="nhm-dialog" class="nhm-dialog"></dialog>
+  <script src="/public/ngan-hang-te-bao-khang-the/ngan-hang-te-bao-khang-the.js"></script>
+</body>
+</html>
