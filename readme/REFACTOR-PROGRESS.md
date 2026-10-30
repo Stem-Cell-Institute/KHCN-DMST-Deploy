@@ -39,11 +39,11 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 > đó trả 400 và không gọi `next()`. Gộp lại rồi mount một lần sẽ đặt `:id` cùng vị trí với
 > `export.js` và `core.js` — `/api/missions/export` và `/stats` sẽ bị nuốt. Bảy mount riêng ở bảy vị
 > trí là **điều kiện đúng đắn**, không phải nợ kỹ thuật.
-| 2 | `crd` — **chia 3 PR** (868 dòng handler, gấp 2,2 lần trần 400) | 36 | 🟡 **Đang tách** — 2.1 và 2.2 xong, chờ 2.3 | xem bảng dưới |
+| 2 | `crd` — **chia 3 PR + lưới test** (868 dòng handler, gấp 2,2 lần trần 400) | 36 | ✅ **Tách xong — `server.js` hết `/api/crd`** (chờ review/merge #24–#27 rồi deploy, theo dõi 48 giờ) | xem bảng dưới |
 | └ 2.0 | Lưới test `tests/crd.test.js` + công cụ `route:snapshot` / `route:compare` | 0 | 🔵 Chờ review (PR #24) | `test/luoi-crd` |
 | └ 2.1 | đăng ký công khai + phần người dùng thường (state, đặt/sửa/hủy lịch, chat, khiếu nại) — **2 router** | 10 | 🔵 Chờ review (PR 2.1) · −296 dòng | `refactor/routes-crd-1` |
 | └ 2.2 | snapshot, thông báo phòng lab, thiết bị (admin) + kiểm duyệt tin, email-notif, khiếu nại (admin) — **2 router** | 14 | 🔵 Chờ review (PR 2.2) · −281 dòng | `refactor/routes-crd-2` |
-| └ 2.3 | hồ sơ CRD, tài khoản, vai trò, lịch (quản trị) | 12 | ⬜ Chưa bắt đầu | — |
+| └ 2.3 | hồ sơ CRD, tài khoản, vai trò, lịch (quản trị) | 12 | 🔵 Chờ review (PR 2.3) · −282 dòng | `refactor/routes-crd-3` |
 | 3 | `submissions` + `publications` | 36 | ⬜ Chưa bắt đầu | — |
 | 4 | `cap-vien` | 47 | ⬜ Chưa bắt đầu | — |
 | 5 | `cooperation` + `htqt` + `events` | 84 | ⬜ Chưa bắt đầu | — |
@@ -52,7 +52,19 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 
 Ký hiệu: ⬜ chưa bắt đầu · 🟡 đang làm · 🔵 chờ review/merge · ✅ đã merge + deploy ổn định
 
-**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **17.929** (đo bằng `wc -l` như CI, sau Đợt 2.2) → *mục tiêu < 300*. Route khai báo thẳng trong `server.js`: 360 → **296** (còn 12 route CRD cho Đợt 2.3).
+**Đợt 2 đã khép.** `server.js` không còn route `/api/crd` nào; 36 route nằm trong 5 file dưới `routes/crd/`, mỗi file mount **tại vị trí cũ** của nhóm nó:
+
+```
+routes/crd/dangKyCongKhai.js     POST /crd/public/register           (không qua authMiddleware; gần nhóm đăng ký chính)
+routes/crd/nguoiDung.js          /crd/state, /crd/bookings*, /crd/chats*, /crd/complaints
+routes/crd/quanTriThietBi.js     /crd/admin/snapshot, lab-announcements*, machines*   ← machines/reorder TRƯỚC machines/:id
+routes/crd/quanTriNguoiDung.js   /crd/admin/persons*, users*, role-defs*, bookings*
+routes/crd/kiemDuyetThongBao.js  DELETE /crd/admin/chats/:id, /crd/email-notif, /crd/admin/complaints*
+```
+
+Thứ tự **giữa** các router CRD không ảnh hưởng (đường dẫn không va chạm), nhưng thứ tự **trong** `quanTriThietBi.js` thì có — đã ghi ở đầu file và có test canh.
+
+**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **17.647** (đo bằng `wc -l` như CI, sau Đợt 2) → *mục tiêu < 300*. Route khai báo thẳng trong `server.js`: 360 → **284** (đúng bằng 360 − 40 `missions` − 36 CRD).
 
 Đã cắt **1.285 dòng** (6,6% chặng đường). Trần hiện tại nằm ở `.github/server-js-max-lines`, CI đỏ
 nếu file dài ra. Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
@@ -66,7 +78,7 @@ nếu file dài ra. Mỗi đợt xong phải hạ con số đó xuống bằng s
 
 | Đợt | Miền | Route còn trong `server.js` | Lưới test | Trạng thái |
 |---|---|---|---|---|
-| 2 | `/api/crd` | 36 | ✅ `tests/crd.test.js` — 31 test: bảng phân quyền đối chiếu route thật, đặt lịch, trùng lịch, chat, khiếu nại, quản trị. **21/21 đột biến bị bắt** (xem bên dưới) | **Đang tách** (2.1 xong) |
+| 2 | `/api/crd` | 36 | ✅ `tests/crd.test.js` — 31 test: bảng phân quyền đối chiếu route thật, đặt lịch, trùng lịch, chat, khiếu nại, quản trị. **21/21 đột biến bị bắt** (xem bên dưới) | **Đã tách xong** (chờ merge và deploy) |
 | 3 | `/api/submissions` + `/api/publications` | 36 | ❌ 0 test | Cần dựng lưới trước |
 | 4 | `/api/cap-vien` | 49 | ❌ 0 test | Cần dựng lưới trước (có DB riêng) |
 | 5 | `/api/cooperation` + `/api/htqt` + `/api/events` | 84 | ⚠️ 4 test nhưng chỉ chạm 2/84 route (dashboard-stats, tat-ca-de-xuat) | Cần dựng lưới trước, **rủi ro cao** |
@@ -155,6 +167,7 @@ Việc phát hiện dọc đường nhưng **cố ý không làm** để giữ p
 | 12 | **Font trang chủ nạp từ Google Fonts.** `index.html` tải Be Vietnam Pro qua `fonts.googleapis.com`. Máy chủ đặt tại Việt Nam nên đây là phụ thuộc mạng ngoài có thể chậm hoặc bị chặn, và trang chủ là trang công khai ai cũng vào. Nên self-host: tải 4 file `.woff2` (400/500/600/700) vào `public/fonts/`, khai `@font-face` với `font-display: swap`, bỏ 3 thẻ `<link>` Google. | Giao diện | Thấp — nhưng ảnh hưởng tốc độ trang công khai |
 | 13 | **`js/auth-status.js` dùng emoji thay icon** (🔐 👤 ⚙️). Craft floor của skill thiết kế cấm emoji đứng thay hệ icon — icon phải được vẽ, cùng nét, cùng cân nặng. File này **dùng chung trên nhiều trang** nên không sửa trong lần làm lại trang chủ; sửa sẽ đổi giao diện mọi trang cùng lúc, cần làm thành PR riêng có rà soát. | Giao diện | Thấp |
 | 14 | **`public/css/ticker.css` vi phạm hai mục của checklist emil.** (a) 3 quy tắc `:hover` không bọc trong `@media (hover: hover)` — trên cảm ứng hiệu ứng dính lại sau khi chạm. (b) Link tin trong dải chạy chỉ cao **32px**, dưới sàn tap target 44px. File này **dùng chung với trang quản trị ticker** nên không sửa trong lần làm lại trang chủ — sửa sẽ đổi cả hai nơi, cần PR riêng có rà soát. | Giao diện | Thấp |
+| 15 | **Hàm và hằng CRD dùng chung vẫn ở `server.js`** — 28 định danh (`crdEnsurePersonForAppUser`, `crdBookingOverlaps`, các hàm `...ToClient`, `CRD_BROADCAST_*`, `crdBroadcastRateMap`, các hàm migration `crdEnsureColumn*`…) sau khi Đợt 2 chuyển hết 36 route sang `routes/crd/` và truyền qua factory. Nên chuyển nghiệp vụ thuần sang `services/crd*.js` (§2.3 kế hoạch), giữ `crdBroadcastRateMap` thành MỘT instance duy nhất trong service. Là refactor thứ hai, cố ý tách khỏi việc dời route. | Đợt 2 | Thấp — làm sau khi Đợt 2 deploy ổn định |
 | ~~15~~ | ✅ **ĐÃ VÁ** — `POST /api/register` không còn tạo tài khoản / đặt mật khẩu / đăng nhập ngay. Nay chỉ gửi thư có liên kết dùng một lần (256 bit, lưu sha256, hạn 2 giờ) tới đúng hộp thư; người cầm liên kết mới đặt mật khẩu ở `xac-minh-email.html` (`POST /api/register/hoan-tat`) rồi mới tạo tài khoản mới hoặc kích hoạt tài khoản Viện tạo sẵn (chưa có mật khẩu). Mật khẩu đặt **sau** xác minh nên kẻ gõ email người khác không biết được mật khẩu. SMTP chưa cấu hình hoặc gửi lỗi → 503, không bỏ qua xác minh. Mã: `routes/dangKy.js`, `services/xacMinhEmail.js`; test: `tests/dangKyXacMinh.test.js`. **Không đụng tài khoản đã có** (không migration, không cột mới, đăng nhập và quên mật khẩu giữ nguyên).<br><br>**Còn nợ, cố ý chưa làm:**<br>• `POST /api/crd/public/register` (email ngoài `@sci.edu.vn`, vai trò `crd_user`) vẫn tạo tài khoản + đăng nhập ngay, không xác minh email — cùng kiểu lỗi, mức thấp hơn vì chỉ vào được module đặt lịch CRD.<br>• `password_reset_tokens.token` lưu mã **thô** (không băm) và `sendPasswordResetEmail` nuốt lỗi SMTP (khi chưa cấu hình SMTP vẫn báo "đã gửi").<br>• Thông báo đăng ký giống nhau cho mọi email, nhưng thời gian phản hồi vẫn khác (có gửi SMTP hay không) — dò được tinh vi bằng đo thời gian; chấp nhận được vì `/api/login` đã cho biết tài khoản chưa kích hoạt.<br>• Branch `feat/bao-cao-phong`: comment trong `routes/baoCaoPhong.js` và `tests/helpers/baoCaoPhongApp.js` còn ghi "đăng ký không xác minh email" — nên cập nhật khi gộp. | Bảo mật | ✅ Đã xử lý (còn nợ nhỏ) |
 
 ---
@@ -268,6 +281,14 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-10-30 · refactor/routes-crd-3 · Đợt 2.3 — quản trị hồ sơ CRD, tài khoản, vai trò, lịch · **Đợt 2 khép**
+
+- **Đã xong:** 12 route CRD cuối cùng ra khỏi `server.js` sang `routes/crd/quanTriNguoiDung.js` (hồ sơ CRD ×4, tài khoản ×3, vai trò ×3, lịch quản trị ×2). `server.js` 17.929 → **17.647** (−282). **Cả Đợt 2: 18.506 → 17.647 (−859 dòng); 36 route CRD (868 dòng handler) sang 5 file `routes/crd/`; PR #24 (lưới test) + #25–#27 (2.1–2.3).**
+- **Bằng chứng toàn Đợt 2 (so với mốc gốc TRƯỚC khi tách):** `diff` route-inventory **rỗng** (665 route, cùng thứ tự); `route:compare` **GIỐNG NHAU** (1.138 yêu cầu, 0 đổi mã, 0 đổi nội dung); 31 test CRD xanh trước/sau và 333/333 toàn bộ; mọi router so từng byte với bản gốc là **NGUYÊN VĂN** (283 + 43 + 204 + 100 + 297 dòng); kiểm đột biến 22/22 + đột biến thứ tự route đều bị bắt trên cấu trúc cuối.
+- **Cạm bẫy phát hiện:** không có thêm so với 2.1–2.2. Ba điều cần nhớ đã ghi ở các nhật ký trước: `crdBroadcastRateMap` là trạng thái trong bộ nhớ (một instance); `DELETE /admin/chats/:id` kiểm quyền trong handler; `reorder` trước `:id`.
+- **Phiên sau làm:** (1) **Deploy Đợt 2 và theo dõi 48 giờ** trước khi sang Đợt 3 (kế hoạch §4). (2) Đợt 3 (`submissions` + `publications`, 36 route) cần **dựng lưới test trước** — hiện 0 test chạm miền này; dùng `tests/crd.test.js` làm mẫu. (3) Tùy chọn: chuyển hàm CRD dùng chung sang `services/` (nợ #15).
+- **Nợ kỹ thuật thêm:** #15 — hàm/hằng CRD dùng chung vẫn ở `server.js`.
 
 ### 2026-10-30 · refactor/routes-crd-2 · Đợt 2.2 — thiết bị, thông báo phòng lab, kiểm duyệt, email-notif
 
