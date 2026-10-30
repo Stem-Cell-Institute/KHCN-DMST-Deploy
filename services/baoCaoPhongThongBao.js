@@ -22,6 +22,8 @@
  *   - Không gửi cho chính người vừa thực hiện thao tác.
  */
 
+const ChucDanh = require('./baoCaoPhongChucDanh');
+
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;')
@@ -399,9 +401,10 @@ function taoThongBao({ db, mailSend, baseUrl }) {
    * Mời một email CHƯA có tài khoản làm trưởng phòng. Thư chứa MÃ DÙNG MỘT LẦN: đó là bằng chứng người
    * nhận đọc được hộp thư này (đăng ký tài khoản của hệ thống không xác minh email — xem baoCaoPhongSchema.js).
    */
-  async function baoLoiMoi({ email, phongTen, nguoiMoiTen, ma, hetHan }) {
+  async function baoLoiMoi({ email, phongTen, nguoiMoiTen, ma, hetHan, chucDanh }) {
+    const cd = ChucDanh.nhan(chucDanh);
     const doan = [
-      { text: `${nguoiMoiTen || 'Người quản lý module'} mời Trưởng phòng — ${phongTen} vào module Báo cáo phòng ban của hệ thống eoffice (STIMS), để nộp báo cáo của phòng.` },
+      { text: `${nguoiMoiTen || 'Người quản lý module'} mời ${cd} — ${phongTen} vào module Báo cáo phòng ban của hệ thống eoffice (STIMS), để nộp báo cáo của phòng.` },
       { text: 'Địa chỉ email này CHƯA có tài khoản eoffice. Hãy làm theo 3 bước:' },
       { nhan: 'Bước 1', text: `Đăng ký tài khoản tại ${goc ? goc + '/dang-ky.html' : 'trang Đăng ký của eoffice'} bằng CHÍNH địa chỉ email này (${email}).` },
       { nhan: 'Bước 2', text: `Đăng nhập, rồi mở ${goc ? goc + '/bao-cao-phong.html' : 'module Báo cáo phòng ban'}.` },
@@ -409,11 +412,12 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       { text: `Mã chỉ dùng được MỘT lần và có hiệu lực đến ${fmtNgay(String(hetHan).slice(0, 10))}. Mã chỉ có tác dụng với tài khoản đăng nhập bằng đúng địa chỉ email này. Nếu bạn không biết lời mời này, hãy bỏ qua thư.` },
     ];
     const lk = goc ? `${goc}/bao-cao-phong.html?moi=${ma}` : '';
-    return guiDen([{ email }], `[Báo cáo phòng ban] Mời Trưởng phòng — ${phongTen} vào module Báo cáo phòng ban`, dungThu(doan, lk, goc));
+    return guiDen([{ email }], `[Báo cáo phòng ban] Mời ${cd} — ${phongTen} vào module Báo cáo phòng ban`, dungThu(doan, lk, goc));
   }
 
   /** Người ĐÃ có tài khoản được gán làm trưởng phòng: báo cho họ, kèm các đợt đang mở của phòng đó. */
-  async function baoDuocGan(userId, phongId, nguoiMoiId) {
+  async function baoDuocGan(userId, phongId, nguoiMoiId, chucDanh) {
+    const cd = ChucDanh.nhan(chucDanh);
     const u = db.prepare('SELECT email, fullname FROM users WHERE id = ?').get(userId);
     const p = db.prepare('SELECT ten FROM bcp_phong WHERE id = ?').get(phongId);
     if (!u || !p || !EMAIL_HOP_LE.test(String(u.email || ''))) return { gui: 0, loi: 0, nguoi_nhan: 0 };
@@ -424,11 +428,11 @@ function taoThongBao({ db, mailSend, baseUrl }) {
           WHERE b.phong_id = ? AND d.trang_thai = 'dang_mo' AND b.trang_thai IN ('chua_nop','can_chinh_sua') ORDER BY d.han_nop`
       )
       .all(phongId);
-    const doan = [{ text: `${(moi && moi.fullname) || 'Người quản lý module'} đã thêm Trưởng phòng — ${p.ten} vào module Báo cáo phòng ban của hệ thống eoffice. Bạn sẽ nộp báo cáo của phòng tại đây.` }];
+    const doan = [{ text: `${(moi && moi.fullname) || 'Người quản lý module'} đã thêm ${cd} — ${p.ten} vào module Báo cáo phòng ban của hệ thống eoffice. Bạn sẽ nộp báo cáo của phòng tại đây.` }];
     if (dangMo.length) {
       doan.push({ nhan: 'Đang có báo cáo cần nộp', text: dangMo.map((x) => `${x.tieu_de} — hạn ${fmtNgay(x.han_nop)} (${conLaiNgay(x.han_nop)})${goc ? ': ' + lienKet('#/bao-cao/' + x.id) : ''}`).join('\n') });
     }
-    return guiDen([{ email: u.email }], `[Báo cáo phòng ban] Trưởng phòng — ${p.ten}: bạn đã được thêm vào module`, dungThu(doan, lienKet('#/cua-toi'), goc));
+    return guiDen([{ email: u.email }], `[Báo cáo phòng ban] ${cd} — ${p.ten}: bạn đã được thêm vào module`, dungThu(doan, lienKet('#/cua-toi'), goc));
   }
 
   return { baoDaNop, baoDaGuiVienTruong, baoDaDuyetTrinh, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoNhacHan, nguoiNhanYKien, nguoiNhanQuanLyYKien, baoYKien, baoLoiMoi, baoDuocGan, tienDo };
