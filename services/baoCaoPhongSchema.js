@@ -277,9 +277,20 @@ function napMauMacDinh(db) {
   return true;
 }
 
+/** Thêm cột nếu chưa có (SQLite không có "ADD COLUMN IF NOT EXISTS"). Dò qua sqlite_master như phần còn lại của file này. */
+function themCot(db, bang, cot, kieu) {
+  const r = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?").get(bang);
+  if (r && !new RegExp('\\b' + cot + '\\b').test(String(r.sql))) db.exec(`ALTER TABLE ${bang} ADD COLUMN ${cot} ${kieu}`);
+}
+
 function ensureSchema(db) {
   if (canDoiThanhVien(db)) doiThanhVien(db);
   for (const sql of CAU_LENH) db.exec(sql);
+  // Chức danh của người phụ trách báo cáo phòng (xem services/baoCaoPhongChucDanh.js). Dòng cũ mặc định là Trưởng phòng.
+  themCot(db, 'bcp_thanh_vien', 'chuc_danh', 'TEXT');
+  themCot(db, 'bcp_loi_moi', 'chuc_danh', 'TEXT');
+  db.exec("UPDATE bcp_thanh_vien SET chuc_danh = 'truong_phong' WHERE vai_tro = 'truong_phong' AND chuc_danh IS NULL");
+  db.exec("UPDATE bcp_loi_moi SET chuc_danh = 'truong_phong' WHERE chuc_danh IS NULL");
   napMauMacDinh(db);
 }
 

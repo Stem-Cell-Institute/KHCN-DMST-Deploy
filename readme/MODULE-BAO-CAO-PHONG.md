@@ -38,6 +38,15 @@ Lưu trong bảng riêng `bcp_thanh_vien`, **không đụng vào cột `users.ro
 - Người được gán/mời phải dùng email `@sci.edu.vn` (cùng điều kiện đăng ký tài khoản). Ô tìm người chỉ
   tìm trong người đã có tài khoản; người **chưa có** thì dùng "Mời trưởng phòng bằng email" (mục sau).
 
+## Chức danh người phụ trách báo cáo của phòng
+
+Một phòng có thể có nhiều người được giao nộp báo cáo. Mỗi người có một **chức danh**: Trưởng phòng, Phó trưởng phòng, Quyền trưởng phòng, Kế toán
+(`services/baoCaoPhongChucDanh.js`; giao diện có bản sao nhãn trong `CHUC_DANH` ở `public/js/baoCaoPhong.js`). **Về quyền, mọi chức danh đều là vai trò
+`truong_phong`** (cùng thấy báo cáo của phòng, cùng nhập/nộp, cùng nhận thư): chức danh chỉ để ghi rõ người đó là ai và hiện trong bảng phân quyền, thư mời,
+thư báo. Lưu ở cột `chuc_danh` của `bcp_thanh_vien` và `bcp_loi_moi` (NULL với vai trò toàn module). DB cũ tự thêm cột khi khởi động, dòng cũ thành Trưởng phòng.
+Chọn chức danh ở "Thêm phân quyền" và "Mời người phụ trách phòng bằng email". Một người chỉ có một chức danh trong một phòng. Các thư khác (mở đợt,
+nhắc hạn, ý kiến…) vẫn gọi chung là "trưởng phòng".
+
 ## Danh mục phòng: xóa hay ngừng dùng
 
 - **Xóa** (`DELETE /phong/:id`, nút "Xóa" ở mục Phòng & phân quyền) chỉ có với phòng **chưa từng được giao đợt nào** (cột "Số đợt đã giao" = 0, tính cả đợt Nháp).
@@ -278,6 +287,7 @@ Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
 - `baoCaoPhongTuDuyet.test.js` — cờ "tự duyệt" (người nộp = người duyệt), không dính lại sau chỉnh sửa/nộp lại.
 - `baoCaoPhongNhacHan.test.js` — nhắc trước hạn: đúng người/đúng mốc/đúng giờ VN, đúng một lần (chạy chồng, khởi động lại, dời hạn), SMTP hỏng.
 - `baoCaoPhongYKien.test.js` — ý kiến của Viện trưởng: chỉ Viện trưởng gửi, email đúng phòng, không lộ cho phòng khác, kiểm dữ liệu, SMTP hỏng.
+- `baoCaoPhongChucDanh.test.js` — chức danh: gán, mặc định, chức danh lạ, cùng quyền, thư mời/thư báo, nâng cấp DB cũ.
 - `baoCaoPhongXoaPhong.test.js` — xóa phòng: chỉ khi chưa từng giao đợt; gỡ trưởng phòng, hủy lời mời, không đụng tài khoản; quyền.
 - `baoCaoPhongXacNhan.test.js` — ai xác nhận / tải / gửi / duyệt: Viện trưởng không xác nhận hộ, không tải/gửi hồ sơ; admin và quản lý được; người kiêm hai vai trò làm được cả hai.
 - `baoCaoPhongVienTruong.test.js` — dữ liệu thẻ việc: `/viec-cua-toi` (hồ sơ chỉ lộ cho Viện trưởng), `/tong-quan` có đủ thông tin hồ sơ chờ.
