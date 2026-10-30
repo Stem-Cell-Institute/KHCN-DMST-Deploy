@@ -39,10 +39,10 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 > đó trả 400 và không gọi `next()`. Gộp lại rồi mount một lần sẽ đặt `:id` cùng vị trí với
 > `export.js` và `core.js` — `/api/missions/export` và `/stats` sẽ bị nuốt. Bảy mount riêng ở bảy vị
 > trí là **điều kiện đúng đắn**, không phải nợ kỹ thuật.
-| 2 | `crd` — **chia 3 PR** (868 dòng handler, gấp 2,2 lần trần 400) | 36 | 🟡 **Đang tách** — 2.1 xong, chờ 2.2 và 2.3 | xem bảng dưới |
+| 2 | `crd` — **chia 3 PR** (868 dòng handler, gấp 2,2 lần trần 400) | 36 | 🟡 **Đang tách** — 2.1 và 2.2 xong, chờ 2.3 | xem bảng dưới |
 | └ 2.0 | Lưới test `tests/crd.test.js` + công cụ `route:snapshot` / `route:compare` | 0 | 🔵 Chờ review (PR #24) | `test/luoi-crd` |
 | └ 2.1 | đăng ký công khai + phần người dùng thường (state, đặt/sửa/hủy lịch, chat, khiếu nại) — **2 router** | 10 | 🔵 Chờ review (PR 2.1) · −296 dòng | `refactor/routes-crd-1` |
-| └ 2.2 | thiết bị, thông báo phòng lab, snapshot, kiểm duyệt tin, email-notif, khiếu nại (admin) — **2 router** | 14 | ⬜ Chưa bắt đầu | — |
+| └ 2.2 | snapshot, thông báo phòng lab, thiết bị (admin) + kiểm duyệt tin, email-notif, khiếu nại (admin) — **2 router** | 14 | 🔵 Chờ review (PR 2.2) · −281 dòng | `refactor/routes-crd-2` |
 | └ 2.3 | hồ sơ CRD, tài khoản, vai trò, lịch (quản trị) | 12 | ⬜ Chưa bắt đầu | — |
 | 3 | `submissions` + `publications` | 36 | ⬜ Chưa bắt đầu | — |
 | 4 | `cap-vien` | 47 | ⬜ Chưa bắt đầu | — |
@@ -52,7 +52,7 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 
 Ký hiệu: ⬜ chưa bắt đầu · 🟡 đang làm · 🔵 chờ review/merge · ✅ đã merge + deploy ổn định
 
-**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **18.210** (đo bằng `wc -l` như CI, sau Đợt 2.1) → *mục tiêu < 300*. Route khai báo thẳng trong `server.js`: 360 → **310** (còn 26 route CRD cho Đợt 2.2–2.3).
+**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **17.929** (đo bằng `wc -l` như CI, sau Đợt 2.2) → *mục tiêu < 300*. Route khai báo thẳng trong `server.js`: 360 → **296** (còn 12 route CRD cho Đợt 2.3).
 
 Đã cắt **1.285 dòng** (6,6% chặng đường). Trần hiện tại nằm ở `.github/server-js-max-lines`, CI đỏ
 nếu file dài ra. Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
@@ -268,6 +268,14 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-10-30 · refactor/routes-crd-2 · Đợt 2.2 — thiết bị, thông báo phòng lab, kiểm duyệt, email-notif
+
+- **Đã xong:** 14 route CRD ra khỏi `server.js` sang `routes/crd/quanTriThietBi.js` (9 route: snapshot, thông báo phòng lab ×4, thiết bị ×4) và `routes/crd/kiemDuyetThongBao.js` (5 route: xóa tin, email-notif ×2, khiếu nại admin ×2, kèm hàm phụ `crdEmailNotifUserId`). `server.js` 18.210 → **17.929** (−281). Dùng lại đúng quy trình và bộ công cụ của 2.1.
+- **Bằng chứng:** `diff` route-inventory **rỗng** (665 route, cùng thứ tự); `tests/crd.test.js` 31/31 xanh trước và sau; `route:compare` so với **mốc gốc trước Đợt 2** → GIỐNG NHAU (0 đổi mã, 0 đổi nội dung); đảo ngược phép biến đổi rồi so từng byte: 204 và 100 dòng NGUYÊN VĂN; kiểm đột biến 22/22 bị bắt **và đột biến thứ tự route (`machines/reorder` sau `machines/:id`) bị bắt ngay trong file mới**.
+- **Cạm bẫy phát hiện:** `DELETE /api/crd/admin/chats/:id` có đường dẫn `admin` nhưng **không** qua `adminOnly` — kiểm quyền nằm trong handler. Đã ghi cảnh báo ở đầu `kiemDuyetThongBao.js` để người sau không "dọn dẹp" bằng middleware. Thứ tự `reorder` trước `:id` cũng ghi ở đầu `quanTriThietBi.js`.
+- **Phiên sau làm:** Đợt 2.3 — `routes/crd/quanTriNguoiDung.js` (12 route: hồ sơ CRD ×4, tài khoản ×3, vai trò ×3, lịch quản trị ×2). Là PR cuối của Đợt 2: sau đó `server.js` không còn route `/api/crd` nào, và có thể bắt đầu chuyển hàm CRD dùng chung sang `services/`.
+- **Nợ kỹ thuật thêm:** không.
 
 ### 2026-10-30 · refactor/routes-crd-1 · Đợt 2.1 — đăng ký công khai + người dùng thường
 
