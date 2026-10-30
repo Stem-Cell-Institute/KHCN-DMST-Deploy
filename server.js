@@ -12857,210 +12857,19 @@ app.use('/api', require('./routes/crd/nguoiDung')({
   crdChatToClient,
 }));
 
-app.get('/api/crd/admin/snapshot', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const base = crdGetStateForUser(req.user);
-    const complaints = db
-      .prepare('SELECT * FROM crd_complaints ORDER BY id DESC')
-      .all()
-      .map(c => ({
-        id: c.id,
-        reporterId: c.reporter_id,
-        againstId: c.against_id || null,
-        bookingId: c.booking_id || null,
-        subject: c.subject,
-        body: c.body,
-        status: c.status,
-        adminNote: c.admin_note || '',
-        createdAt: c.created_at
-      }));
-    return res.json({ ...base, complaints });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-app.get('/api/crd/admin/lab-announcements', authMiddleware, adminOnly, (req, res) => {
-  try {
-    return res.json({ announcements: crdLabAnnouncementsAll() });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-app.post('/api/crd/admin/lab-announcements', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const b = req.body || {};
-    const title = (b.title != null ? String(b.title) : '').trim();
-    const bodyText = (b.body != null ? String(b.body) : '').trim();
-    if (!title && !bodyText) {
-      return res.status(400).json({ message: 'Vui lòng nhập tiêu đề hoặc nội dung thông báo' });
-    }
-    let sortOrder = b.sortOrder !== undefined ? Number(b.sortOrder) : 0;
-    if (!Number.isFinite(sortOrder)) sortOrder = 0;
-    const isActive = b.isActive === false || b.isActive === 0 ? 0 : 1;
-    const id = 'la_' + crypto.randomBytes(6).toString('hex');
-    db.prepare(
-      `INSERT INTO crd_lab_announcements (id, title, body, sort_order, is_active, updated_at)
-       VALUES (?,?,?,?,?, datetime('now','localtime'))`
-    ).run(id, title, bodyText, sortOrder, isActive);
-    const row = db.prepare('SELECT * FROM crd_lab_announcements WHERE id = ?').get(id);
-    return res.status(201).json({
-      announcement: crdAnnouncementToClient(row),
-      labAnnouncements: crdLabAnnouncementsActive()
-    });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-app.put('/api/crd/admin/lab-announcements/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const id = (req.params.id || '').trim();
-    const row = db.prepare('SELECT * FROM crd_lab_announcements WHERE id = ?').get(id);
-    if (!row) return res.status(404).json({ message: 'Không tìm thấy thông báo' });
-    const b = req.body || {};
-    const title = b.title !== undefined ? String(b.title).trim() : row.title || '';
-    const bodyText = b.body !== undefined ? String(b.body) : row.body || '';
-    let sortOrder = b.sortOrder !== undefined ? Number(b.sortOrder) : row.sort_order;
-    let isActive =
-      b.isActive !== undefined ? (b.isActive === false || b.isActive === 0 ? 0 : 1) : row.is_active;
-    if (!Number.isFinite(sortOrder)) sortOrder = 0;
-    if (!title.trim() && !String(bodyText || '').trim()) {
-      return res.status(400).json({ message: 'Tiêu đề và nội dung không được để trống cùng lúc' });
-    }
-    db.prepare(
-      `UPDATE crd_lab_announcements SET title=?, body=?, sort_order=?, is_active=?,
-       updated_at=datetime('now','localtime') WHERE id=?`
-    ).run(title, bodyText, sortOrder, isActive, id);
-    return res.json({
-      announcement: crdAnnouncementToClient(db.prepare('SELECT * FROM crd_lab_announcements WHERE id = ?').get(id)),
-      labAnnouncements: crdLabAnnouncementsActive()
-    });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-app.delete('/api/crd/admin/lab-announcements/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const id = (req.params.id || '').trim();
-    const r = db.prepare('DELETE FROM crd_lab_announcements WHERE id = ?').run(id);
-    if (!r.changes) return res.status(404).json({ message: 'Không tìm thấy thông báo' });
-    return res.json({ ok: true, labAnnouncements: crdLabAnnouncementsActive() });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-app.post('/api/crd/admin/machines', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const b = req.body || {};
-    const name = (b.name || '').trim();
-    if (!name) return res.status(400).json({ message: 'Tên thiết bị bắt buộc' });
-    const id = (b.id && String(b.id).trim()) || 'm_' + crypto.randomBytes(5).toString('hex');
-    const type = (b.type || '').trim() || '';
-    const location = (b.location || '').trim() || '';
-    const color = (b.color || '#667eea').trim();
-    const availFrom = Math.max(0, Math.min(23, Number(b.availFrom) || 8));
-    const availTo = Math.max(1, Math.min(24, Number(b.availTo) || 20));
-    const maxHours = Math.max(1, Math.min(24, Number(b.maxHours) || 4));
-    const description = (b.desc || b.description || '').trim();
-    const sort_order = Number(b.sort_order) || 0;
-    if (availTo <= availFrom) return res.status(400).json({ message: 'availTo phải lớn hơn availFrom' });
-    db.prepare(
-      `INSERT INTO crd_machines (id,name,type,location,color,avail_from,avail_to,max_hours,description,sort_order)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`
-    ).run(id, name, type, location, color, availFrom, availTo, maxHours, description, sort_order);
-    return res.status(201).json({ machine: crdMachineToClient(db.prepare('SELECT * FROM crd_machines WHERE id = ?').get(id)) });
-  } catch (e) {
-    if (e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
-      return res.status(409).json({ message: 'ID thiết bị đã tồn tại' });
-    }
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-/** Body: { orderedIds: string[] } — đủ mọi id thiết bị, đúng thứ tự hiển thị */
-app.put('/api/crd/admin/machines/reorder', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const raw = req.body && req.body.orderedIds;
-    if (!Array.isArray(raw) || !raw.length) {
-      return res.status(400).json({ message: 'orderedIds phải là mảng id thiết bị' });
-    }
-    const orderedIds = raw.map((x) => String(x || '').trim()).filter(Boolean);
-    const uniq = new Set(orderedIds);
-    if (uniq.size !== orderedIds.length) {
-      return res.status(400).json({ message: 'Trùng ID trong orderedIds' });
-    }
-    const existing = db.prepare('SELECT id FROM crd_machines').all().map((r) => r.id);
-    if (orderedIds.length !== existing.length) {
-      return res.status(400).json({ message: 'Số thiết bị không khớp với máy chủ' });
-    }
-    const es = new Set(existing);
-    for (const id of orderedIds) {
-      if (!es.has(id)) return res.status(400).json({ message: 'Có ID không tồn tại trong orderedIds' });
-    }
-
-    const upd = db.prepare(
-      "UPDATE crd_machines SET sort_order = ?, updated_at = datetime('now') WHERE id = ?"
-    );
-    const tx = db.transaction(() => {
-      orderedIds.forEach((id, i) => upd.run(i, id));
-    });
-    tx();
-    const machines = db
-      .prepare('SELECT * FROM crd_machines ORDER BY sort_order ASC, name ASC')
-      .all()
-      .map(crdMachineToClient);
-    return res.json({ machines });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-app.put('/api/crd/admin/machines/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const id = (req.params.id || '').trim();
-    const row = db.prepare('SELECT * FROM crd_machines WHERE id = ?').get(id);
-    if (!row) return res.status(404).json({ message: 'Không tìm thấy' });
-    const b = req.body || {};
-    const name = (b.name !== undefined ? String(b.name) : row.name).trim();
-    if (!name) return res.status(400).json({ message: 'Tên thiết bị bắt buộc' });
-    const type = b.type !== undefined ? String(b.type) : row.type;
-    const location = b.location !== undefined ? String(b.location) : row.location;
-    const color = b.color !== undefined ? String(b.color) : row.color;
-    let availFrom = b.availFrom !== undefined ? Number(b.availFrom) : row.avail_from;
-    let availTo = b.availTo !== undefined ? Number(b.availTo) : row.avail_to;
-    let maxHours = b.maxHours !== undefined ? Number(b.maxHours) : row.max_hours;
-    const description = b.desc !== undefined ? String(b.desc) : b.description !== undefined ? String(b.description) : row.description;
-    let sortOrder = b.sort_order !== undefined ? Number(b.sort_order) : row.sort_order;
-    if (!Number.isFinite(sortOrder)) sortOrder = 0;
-    availFrom = Math.max(0, Math.min(23, availFrom));
-    availTo = Math.max(1, Math.min(24, availTo));
-    maxHours = Math.max(1, Math.min(24, maxHours));
-    if (availTo <= availFrom) return res.status(400).json({ message: 'availTo phải lớn hơn availFrom' });
-    db.prepare(
-      `UPDATE crd_machines SET name=?, type=?, location=?, color=?, avail_from=?, avail_to=?, max_hours=?, description=?, sort_order=?, updated_at=datetime('now') WHERE id=?`
-    ).run(name, type, location, color, availFrom, availTo, maxHours, description || '', sortOrder, id);
-    return res.json({ machine: crdMachineToClient(db.prepare('SELECT * FROM crd_machines WHERE id = ?').get(id)) });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-app.delete('/api/crd/admin/machines/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const id = (req.params.id || '').trim();
-    const row = db.prepare('SELECT id FROM crd_machines WHERE id = ?').get(id);
-    if (!row) return res.status(404).json({ message: 'Không tìm thấy' });
-    db.prepare('DELETE FROM crd_bookings WHERE machine_id = ?').run(id);
-    db.prepare('DELETE FROM crd_machines WHERE id = ?').run(id);
-    return res.json({ ok: true });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
+// Đặt lịch CRD — quản trị snapshot, thông báo phòng lab, thiết bị (9 endpoint) đã tách sang
+// routes/crd/quanTriThietBi.js. Mount ĐÚNG TẠI VỊ TRÍ CŨ: vẫn trước nhóm quản trị hồ sơ CRD bên dưới.
+app.use('/api', require('./routes/crd/quanTriThietBi')({
+  authMiddleware,
+  adminOnly,
+  crdGetStateForUser,
+  db,
+  crdLabAnnouncementsAll,
+  crypto,
+  crdAnnouncementToClient,
+  crdLabAnnouncementsActive,
+  crdMachineToClient,
+}));
 
 app.post('/api/crd/admin/persons', authMiddleware, adminOnly, (req, res) => {
   try {
@@ -13902,106 +13711,16 @@ app.get('/api/users/search', authMiddleware, adminOrMasterAdminApi, (req, res) =
   }
 });
 
-app.delete('/api/crd/admin/chats/:id', authMiddleware, (req, res) => {
-  try {
-    const id = (req.params.id || '').trim();
-    const row = db.prepare('SELECT * FROM crd_chats WHERE id = ?').get(id);
-    if (!row) return res.status(404).json({ message: 'Không tìm thấy' });
-    const isSysAdmin = (req.user.role || '').toLowerCase() === 'admin';
-    const mePersonId = crdEnsurePersonForAppUser(req.user);
-    const isBroadcast = row.to_id === CRD_BROADCAST_TO_ID;
-    if (isBroadcast) {
-      if (!isSysAdmin && !crdPersonHasModeratorSlot(mePersonId)) {
-        return res.status(403).json({
-          message: 'Chỉ quản trị hệ thống hoặc tài khoản có vai trò Admin CRD mới xóa được tin kênh chung.'
-        });
-      }
-    } else if (!isSysAdmin) {
-      return res.status(403).json({ message: 'Chỉ quản trị hệ thống mới xóa được tin nhắn riêng.' });
-    }
-    db.prepare('UPDATE crd_chats SET is_deleted = 1 WHERE id = ?').run(id);
-    return res.json({ ok: true });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-/**
- * Cài đặt email CRD (bảng users) gắn với tài khoản đăng nhập JWT — không phụ thuộc cột crd_persons.user_id.
- * (Cột user_id trên hồ sơ CRD chỉ là bản sao; trước đây thiếu cột dễ gây hiểu nhầm "Không liên kết tài khoản"
- * dù đã đăng nhập.)
- */
-function crdEmailNotifUserId(req) {
-  const mePersonId = crdEnsurePersonForAppUser(req.user);
-  if (!mePersonId) return { error: 'Không xác định người dùng CRD' };
-  const uid = Number(req.user && req.user.id);
-  if (!Number.isFinite(uid)) return { error: 'Không xác định tài khoản đăng nhập' };
-  try {
-    db.prepare('UPDATE crd_persons SET user_id = ? WHERE id = ? AND (user_id IS NULL OR user_id = ?)').run(
-      uid,
-      mePersonId,
-      uid
-    );
-  } catch (_) {
-    /* ignore nếu DB cũ */
-  }
-  return { uid };
-}
-
-/** Toggle thông báo email CRD cho chính mình */
-app.put('/api/crd/email-notif', authMiddleware, (req, res) => {
-  try {
-    const r = crdEmailNotifUserId(req);
-    if (r.error) return res.status(403).json({ message: r.error });
-    const val = req.body && req.body.enabled !== undefined ? (req.body.enabled ? 1 : 0) : 1;
-    db.prepare('UPDATE users SET crd_email_notif = ? WHERE id = ?').run(val, r.uid);
-    return res.json({ ok: true, enabled: val === 1 });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-/** Lấy trạng thái thông báo email CRD của chính mình */
-app.get('/api/crd/email-notif', authMiddleware, (req, res) => {
-  try {
-    const r = crdEmailNotifUserId(req);
-    if (r.error) return res.status(403).json({ message: r.error });
-    const row = db.prepare('SELECT crd_email_notif FROM users WHERE id = ?').get(r.uid);
-    return res.json({ enabled: row && Number(row.crd_email_notif) === 1 });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-app.put('/api/crd/admin/complaints/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID không hợp lệ' });
-    const row = db.prepare('SELECT * FROM crd_complaints WHERE id = ?').get(id);
-    if (!row) return res.status(404).json({ message: 'Không tìm thấy' });
-    const b = req.body || {};
-    const status = (b.status || row.status || 'open').trim();
-    const adminNote = b.adminNote !== undefined ? String(b.adminNote) : row.admin_note;
-    const allowed = ['open', 'in_review', 'resolved', 'rejected'];
-    if (!allowed.includes(status)) return res.status(400).json({ message: 'Trạng thái không hợp lệ' });
-    db.prepare('UPDATE crd_complaints SET status=?, admin_note=? WHERE id=?').run(status, adminNote || '', id);
-    return res.json({ ok: true });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
-
-app.delete('/api/crd/admin/complaints/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID không hợp lệ' });
-    const r = db.prepare('DELETE FROM crd_complaints WHERE id = ?').run(id);
-    if (!r.changes) return res.status(404).json({ message: 'Không tìm thấy' });
-    return res.json({ ok: true });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi' });
-  }
-});
+// Đặt lịch CRD — kiểm duyệt tin, email-notif, khiếu nại admin (5 endpoint) đã tách sang
+// routes/crd/kiemDuyetThongBao.js. Mount ĐÚNG TẠI VỊ TRÍ CŨ.
+app.use('/api', require('./routes/crd/kiemDuyetThongBao')({
+  authMiddleware,
+  db,
+  crdEnsurePersonForAppUser,
+  CRD_BROADCAST_TO_ID,
+  crdPersonHasModeratorSlot,
+  adminOnly,
+}));
 
 // BỔ SUNG MODULE HỢP TÁC QUỐC TẾ — CÁC ROUTE & TÍNH NĂNG MỚI
 // Các route CŨ giữ nguyên phía trên — file này CHỈ THÊM route mới
