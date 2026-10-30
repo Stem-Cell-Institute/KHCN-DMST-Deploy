@@ -128,6 +128,7 @@ Việc phát hiện dọc đường nhưng **cố ý không làm** để giữ p
 | 12 | **Font trang chủ nạp từ Google Fonts.** `index.html` tải Be Vietnam Pro qua `fonts.googleapis.com`. Máy chủ đặt tại Việt Nam nên đây là phụ thuộc mạng ngoài có thể chậm hoặc bị chặn, và trang chủ là trang công khai ai cũng vào. Nên self-host: tải 4 file `.woff2` (400/500/600/700) vào `public/fonts/`, khai `@font-face` với `font-display: swap`, bỏ 3 thẻ `<link>` Google. | Giao diện | Thấp — nhưng ảnh hưởng tốc độ trang công khai |
 | 13 | **`js/auth-status.js` dùng emoji thay icon** (🔐 👤 ⚙️). Craft floor của skill thiết kế cấm emoji đứng thay hệ icon — icon phải được vẽ, cùng nét, cùng cân nặng. File này **dùng chung trên nhiều trang** nên không sửa trong lần làm lại trang chủ; sửa sẽ đổi giao diện mọi trang cùng lúc, cần làm thành PR riêng có rà soát. | Giao diện | Thấp |
 | 14 | **`public/css/ticker.css` vi phạm hai mục của checklist emil.** (a) 3 quy tắc `:hover` không bọc trong `@media (hover: hover)` — trên cảm ứng hiệu ứng dính lại sau khi chạm. (b) Link tin trong dải chạy chỉ cao **32px**, dưới sàn tap target 44px. File này **dùng chung với trang quản trị ticker** nên không sửa trong lần làm lại trang chủ — sửa sẽ đổi cả hai nơi, cần PR riêng có rà soát. | Giao diện | Thấp |
+| ~~15~~ | ✅ **ĐÃ VÁ** — `POST /api/register` không còn tạo tài khoản / đặt mật khẩu / đăng nhập ngay. Nay chỉ gửi thư có liên kết dùng một lần (256 bit, lưu sha256, hạn 2 giờ) tới đúng hộp thư; người cầm liên kết mới đặt mật khẩu ở `xac-minh-email.html` (`POST /api/register/hoan-tat`) rồi mới tạo tài khoản mới hoặc kích hoạt tài khoản Viện tạo sẵn (chưa có mật khẩu). Mật khẩu đặt **sau** xác minh nên kẻ gõ email người khác không biết được mật khẩu. SMTP chưa cấu hình hoặc gửi lỗi → 503, không bỏ qua xác minh. Mã: `routes/dangKy.js`, `services/xacMinhEmail.js`; test: `tests/dangKyXacMinh.test.js`. **Không đụng tài khoản đã có** (không migration, không cột mới, đăng nhập và quên mật khẩu giữ nguyên).<br><br>**Còn nợ, cố ý chưa làm:**<br>• `POST /api/crd/public/register` (email ngoài `@sci.edu.vn`, vai trò `crd_user`) vẫn tạo tài khoản + đăng nhập ngay, không xác minh email — cùng kiểu lỗi, mức thấp hơn vì chỉ vào được module đặt lịch CRD.<br>• `password_reset_tokens.token` lưu mã **thô** (không băm) và `sendPasswordResetEmail` nuốt lỗi SMTP (khi chưa cấu hình SMTP vẫn báo "đã gửi").<br>• Thông báo đăng ký giống nhau cho mọi email, nhưng thời gian phản hồi vẫn khác (có gửi SMTP hay không) — dò được tinh vi bằng đo thời gian; chấp nhận được vì `/api/login` đã cho biết tài khoản chưa kích hoạt.<br>• Branch `feat/bao-cao-phong`: comment trong `routes/baoCaoPhong.js` và `tests/helpers/baoCaoPhongApp.js` còn ghi "đăng ký không xác minh email" — nên cập nhật khi gộp. | Bảo mật | ✅ Đã xử lý (còn nợ nhỏ) |
 
 ---
 
@@ -240,6 +241,29 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-10-28 · module mới **Báo cáo phòng ban** · tính năng, không phải refactor
+
+- **Đã xong:** module cho Trưởng phòng Tổ chức Hành chính quản lý báo cáo của các trưởng phòng — xem
+  [MODULE-BAO-CAO-PHONG.md](MODULE-BAO-CAO-PHONG.md). Biểu mẫu nhập trực tiếp, người quản lý tự tùy
+  chỉnh (phiên bản bất biến, đợt ghim phiên bản). Đã mở rộng: bảng nhiều dòng + ô tổng hợp tự tính,
+  mẫu mặc định theo Word của Viện, vai trò Viện trưởng, kết xuất Word/PDF, email báo nộp/trình/duyệt,
+  hồ sơ trình Viện trưởng (tải tệp, gửi/gửi lại để nhắc, chỉ Viện trưởng duyệt), mời trưởng phòng bằng email, thẻ trang chủ.
+  197 test mới (từ 48 lên 245). Có email tự nhắc trước hạn (hẹn giờ trong tiến trình; thêm bảng `bcp_nhac_han`). Sửa đợt đang mở có email báo trưởng phòng các phòng chưa nộp. Chính sách tự duyệt (người nộp cũng là người duyệt): cho phép, ghi rõ (xem tài liệu module).
+- **Thêm dependency `pdfkit@0.20.2`** (MIT, +19 gói gián tiếp) và 4 file font `services/fonts/Tinos-*.ttf`
+  (SIL OFL, ~2,2 MB) để xuất PDF có dấu tiếng Việt. `npm audit` không đổi (5 mục, 2 high — nợ #3). Cần
+  `npm ci` khi deploy; Docker `COPY . .` đã mang theo thư mục font.
+- **Cần cấu hình khi deploy:** `BASE_URL` (liên kết trong email) và SMTP (`SMTP_HOST/USER/PASS`, đã dùng
+  bởi module Hội đồng); thiếu SMTP thì module vẫn chạy, chỉ không gửi thư. Tệp hồ sơ trình nằm dưới
+  thư mục uploads — phải nằm trong volume được sao lưu.
+- **Đã nâng trần `.github/server-js-max-lines` 18.562 → 18.564** vì `server.js` thêm **2 dòng**: một dòng mount
+  router và một dòng `department_reports` trong `HOMEPAGE_MODULES_DEFAULT` (thẻ trang chủ). Cùng lý do với lần nâng ở mục Chart.js: đây là tính năng mới, không phải refactor, và
+  con số nằm trong diff để review thấy. Toàn bộ logic nằm ngoài `server.js` (`routes/`, `services/`);
+  lược đồ DB tự tạo trong router nên không thêm dòng nào vào các khối `CREATE TABLE` của `server.js`.
+- **Chưa làm:** lối vào từ trang chủ (phụ thuộc `HOMEPAGE_MODULES_DEFAULT` + trang chủ công khai nên cần
+  quyết định sản phẩm), email nhắc hạn, xuất Excel tổng hợp, đính kèm tệp, vai trò chỉ-xem.
+- **Cách kiểm giao diện không đụng dữ liệu thật:** harness express + DB `:memory:` + chính router thật +
+  xác thực giả (chọn người dùng tổng hợp). Không cần tài khoản hay token nào của hệ thống.
 
 ### 2026-10-22 · `refactor/routes-missions-4` · Đợt 1.4 — **hết endpoint `/api/missions` trong `server.js`**
 

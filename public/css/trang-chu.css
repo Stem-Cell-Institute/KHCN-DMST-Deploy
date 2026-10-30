@@ -322,6 +322,12 @@ a.header-home-link {
 .module-card--crd-spotlight .module-icon-bg { color: var(--son); }
 .module-card--crd-spotlight .module-description a { font-weight: 600; }
 
+/* Thẻ "Báo cáo phòng ban" khi người dùng có báo cáo cần nộp (public/js/the-bao-cao-phong.js) */
+.modules-grid > .module-card.module-card--viec { padding-left: 22px; border-left: 4px solid var(--son); }
+.viec-the { margin: 0 0 16px; padding: 12px 14px; background: #fdf2f1; border: 1px solid var(--son); color: var(--muc); font-size: 0.92rem; line-height: 1.5; max-width: 62ch; }
+.viec-the strong { display: block; margin-bottom: 2px; font-size: 1rem; color: var(--son-dam); }
+.btn-access--viec { min-height: 48px; padding: 0 24px; background: var(--son); font-size: 1rem; }
+
 /* Module chưa triển khai */
 .module-card--disabled { opacity: 0.5; }
 .module-card--disabled .btn-access {
@@ -375,6 +381,7 @@ a.header-home-link {
   .stat-card:nth-child(n + 4) { border-top: 1px solid var(--ke); }
   .modules-grid { grid-template-columns: 1fr; }
   .modules-grid > .module-card:nth-child(even) { padding-left: 0; border-left: 0; }
+  .modules-grid > .module-card.module-card--viec { padding-left: 14px; border-left: 4px solid var(--son); }
   .module-card--crd-spotlight { padding-left: 14px; }
 }
 
