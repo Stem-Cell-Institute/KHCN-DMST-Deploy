@@ -82,8 +82,15 @@ function mintTokens(dbPath, jwtSecret) {
   };
 }
 
-/** Khởi động server test. Trả về { baseUrl, tokens, stop() }. */
-async function startTestServer() {
+/**
+ * Khởi động server test. Trả về { baseUrl, tokens, dbPath, logs, stop() }.
+ *
+ * options.port — cổng riêng. Node chạy các file test SONG SONG, nên mỗi file dùng server riêng phải
+ *                chọn một cổng khác nhau (mặc định PORT, dành cho smoke.test.js).
+ * options.env  — biến môi trường thêm cho tiến trình server (vd API_RATE_LIMIT_MAX).
+ */
+async function startTestServer(options = {}) {
+  const port = options.port || PORT;
   require(path.join(CODE_ROOT, 'node_modules', 'dotenv')).config({ path: path.join(CODE_ROOT, '.env') });
   const jwtSecret = process.env.JWT_SECRET;
   if (!jwtSecret) throw new Error('Thiếu JWT_SECRET trong .env — không ký được token test.');
@@ -95,14 +102,15 @@ async function startTestServer() {
   const env = {
     ...process.env,
     NODE_ENV: 'development',
-    PORT: String(PORT),
-    BASE_URL: 'http://127.0.0.1:' + PORT,
+    PORT: String(port),
+    BASE_URL: 'http://127.0.0.1:' + port,
     APP_DATA_DIR: dir,        // uploads + dữ liệu đều nằm trong hộp cát
     SQLITE_PATH: dbPath,
     SMTP_HOST: '',            // rỗng => không tạo transporter => không gửi mail
     SMTP_USER: '',
     SMTP_PASS: '',
-    TEST_PORT: String(PORT),
+    TEST_PORT: String(port),
+    ...(options.env || {}),
   };
 
   const child = spawn(process.execPath, [path.join(CODE_ROOT, 'server.js')], {
@@ -115,7 +123,7 @@ async function startTestServer() {
   child.stdout.on('data', (d) => logs.push(String(d)));
   child.stderr.on('data', (d) => logs.push(String(d)));
 
-  const baseUrl = 'http://127.0.0.1:' + PORT;
+  const baseUrl = 'http://127.0.0.1:' + port;
   try {
     await waitForHealth(baseUrl);
   } catch (e) {

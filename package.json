@@ -13,6 +13,8 @@
     "migrate:turso": "node scripts/migrate-to-turso.js",
     "db:status": "node scripts/db-status.js",
     "routes:inventory": "node scripts/route-inventory.js",
+    "route:snapshot": "node scripts/route-snapshot.js",
+    "route:compare": "node scripts/route-compare.js",
     "import:sjr": "node scripts/import-sjr-csv.js",
     "migrate:reset-precreated": "node migrations/reset-precreated-passwords.js",
     "orcid:harvest": "node scripts/orcid-harvest-cli.js",
