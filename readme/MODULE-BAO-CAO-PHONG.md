@@ -38,6 +38,15 @@ Lưu trong bảng riêng `bcp_thanh_vien`, **không đụng vào cột `users.ro
 - Người được gán/mời phải dùng email `@sci.edu.vn` (cùng điều kiện đăng ký tài khoản). Ô tìm người chỉ
   tìm trong người đã có tài khoản; người **chưa có** thì dùng "Mời trưởng phòng bằng email" (mục sau).
 
+## Danh mục phòng: xóa hay ngừng dùng
+
+- **Xóa** (`DELETE /phong/:id`, nút "Xóa" ở mục Phòng & phân quyền) chỉ có với phòng **chưa từng được giao đợt nào** (cột "Số đợt đã giao" = 0, tính cả đợt Nháp).
+  Xóa kèm gỡ các trưởng phòng đang gắn với phòng và hủy lời mời đang chờ; **tài khoản của họ không bị xóa**. Phòng đã có đợt: server trả 409,
+  giao diện không hiện nút Xóa — vì báo cáo là hồ sơ của phòng, không được mất theo.
+- **Ngừng dùng**: phòng không còn được giao ở đợt mới, báo cáo cũ giữ nguyên; "Dùng lại" để bật trở lại.
+- **Mã phòng** (`bcp_phong.ma`) không còn hiển thị hay nhập trên giao diện. Cột còn trong DB chỉ để "Nhập từ danh mục đơn vị" khỏi tạo trùng
+  phòng đã có; không dùng cho phân quyền, email hay kết xuất.
+
 ## Mời trưởng phòng bằng email
 
 Người quản lý nhập email @sci.edu.vn + chọn phòng (`POST /loi-moi`):
@@ -269,6 +278,7 @@ Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
 - `baoCaoPhongTuDuyet.test.js` — cờ "tự duyệt" (người nộp = người duyệt), không dính lại sau chỉnh sửa/nộp lại.
 - `baoCaoPhongNhacHan.test.js` — nhắc trước hạn: đúng người/đúng mốc/đúng giờ VN, đúng một lần (chạy chồng, khởi động lại, dời hạn), SMTP hỏng.
 - `baoCaoPhongYKien.test.js` — ý kiến của Viện trưởng: chỉ Viện trưởng gửi, email đúng phòng, không lộ cho phòng khác, kiểm dữ liệu, SMTP hỏng.
+- `baoCaoPhongXoaPhong.test.js` — xóa phòng: chỉ khi chưa từng giao đợt; gỡ trưởng phòng, hủy lời mời, không đụng tài khoản; quyền.
 - `baoCaoPhongXacNhan.test.js` — ai xác nhận / tải / gửi / duyệt: Viện trưởng không xác nhận hộ, không tải/gửi hồ sơ; admin và quản lý được; người kiêm hai vai trò làm được cả hai.
 - `baoCaoPhongVienTruong.test.js` — dữ liệu thẻ việc: `/viec-cua-toi` (hồ sơ chỉ lộ cho Viện trưởng), `/tong-quan` có đủ thông tin hồ sơ chờ.
 - `baoCaoPhongSuaDot.test.js` — email khi sửa đợt đang mở: đúng người nhận, không gửi khi không đổi, tắt được, Nháp/đã đóng.

@@ -1610,6 +1610,14 @@
   }
 
   // ══ QUẢN LÝ: phòng & phân quyền ═══════════════════════════════════════════
+  function xoaPhong(p) {
+    var gan = p.so_truong_phong ? ' ' + p.so_truong_phong + ' trưởng phòng đang gắn với phòng này sẽ không còn là trưởng phòng của phòng (tài khoản của họ không bị xóa).' : '';
+    xacNhan('Xóa phòng?', 'Phòng "' + p.ten + '" sẽ bị xóa vĩnh viễn.' + gan + ' Không hoàn tác được.', 'Xóa phòng', true).then(function (ok) {
+      if (!ok) return;
+      api('/phong/' + p.id, { method: 'DELETE' }).then(function () { thongBao('Đã xóa phòng.'); return route(); }).catch(function (e) { thongBao(e.message, 'loi'); });
+    });
+  }
+
   function viewPhong() {
     return Promise.all([api('/phong'), api('/thanh-vien'), api('/loi-moi')]).then(function (r) {
       var phongs = r[0].phong;
@@ -1619,11 +1627,9 @@
 
       // — Phòng
       var ten = h('input', { type: 'text', id: 'p-ten', maxlength: 150 });
-      var ma = h('input', { type: 'text', id: 'p-ma', maxlength: 30, placeholder: 'vd: khcn (tùy chọn)' });
-      var formThem = h('form', { class: 'luoi-2', novalidate: true },
+      var formThem = h('form', { novalidate: true },
         h('div', { class: 'truong' }, h('label', { for: 'p-ten', text: 'Tên phòng' }), ten),
-        h('div', { class: 'truong' }, h('label', { for: 'p-ma', text: 'Mã (chữ thường không dấu)' }), ma),
-        h('div', { class: 'nhom-nut rong' },
+        h('div', { class: 'nhom-nut' },
           h('button', { type: 'submit', class: 'btn' }, 'Thêm phòng'),
           h('button', { type: 'button', class: 'btn btn-phu', onclick: function () {
             api('/phong/nhap-tu-don-vi', { method: 'POST' }).then(function (k) {
@@ -1633,22 +1639,24 @@
           } }, 'Nhập từ danh mục đơn vị')));
       formThem.addEventListener('submit', function (e) {
         e.preventDefault();
-        api('/phong', { method: 'POST', body: { ten: ten.value, ma: ma.value } })
+        api('/phong', { method: 'POST', body: { ten: ten.value } })
           .then(function () { thongBao('Đã thêm phòng.'); return route(); })
           .catch(function (er) { thongBao(er.message, 'loi'); });
       });
       node.push(h('h3', { text: 'Các phòng' }),
         phongs.length ? h('div', { class: 'cuon-ngang' }, h('table', null,
-          h('thead', null, h('tr', null, ['Phòng', 'Mã', 'Trưởng phòng', 'Trạng thái', ''].map(function (t) { return h('th', { scope: 'col', text: t }); }))),
+          h('thead', null, h('tr', null, ['Phòng', 'Trưởng phòng', 'Số đợt đã giao', 'Trạng thái', ''].map(function (t) { return h('th', { scope: 'col', text: t }); }))),
           h('tbody', null, phongs.map(function (p) {
             return h('tr', null,
-              h('td', { text: p.ten }), h('td', { class: 'mo', text: p.ma || '—' }), h('td', { class: 'con-so', text: String(p.so_truong_phong) }),
+              h('td', { text: p.ten }), h('td', { class: 'con-so', text: String(p.so_truong_phong) }), h('td', { class: 'con-so', text: String(p.so_dot) }),
               h('td', null, p.active ? h('span', { class: 'nhan nhan-mo', text: 'Đang dùng' }) : h('span', { class: 'nhan', text: 'Ngừng dùng' })),
               h('td', null, h('div', { class: 'nhom-nut' },
                 h('button', { type: 'button', class: 'btn btn-phu btn-nho', 'aria-label': 'Đổi tên ' + p.ten, onclick: function () { suaPhong(p); } }, 'Đổi tên'),
                 h('button', { type: 'button', class: 'btn btn-phu btn-nho', onclick: function () {
                   api('/phong/' + p.id, { method: 'PUT', body: { active: !p.active } }).then(function () { return route(); }).catch(function (e) { thongBao(e.message, 'loi'); });
-                } }, p.active ? 'Ngừng dùng' : 'Dùng lại'))));
+                } }, p.active ? 'Ngừng dùng' : 'Dùng lại'),
+                // Chỉ phòng chưa từng được giao đợt nào mới xóa được (cột "Số đợt đã giao" = 0); phòng đã dùng thì Ngừng dùng.
+                p.so_dot === 0 ? h('button', { type: 'button', class: 'btn btn-nguy btn-nho', 'aria-label': 'Xóa ' + p.ten, onclick: function () { xoaPhong(p); } }, 'Xóa') : null)));
           })))) : bangTrong('Chưa có phòng nào.'),
         h('h3', { text: 'Thêm phòng' }), formThem);
 

@@ -198,7 +198,8 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       const phong = db
         .prepare(
           `SELECT p.id, p.ma, p.ten, p.active,
-                  (SELECT COUNT(*) FROM bcp_thanh_vien t WHERE t.phong_id = p.id) AS so_truong_phong
+                  (SELECT COUNT(*) FROM bcp_thanh_vien t WHERE t.phong_id = p.id) AS so_truong_phong,
+                  (SELECT COUNT(*) FROM bcp_bao_cao b WHERE b.phong_id = p.id) AS so_dot
              FROM bcp_phong p ORDER BY p.active DESC, p.ten`
         )
         .all();
@@ -271,6 +272,33 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       }
       db.prepare('UPDATE bcp_phong SET ten = ?, active = ? WHERE id = ?').run(ten, active, id);
       res.json({ id, ten, active });
+    })
+  );
+
+  /**
+   * Xóa phòng. CHỈ khi phòng chưa từng được giao đợt nào (kể cả đợt Nháp): báo cáo đã có là hồ sơ của phòng nên không được làm
+   * mất theo. Phòng đã dùng thì "Ngừng dùng" (không giao ở đợt mới, báo cáo cũ vẫn giữ). Xóa kèm việc gỡ các trưởng phòng
+   * đang gắn với phòng và hủy lời mời đang chờ; tài khoản của họ không bị đụng tới.
+   */
+  router.delete(
+    '/phong/:id',
+    canQuanLyModule,
+    bao((req, res) => {
+      const id = docId(req.params.id);
+      if (!id) return loi(res, 400, 'ID không hợp lệ.');
+      const p = db.prepare('SELECT id, ten FROM bcp_phong WHERE id = ?').get(id);
+      if (!p) return loi(res, 404, 'Không tìm thấy phòng.');
+      const soDot = db.prepare('SELECT COUNT(*) AS n FROM bcp_bao_cao WHERE phong_id = ?').get(id).n;
+      if (soDot > 0) {
+        return loi(res, 409, `Phòng đã được giao trong ${soDot} đợt báo cáo nên không xóa được (báo cáo của phòng được giữ lại). Hãy chọn "Ngừng dùng" để phòng không còn được giao ở các đợt mới.`);
+      }
+      let goTruongPhong = 0;
+      db.transaction(() => {
+        goTruongPhong = db.prepare('DELETE FROM bcp_thanh_vien WHERE phong_id = ?').run(id).changes;
+        db.prepare('DELETE FROM bcp_loi_moi WHERE phong_id = ?').run(id);
+        db.prepare('DELETE FROM bcp_phong WHERE id = ?').run(id);
+      })();
+      res.json({ ok: true, go_truong_phong: goTruongPhong });
     })
   );
 
