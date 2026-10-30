@@ -101,6 +101,12 @@
     if (isNaN(n)) return '';
     return n > 0 ? 'còn ' + n + ' ngày' : n === 0 ? 'hết hạn trong hôm nay' : 'đã quá hạn ' + (-n) + ' ngày';
   }
+  /** Đơn vị đếm tiến độ: đợt "mỗi người một báo cáo" đếm theo báo cáo (một phòng có thể có nhiều báo cáo), đợt thường đếm theo phòng. */
+  function donVi(cachNop) { return cachNop === 'tat_ca' ? 'báo cáo' : 'phòng'; }
+  /** "Họ tên — Chức danh" của người phụ trách một báo cáo riêng (rỗng nếu là báo cáo chung của phòng). */
+  function nguoiPhuTrachNhan(b) {
+    return b.chu_ten ? b.chu_ten + (b.chuc_danh && CHUC_DANH[b.chuc_danh] ? ' — ' + CHUC_DANH[b.chuc_danh] : '') : '';
+  }
   function fmtGio(s) {
     if (!s) return '';
     var t = /^\d{4}-\d{2}-\d{2} \d/.test(s) ? s.replace(' ', 'T') + 'Z' : s; // SQLite datetime('now') là UTC, không có 'Z'
@@ -744,7 +750,7 @@
       var form = dungForm(d.truong, d.du_lieu);
       var node = [
         h('div', { class: 'nhom-nut' }, quayLai),
-        tieuDe(d.dot.tieu_de, d.phong_ten + (d.dot.ky ? ' · ' + LOAI_DOT[d.dot.loai] + ' ' + d.dot.ky : '') + ' · Hạn nộp ' + fmtNgay(d.dot.han_nop)),
+        tieuDe(d.dot.tieu_de, d.phong_ten + (d.nguoi_phu_trach ? ' · ' + d.nguoi_phu_trach + (d.chuc_danh && CHUC_DANH[d.chuc_danh] ? ' (' + CHUC_DANH[d.chuc_danh] + ')' : '') : '') + (d.dot.ky ? ' · ' + LOAI_DOT[d.dot.loai] + ' ' + d.dot.ky : '') + ' · Hạn nộp ' + fmtNgay(d.dot.han_nop)),
         h('p', null, nhan(TT_BAO_CAO, d.trang_thai), ' ', d.tre_han ? nhanTreHan() : null, ' ', d.dot.trang_thai === 'dong' ? nhan(TT_DOT, 'dong') : null),
       ];
       if (d.dot.mo_ta) node.push(h('p', { class: 'phu', text: d.dot.mo_ta }));
@@ -898,22 +904,24 @@
       return h('section', { class: 'luu-y dai-xu-ly', 'aria-label': 'Tiến độ các đợt đang mở' },
         h('p', null, h('strong', { text: 'Các đợt đang mở' })),
         h('ul', { class: 'dai-dot' }, t.chi_tiet.map(function (d) {
-          return h('li', null, h('a', { href: '#/dot/' + d.dot_id, text: d.tieu_de }), ' — đã nộp ' + d.da_nop + '/' + d.tong + ' phòng · hạn ' + fmtNgay(d.han_nop));
+          return h('li', null, h('a', { href: '#/dot/' + d.dot_id, text: d.tieu_de }), ' — đã nộp ' + d.da_nop + '/' + d.tong + ' ' + donVi(d.cach_nop) + ' · hạn ' + fmtNgay(d.han_nop));
         })));
     }
     if (!t.dot_dang_mo && !t.cho_vien_truong) return null;
     var khan = t.tre_han > 0 || (t.la_vien_truong && t.cho_vien_truong > 0);
     var tom = [];
+    // Có đợt "mỗi người một báo cáo" thì số liệu tổng hợp đếm theo báo cáo, không theo phòng.
+    var dv = t.chi_tiet.some(function (x) { return x.cach_nop === 'tat_ca'; }) ? 'báo cáo' : 'phòng';
     if (t.cho_duyet) tom.push(t.cho_duyet + ' báo cáo chờ xác nhận');
-    if (t.chua_nop) tom.push(t.chua_nop + ' phòng chưa nộp');
+    if (t.chua_nop) tom.push(t.chua_nop + ' ' + dv + ' chưa nộp');
     // Trễ hạn gồm cả phòng ĐÃ nộp nhưng nộp muộn, nên có thể lớn hơn số phòng chưa nộp: tách riêng cho khỏi tưởng sai.
-    if (t.tre_han) tom.push(t.tre_han + ' phòng trễ hạn (kể cả nộp muộn)');
+    if (t.tre_han) tom.push(t.tre_han + ' ' + dv + ' trễ hạn (kể cả nộp muộn)');
     if (t.cho_vien_truong) tom.push(t.cho_vien_truong + ' hồ sơ chờ Viện trưởng duyệt');
     var node = [h('p', null, h('strong', { text: 'Cần xử lý: ' }), tom.length ? tom.join(' · ') : 'không có việc nào đang chờ.')];
     if (t.chi_tiet.length) {
       node.push(h('ul', { class: 'dai-dot' }, t.chi_tiet.map(function (d) {
         return h('li', null, h('a', { href: '#/dot/' + d.dot_id, text: d.tieu_de }),
-          ' — đã nộp ' + d.da_nop + '/' + d.tong + ' phòng' + (d.cho_duyet ? ', chờ xác nhận ' + d.cho_duyet : '') + (d.chua_nop ? ', chưa nộp ' + d.chua_nop : '') + (d.tre_han ? ', trễ hạn ' + d.tre_han : '') + ' · hạn ' + fmtNgay(d.han_nop));
+          ' — đã nộp ' + d.da_nop + '/' + d.tong + ' ' + donVi(d.cach_nop) + (d.cho_duyet ? ', chờ xác nhận ' + d.cho_duyet : '') + (d.chua_nop ? ', chưa nộp ' + d.chua_nop : '') + (d.tre_han ? ', trễ hạn ' + d.tre_han : '') + ' · hạn ' + fmtNgay(d.han_nop));
       })));
     }
     if (t.ho_so_cho_vien_truong.length && !me.vien_truong) {
@@ -982,6 +990,10 @@
         ? h('div', { class: 'truong' }, h('label', { class: 'dong-tick', for: 'd-bao' }, cbBao, 'Gửi email báo trưởng phòng các phòng chưa nộp nếu đổi hạn nộp, tiêu đề hoặc hướng dẫn'),
             h('p', { class: 'tro-giup', text: 'Phòng đã nộp không nhận thư. Bỏ chọn nếu chỉ sửa lỗi chính tả.' }))
         : null;
+      // Cách nộp của phòng có từ hai người phụ trách trở lên. Chỉ đổi được khi đợt còn Nháp (đã mở thì báo cáo đã được tạo theo cách nộp này).
+      var fCach = h('select', { id: 'd-cach-nop', disabled: khoa, value: dot.cach_nop || 'mot_nguoi' },
+        h('option', { value: 'mot_nguoi', text: 'Một báo cáo chung của phòng (một người phụ trách nộp là đủ)' }),
+        h('option', { value: 'tat_ca', text: 'Mỗi người phụ trách nộp một báo cáo riêng (phòng hoàn thành khi tất cả đã nộp)' }));
       var fMau = h('select', { id: 'd-mau', disabled: khoa, value: String(dot.mau_id || maus[0].id) },
         maus.map(function (m) { return h('option', { value: String(m.id), text: m.ten + ' (phiên bản ' + m.so_phien_ban + ')' }); }));
       var hop_phong = phongs.map(function (p) {
@@ -1004,6 +1016,8 @@
         hopBao,
         h('div', { class: 'truong' }, h('label', { for: 'd-mau', text: 'Biểu mẫu' }),
           khoa ? h('p', { class: 'tro-giup', text: 'Đợt đã mở nên không đổi được biểu mẫu.' }) : h('p', { class: 'tro-giup', text: 'Đợt dùng phiên bản mới nhất của biểu mẫu tại thời điểm tạo.' }), fMau),
+        h('div', { class: 'truong' }, h('label', { for: 'd-cach-nop', text: 'Cách nộp báo cáo của phòng' }),
+          h('p', { class: 'tro-giup', text: khoa ? 'Đợt đã mở nên không thể thay đổi cách nộp.' : 'Áp dụng khi một phòng có từ hai người phụ trách trở lên. Chỉ lựa chọn được khi đợt còn ở trạng thái Nháp.' }), fCach),
         h('fieldset', { class: 'nhom' }, h('legend', { text: 'Giao cho các phòng *' }),
           khoa ? h('p', { class: 'tro-giup', text: 'Đợt đã mở: chỉ thêm được phòng, không gỡ phòng.' }) : null,
           h('div', { class: 'lua-phong' }, hop_phong), chonHet));
@@ -1018,7 +1032,7 @@
           if (!fHan.value) { fHan.focus(); throw new Error('Cần chọn hạn nộp.'); }
           if (!phong_ids.length) throw new Error('Cần chọn ít nhất một phòng.');
           var body = { tieu_de: fTieuDe.value, loai: fLoai.value, ky: fKy.value, han_nop: fHan.value, mo_ta: fMoTa.value, phong_ids: phong_ids };
-          if (!khoa) body.mau_id = Number(fMau.value);
+          if (!khoa) { body.mau_id = Number(fMau.value); body.cach_nop = fCach.value; }
           if (hopBao && !cbBao.checked) body.khong_thong_bao = true;
           return api(cu ? '/dot/' + dotId : '/dot', { method: cu ? 'PUT' : 'POST', body: body }).then(function (kq) {
             thongBao(cu ? 'Đã lưu đợt báo cáo.' + (kq.da_bao ? ' Đã gửi email báo ' + kq.da_bao + ' trưởng phòng chưa nộp.' : '') : 'Đã tạo đợt báo cáo ở trạng thái Nháp.');
@@ -1163,14 +1177,14 @@
     var aWord = h('a', { class: 'btn btn-phu btn-nho', 'aria-disabled': 'true' }, 'Tải Word (.docx)');
     var aPdf = h('a', { class: 'btn btn-phu btn-nho', 'aria-disabled': 'true' }, 'Tải PDF');
     var aXem = h('a', { class: 'btn btn-phu btn-nho', 'aria-disabled': 'true', target: '_blank', rel: 'noopener' }, 'Xem trước PDF');
-    var cbTatCa = h('input', { type: 'checkbox', id: 'xuat-tat-ca', 'aria-label': 'Chọn tất cả các phòng đã nộp' });
+    var cbTatCa = h('input', { type: 'checkbox', id: 'xuat-tat-ca', 'aria-label': 'Chọn tất cả các báo cáo đã nộp' });
     var cbs = [];
 
     function capNhat() {
       var ids = Object.keys(chon).filter(function (k) { return chon[k]; });
-      dem.textContent = ids.length ? 'Đã chọn ' + ids.length + ' phòng' : 'Chưa chọn phòng nào';
+      dem.textContent = ids.length ? 'Đã chọn ' + ids.length + ' báo cáo' : 'Chưa chọn báo cáo nào';
       [[aWord, 'docx', ''], [aPdf, 'pdf', ''], [aXem, 'pdf', '&xem=1']].forEach(function (p) {
-        if (ids.length) { p[0].setAttribute('href', API + '/dot/' + dotId + '/xuat?phong=' + ids.join(',') + '&dinh_dang=' + p[1] + p[2]); p[0].removeAttribute('aria-disabled'); }
+        if (ids.length) { p[0].setAttribute('href', API + '/dot/' + dotId + '/xuat?bao_cao=' + ids.join(',') + '&dinh_dang=' + p[1] + p[2]); p[0].removeAttribute('aria-disabled'); }
         else { p[0].removeAttribute('href'); p[0].setAttribute('aria-disabled', 'true'); }
       });
       var duocChon = baoCao.filter(daNop);
@@ -1179,7 +1193,7 @@
     [aWord, aPdf, aXem].forEach(function (a) { a.addEventListener('click', function (e) { if (a.getAttribute('aria-disabled') === 'true') e.preventDefault(); }); });
     cbTatCa.disabled = !baoCao.some(daNop);
     cbTatCa.addEventListener('change', function () {
-      baoCao.forEach(function (b, i) { if (daNop(b)) { chon[b.phong_id] = cbTatCa.checked; cbs[i].checked = cbTatCa.checked; } });
+      baoCao.forEach(function (b, i) { if (daNop(b)) { chon[b.id] = cbTatCa.checked; cbs[i].checked = cbTatCa.checked; } });
       capNhat();
     });
 
@@ -1189,14 +1203,14 @@
       h('tbody', null, baoCao.map(function (b, i) {
         var cb = null;
         if (coXuat) {
-          cb = h('input', { type: 'checkbox', id: 'xuat-' + b.phong_id, disabled: !daNop(b), 'aria-label': 'Chọn ' + b.phong_ten + ' để kết xuất' });
+          cb = h('input', { type: 'checkbox', id: 'xuat-' + b.id, disabled: !daNop(b), 'aria-label': 'Chọn báo cáo của ' + b.phong_ten + (b.chu_ten ? ' (' + b.chu_ten + ')' : '') + ' để kết xuất' });
           if (!daNop(b)) cb.title = 'Chưa nộp, chưa kết xuất được';
-          cb.addEventListener('change', function () { chon[b.phong_id] = cb.checked; capNhat(); });
+          cb.addEventListener('change', function () { chon[b.id] = cb.checked; capNhat(); });
           cbs[i] = cb;
         }
         return h('tr', { class: b.tre_han && (b.trang_thai === 'chua_nop' || b.trang_thai === 'can_chinh_sua') ? 'dong-chu-y' : '' },
           coXuat ? h('td', { class: 'cot-chon' }, cb) : null,
-          h('td', { class: 'ten-phong', text: b.phong_ten }),
+          h('td', { class: 'ten-phong' }, b.phong_ten, b.chu_ten ? h('div', { class: 'mo', text: nguoiPhuTrachNhan(b) }) : null),
           h('td', null, nhan(TT_BAO_CAO, b.trang_thai), b.tre_han ? [' ', nhanTreHan()] : null, b.tu_duyet ? [' ', nhanTuDuyet()] : null),
           h('td', { text: b.nguoi_nop || '—' }),
           h('td', { class: 'con-so', text: b.nop_luc ? fmtGio(b.nop_luc) : '—' }),
@@ -1205,8 +1219,8 @@
     capNhat();
     if (!coXuat) return [bang];
     return [bang, h('div', { class: 'xuat-bar' },
-      h('span', { class: 'xuat-nhan', text: 'Kết xuất báo cáo các phòng đã chọn:' }), aWord, aPdf, aXem, dem,
-      h('p', { class: 'mo' }, 'Chọn một hoặc nhiều phòng. Nhiều phòng sẽ gộp vào một tệp, mỗi phòng một văn bản riêng bắt đầu ở trang mới. Chỉ báo cáo đã nộp hoặc đã xác nhận mới kết xuất được.'))];
+      h('span', { class: 'xuat-nhan', text: 'Kết xuất các báo cáo đã chọn:' }), aWord, aPdf, aXem, dem,
+      h('p', { class: 'mo' }, 'Chọn một hoặc nhiều báo cáo. Nhiều báo cáo được gộp vào một tệp, mỗi báo cáo là một văn bản riêng bắt đầu ở trang mới. Chỉ báo cáo đã nộp hoặc đã xác nhận mới kết xuất được.'))];
   }
 
   function viewDot(id) {
@@ -1231,8 +1245,8 @@
               return ph && ph.so_truong_phong === 0;
             }).map(function (b) { return b.phong_ten; });
             return xacNhan('Mở đợt báo cáo?',
-              'Các trưởng phòng sẽ thấy đợt này và nhận email báo kèm liên kết để nộp báo cáo.' +
-              (thieu.length ? ' LƯU Ý: ' + thieu.join('; ') + ' CHƯA có trưởng phòng nên sẽ không nhận được email. Bạn có thể mở đợt rồi gán trưởng phòng sau (người được gán sẽ nhận thư báo các đợt đang mở), hoặc gán trước ở mục Phòng & phân quyền.' : ''),
+              'Những người phụ trách của các phòng sẽ nhìn thấy đợt này và nhận email thông báo kèm liên kết để nộp báo cáo.' + (d.cach_nop === 'tat_ca' ? ' Đợt này yêu cầu mỗi người phụ trách nộp một báo cáo riêng.' : '') +
+              (thieu.length ? ' LƯU Ý: ' + thieu.join('; ') + ' chưa có người phụ trách nên sẽ không nhận được email. Có thể mở đợt rồi phân công người phụ trách sau (người được phân công sẽ nhận thư thông báo các đợt đang mở), hoặc phân công trước tại mục Phòng & phân quyền.' : ''),
               'Mở đợt');
           }).then(function (ok) { if (ok) doiTT('/mo', 'Đã mở đợt báo cáo.'); }).catch(function (e) { thongBao(e.message, 'loi'); });
         } }, 'Mở đợt cho các phòng'));
@@ -1260,6 +1274,14 @@
         h('p', null, nhan(TT_DOT, d.trang_thai), ' ', h('span', { class: 'con-so', text: 'Đã nộp ' + daNop + '/' + kq.bao_cao.length })),
       ];
       if (d.mo_ta) node.push(h('p', { class: 'phu', text: d.mo_ta }));
+      node.push(h('p', { class: 'mo', text: 'Cách nộp: ' + (d.cach_nop === 'tat_ca' ? 'mỗi người phụ trách nộp một báo cáo riêng; phòng chỉ hoàn thành khi tất cả những người được phân công đã nộp.' : 'một báo cáo chung của phòng; một người phụ trách nộp là đủ.') }));
+      if (d.cach_nop === 'tat_ca') {
+        var nhomPhong = {};
+        kq.bao_cao.forEach(function (b) { (nhomPhong[b.phong_id] = nhomPhong[b.phong_id] || []).push(b); });
+        var soPhong = Object.keys(nhomPhong);
+        var soXong = soPhong.filter(function (k) { return nhomPhong[k].every(function (b) { return b.trang_thai === 'da_nop' || b.trang_thai === 'da_duyet'; }); }).length;
+        node.push(h('p', null, h('strong', { text: 'Phòng đã hoàn thành báo cáo: ' + soXong + '/' + soPhong.length })));
+      }
       if (d.trang_thai === 'nhap' && me.quan_ly_module) node.push(h('div', { class: 'luu-y' }, h('p', { text: 'Đợt đang ở trạng thái Nháp: các trưởng phòng chưa nhìn thấy. Kiểm tra lại rồi bấm "Mở đợt cho các phòng".' })));
       // Mở/đóng/sửa/xóa đợt: chỉ người quản lý module. Viện trưởng chỉ xem.
       if (me.quan_ly_module) node.push(h('div', { class: 'nhom-nut' }, nut));
