@@ -615,3 +615,27 @@ test('danh sách đợt cho người quản lý phân biệt đợt ĐÃ TRÌNH 
   const tq = (await ung.json(QUAN_LY, 'GET', '/tong-quan')).d.chi_tiet.find((y) => y.dot_id === dot.id);
   assert.equal(tq.da_trinh, true);
 });
+
+test('nhiều biểu mẫu: nhân bản tạo biểu mẫu mới từ cấu trúc của mẫu gốc; xóa chỉ khi chưa đợt nào dùng; chỉ người quản lý module', async () => {
+  for (const uid of [VIEN_TRUONG, TP_A, NGOAI]) {
+    assert.equal((await ung.json(uid, 'POST', `/mau/${ID.mau}/nhan-ban`, {})).s, 403, 'user ' + uid);
+    assert.equal((await ung.json(uid, 'DELETE', `/mau/${ID.mau}`)).s, 403);
+  }
+  const goc = (await ung.json(QUAN_LY, 'GET', '/mau/' + ID.mau)).d;
+  const r = await ung.json(QUAN_LY, 'POST', `/mau/${ID.mau}/nhan-ban`, {});
+  assert.equal(r.s, 201, JSON.stringify(r.d));
+  const ban = (await ung.json(QUAN_LY, 'GET', '/mau/' + r.d.id)).d;
+  assert.equal(ban.ten, goc.ten + ' (bản sao)');
+  assert.deepEqual(ban.truong, goc.truong, 'cùng cấu trúc ô');
+  assert.equal(ban.so_phien_ban, 1);
+  const ds = (await ung.json(QUAN_LY, 'GET', '/mau')).d.mau;
+  assert.ok(ds.length >= 2, 'lưu được nhiều biểu mẫu');
+  // dùng mẫu mới cho một đợt khác
+  const dot = await ung.json(QUAN_LY, 'POST', '/dot', { tieu_de: 'Đợt dùng mẫu khác', han_nop: '2099-12-31', mau_id: r.d.id, phong_ids: [ID.phongA] });
+  assert.equal(dot.s, 201);
+  assert.equal((await ung.json(QUAN_LY, 'DELETE', '/mau/' + r.d.id)).s, 409, 'đã có đợt dùng thì không xóa');
+  const r2 = await ung.json(QUAN_LY, 'POST', `/mau/${ID.mau}/nhan-ban`, {});
+  assert.equal((await ung.json(QUAN_LY, 'DELETE', '/mau/' + r2.d.id)).s, 200, 'mẫu chưa dùng thì xóa được');
+  assert.equal((await ung.json(QUAN_LY, 'GET', '/mau/' + r2.d.id)).s, 404);
+  assert.equal((await ung.json(QUAN_LY, 'POST', '/mau/999999/nhan-ban', {})).s, 404);
+});

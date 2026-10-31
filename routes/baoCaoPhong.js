@@ -506,6 +506,44 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
     })
   );
 
+  /**
+   * Nhân bản biểu mẫu: tạo biểu mẫu MỚI (phiên bản 1) từ cấu trúc mới nhất của biểu mẫu gốc, để dựng nhanh một biến thể
+   * (vd. mẫu tháng, mẫu quý, mẫu đột xuất) rồi sửa. Biểu mẫu gốc và các đợt đã giao không bị đụng tới.
+   */
+  router.post(
+    '/mau/:id/nhan-ban',
+    canQuanLyModule,
+    bao((req, res) => {
+      const id = docId(req.params.id);
+      if (!id) return loi(res, 400, 'ID không hợp lệ.');
+      const m = db.prepare('SELECT id, ten, mo_ta FROM bcp_mau WHERE id = ?').get(id);
+      if (!m) return loi(res, 404, 'Không tìm thấy biểu mẫu.');
+      const pb = phienBanMoiNhat(id);
+      let moiId;
+      db.transaction(() => {
+        const r = db.prepare('INSERT INTO bcp_mau (ten, mo_ta, created_by) VALUES (?,?,?)').run((m.ten + ' (bản sao)').slice(0, 150), m.mo_ta, req.user.id);
+        moiId = Number(r.lastInsertRowid);
+        db.prepare('INSERT INTO bcp_mau_phien_ban (mau_id, so_phien_ban, truong_json, created_by) VALUES (?,?,?,?)').run(moiId, 1, pb.truong_json, req.user.id);
+      })();
+      res.status(201).json({ id: moiId, so_phien_ban: 1 });
+    })
+  );
+
+  /** Xóa biểu mẫu CHƯA được đợt nào dùng (đợt đã giao ghim phiên bản của nó nên không xóa được). */
+  router.delete(
+    '/mau/:id',
+    canQuanLyModule,
+    bao((req, res) => {
+      const id = docId(req.params.id);
+      if (!id) return loi(res, 400, 'ID không hợp lệ.');
+      if (!db.prepare('SELECT 1 AS ok FROM bcp_mau WHERE id = ?').get(id)) return loi(res, 404, 'Không tìm thấy biểu mẫu.');
+      const soDot = db.prepare('SELECT COUNT(*) AS n FROM bcp_dot d JOIN bcp_mau_phien_ban v ON v.id = d.mau_phien_ban_id WHERE v.mau_id = ?').get(id).n;
+      if (soDot > 0) return loi(res, 409, `Biểu mẫu đã được dùng trong ${soDot} đợt nên không xóa được (đợt đã giao giữ nguyên biểu mẫu của nó).`);
+      db.prepare('DELETE FROM bcp_mau WHERE id = ?').run(id);
+      res.json({ ok: true });
+    })
+  );
+
   // ══ ĐỢT BÁO CÁO ════════════════════════════════════════════════════════════
   const CACH_NOP = ['mot_nguoi', 'tat_ca'];
 

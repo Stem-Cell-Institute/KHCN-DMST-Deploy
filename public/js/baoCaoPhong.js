@@ -1223,7 +1223,7 @@
   // ══ QUẢN LÝ: biểu mẫu ═════════════════════════════════════════════════════
   function viewMauList() {
     return api('/mau').then(function (kq) {
-      var node = [tieuDe('Biểu mẫu báo cáo', 'Cấu hình các ô mà trưởng phòng phải điền. Sửa biểu mẫu không làm đổi các đợt đã giao.',
+      var node = [tieuDe('Biểu mẫu báo cáo', 'Lưu được nhiều biểu mẫu khác nhau; mỗi đợt chọn một biểu mẫu khi tạo. Sửa biểu mẫu không làm đổi các đợt đã giao.',
         h('a', { class: 'btn', href: '#/mau/moi' }, '+ Tạo biểu mẫu'))];
       if (!kq.mau.length) node.push(bangTrong('Chưa có biểu mẫu nào.'));
       else {
@@ -1234,7 +1234,16 @@
               h('td', null, h('a', { href: '#/mau/' + m.id, text: m.ten }), m.mo_ta ? h('div', { class: 'mo', text: m.mo_ta }) : null),
               h('td', { class: 'con-so', text: String(m.so_phien_ban) }),
               h('td', { class: 'con-so', text: String(m.so_dot) }),
-              h('td', null, h('a', { class: 'btn btn-nho btn-phu', href: '#/mau/' + m.id }, 'Sửa')));
+              h('td', null, h('div', { class: 'nhom-nut' },
+                h('a', { class: 'btn btn-nho btn-phu', href: '#/mau/' + m.id }, 'Sửa'),
+                h('button', { type: 'button', class: 'btn btn-nho btn-phu', onclick: function () {
+                  api('/mau/' + m.id + '/nhan-ban', { method: 'POST' }).then(function (r) { thongBao('Đã nhân bản biểu mẫu. Hãy đổi tên và chỉnh sửa theo nhu cầu.'); location.hash = '#/mau/' + r.id; }).catch(function (e) { thongBao(e.message, 'loi'); });
+                } }, 'Nhân bản'),
+                m.so_dot === 0 ? h('button', { type: 'button', class: 'btn btn-nho btn-nguy', 'aria-label': 'Xóa biểu mẫu ' + m.ten, onclick: function () {
+                  xacNhan('Xóa biểu mẫu?', 'Biểu mẫu "' + m.ten + '" chưa được đợt nào dùng và sẽ bị xóa vĩnh viễn.', 'Xóa biểu mẫu', true).then(function (ok) {
+                    if (ok) api('/mau/' + m.id, { method: 'DELETE' }).then(function () { thongBao('Đã xóa biểu mẫu.'); return route(); }).catch(function (e) { thongBao(e.message, 'loi'); });
+                  });
+                } }, 'Xóa') : null)));
           })))));
       }
       main.replaceChildren.apply(main, node);
