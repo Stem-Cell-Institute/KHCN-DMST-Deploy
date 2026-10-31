@@ -22,6 +22,8 @@
  *   - Không gửi cho chính người vừa thực hiện thao tác.
  */
 
+const ChucDanh = require('./baoCaoPhongChucDanh');
+
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;')
@@ -106,10 +108,16 @@ function taoThongBao({ db, mailSend, baseUrl }) {
   /** Tiến độ nộp của một đợt: bao nhiêu phòng đã nộp / cần nộp, và phòng nào chưa. */
   function tienDo(dotId) {
     const rows = db
-      .prepare('SELECT b.trang_thai, p.ten FROM bcp_bao_cao b JOIN bcp_phong p ON p.id = b.phong_id WHERE b.dot_id = ? ORDER BY p.ten')
+      .prepare(
+        `SELECT b.trang_thai, CASE WHEN u.fullname IS NULL THEN p.ten ELSE p.ten || ' (' || u.fullname || ')' END AS ten
+           FROM bcp_bao_cao b JOIN bcp_phong p ON p.id = b.phong_id LEFT JOIN users u ON u.id = b.chu_id WHERE b.dot_id = ? ORDER BY p.ten, u.fullname`
+      )
       .all(dotId);
+    // Đợt mỗi người một báo cáo thì đếm theo BÁO CÁO (một phòng có thể có nhiều báo cáo); đợt thường vẫn đếm theo phòng.
+    const donVi = (db.prepare('SELECT cach_nop FROM bcp_dot WHERE id = ?').get(dotId) || {}).cach_nop === 'tat_ca' ? 'báo cáo' : 'phòng';
     const daNop = rows.filter((r) => r.trang_thai === 'da_nop' || r.trang_thai === 'da_duyet');
     return {
+      don_vi: donVi,
       tong: rows.length,
       da_nop: daNop.length,
       cho_duyet: rows.filter((r) => r.trang_thai === 'da_nop').length,
@@ -133,14 +141,14 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     if (!b) return { gui: 0, loi: 0, nguoi_nhan: 0 };
     const td = tienDo(b.dot_id);
     const du = td.tong > 0 && td.da_nop === td.tong;
-    const tieuDe = `${du ? '[Đã đủ báo cáo] ' : '[Báo cáo phòng ban] '}${b.phong_ten} ${nopLai ? 'nộp lại' : 'đã nộp'} báo cáo — ${b.tieu_de} (${td.da_nop}/${td.tong} phòng)`;
+    const tieuDe = `${du ? '[Đã đủ báo cáo] ' : '[Báo cáo phòng ban] '}${b.phong_ten} ${nopLai ? 'nộp lại' : 'đã nộp'} báo cáo — ${b.tieu_de} (${td.da_nop}/${td.tong} ${td.don_vi})`;
     const doan = [
       { text: `${b.phong_ten} vừa ${nopLai ? 'nộp lại (sau khi chỉnh sửa)' : 'nộp'} báo cáo cho đợt «${b.tieu_de}».` },
       { nhan: 'Người nộp', text: b.nguoi_nop || '(không rõ)' },
       { nhan: 'Thời điểm nộp', text: fmtGio(b.nop_luc) },
       { nhan: 'Hạn nộp của đợt', text: fmtNgay(b.han_nop) },
-      { nhan: 'Tiến độ đợt này', text: `đã nộp ${td.da_nop}/${td.tong} phòng (chờ xác nhận ${td.cho_duyet}, đã xác nhận ${td.da_duyet})` },
-      { nhan: 'Phòng chưa nộp', text: td.chua_nop.length ? td.chua_nop.join('; ') : 'không còn — tất cả các phòng đã nộp.' },
+      { nhan: 'Tiến độ đợt này', text: `đã nộp ${td.da_nop}/${td.tong} ${td.don_vi} (chờ xác nhận ${td.cho_duyet}, đã xác nhận ${td.da_duyet})` },
+      { nhan: td.don_vi === 'phòng' ? 'Phòng chưa nộp' : 'Báo cáo chưa nộp', text: td.chua_nop.length ? td.chua_nop.join('; ') : 'không còn — tất cả các phòng đã nộp.' },
     ];
     return guiDen(nguoiNhan('quan_ly', nguoiNopId), tieuDe, dungThu(doan, lienKet(`#/bao-cao/${b.id}`), goc));
   }
@@ -208,7 +216,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
         `SELECT u.id, u.email, u.fullname, b.id AS bao_cao_id, b.phong_id, p.ten AS phong_ten
            FROM bcp_bao_cao b
            JOIN bcp_phong p ON p.id = b.phong_id
-           JOIN bcp_thanh_vien t ON t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong'
+           JOIN bcp_thanh_vien t ON t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong' AND (b.chu_id IS NULL OR b.chu_id = t.user_id)
            JOIN users u ON u.id = t.user_id
           WHERE b.dot_id = ? ORDER BY u.id, p.ten`
       )
@@ -251,7 +259,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
         `SELECT u.id, u.email, u.fullname, b.id AS bao_cao_id, p.ten AS phong_ten
            FROM bcp_bao_cao b
            JOIN bcp_phong p ON p.id = b.phong_id
-           JOIN bcp_thanh_vien t ON t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong'
+           JOIN bcp_thanh_vien t ON t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong' AND (b.chu_id IS NULL OR b.chu_id = t.user_id)
            JOIN users u ON u.id = t.user_id
           WHERE b.dot_id = ? AND b.trang_thai IN ('chua_nop','can_chinh_sua') ORDER BY u.id, p.ten`
       )
@@ -303,7 +311,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       .prepare(
         `SELECT DISTINCT u.id, u.email, u.fullname
            FROM bcp_bao_cao b
-           JOIN bcp_thanh_vien t ON t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong'
+           JOIN bcp_thanh_vien t ON t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong' AND (b.chu_id IS NULL OR b.chu_id = t.user_id)
            JOIN users u ON u.id = t.user_id
           WHERE b.id = ?`
       )
@@ -353,7 +361,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
            FROM bcp_bao_cao b
            JOIN bcp_phong p ON p.id = b.phong_id
            JOIN bcp_dot d ON d.id = b.dot_id
-           JOIN bcp_thanh_vien t ON t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong'
+           JOIN bcp_thanh_vien t ON t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong' AND (b.chu_id IS NULL OR b.chu_id = t.user_id)
            JOIN users u ON u.id = t.user_id
           WHERE b.id IN (${muc.map(() => '?').join(',')}) ORDER BY u.id, d.han_nop, p.ten`
       )
@@ -399,9 +407,10 @@ function taoThongBao({ db, mailSend, baseUrl }) {
    * Mời một email CHƯA có tài khoản làm trưởng phòng. Thư chứa MÃ DÙNG MỘT LẦN: đó là bằng chứng người
    * nhận đọc được hộp thư này (đăng ký tài khoản của hệ thống không xác minh email — xem baoCaoPhongSchema.js).
    */
-  async function baoLoiMoi({ email, phongTen, nguoiMoiTen, ma, hetHan }) {
+  async function baoLoiMoi({ email, phongTen, nguoiMoiTen, ma, hetHan, chucDanh }) {
+    const cd = ChucDanh.nhan(chucDanh);
     const doan = [
-      { text: `${nguoiMoiTen || 'Người quản lý module'} mời Trưởng phòng — ${phongTen} vào module Báo cáo phòng ban của hệ thống eoffice (STIMS), để nộp báo cáo của phòng.` },
+      { text: `${nguoiMoiTen || 'Người quản lý module'} mời ${cd} — ${phongTen} vào module Báo cáo phòng ban của hệ thống eoffice (STIMS), để nộp báo cáo của phòng.` },
       { text: 'Địa chỉ email này CHƯA có tài khoản eoffice. Hãy làm theo 3 bước:' },
       { nhan: 'Bước 1', text: `Đăng ký tài khoản tại ${goc ? goc + '/dang-ky.html' : 'trang Đăng ký của eoffice'} bằng CHÍNH địa chỉ email này (${email}).` },
       { nhan: 'Bước 2', text: `Đăng nhập, rồi mở ${goc ? goc + '/bao-cao-phong.html' : 'module Báo cáo phòng ban'}.` },
@@ -409,11 +418,12 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       { text: `Mã chỉ dùng được MỘT lần và có hiệu lực đến ${fmtNgay(String(hetHan).slice(0, 10))}. Mã chỉ có tác dụng với tài khoản đăng nhập bằng đúng địa chỉ email này. Nếu bạn không biết lời mời này, hãy bỏ qua thư.` },
     ];
     const lk = goc ? `${goc}/bao-cao-phong.html?moi=${ma}` : '';
-    return guiDen([{ email }], `[Báo cáo phòng ban] Mời Trưởng phòng — ${phongTen} vào module Báo cáo phòng ban`, dungThu(doan, lk, goc));
+    return guiDen([{ email }], `[Báo cáo phòng ban] Mời ${cd} — ${phongTen} vào module Báo cáo phòng ban`, dungThu(doan, lk, goc));
   }
 
   /** Người ĐÃ có tài khoản được gán làm trưởng phòng: báo cho họ, kèm các đợt đang mở của phòng đó. */
-  async function baoDuocGan(userId, phongId, nguoiMoiId) {
+  async function baoDuocGan(userId, phongId, nguoiMoiId, chucDanh) {
+    const cd = ChucDanh.nhan(chucDanh);
     const u = db.prepare('SELECT email, fullname FROM users WHERE id = ?').get(userId);
     const p = db.prepare('SELECT ten FROM bcp_phong WHERE id = ?').get(phongId);
     if (!u || !p || !EMAIL_HOP_LE.test(String(u.email || ''))) return { gui: 0, loi: 0, nguoi_nhan: 0 };
@@ -421,14 +431,14 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     const dangMo = db
       .prepare(
         `SELECT b.id, d.tieu_de, d.han_nop FROM bcp_bao_cao b JOIN bcp_dot d ON d.id = b.dot_id
-          WHERE b.phong_id = ? AND d.trang_thai = 'dang_mo' AND b.trang_thai IN ('chua_nop','can_chinh_sua') ORDER BY d.han_nop`
+          WHERE b.phong_id = ? AND (b.chu_id IS NULL OR b.chu_id = ?) AND d.trang_thai = 'dang_mo' AND b.trang_thai IN ('chua_nop','can_chinh_sua') ORDER BY d.han_nop`
       )
-      .all(phongId);
-    const doan = [{ text: `${(moi && moi.fullname) || 'Người quản lý module'} đã thêm Trưởng phòng — ${p.ten} vào module Báo cáo phòng ban của hệ thống eoffice. Bạn sẽ nộp báo cáo của phòng tại đây.` }];
+      .all(phongId, userId);
+    const doan = [{ text: `${(moi && moi.fullname) || 'Người quản lý module'} đã thêm ${cd} — ${p.ten} vào module Báo cáo phòng ban của hệ thống eoffice. Bạn sẽ nộp báo cáo của phòng tại đây.` }];
     if (dangMo.length) {
       doan.push({ nhan: 'Đang có báo cáo cần nộp', text: dangMo.map((x) => `${x.tieu_de} — hạn ${fmtNgay(x.han_nop)} (${conLaiNgay(x.han_nop)})${goc ? ': ' + lienKet('#/bao-cao/' + x.id) : ''}`).join('\n') });
     }
-    return guiDen([{ email: u.email }], `[Báo cáo phòng ban] Trưởng phòng — ${p.ten}: bạn đã được thêm vào module`, dungThu(doan, lienKet('#/cua-toi'), goc));
+    return guiDen([{ email: u.email }], `[Báo cáo phòng ban] ${cd} — ${p.ten}: bạn đã được thêm vào module`, dungThu(doan, lienKet('#/cua-toi'), goc));
   }
 
   return { baoDaNop, baoDaGuiVienTruong, baoDaDuyetTrinh, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoNhacHan, nguoiNhanYKien, nguoiNhanQuanLyYKien, baoYKien, baoLoiMoi, baoDuocGan, tienDo };

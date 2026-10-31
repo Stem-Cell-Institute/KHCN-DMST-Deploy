@@ -38,6 +38,47 @@ Lưu trong bảng riêng `bcp_thanh_vien`, **không đụng vào cột `users.ro
 - Người được gán/mời phải dùng email `@sci.edu.vn` (cùng điều kiện đăng ký tài khoản). Ô tìm người chỉ
   tìm trong người đã có tài khoản; người **chưa có** thì dùng "Mời trưởng phòng bằng email" (mục sau).
 
+## Chức danh người phụ trách báo cáo của phòng
+
+Một phòng có thể có nhiều người được giao nộp báo cáo. Mỗi người có một **chức danh**: Trưởng phòng, Phó trưởng phòng, Quyền trưởng phòng, Kế toán
+(`services/baoCaoPhongChucDanh.js`; giao diện có bản sao nhãn trong `CHUC_DANH` ở `public/js/baoCaoPhong.js`). **Về quyền, mọi chức danh đều là vai trò
+`truong_phong`** (cùng thấy báo cáo của phòng, cùng nhập/nộp, cùng nhận thư): chức danh chỉ để ghi rõ người đó là ai và hiện trong bảng phân quyền, thư mời,
+thư báo. Lưu ở cột `chuc_danh` của `bcp_thanh_vien` và `bcp_loi_moi` (NULL với vai trò toàn module). DB cũ tự thêm cột khi khởi động, dòng cũ thành Trưởng phòng.
+Chọn chức danh ở "Thêm phân quyền" và "Mời người phụ trách phòng bằng email". Một người chỉ có một chức danh trong một phòng. Các thư khác (mở đợt,
+nhắc hạn, ý kiến…) vẫn gọi chung là "trưởng phòng".
+
+## Cách nộp khi một phòng có nhiều người phụ trách
+
+Mỗi **đợt** có một trong hai cách nộp (`bcp_dot.cach_nop`), người quản lý module chọn khi tạo đợt:
+
+| Cách nộp | Báo cáo | Phòng hoàn thành khi |
+|---|---|---|
+| `mot_nguoi` (mặc định, như trước) | **một báo cáo chung** của phòng; ai trong phòng cũng nhập và nộp được | một người đã nộp |
+| `tat_ca` | **mỗi người phụ trách một báo cáo riêng** (cùng biểu mẫu), `bcp_bao_cao.chu_id` = người đó | **mọi người** được phân công đã nộp |
+
+Quy tắc của `tat_ca`:
+- **Chỉ đổi được cách nộp khi đợt còn Nháp** (báo cáo được dựng lại); đã mở thì 409.
+- **Mỗi người chỉ thấy, nhập và nộp báo cáo của mình**; đồng nghiệp cùng phòng không đọc được báo cáo của nhau (404). Người quản lý và Viện trưởng đọc tất cả.
+- **Đồng bộ theo người phụ trách hiện tại**: khi mở/mở lại đợt, khi gán người mới (gán trực tiếp, nhận lời mời), người đó có báo cáo riêng; người mới nhận lại báo cáo "chờ giao"
+  còn trống nếu có. Khi gỡ một người: báo cáo **chưa nộp** của họ bị bỏ; báo cáo **cần chỉnh sửa** thành "chờ giao" (ai trong phòng cũng nhập được); báo cáo **đã nộp/đã xác nhận** giữ nguyên làm hồ sơ.
+  Phòng chưa có ai được phân công có một báo cáo "chờ giao" (`chu_id` rỗng).
+- **Tiến độ đếm theo BÁO CÁO** (một phòng có thể có nhiều báo cáo): thư/dải ghi "x/y báo cáo" thay vì "x/y phòng"; trang đợt thêm dòng "Phòng đã hoàn thành báo cáo: x/y" (phòng hoàn thành khi mọi báo cáo của phòng đã nộp).
+  Thư báo nộp liệt kê "Báo cáo chưa nộp" kèm tên người. Đợt `mot_nguoi` giữ nguyên cách nói cũ.
+- **Thư theo từng báo cáo**: thư mở đợt, nhắc hạn, báo sửa đợt chỉ nêu liên kết báo cáo **của đúng người nhận**; ý kiến của Viện trưởng về một báo cáo riêng chỉ gửi người đó và người quản lý module.
+- **Kết xuất** có thêm `?bao_cao=ID,ID` (chọn từng báo cáo); giao diện dùng cách này. `?phong=` vẫn lấy mọi báo cáo của phòng (409 nếu có báo cáo chưa nộp). Tên văn bản kèm người phụ trách ("Phòng A — Họ tên").
+
+Chuyển DB cũ: bảng `bcp_bao_cao` kiểu cũ có `UNIQUE (dot_id, phong_id)` nên **được dựng lại khi khởi động** (tắt khóa ngoại, chép dữ liệu, đổi tên; trong một giao dịch, giữ nguyên lịch sử/ý kiến/nhật ký nhắc),
+thêm `chu_id` và chỉ mục duy nhất `(dot_id, phong_id, COALESCE(chu_id,0))`; đợt cũ là `mot_nguoi`. **Nên sao lưu DB trước khi deploy bản này** như mọi lần nâng cấp lược đồ.
+
+## Danh mục phòng: xóa hay ngừng dùng
+
+- **Xóa** (`DELETE /phong/:id`, nút "Xóa" ở mục Phòng & phân quyền) chỉ có với phòng **chưa từng được giao đợt nào** (cột "Số đợt đã giao" = 0, tính cả đợt Nháp).
+  Xóa kèm gỡ các trưởng phòng đang gắn với phòng và hủy lời mời đang chờ; **tài khoản của họ không bị xóa**. Phòng đã có đợt: server trả 409,
+  giao diện không hiện nút Xóa — vì báo cáo là hồ sơ của phòng, không được mất theo.
+- **Ngừng dùng**: phòng không còn được giao ở đợt mới, báo cáo cũ giữ nguyên; "Dùng lại" để bật trở lại.
+- **Mã phòng** (`bcp_phong.ma`) không còn hiển thị hay nhập trên giao diện. Cột còn trong DB chỉ để "Nhập từ danh mục đơn vị" khỏi tạo trùng
+  phòng đã có; không dùng cho phân quyền, email hay kết xuất.
+
 ## Mời trưởng phòng bằng email
 
 Người quản lý nhập email @sci.edu.vn + chọn phòng (`POST /loi-moi`):
@@ -269,6 +310,9 @@ Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
 - `baoCaoPhongTuDuyet.test.js` — cờ "tự duyệt" (người nộp = người duyệt), không dính lại sau chỉnh sửa/nộp lại.
 - `baoCaoPhongNhacHan.test.js` — nhắc trước hạn: đúng người/đúng mốc/đúng giờ VN, đúng một lần (chạy chồng, khởi động lại, dời hạn), SMTP hỏng.
 - `baoCaoPhongYKien.test.js` — ý kiến của Viện trưởng: chỉ Viện trưởng gửi, email đúng phòng, không lộ cho phòng khác, kiểm dữ liệu, SMTP hỏng.
+- `baoCaoPhongCachNop.test.js` — cách nộp: mỗi người một báo cáo riêng (riêng tư, đồng bộ người mới/người bị gỡ, thư, kết xuất, ý kiến) và việc dựng lại bảng cũ không mất dữ liệu.
+- `baoCaoPhongChucDanh.test.js` — chức danh: gán, mặc định, chức danh lạ, cùng quyền, thư mời/thư báo, nâng cấp DB cũ.
+- `baoCaoPhongXoaPhong.test.js` — xóa phòng: chỉ khi chưa từng giao đợt; gỡ trưởng phòng, hủy lời mời, không đụng tài khoản; quyền.
 - `baoCaoPhongXacNhan.test.js` — ai xác nhận / tải / gửi / duyệt: Viện trưởng không xác nhận hộ, không tải/gửi hồ sơ; admin và quản lý được; người kiêm hai vai trò làm được cả hai.
 - `baoCaoPhongVienTruong.test.js` — dữ liệu thẻ việc: `/viec-cua-toi` (hồ sơ chỉ lộ cho Viện trưởng), `/tong-quan` có đủ thông tin hồ sơ chờ.
 - `baoCaoPhongSuaDot.test.js` — email khi sửa đợt đang mở: đúng người nhận, không gửi khi không đổi, tắt được, Nháp/đã đóng.
