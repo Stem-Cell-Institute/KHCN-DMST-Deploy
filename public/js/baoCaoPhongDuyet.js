@@ -80,8 +80,11 @@
     var cho = tq.dot_cho_vien_truong || [];
     var xong = (tq.dot_da_trinh || []).filter(function (x) { return x.cho_quyet_dinh === 0; });
     var node = [h('div', { class: 'thanh-tieu-de' }, h('div', null, h('h2', { text: 'Duyệt báo cáo' })))];
-    if (!cho.length && !xong.length) {
-      node.push(h('div', { class: 'trong', text: 'Chưa có đợt nào được trình. Khi người quản lý module trình một đợt, báo cáo của các phòng sẽ hiện ở đây.' }));
+    // Không có báo cáo nào chờ duyệt: nói rõ thay vì để trang trống.
+    if (!cho.length) {
+      node.push(h('div', { class: 'trong', role: 'status' },
+        h('p', null, h('strong', { text: xong.length ? 'Hiện không có báo cáo nào chờ bạn duyệt.' : 'Chưa có đợt báo cáo nào được trình.' })),
+        h('p', { class: 'mo', text: xong.length ? 'Khi người quản lý module trình đợt mới, hoặc phòng nộp lại báo cáo bạn đã đề nghị chỉnh sửa, báo cáo sẽ hiện ở đây và trên thanh điều hướng. Các đợt đã xử lý xem lại ở bên dưới.' : 'Khi người quản lý module trình một đợt, báo cáo của các phòng sẽ hiện ở đây để bạn đọc và duyệt.' })));
     }
     if (cho.length) node.push(h('h3', { text: 'Chờ duyệt (' + cho.length + ')' }), cho.map(function (x) { return theDot(x, vt); }));
     if (xong.length) node.push(h('h3', { text: 'Đã xử lý xong' }), xong.map(function (x) { return theDot(x, vt); }));
@@ -501,13 +504,8 @@
   B.views.duyet = function (args) {
     var dotId = Number(args[0]);
     if (dotId > 0) return viewDoc(dotId, Number(args[1]) || 0);
-    var vienTruong = !!B.me().vien_truong;
-    return api('/tong-quan').then(function (tq) {
-      // Viện trưởng chỉ có MỘT đợt đang chờ thì vào thẳng đó: bớt một bước.
-      // "#/duyet/ds" luôn hiện danh sách (nút "Các đợt đã trình" dẫn tới đây), nên vẫn đi tới được danh sách khi cần.
-      var cho = tq.dot_cho_vien_truong || [];
-      if (args[0] !== 'ds' && vienTruong && cho.length === 1) return viewDoc(cho[0].dot_id, 0);
-      veDanhSachDot(tq);
-    });
+    // Mở mục "Duyệt báo cáo" luôn hiện TRANG ĐẦU (danh sách các đợt chờ duyệt kèm số báo cáo), không nhảy thẳng vào đọc báo cáo:
+    // Viện trưởng thấy tổng quan việc cần làm rồi tự bấm "Đọc và duyệt". ("#/duyet/ds" cũng là trang này.)
+    return api('/tong-quan').then(veDanhSachDot);
   };
 })();
