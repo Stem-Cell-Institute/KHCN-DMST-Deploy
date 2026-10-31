@@ -1068,7 +1068,7 @@
     if (me.quan_ly_module && d.trang_thai !== 'nhap') {
       var chuaNop = kq.bao_cao.filter(function (b) { return b.trang_thai === 'chua_nop'; });
       var trinhLai = !!t;
-      node.push(h('p', { class: 'mo', text: 'Trình để Viện trưởng đọc báo cáo của từng phòng ngay trong hệ thống và duyệt, không duyệt, góp ý hoặc đề nghị chỉnh sửa; Viện trưởng nhận email kèm liên kết. Không cần xuất hay tải tệp. Phòng chưa nộp hoặc trễ hạn vẫn trình được, Viện trưởng sẽ thấy "Chưa nộp". Có thể trình lại để nhắc. Kết xuất Word/PDF (ở trên) vẫn dùng được khi cần nộp hồ sơ cho nơi khác.' }));
+      node.push(h('p', { class: 'mo', text: 'Trình để Viện trưởng đọc báo cáo của từng phòng ngay trong hệ thống và duyệt, không duyệt, góp ý hoặc đề nghị chỉnh sửa; Viện trưởng nhận email kèm liên kết. Không cần xuất hay tải tệp. Phòng chưa nộp hoặc trễ hạn vẫn trình được, Viện trưởng sẽ thấy "Chưa nộp". Có thể trình lại để nhắc.' }));
       var loiNhan = h('textarea', { id: 'trinh-loi-nhan', rows: 2, maxlength: 1000 });
       var loiEl = h('p', { class: 'loi-truong', role: 'alert', hidden: true });
       var nutTrinh = h('button', { type: 'button', class: trinhLai ? 'btn btn-phu' : 'btn' }, trinhLai ? 'Trình lại để nhắc Viện trưởng' : 'Trình Viện trưởng');
