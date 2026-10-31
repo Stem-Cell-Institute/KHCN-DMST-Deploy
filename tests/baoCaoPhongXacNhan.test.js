@@ -46,6 +46,7 @@ async function dotDaNop(tieuDe) {
   const r = await ung.json(QUAN_LY, 'POST', '/dot', { tieu_de: tieuDe, loai: 'thang', ky: '10/2026', han_nop: '2099-12-31', mau_id: ID.mau, phong_ids: [ID.phongA, ID.phongB] });
   assert.equal(r.s, 201, JSON.stringify(r.d));
   assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${r.d.id}/mo`, {})).s, 200);
+  ung.daTrinh(r.d.id);
   const bc = Object.fromEntries((await ung.json(QUAN_LY, 'GET', '/dot/' + r.d.id)).d.bao_cao.map((b) => [b.phong_id, b.id]));
   for (const [uid, p, ten] of [[TP_A, ID.phongA, 'A'], [TP_B, ID.phongB, 'B']]) {
     assert.equal((await ung.json(uid, 'PUT', `/bao-cao/${bc[p]}/du-lieu`, { du_lieu: DU_LIEU(ten) })).s, 200);

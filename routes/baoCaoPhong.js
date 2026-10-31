@@ -157,6 +157,14 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
   const canXacNhan = (req, res, next) =>
     req.bcp.laQuanLyModule ? next() : loi(res, 403, 'Chỉ người quản lý module mới xác nhận hoặc yêu cầu chỉnh sửa báo cáo của phòng. Viện trưởng duyệt hồ sơ trình.');
 
+  /**
+   * Viện trưởng (không kiêm quản lý module) CHỈ thấy các đợt đã được người quản lý "trình": trình là lúc báo cáo của đợt được
+   * "kích hoạt" trong giao diện của ông. Đợt chưa trình thì với ông như không tồn tại (404): không danh sách, không tiến độ,
+   * không đọc được báo cáo, không góp ý được. Người quản lý, admin và chủ phòng không bị giới hạn này.
+   */
+  const chiXemDaTrinh = (req) => req.bcp.laVienTruong && !req.bcp.laQuanLyModule;
+  const dotDaTrinh = (dotId) => !!db.prepare('SELECT 1 AS ok FROM bcp_trinh_lan WHERE dot_id = ?').get(dotId);
+
   function ghiLichSu(baoCaoId, hanhDong, nguoiId, ghiChu) {
     db.prepare('INSERT INTO bcp_lich_su (bao_cao_id, hanh_dong, nguoi_id, ghi_chu) VALUES (?,?,?,?)').run(
       baoCaoId,
@@ -616,7 +624,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
     canQuanLy,
     bao((req, res) => {
       const homNay = ngayVN(new Date());
-      const dots = db
+      const tatCaDot = db
         .prepare(
           `SELECT d.id, d.tieu_de, d.loai, d.ky, d.han_nop, d.trang_thai, d.created_at, d.cach_nop, m.ten AS mau_ten
              FROM bcp_dot d
@@ -625,6 +633,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
             ORDER BY d.id DESC`
         )
         .all();
+      const dots = chiXemDaTrinh(req) ? tatCaDot.filter((d) => dotDaTrinh(d.id)) : tatCaDot;
       const bcs = db.prepare('SELECT dot_id, trang_thai, nop_luc FROM bcp_bao_cao').all();
       const theoDot = new Map();
       for (const b of bcs) {
@@ -684,7 +693,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
             WHERE d.id = ?`
         )
         .get(id);
-      if (!d) return loi(res, 404, 'Không tìm thấy đợt báo cáo.');
+      if (!d || (chiXemDaTrinh(req) && !dotDaTrinh(id))) return loi(res, 404, 'Không tìm thấy đợt báo cáo.');
       const homNay = ngayVN(new Date());
       const bao_cao = db
         .prepare(
@@ -941,6 +950,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
     // Báo cáo riêng của một người (chu_id) chỉ người đó nhập/xem; báo cáo chung hoặc chờ giao (chu_id rỗng) thì ai trong phòng cũng được.
     const laChuPhong = req.bcp.phongIds.includes(b.phong_id) && b.dot_trang_thai !== 'nhap' && (b.chu_id == null || b.chu_id === req.user.id);
     if (!req.bcp.laQuanLy && !laChuPhong) return null; // không phân biệt "không có" và "không được xem"
+    if (chiXemDaTrinh(req) && !laChuPhong && !dotDaTrinh(b.dot_id)) return null; // đợt chưa trình: Viện trưởng chưa thấy
     return { b, laChuPhong };
   }
 
@@ -1341,7 +1351,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
     canQuanLy,
     bao((req, res) => {
       const homNay = ngayVN(new Date());
-      const dots = db.prepare("SELECT id, tieu_de, ky, han_nop, trang_thai, cach_nop FROM bcp_dot WHERE trang_thai = 'dang_mo' ORDER BY han_nop, id").all();
+      const dots = db.prepare("SELECT id, tieu_de, ky, han_nop, trang_thai, cach_nop FROM bcp_dot WHERE trang_thai = 'dang_mo' ORDER BY han_nop, id").all().filter((d) => !chiXemDaTrinh(req) || dotDaTrinh(d.id));
       const bcs = db
         .prepare("SELECT b.dot_id, b.trang_thai, b.nop_luc FROM bcp_bao_cao b JOIN bcp_dot d ON d.id = b.dot_id WHERE d.trang_thai = 'dang_mo'")
         .all();
