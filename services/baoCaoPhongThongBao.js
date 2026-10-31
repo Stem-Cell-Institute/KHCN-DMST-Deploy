@@ -6,7 +6,7 @@
  *   quản lý module TRÌNH / trình lại đợt cho Viện trưởng → Viện trưởng (vai trò vien_truong)
  *   Viện trưởng KHÔNG DUYỆT hoặc ĐỀ NGHỊ CHỈNH SỬA một báo cáo → người phụ trách báo cáo đó + người quản lý module
  *     (Viện trưởng DUYỆT một báo cáo: không gửi thư cho phòng, phòng thấy trạng thái ngay trong báo cáo)
- *   Viện trưởng đã xử lý xong mọi báo cáo chờ quyết định của một đợt → người quản lý module (một thư)
+ *   Viện trưởng đã xử lý xong mọi báo cáo chờ duyệt của một đợt → người quản lý module (một thư)
  *   phòng nộp lại đúng báo cáo Viện trưởng đã đề nghị chỉnh sửa → Viện trưởng
  *   quản lý MỞ đợt báo cáo           → trưởng phòng của các phòng được giao, kèm liên kết vào đúng báo cáo của phòng họ
  *   Viện trưởng có Ý KIẾN về báo cáo của một phòng → trưởng phòng của CHÍNH phòng đó VÀ người quản lý module (kèm nội dung ý kiến)
@@ -168,7 +168,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     const nguoi = db.prepare('SELECT fullname FROM users WHERE id = ?').get(nguoiTrinhId);
     const td = tienDo(dotId);
     const doan = [
-      { text: trinhLai ? `Đợt báo cáo «${d.tieu_de}» được trình lại, đang chờ Viện trưởng xem và quyết định.` : `Đợt báo cáo «${d.tieu_de}» được trình, đang chờ Viện trưởng xem và quyết định.` },
+      { text: trinhLai ? `Đợt báo cáo «${d.tieu_de}» được trình lại, đang chờ Viện trưởng xem và duyệt.` : `Đợt báo cáo «${d.tieu_de}» được trình, đang chờ Viện trưởng xem và duyệt.` },
       { nhan: 'Người trình', text: (nguoi && nguoi.fullname) || '(không rõ)' },
       { nhan: 'Thời điểm', text: fmtGio(t.trinh_luc) },
       { nhan: 'Đã nộp', text: `${td.da_nop}/${td.tong} ${td.don_vi}` },

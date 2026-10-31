@@ -76,7 +76,7 @@
     chua_nop: ['○', 'Chưa nộp', ''],
     dang_sua: ['↺', 'Phòng đang chỉnh sửa', 'nhan-chu-y'],
     de_nghi_chinh_sua: ['↺', 'Đã đề nghị chỉnh sửa', 'nhan-chu-y'],
-    cho_quyet_dinh: ['●', 'Chờ quyết định', 'nhan-nop'],
+    cho_quyet_dinh: ['●', 'Chờ duyệt', 'nhan-nop'],
     duyet: ['✓', 'Viện trưởng đã duyệt', 'nhan-duyet'],
     khong_duyet: ['✕', 'Viện trưởng không duyệt', 'nhan-chu-y'],
   };
@@ -653,7 +653,7 @@
     return h('section', { class: 'viec-lon', 'aria-label': 'Đợt chờ bạn duyệt: ' + x.tieu_de },
       h('div', { class: 'viec-chu' },
         h('p', { class: 'viec-tieu', text: 'Đợt chờ bạn duyệt: ' + x.tieu_de }),
-        h('p', { class: 'viec-phu', text: x.cho_quyet_dinh + ' báo cáo chờ quyết định · đã nộp ' + x.da_nop + '/' + x.tong + ' · trình bởi ' + (x.nguoi_trinh || '—') + ' lúc ' + fmtGio(x.trinh_luc) }),
+        h('p', { class: 'viec-phu', text: x.cho_quyet_dinh + ' báo cáo chờ duyệt · đã nộp ' + x.da_nop + '/' + x.tong + ' · trình bởi ' + (x.nguoi_trinh || '—') + ' lúc ' + fmtGio(x.trinh_luc) }),
         x.loi_nhan ? h('p', { class: 'viec-nx' }, h('strong', { text: 'Lời nhắn: ' }), x.loi_nhan) : null),
       h('a', { class: 'btn btn-lon', href: '#/duyet/' + x.dot_id }, 'Đọc và duyệt →'));
   }
@@ -935,7 +935,7 @@
     if (t.chua_nop) tom.push(t.chua_nop + ' ' + dv + ' chưa nộp');
     // Trễ hạn gồm cả phòng ĐÃ nộp nhưng nộp muộn, nên có thể lớn hơn số phòng chưa nộp: tách riêng cho khỏi tưởng sai.
     if (t.tre_han) tom.push(t.tre_han + ' ' + dv + ' trễ hạn (kể cả nộp muộn)');
-    if (t.bao_cao_cho_vien_truong) tom.push(t.bao_cao_cho_vien_truong + ' báo cáo chờ Viện trưởng quyết định');
+    if (t.bao_cao_cho_vien_truong) tom.push(t.bao_cao_cho_vien_truong + ' báo cáo chờ Viện trưởng duyệt');
     var node = [h('p', null, h('strong', { text: 'Cần xử lý: ' }), tom.length ? tom.join(' · ') : 'không có việc nào đang chờ.')];
     if (t.chi_tiet.length) {
       node.push(h('ul', { class: 'dai-dot' }, t.chi_tiet.map(function (d) {
@@ -1077,7 +1077,7 @@
   function tomTatTienDoVT(td) {
     var daXuLy = td.duyet + td.khong_duyet + td.de_nghi_chinh_sua;
     return 'Viện trưởng đã xử lý ' + daXuLy + '/' + (daXuLy + td.cho_quyet_dinh) + ' báo cáo đã nộp (duyệt ' + td.duyet + ' · không duyệt ' + td.khong_duyet +
-      ' · đề nghị chỉnh sửa ' + td.de_nghi_chinh_sua + ') · còn chờ quyết định ' + td.cho_quyet_dinh + ' · chưa nộp ' + td.chua_nop + (td.dang_sua ? ' · đang chỉnh sửa ' + td.dang_sua : '');
+      ' · đề nghị chỉnh sửa ' + td.de_nghi_chinh_sua + ') · còn chờ duyệt ' + td.cho_quyet_dinh + ' · chưa nộp ' + td.chua_nop + (td.dang_sua ? ' · đang chỉnh sửa ' + td.dang_sua : '');
   }
 
   /**
@@ -1111,7 +1111,7 @@
         loiEl.hidden = true;
         var daNop = kq.bao_cao.length - chuaNop.length;
         xacNhan(trinhLai ? 'Trình lại cho Viện trưởng?' : 'Trình đợt này cho Viện trưởng?',
-          'Viện trưởng sẽ thấy ' + daNop + '/' + kq.bao_cao.length + ' báo cáo đã nộp để đọc và quyết định, kèm email thông báo.' +
+          'Viện trưởng sẽ thấy ' + daNop + '/' + kq.bao_cao.length + ' báo cáo đã nộp để đọc và duyệt, kèm email thông báo.' +
           (chuaNop.length ? ' Còn ' + chuaNop.length + ' báo cáo chưa nộp (' + chuaNop.slice(0, 4).map(function (b) { return b.phong_ten; }).join('; ') + (chuaNop.length > 4 ? '…' : '') + '): Viện trưởng sẽ thấy "Chưa nộp" ở các phòng đó, và vẫn có thể trình lại khi phòng nộp xong.' : ''),
           trinhLai ? 'Trình lại' : 'Trình').then(function (ok) {
           if (!ok) return;

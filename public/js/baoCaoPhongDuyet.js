@@ -69,7 +69,7 @@
     return h('section', { class: cho ? 'viec-lon' : 'luu-y duyet-the-xong', 'aria-label': x.tieu_de },
       h('div', { class: 'viec-chu' },
         h('p', { class: 'viec-tieu', text: x.tieu_de }),
-        h('p', { class: 'viec-phu', text: (cho ? x.cho_quyet_dinh + ' báo cáo chờ quyết định · ' : 'Đã xử lý xong · ') + 'đã nộp ' + x.da_nop + '/' + x.tong + (x.chua_nop ? ' · chưa nộp ' + x.chua_nop : '') + ' · hạn ' + fmtNgay(x.han_nop) }),
+        h('p', { class: 'viec-phu', text: (cho ? x.cho_quyet_dinh + ' báo cáo chờ duyệt · ' : 'Đã xử lý xong · ') + 'đã nộp ' + x.da_nop + '/' + x.tong + (x.chua_nop ? ' · chưa nộp ' + x.chua_nop : '') + ' · hạn ' + fmtNgay(x.han_nop) }),
         h('p', { class: 'mo', text: 'Trình' + (x.lan > 1 ? ' (lần ' + x.lan + ')' : '') + ' bởi ' + (x.nguoi_trinh || '—') + ' lúc ' + fmtGio(x.trinh_luc) }),
         x.loi_nhan ? h('p', { class: 'viec-nx' }, h('strong', { text: 'Lời nhắn: ' }), x.loi_nhan) : null),
       h('a', { class: cho ? 'btn btn-lon' : 'btn btn-phu', href: '#/duyet/' + x.dot_id }, cho ? (vienTruong ? 'Đọc và duyệt →' : 'Xem →') : 'Xem lại →'));
@@ -79,15 +79,11 @@
     var vt = !!B.me().vien_truong;
     var cho = tq.dot_cho_vien_truong || [];
     var xong = (tq.dot_da_trinh || []).filter(function (x) { return x.cho_quyet_dinh === 0; });
-    var node = [h('div', { class: 'thanh-tieu-de' }, h('div', null,
-      h('h2', { text: 'Duyệt báo cáo' }),
-      h('p', { class: 'phu', text: vt
-        ? 'Các đợt đã được người quản lý module trình. Đọc báo cáo của từng phòng rồi bấm Duyệt, Không duyệt, Ý kiến hoặc Đề nghị chỉnh sửa; không cần tải tệp.'
-        : 'Các đợt đã trình Viện trưởng. Bạn xem được như Viện trưởng, nhưng chỉ Viện trưởng đưa ra quyết định.' })))];
+    var node = [h('div', { class: 'thanh-tieu-de' }, h('div', null, h('h2', { text: 'Duyệt báo cáo' })))];
     if (!cho.length && !xong.length) {
       node.push(h('div', { class: 'trong', text: 'Chưa có đợt nào được trình. Khi người quản lý module trình một đợt, báo cáo của các phòng sẽ hiện ở đây.' }));
     }
-    if (cho.length) node.push(h('h3', { text: 'Chờ quyết định (' + cho.length + ')' }), cho.map(function (x) { return theDot(x, vt); }));
+    if (cho.length) node.push(h('h3', { text: 'Chờ duyệt (' + cho.length + ')' }), cho.map(function (x) { return theDot(x, vt); }));
     if (xong.length) node.push(h('h3', { text: 'Đã xử lý xong' }), xong.map(function (x) { return theDot(x, vt); }));
     ghi(B.main, node);
   }
@@ -225,7 +221,7 @@
             h('p', { class: 'mo', text: 'Báo cáo vẫn giữ nguyên trạng thái đã nộp. Đã gửi email lý do cho phòng và người quản lý module.' }));
         }
         return h('div', { class: 'luu-y luu-y-do', role: 'status' }, h('p', null, h('strong', { text: ten + ' đã đề nghị phòng chỉnh sửa' }), ' · ' + fmtGio(q.luc)), h('p', { text: q.ghi_chu }),
-          h('p', { class: 'mo', text: 'Báo cáo đã trả về phòng. Khi phòng nộp lại, báo cáo hiện lại ở đây để chờ quyết định.' }));
+          h('p', { class: 'mo', text: 'Báo cáo đã trả về phòng. Khi phòng nộp lại, báo cáo hiện lại ở đây để chờ duyệt.' }));
       }
 
       function veBai() {
@@ -477,7 +473,7 @@
         document.body.classList.remove('co-thanh-duyet');
       });
 
-      // Báo cáo mở đầu: theo liên kết nếu có, không thì báo cáo đầu tiên đang chờ quyết định, không thì báo cáo đầu tiên.
+      // Báo cáo mở đầu: theo liên kết nếu có, không thì báo cáo đầu tiên đang chờ duyệt, không thì báo cáo đầu tiên.
       var dau0 = -1;
       data.bao_cao.forEach(function (b, i) { if (dau0 < 0 && b.id === chonId) dau0 = i; });
       if (dau0 < 0) data.bao_cao.forEach(function (b, i) { if (dau0 < 0 && b.vt_trang_thai === 'cho_quyet_dinh') dau0 = i; });
