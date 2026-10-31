@@ -626,11 +626,14 @@
     return tq.bao_cao_cho_vien_truong || 0;
   }
 
+  /** Tên mục danh sách đợt: người quản lý dùng nó để giao và theo dõi đợt; Viện trưởng dùng nó để xem lại (lưu trữ) các đợt đã trình và báo cáo từng phòng. */
+  function tenMucDot() { return me.quan_ly_module ? 'Các đợt báo cáo' : 'Lịch sử các đợt báo cáo'; }
+
   function dungNav(muc) {
     mucNav = muc;
     var ds = [];
     if (me.vien_truong) ds.push(['duyet', 'Duyệt báo cáo']);
-    if (me.quan_ly) ds.push(['dot', 'Đợt báo cáo']);
+    if (me.quan_ly) ds.push(['dot', tenMucDot()]);
     // Biểu mẫu và Phòng & phân quyền: chỉ người quản lý module (Viện trưởng không quản lý, chỉ xem tiến độ và duyệt hồ sơ).
     if (me.quan_ly_module) ds.push(['mau', 'Biểu mẫu'], ['phong', 'Phòng & phân quyền']);
     if (me.phong.length) ds[viec.length ? 'unshift' : 'push'](['cua-toi', 'Báo cáo của tôi']);
@@ -648,22 +651,9 @@
     return api('/tong-quan').then(function (r) { tq = r; dungNav(mucNav); veDaiViec(); }).catch(function () { /* giữ số liệu cũ */ });
   }
 
-  /** Thẻ việc của VIỆN TRƯỞNG cho một đợt đã trình: bao nhiêu báo cáo chờ ông quyết định, một nút vào đọc và duyệt ngay. */
-  function theDotChoDuyet(x) {
-    return h('section', { class: 'viec-lon', 'aria-label': 'Đợt chờ bạn duyệt: ' + x.tieu_de },
-      h('div', { class: 'viec-chu' },
-        h('p', { class: 'viec-tieu', text: 'Đợt chờ bạn duyệt: ' + x.tieu_de }),
-        h('p', { class: 'viec-phu', text: x.cho_quyet_dinh + ' báo cáo chờ duyệt · đã nộp ' + x.da_nop + '/' + x.tong + ' · trình bởi ' + (x.nguoi_trinh || '—') + ' lúc ' + fmtGio(x.trinh_luc) }),
-        x.loi_nhan ? h('p', { class: 'viec-nx' }, h('strong', { text: 'Lời nhắn: ' }), x.loi_nhan) : null),
-      h('a', { class: 'btn btn-lon', href: '#/duyet/' + x.dot_id }, 'Đọc và duyệt →'));
-  }
-
-  /** Dải nổi bật trên các màn quản lý: thẻ việc của Viện trưởng (đợt chờ duyệt) và "Phòng bạn cần nộp báo cáo" + nút to. */
+  /** Dải nổi bật trên các màn quản lý: "Phòng bạn cần nộp báo cáo" + nút to. (Việc duyệt của Viện trưởng nằm ở mục "Duyệt báo cáo", không lặp lại ở đây.) */
   function veDaiViec() {
     var cacThe = [];
-    if (hienDai && me && me.vien_truong && tq) {
-      cacThe = (tq.dot_cho_vien_truong || []).map(theDotChoDuyet);
-    }
     if (!hienDai || !viec.length) { daiViec.replaceChildren.apply(daiViec, cacThe); return; }
     var b = viec[0];
     var nhieu = viec.length > 1;
@@ -919,7 +909,7 @@
       veDaiViec();
       // Viện trưởng chỉ xem tiến độ: không có nút tạo đợt, và không cần thấy đợt còn Nháp (chưa giao cho ai).
       var cacDot = me.quan_ly_module ? kq.dot : kq.dot.filter(function (d) { return d.trang_thai !== 'nhap'; });
-      var node = [tieuDe('Đợt báo cáo', me.quan_ly_module ? 'Mỗi đợt giao một biểu mẫu cho các phòng, kèm hạn nộp.' : 'Tiến độ nộp báo cáo của các phòng theo từng đợt.',
+      var node = [tieuDe(tenMucDot(), me.quan_ly_module ? 'Mỗi đợt giao một biểu mẫu cho các phòng, kèm hạn nộp.' : 'Lưu trữ các đợt báo cáo đã trình: xem lại báo cáo và tiến độ của từng phòng theo từng đợt.',
         me.quan_ly_module ? h('button', { type: 'button', class: 'btn', onclick: function () { moFormDot(null); } }, '+ Tạo đợt báo cáo') : null)];
       var dai = dungDaiCanXuLy(tq);
       if (dai) node.push(dai);
@@ -1194,7 +1184,7 @@
 
       var daNop = kq.bao_cao.filter(function (b) { return b.trang_thai === 'da_nop' || b.trang_thai === 'da_duyet'; }).length;
       var node = [
-        h('div', { class: 'nhom-nut' }, h('a', { class: 'btn btn-phu btn-nho', href: '#/dot' }, '← Tất cả đợt')),
+        h('div', { class: 'nhom-nut' }, h('a', { class: 'btn btn-phu btn-nho', href: '#/dot' }, '← ' + tenMucDot())),
         tieuDe(d.tieu_de, LOAI_DOT[d.loai] + (d.ky ? ' · ' + d.ky : '') + ' · Hạn nộp ' + fmtNgay(d.han_nop) + ' · Biểu mẫu "' + d.mau_ten + '" phiên bản ' + d.so_phien_ban),
         h('p', null, nhan(TT_DOT, d.trang_thai), ' ', h('span', { class: 'con-so', text: 'Đã nộp ' + daNop + '/' + kq.bao_cao.length })),
       ];
