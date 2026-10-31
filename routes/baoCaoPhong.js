@@ -648,7 +648,16 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
           dem[r.trang_thai] += 1;
           if (treHan(r, d, homNay)) tre += 1;
         }
-        return { ...d, tong: rows.length, ...dem, tre_han: tre };
+        // Đã trình Viện trưởng chưa (người quản lý cần phân biệt), lần trình mới nhất và Viện trưởng đã xử lý đến đâu.
+        const t = vt.trinhCuaDot(d.id);
+        const tdVt = t ? vt.tienDoDot(d.id) : null;
+        return {
+          ...d, tong: rows.length, ...dem, tre_han: tre,
+          da_trinh: !!t,
+          trinh_lan: t ? t.lan : 0,
+          trinh_luc: t ? t.trinh_luc : null,
+          vt: tdVt ? { cho_quyet_dinh: tdVt.cho_quyet_dinh, duyet: tdVt.duyet, khong_duyet: tdVt.khong_duyet, de_nghi_chinh_sua: tdVt.de_nghi_chinh_sua } : null,
+        };
       });
       res.json({ dot: ds });
     })

@@ -597,3 +597,24 @@ test('ý kiến vẫn dùng đường sẵn có và trả về nội dung vừa 
   assert.equal(bc.vt_trang_thai, 'duyet', 'ý kiến không đổi quyết định');
   assert.equal((await ung.json(VIEN_TRUONG, 'POST', `/bao-cao/${dot.c}/y-kien`, { noi_dung: 'x' })).s, 409, 'phòng chưa nộp thì chưa góp ý được');
 });
+
+test('danh sách đợt cho người quản lý phân biệt đợt ĐÃ TRÌNH và CHƯA TRÌNH (kèm lần trình và tiến độ của Viện trưởng)', async () => {
+  const dot = await taoDot('Đợt để phân biệt trình', { phong: [ID.phongA, ID.phongB] });
+  const dong = async () => (await ung.json(QUAN_LY, 'GET', '/dot')).d.dot.find((x) => x.id === dot.id);
+  let x = await dong();
+  assert.equal(x.da_trinh, false);
+  assert.equal(x.trinh_lan, 0);
+  assert.equal(x.vt, null);
+  await trinh(dot.id);
+  x = await dong();
+  assert.equal(x.da_trinh, true);
+  assert.equal(x.trinh_lan, 1);
+  assert.ok(x.trinh_luc);
+  assert.equal(x.vt.cho_quyet_dinh, 2);
+  assert.equal((await quyet(VIEN_TRUONG, dot.id, dot.a, 'duyet')).s, 200);
+  assert.equal((await dong()).vt.duyet, 1);
+  await trinh(dot.id);
+  assert.equal((await dong()).trinh_lan, 2);
+  const tq = (await ung.json(QUAN_LY, 'GET', '/tong-quan')).d.chi_tiet.find((y) => y.dot_id === dot.id);
+  assert.equal(tq.da_trinh, true);
+});

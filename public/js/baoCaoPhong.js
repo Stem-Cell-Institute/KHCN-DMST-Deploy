@@ -141,6 +141,12 @@
     var q = b && b.vt_trang_thai;
     return q === 'duyet' || q === 'khong_duyet' || q === 'de_nghi_chinh_sua' ? nhan(TT_VT, q) : null;
   }
+  /** Nhãn "Đã trình" / "Chưa trình" Viện trưởng của một đợt (người quản lý cần phân biệt đợt nào đã trình, đợt nào chưa). */
+  function nhanTrinh(daTrinh, lan) {
+    return daTrinh
+      ? h('span', { class: 'nhan nhan-duyet' }, h('span', { 'aria-hidden': 'true', text: '✓' }), 'Đã trình' + (lan > 1 ? ' (lần ' + lan + ')' : ''))
+      : h('span', { class: 'nhan nhan-chu-y' }, h('span', { 'aria-hidden': 'true', text: '!' }), 'Chưa trình');
+  }
   function nhanTuDuyet() {
     return h('span', { class: 'nhan nhan-chu-y' }, h('span', { 'aria-hidden': 'true', text: '↺' }), 'Tự xác nhận');
   }
@@ -895,7 +901,7 @@
       node.push(h('ul', { class: 'dai-dot' }, t.chi_tiet.map(function (d) {
         return h('li', null, h('a', { href: '#/dot/' + d.dot_id, text: d.tieu_de }),
           ' — đã nộp ' + d.da_nop + '/' + d.tong + ' ' + donVi(d.cach_nop) + (d.cho_duyet ? ', chờ xác nhận ' + d.cho_duyet : '') + (d.chua_nop ? ', chưa nộp ' + d.chua_nop : '') + (d.tre_han ? ', trễ hạn ' + d.tre_han : '') + ' · hạn ' + fmtNgay(d.han_nop) +
-          (d.da_trinh ? ' · Viện trưởng còn ' + d.vt.cho_quyet_dinh + ' báo cáo chờ' : ''));
+          (d.da_trinh ? ' · đã trình, Viện trưởng còn ' + d.vt.cho_quyet_dinh + ' báo cáo chờ duyệt' : ' · chưa trình Viện trưởng'));
       })));
     }
     return h('section', { class: 'luu-y dai-xu-ly' + (khan ? ' luu-y-do' : ''), 'aria-label': 'Việc cần xử lý' }, node);
@@ -917,13 +923,18 @@
         node.push(bangTrong(me.quan_ly_module ? 'Chưa có đợt báo cáo nào. Bấm "Tạo đợt báo cáo" để bắt đầu.' : 'Chưa có đợt báo cáo nào đang mở.'));
       } else {
         node.push(h('div', { class: 'cuon-ngang' }, h('table', null,
-          h('thead', null, h('tr', null, ['Đợt báo cáo', 'Hạn nộp', 'Trạng thái', 'Tiến độ'].map(function (t) { return h('th', { scope: 'col', text: t }); }))),
+          h('thead', null, h('tr', null, ['Đợt báo cáo', 'Hạn nộp', 'Trạng thái', me.quan_ly_module ? 'Trình Viện trưởng' : null, 'Tiến độ'].filter(Boolean).map(function (t) { return h('th', { scope: 'col', text: t }); }))),
           h('tbody', null, cacDot.map(function (d) {
             var daNop = d.da_nop + d.da_duyet;
             return h('tr', { class: d.tre_han && d.trang_thai === 'dang_mo' ? 'dong-chu-y' : '' },
               h('td', null, h('a', { href: '#/dot/' + d.id, text: d.tieu_de }), h('div', { class: 'mo', text: LOAI_DOT[d.loai] + (d.ky ? ' · ' + d.ky : '') + ' · ' + d.mau_ten })),
               h('td', { class: 'con-so', text: fmtNgay(d.han_nop) }),
               h('td', null, nhan(TT_DOT, d.trang_thai)),
+              // Chỉ người quản lý module: đợt nào đã trình, đợt nào chưa (đợt Nháp chưa mở nên chưa có gì để trình).
+              me.quan_ly_module ? h('td', null,
+                d.trang_thai === 'nhap' ? h('span', { class: 'mo', text: '—' }) : nhanTrinh(d.da_trinh, d.trinh_lan),
+                d.da_trinh ? h('div', { class: 'mo con-so', text: fmtGio(d.trinh_luc) }) : null,
+                d.da_trinh ? h('div', { class: 'mo', text: d.vt.cho_quyet_dinh ? 'Viện trưởng còn ' + d.vt.cho_quyet_dinh + ' báo cáo chờ duyệt' : 'Viện trưởng đã duyệt xong' }) : null) : null,
               h('td', null,
                 h('span', { class: 'con-so', text: 'Đã nộp ' + daNop + '/' + d.tong }),
                 h('div', { class: 'mo con-so', text: 'chờ xác nhận ' + d.da_nop + ' · cần sửa ' + d.can_chinh_sua + ' · đã xác nhận ' + d.da_duyet }),
@@ -1186,7 +1197,7 @@
       var node = [
         h('div', { class: 'nhom-nut' }, h('a', { class: 'btn btn-phu btn-nho', href: '#/dot' }, '← ' + tenMucDot())),
         tieuDe(d.tieu_de, LOAI_DOT[d.loai] + (d.ky ? ' · ' + d.ky : '') + ' · Hạn nộp ' + fmtNgay(d.han_nop) + ' · Biểu mẫu "' + d.mau_ten + '" phiên bản ' + d.so_phien_ban),
-        h('p', null, nhan(TT_DOT, d.trang_thai), ' ', h('span', { class: 'con-so', text: 'Đã nộp ' + daNop + '/' + kq.bao_cao.length })),
+        h('p', null, nhan(TT_DOT, d.trang_thai), ' ', d.trang_thai !== 'nhap' ? [nhanTrinh(!!kq.trinh_vt, kq.trinh_vt ? kq.trinh_vt.lan : 0), ' '] : null, h('span', { class: 'con-so', text: 'Đã nộp ' + daNop + '/' + kq.bao_cao.length })),
       ];
       if (d.mo_ta) node.push(h('p', { class: 'phu', text: d.mo_ta }));
       node.push(h('p', { class: 'mo', text: 'Cách nộp: ' + (d.cach_nop === 'tat_ca' ? 'mỗi người phụ trách nộp một báo cáo riêng; phòng chỉ hoàn thành khi tất cả những người được phân công đã nộp.' : 'một báo cáo chung của phòng; một người phụ trách nộp là đủ.') }));
