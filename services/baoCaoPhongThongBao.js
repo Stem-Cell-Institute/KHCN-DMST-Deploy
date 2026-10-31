@@ -8,7 +8,6 @@
  *     (Viện trưởng DUYỆT một báo cáo: không gửi thư cho phòng, phòng thấy trạng thái ngay trong báo cáo)
  *   Viện trưởng đã xử lý xong mọi báo cáo chờ quyết định của một đợt → người quản lý module (một thư)
  *   phòng nộp lại đúng báo cáo Viện trưởng đã đề nghị chỉnh sửa → Viện trưởng
- *   Viện trưởng duyệt hồ sơ bằng tệp của cách làm cũ (chỉ còn hồ sơ đang chờ lúc chuyển đổi) → người quản lý module
  *   quản lý MỞ đợt báo cáo           → trưởng phòng của các phòng được giao, kèm liên kết vào đúng báo cáo của phòng họ
  *   Viện trưởng có Ý KIẾN về báo cáo của một phòng → trưởng phòng của CHÍNH phòng đó VÀ người quản lý module (kèm nội dung ý kiến)
  *   hệ thống TỰ nhắc trước hạn nộp (còn 1–2 ngày, và đúng ngày hạn) → trưởng phòng của các phòng CHƯA nộp
@@ -179,21 +178,6 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     doan.push({ text: 'Cách làm: đăng nhập eoffice, mở mục "Duyệt báo cáo", đọc báo cáo của từng phòng rồi bấm Duyệt, Không duyệt, Ý kiến hoặc Đề nghị chỉnh sửa. Không cần tải tệp.' });
     const tieuDe = trinhLai ? `[Nhắc duyệt] Báo cáo các phòng — ${d.tieu_de}` : `[Cần duyệt] Báo cáo các phòng — ${d.tieu_de}`;
     return guiDen(nguoiNhan('vien_truong', nguoiTrinhId), tieuDe, dungThu(doan, lienKet(`#/duyet/${d.id}`), goc));
-  }
-
-  /** Viện trưởng đã duyệt hồ sơ bằng tệp (cách làm cũ). Chỉ Viện trưởng duyệt được, nên chỉ cần báo người quản lý module. */
-  async function baoDaDuyetTrinh(dotId, nguoiDuyetId) {
-    const d = db.prepare('SELECT id, tieu_de FROM bcp_dot WHERE id = ?').get(dotId);
-    const t = db.prepare('SELECT nhan_xet, duyet_luc FROM bcp_trinh WHERE dot_id = ?').get(dotId);
-    if (!d || !t) return { gui: 0, loi: 0, nguoi_nhan: 0 };
-    const nguoi = db.prepare('SELECT fullname FROM users WHERE id = ?').get(nguoiDuyetId);
-    const ten = (nguoi && nguoi.fullname) || '(không rõ)';
-    const doan = [
-      { text: `Viện trưởng ${ten} đã duyệt hồ sơ báo cáo của đợt «${d.tieu_de}».` },
-      { nhan: 'Thời điểm', text: fmtGio(t.duyet_luc) },
-    ];
-    if (t.nhan_xet) doan.push({ nhan: 'Nhận xét', text: t.nhan_xet });
-    return guiDen(nguoiNhan('quan_ly', nguoiDuyetId), `[Viện trưởng đã duyệt] ${d.tieu_de}`, dungThu(doan, lienKet(`#/dot/${d.id}`), goc));
   }
 
   const homNayVN = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
@@ -504,7 +488,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
   /** Viện trưởng sẽ nhận thư (có email hợp lệ), trừ `boQuaUserId`. Tách riêng để route đếm được số người nhận mà không cần gửi. */
   const nguoiNhanVienTruong = (boQuaUserId) => nguoiNhan('vien_truong', boQuaUserId);
 
-  return { nguoiNhanVienTruong, baoDaNop, baoTrinhVienTruong, baoDaDuyetTrinh, baoQuyetDinh, baoDaXuLyXong, baoNopLaiTheoDeNghi, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoNhacHan, nguoiNhanYKien, nguoiNhanQuanLyYKien, baoYKien, baoLoiMoi, baoDuocGan, tienDo };
+  return { nguoiNhanVienTruong, baoDaNop, baoTrinhVienTruong, baoQuyetDinh, baoDaXuLyXong, baoNopLaiTheoDeNghi, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoNhacHan, nguoiNhanYKien, nguoiNhanQuanLyYKien, baoYKien, baoLoiMoi, baoDuocGan, tienDo };
 }
 
 module.exports = { taoThongBao, esc };

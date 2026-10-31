@@ -94,19 +94,10 @@ test('người kiêm cả Viện trưởng và quản lý module thì xác nhậ
   assert.equal((await ung.json(VT_KIEM_QL, 'POST', `/bao-cao/${dot.a}/duyet`, {})).s, 200);
 });
 
-test('Viện trưởng KHÔNG trình đợt (403); hồ sơ tệp cũ đang chờ thì ông vẫn đọc (tải về) và duyệt được', async () => {
+test('Viện trưởng KHÔNG trình đợt (403); người quản lý module trình được', async () => {
   const dot = await dotDaNop('Đợt 3');
-  const hs = ung.taoHoSoCu(dot.id); // hồ sơ tệp của cách làm cũ, đang chờ lúc chuyển đổi
-  const url = `/dot/${dot.id}/trinh`;
-  const ds = await ung.json(VIEN_TRUONG, 'GET', url);
-  assert.equal(ds.s, 200, 'Viện trưởng xem được hồ sơ cũ');
-  assert.equal(ds.d.tep[0].id, hs.tepId);
-
   assert.equal((await ung.json(VIEN_TRUONG, 'POST', `/dot/${dot.id}/trinh-vien-truong`, {})).s, 403, 'trình đợt là việc của người quản lý module');
-
-  const taiVe = await ung.goi(VIEN_TRUONG, 'GET', `${url}/tep/${hs.tepId}/tai`);
-  assert.equal(taiVe.status, 200, 'Viện trưởng tải tệp về đọc được');
-  assert.equal((await ung.json(VIEN_TRUONG, 'POST', url + '/duyet', { nhan_xet: 'Đồng ý.' })).s, 200, 'và duyệt được');
+  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh-vien-truong`, {})).s, 200);
 });
 
 test('người kiêm Viện trưởng và quản lý module thì trình đợt được', async () => {

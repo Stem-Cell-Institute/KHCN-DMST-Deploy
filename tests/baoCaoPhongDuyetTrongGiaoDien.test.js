@@ -187,7 +187,7 @@ test('trình lại (nhắc): thư [Nhắc duyệt], ghi vào lịch sử đợt 
   assert.match(ung.thu[0].subject, /^\[Nhắc duyệt\]/);
   assert.match(ung.thu[0].text, /được trình lại/);
 
-  const ls = (await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/trinh`)).d.lich_su.map((h) => h.hanh_dong).filter((h) => h.startsWith('trinh'));
+  const ls = (await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}`)).d.lich_su.map((h) => h.hanh_dong).filter((h) => h.startsWith('trinh'));
   assert.deepEqual(ls, ['trinh', 'trinh_lai']);
 
   assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/dong`, {})).s, 200);
@@ -462,7 +462,7 @@ test('đề nghị chỉnh sửa khi đợt đã ĐÓNG: đợt tự mở lại,
   assert.equal(r.s, 200, JSON.stringify(r.d));
   assert.equal(r.d.dot_mo_lai, true);
   assert.equal((await ung.json(QUAN_LY, 'GET', '/dot/' + dot.id)).d.dot.trang_thai, 'dang_mo');
-  const ls = (await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/trinh`)).d.lich_su.find((h) => h.hanh_dong === 'mo_lai_theo_de_nghi');
+  const ls = (await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}`)).d.lich_su.find((h) => h.hanh_dong === 'mo_lai_theo_de_nghi');
   assert.ok(ls, 'ghi vào lịch sử đợt');
   assert.match(ls.ghi_chu, /Phòng A/);
   assert.equal(ls.nguoi, 'Phạm Viện Trưởng');

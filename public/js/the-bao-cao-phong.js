@@ -24,16 +24,15 @@
   }
 
   /**
-   * viec: báo cáo cần nộp/chỉnh sửa của phòng mình; hoSo: hồ sơ chờ Viện trưởng duyệt (rỗng nếu không phải Viện trưởng).
+   * viec: báo cáo cần nộp/chỉnh sửa của phòng mình; dotDuyet: các đợt đã trình còn báo cáo chờ Viện trưởng quyết định (rỗng nếu không phải Viện trưởng).
    * Dữ liệu chỉ vào DOM qua textContent.
    */
-  function ap(card, viec, hoSo, dotDuyet) {
+  function ap(card, viec, dotDuyet) {
     var cu = card.querySelector('.viec-the');
     if (cu) cu.remove();
     viec = viec || [];
-    hoSo = hoSo || [];
     dotDuyet = dotDuyet || [];
-    if ((!viec.length && !hoSo.length && !dotDuyet.length) || card.classList.contains('module-card--disabled')) return;
+    if ((!viec.length && !dotDuyet.length) || card.classList.contains('module-card--disabled')) return;
     var ds = viec.slice().sort(function (a, b) { return a.han_nop < b.han_nop ? -1 : a.han_nop > b.han_nop ? 1 : 0; });
     var b = ds[0];
     var nhieu = ds.length > 1;
@@ -56,7 +55,6 @@
       var soBaoCao = dotDuyet.reduce(function (n, x) { return n + (x.cho_quyet_dinh || 0); }, 0);
       them('Có ' + soBaoCao + ' báo cáo chờ bạn duyệt', dotDuyet[0].tieu_de + (dotDuyet.length > 1 ? ' và ' + (dotDuyet.length - 1) + ' đợt khác' : ''));
     }
-    if (hoSo.length) them(hoSo.length > 1 ? 'Có ' + hoSo.length + ' hồ sơ tệp cũ chờ bạn duyệt' : 'Có 1 hồ sơ tệp cũ chờ bạn duyệt', hoSo[0].tieu_de);
     if (ds.length) {
       them(nhieu ? 'Có ' + ds.length + ' báo cáo cần nộp' : canSua ? 'Có 1 báo cáo cần chỉnh sửa' : 'Có 1 báo cáo cần nộp',
         b.tieu_de + ' — hạn ' + ngay(b.han_nop) + ' (' + conLai(b.han_nop) + ')');
@@ -68,9 +66,8 @@
     card.classList.add('module-card--viec');
     if (nut) {
       var dich;
-      if ((hoSo.length || dotDuyet.length) && ds.length) { nut.textContent = 'Xem việc của bạn →'; dich = 'bao-cao-phong.html'; }
+      if (dotDuyet.length && ds.length) { nut.textContent = 'Xem việc của bạn →'; dich = 'bao-cao-phong.html'; }
       else if (dotDuyet.length) { nut.textContent = 'Đọc và duyệt báo cáo →'; dich = 'bao-cao-phong.html#/duyet'; }
-      else if (hoSo.length) { nut.textContent = 'Đọc và duyệt hồ sơ →'; dich = 'bao-cao-phong.html#/dot'; }
       else {
         nut.textContent = nhieu ? 'Xem các báo cáo cần nộp →' : canSua ? 'Chỉnh sửa báo cáo →' : 'Làm báo cáo ngay →';
         dich = 'bao-cao-phong.html' + (nhieu ? '#/cua-toi' : '#/bao-cao/' + b.id);
@@ -88,7 +85,7 @@
     fetch('/api/bao-cao-phong/viec-cua-toi', { headers: { Authorization: 'Bearer ' + token } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        if (d && Array.isArray(d.bao_cao)) ap(card, d.bao_cao, Array.isArray(d.ho_so_duyet) ? d.ho_so_duyet : [], Array.isArray(d.dot_duyet) ? d.dot_duyet : []);
+        if (d && Array.isArray(d.bao_cao)) ap(card, d.bao_cao, Array.isArray(d.dot_duyet) ? d.dot_duyet : []);
       })
       .catch(function () { /* thẻ giữ nguyên */ });
   }

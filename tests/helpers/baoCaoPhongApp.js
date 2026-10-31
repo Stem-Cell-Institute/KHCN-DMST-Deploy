@@ -112,22 +112,6 @@ async function dungUngDung(tuyChon = {}) {
     return id;
   };
 
-  /**
-   * Dựng một HỒ SƠ TRÌNH BẰNG TỆP của cách làm cũ (đã ngừng tạo mới): ghi thẳng vào DB và đĩa, giống dữ liệu thật đã có sẵn từ trước.
-   * trangThai: 'da_gui' (đang chờ Viện trưởng duyệt) | 'da_duyet'. Trả {tepId, tenLuu}.
-   */
-  ung.taoHoSoCu = (dotId, { tenTep = 'Báo cáo đã ký.pdf', loiNhan = null, trangThai = 'da_gui', nguoiGui = 2, noiDung = null } = {}) => {
-    const tenLuu = require('crypto').randomBytes(16).toString('hex') + '.pdf';
-    const dir = path.join(uploadsRoot, 'bao-cao-phong', String(dotId));
-    fs.mkdirSync(dir, { recursive: true });
-    const nd = noiDung || PDF_MAU;
-    fs.writeFileSync(path.join(dir, tenLuu), nd);
-    db.prepare('INSERT INTO bcp_trinh (dot_id, trang_thai, loi_nhan, nguoi_gui_id, gui_luc) VALUES (?,?,?,?,?)').run(dotId, trangThai, loiNhan, nguoiGui, new Date().toISOString());
-    const r = db.prepare('INSERT INTO bcp_trinh_tep (dot_id, ten_goc, ten_luu, loai, kich_thuoc, nguoi_tai_id) VALUES (?,?,?,?,?,?)').run(dotId, tenTep, tenLuu, 'pdf', nd.length, nguoiGui);
-    db.prepare("INSERT INTO bcp_dot_lich_su (dot_id, hanh_dong, nguoi_id, ghi_chu) VALUES (?, 'gui', ?, ?)").run(dotId, nguoiGui, loiNhan);
-    return { tepId: Number(r.lastInsertRowid), tenLuu };
-  };
-
   ung.dung = async () => {
     await new Promise((r) => server.close(r));
     db.close();

@@ -3,19 +3,16 @@
  * Test cho các phần của module Báo cáo phòng ban được thêm sau bản đầu:
  *   1. Vai trò Viện trưởng + dải "tổng quan"
  *   2. Email báo nộp
- *   3. Hồ sơ trình bằng TỆP của cách làm cũ: chỉ còn đọc / tải về / duyệt hồ sơ đang chờ (đã ngừng tạo mới)
+ *   3. Gán Viện trưởng
  *   4. Kết xuất Word/PDF qua API (vẫn là công cụ của người quản lý module)
  *
  * Chạy trên router thật trong tiến trình (tests/helpers/baoCaoPhongApp.js) nên soi được email đã gửi và
- * vị trí tệp trên đĩa. Trọng tâm là những chỗ sai thì hậu quả nặng: đường dẫn tệp cũ (path traversal),
- * ai được tải hồ sơ, ai được duyệt, và email gửi nhầm người.
+ * Trọng tâm là những chỗ sai thì hậu quả nặng: ai được kết xuất, ai được trình, và email gửi nhầm người.
  */
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const path = require('path');
-const { dungUngDung, PDF_MAU } = require('./helpers/baoCaoPhongApp');
+const { dungUngDung } = require('./helpers/baoCaoPhongApp');
 
 const ADMIN = 1;
 const QUAN_LY = 2;
@@ -180,53 +177,7 @@ test('trưởng phòng và người ngoài không xem được tổng quan', asy
   assert.equal((await ung.json(null, 'GET', '/tong-quan')).s, 401);
 });
 
-// ── 5. Hồ sơ trình bằng tệp của cách làm CŨ: chỉ còn đọc ─────────────────────
-// Cách làm mới (trình ngay trong giao diện, Viện trưởng duyệt từng báo cáo) có test riêng ở baoCaoPhongDuyetTrongGiaoDien.test.js.
-// Dữ liệu cũ được dựng thẳng vào DB (ung.taoHoSoCu) như dữ liệu thật đã có sẵn từ trước khi nâng cấp.
-
-test('hồ sơ cũ: trưởng phòng và người ngoài không chạm được vào', async () => {
-  const dot = ID.dotMail;
-  for (const uid of [TP_A, TP_B, NGOAI, VT_CHUNG]) {
-    assert.equal((await ung.json(uid, 'GET', `/dot/${dot.id}/trinh`)).s, 403, 'user ' + uid);
-    assert.equal((await ung.json(uid, 'POST', `/dot/${dot.id}/trinh/gui`, {})).s, 403);
-    assert.equal((await ung.json(uid, 'POST', `/dot/${dot.id}/trinh/duyet`, {})).s, 403);
-    assert.equal((await ung.json(uid, 'POST', `/dot/${dot.id}/trinh-vien-truong`, {})).s, 403, 'cách trình mới cũng vậy');
-  }
-  assert.equal((await ung.json(null, 'GET', `/dot/${dot.id}/trinh`)).s, 401);
-});
-
-test('hồ sơ cũ: đợt còn Nháp chưa có gì để xem (409)', async () => {
-  const r = await ung.json(QUAN_LY, 'POST', '/dot', { tieu_de: 'Nháp', han_nop: '2099-12-31', mau_id: ID.mau, phong_ids: [ID.phongA] });
-  assert.equal((await ung.json(QUAN_LY, 'GET', `/dot/${r.d.id}/trinh`)).s, 409);
-  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${r.d.id}/trinh-vien-truong`, {})).s, 409, 'đợt Nháp cũng chưa trình được');
-});
-
-test('hồ sơ cũ: đợt chưa từng có hồ sơ thì trả trạng thái chưa gửi và KHÔNG có dữ liệu cũ (giao diện ẩn mục này)', async () => {
-  const r = await ung.json(QUAN_LY, 'GET', `/dot/${ID.dotMail.id}/trinh`);
-  assert.equal(r.s, 200);
-  assert.equal(r.d.trinh.trang_thai, 'chua_gui');
-  assert.equal(r.d.co_du_lieu_cu, false);
-  assert.deepEqual(r.d.tep, []);
-  assert.equal(r.d.co_the.duyet, false);
-});
-
-test('ĐÃ NGỪNG: không tải tệp lên, không xóa tệp, không gửi hồ sơ tệp mới (409); không để lại tệp nào trên đĩa', async () => {
-  const dot = await taoDot('Đợt ngừng hồ sơ tệp', [ID.phongA]);
-  const url = `/dot/${dot.id}/trinh`;
-  for (const uid of [QUAN_LY, ADMIN]) {
-    const r = await ung.taiTep(uid, url + '/tep', 'bao-cao.pdf', PDF_MAU);
-    assert.equal(r.s, 409, 'user ' + uid);
-    assert.match(r.d.message, /Trình Viện trưởng/);
-    assert.equal((await ung.json(uid, 'POST', url + '/gui', {})).s, 409);
-  }
-  // tệp sai đuôi cũng không còn được nhận: máy chủ không đọc nội dung tải lên nữa
-  assert.equal((await ung.taiTep(QUAN_LY, url + '/tep', 'virus.exe', Buffer.from('MZ....'))).s, 409);
-  assert.equal((await ung.json(QUAN_LY, 'DELETE', url + '/tep/1')).s, 409, 'cũng không xóa tệp cũ: báo cáo là hồ sơ, không được mất');
-  const dir = path.join(ung.uploadsRoot, 'bao-cao-phong', String(dot.id));
-  assert.ok(!fs.existsSync(dir) || fs.readdirSync(dir).length === 0, 'không có tệp nào được ghi');
-  const st = await ung.json(QUAN_LY, 'GET', url);
-  assert.equal(st.d.trinh.trang_thai, 'chua_gui', 'không tạo ra hồ sơ cũ mới');
-});
+// ── 5. Gán Viện trưởng ───────────────────────────────────────────────────────
 
 test('admin gán Viện trưởng; Viện trưởng có đủ quyền quản lý và thấy mình là Viện trưởng', async () => {
   const r = await ung.json(ADMIN, 'POST', '/thanh-vien', { user_id: VIEN_TRUONG, vai_tro: 'vien_truong' });
@@ -240,91 +191,11 @@ test('admin gán Viện trưởng; Viện trưởng có đủ quyền quản lý
   assert.equal((await ung.json(ADMIN, 'POST', '/thanh-vien', { user_id: VIEN_TRUONG, vai_tro: 'vien_truong' })).s, 409);
 });
 
-test('hồ sơ cũ đang chờ: hiện đủ cho quản lý và Viện trưởng; chỉ Viện trưởng có nút Duyệt', async () => {
+test('đã bỏ hồ sơ trình bằng tệp: các đường /trinh không còn (404)', async () => {
   const dot = ID.dotMail;
-  ID.hoSoCu = ung.taoHoSoCu(dot.id, { tenTep: 'Báo cáo tháng 10 – đã ký.pdf', loiNhan: 'Kính trình Viện trưởng xem và duyệt.' });
-  for (const uid of [QUAN_LY, VIEN_TRUONG, ADMIN]) {
-    const r = await ung.json(uid, 'GET', `/dot/${dot.id}/trinh`);
-    assert.equal(r.s, 200, 'user ' + uid);
-    assert.equal(r.d.trinh.trang_thai, 'da_gui');
-    assert.equal(r.d.trinh.loi_nhan, 'Kính trình Viện trưởng xem và duyệt.');
-    assert.equal(r.d.co_du_lieu_cu, true);
-    assert.equal(r.d.tep.length, 1);
-    assert.equal(r.d.tep[0].ten_goc, 'Báo cáo tháng 10 – đã ký.pdf');
+  for (const [m, d] of [['GET', ''], ['POST', '/gui'], ['POST', '/duyet'], ['POST', '/tep'], ['GET', '/tep/1/tai']]) {
+    assert.equal((await ung.json(QUAN_LY, m, `/dot/${dot.id}/trinh${d}`, m === 'POST' ? {} : undefined)).s, 404, m + ' ' + d);
   }
-  assert.equal((await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/trinh`)).d.co_the.duyet, false, 'quản lý không duyệt thay');
-  assert.equal((await ung.json(VIEN_TRUONG, 'GET', `/dot/${dot.id}/trinh`)).d.co_the.duyet, true);
-});
-
-test('KHÔNG có thu hồi và KHÔNG có duyệt thay: quản lý module và admin đều bị 403 khi duyệt hồ sơ cũ, hồ sơ vẫn chưa duyệt', async () => {
-  const dot = ID.dotMail;
-  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot.id}/trinh/thu-hoi`, {})).s, 404, 'đã bỏ thu hồi');
-  for (const uid of [QUAN_LY, ADMIN]) {
-    const r = await ung.json(uid, 'POST', `/dot/${dot.id}/trinh/duyet`, { nhan_xet: 'Duyệt hộ' });
-    assert.equal(r.s, 403, 'user ' + uid);
-    assert.match(r.d.message, /Chỉ Viện trưởng/);
-  }
-  assert.equal((await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/trinh`)).d.trinh.trang_thai, 'da_gui');
-});
-
-test('Viện trưởng duyệt hồ sơ cũ: người quản lý được báo, Viện trưởng không nhận lại thư; duyệt lần hai bị từ chối', async () => {
-  const dot = ID.dotMail;
-  ung.thu.length = 0;
-  const r = await ung.json(VIEN_TRUONG, 'POST', `/dot/${dot.id}/trinh/duyet`, { nhan_xet: 'Đã xem, đồng ý.' });
-  assert.equal(r.s, 200, JSON.stringify(r.d));
-  await ung.doiThu(1);
-  assert.deepEqual(ung.thu.map((t) => t.to), ['quanly@thu.local']);
-  assert.match(ung.thu[0].subject, /^\[Viện trưởng đã duyệt\]/);
-  assert.match(ung.thu[0].text, /Đã xem, đồng ý\./);
-
-  const st = await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/trinh`);
-  assert.equal(st.d.trinh.trang_thai, 'da_duyet');
-  assert.equal(st.d.trinh.nguoi_duyet, 'Phạm Viện Trưởng');
-  assert.equal(st.d.trinh.duyet_thay, undefined, 'không còn khái niệm duyệt thay');
-  assert.ok(st.d.lich_su.some((h) => h.hanh_dong === 'duyet'));
-  assert.equal((await ung.json(VIEN_TRUONG, 'POST', `/dot/${dot.id}/trinh/duyet`, {})).s, 409, 'đã duyệt rồi');
-  assert.equal((await ung.json(QUAN_LY, 'DELETE', `/dot/${dot.id}/trinh/tep/${ID.hoSoCu.tepId}`)).s, 409, 'tệp cũ giữ nguyên');
-});
-
-// ── 6. Tải tệp cũ về ─────────────────────────────────────────────────────────
-
-test('tải tệp hồ sơ cũ: người quản lý và Viện trưởng tải được đúng nội dung, tên tiếng Việt, không lưu đệm', async () => {
-  const url = `/dot/${ID.dotMail.id}/trinh/tep/${ID.hoSoCu.tepId}/tai`;
-  for (const uid of [QUAN_LY, VIEN_TRUONG, ADMIN]) {
-    const r = await ung.goi(uid, 'GET', url);
-    assert.equal(r.status, 200, 'user ' + uid);
-    assert.equal(r.headers.get('content-type'), 'application/pdf');
-    assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
-    assert.equal(r.headers.get('cache-control'), 'no-store');
-    assert.match(r.headers.get('content-disposition'), /filename\*=UTF-8''B%C3%A1o/);
-    assert.deepEqual(Buffer.from(await r.arrayBuffer()), PDF_MAU, 'nội dung tải về phải y nguyên tệp đã lưu');
-  }
-});
-
-test('tải tệp hồ sơ cũ: trưởng phòng, người ngoài, người chưa đăng nhập đều bị chặn', async () => {
-  const url = `/dot/${ID.dotMail.id}/trinh/tep/${ID.hoSoCu.tepId}/tai`;
-  assert.equal((await ung.goi(TP_A, 'GET', url)).status, 403);
-  assert.equal((await ung.goi(TP_B, 'GET', url)).status, 403);
-  assert.equal((await ung.goi(NGOAI, 'GET', url)).status, 403);
-  assert.equal((await ung.goi(VT_CHUNG, 'GET', url)).status, 403);
-  assert.equal((await ung.goi(null, 'GET', url)).status, 401);
-});
-
-test('tải tệp hồ sơ cũ: không tải được tệp của đợt khác bằng cách đổi id đợt', async () => {
-  const dotKhac = await taoDot('Đợt khác', [ID.phongA]);
-  const r = await ung.goi(QUAN_LY, 'GET', `/dot/${dotKhac.id}/trinh/tep/${ID.hoSoCu.tepId}/tai`);
-  assert.equal(r.status, 404);
-});
-
-test('tải tệp hồ sơ cũ: dòng DB có tên lưu độc hại (../) cũng không đọc được tệp ngoài thư mục', async () => {
-  const dot = await taoDot('Đợt traversal', [ID.phongA]);
-  // Mô phỏng DB bị can thiệp: tên lưu trỏ ra ngoài thư mục tệp
-  ung.db.prepare('INSERT INTO bcp_trinh (dot_id) VALUES (?)').run(dot.id);
-  const r = ung.db
-    .prepare("INSERT INTO bcp_trinh_tep (dot_id, ten_goc, ten_luu, loai, kich_thuoc) VALUES (?, 'x.pdf', '../../../etc/passwd', 'pdf', 1)")
-    .run(dot.id);
-  const res = await ung.goi(QUAN_LY, 'GET', `/dot/${dot.id}/trinh/tep/${Number(r.lastInsertRowid)}/tai`);
-  assert.equal(res.status, 404);
 });
 
 // ── 7. Kết xuất qua API ─────────────────────────────────────────────────────
@@ -398,7 +269,7 @@ test('kết xuất: không xuất được khi đợt chưa có báo cáo nào �
 });
 
 test('kết xuất được ghi vào lịch sử đợt (ai xuất, định dạng, phòng nào)', async () => {
-  const st = await ung.json(QUAN_LY, 'GET', `/dot/${ID.dotMail.id}/trinh`);
+  const st = await ung.json(QUAN_LY, 'GET', `/dot/${ID.dotMail.id}`);
   const xuat = st.d.lich_su.filter((h) => h.hanh_dong === 'xuat');
   assert.ok(xuat.length >= 3);
   assert.ok(xuat.some((h) => /^PDF:/.test(h.ghi_chu) && h.nguoi === 'Nguyễn Quản Lý'));

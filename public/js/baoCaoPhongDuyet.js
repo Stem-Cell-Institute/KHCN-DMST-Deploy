@@ -79,16 +79,14 @@
     var vt = !!B.me().vien_truong;
     var cho = tq.dot_cho_vien_truong || [];
     var xong = (tq.dot_da_trinh || []).filter(function (x) { return x.cho_quyet_dinh === 0; });
-    var cu = tq.ho_so_cho_vien_truong || [];
     var node = [h('div', { class: 'thanh-tieu-de' }, h('div', null,
       h('h2', { text: 'Duyệt báo cáo' }),
       h('p', { class: 'phu', text: vt
         ? 'Các đợt đã được người quản lý module trình. Đọc báo cáo của từng phòng rồi bấm Duyệt, Không duyệt, Ý kiến hoặc Đề nghị chỉnh sửa; không cần tải tệp.'
         : 'Các đợt đã trình Viện trưởng. Bạn xem được như Viện trưởng, nhưng chỉ Viện trưởng đưa ra quyết định.' })))];
-    if (!cho.length && !xong.length && !cu.length) {
+    if (!cho.length && !xong.length) {
       node.push(h('div', { class: 'trong', text: 'Chưa có đợt nào được trình. Khi người quản lý module trình một đợt, báo cáo của các phòng sẽ hiện ở đây.' }));
     }
-    if (cu.length && B.theHoSoCu && vt) node.push(h('h3', { text: 'Hồ sơ tệp cũ chờ duyệt (' + cu.length + ')' }), cu.map(B.theHoSoCu));
     if (cho.length) node.push(h('h3', { text: 'Chờ quyết định (' + cho.length + ')' }), cho.map(function (x) { return theDot(x, vt); }));
     if (xong.length) node.push(h('h3', { text: 'Đã xử lý xong' }), xong.map(function (x) { return theDot(x, vt); }));
     ghi(B.main, node);
@@ -505,10 +503,10 @@
     if (dotId > 0) return viewDoc(dotId, Number(args[1]) || 0);
     var vienTruong = !!B.me().vien_truong;
     return api('/tong-quan').then(function (tq) {
-      // Viện trưởng chỉ có MỘT đợt đang chờ (và không có hồ sơ tệp cũ) thì vào thẳng đó: bớt một bước.
+      // Viện trưởng chỉ có MỘT đợt đang chờ thì vào thẳng đó: bớt một bước.
       // "#/duyet/ds" luôn hiện danh sách (nút "Các đợt đã trình" dẫn tới đây), nên vẫn đi tới được danh sách khi cần.
       var cho = tq.dot_cho_vien_truong || [];
-      if (args[0] !== 'ds' && vienTruong && cho.length === 1 && !(tq.ho_so_cho_vien_truong || []).length) return viewDoc(cho[0].dot_id, 0);
+      if (args[0] !== 'ds' && vienTruong && cho.length === 1) return viewDoc(cho[0].dot_id, 0);
       veDanhSachDot(tq);
     });
   };

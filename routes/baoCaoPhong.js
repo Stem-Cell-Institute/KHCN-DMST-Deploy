@@ -28,7 +28,6 @@ const { taoNhacHan } = require('../services/baoCaoPhongNhacHan');
 const ChucDanh = require('../services/baoCaoPhongChucDanh');
 const Xuat = require('../services/baoCaoPhongXuat');
 const { contentDisposition } = require('../lib/filenames');
-const createTrinhRouter = require('./baoCaoPhongTrinh');
 const createVienTruongRouter = require('./baoCaoPhongVienTruong');
 const { taoVienTruong, trangThaiVienTruong } = require('../services/baoCaoPhongVienTruong');
 
@@ -80,13 +79,12 @@ function treHan(bc, dot, homNay) {
 }
 
 /**
- * @param {{db:object, mailSend?:Function, uploadsRoot?:string, baseUrl?:string}} deps
+ * @param {{db:object, mailSend?:Function, baseUrl?:string}} deps
  *   mailSend — gửi email (nodemailer của server.js); thiếu thì module chạy bình thường, chỉ không gửi thư.
- *   uploadsRoot — thư mục gốc lưu tệp tải lên; thiếu thì bỏ phần hồ sơ trình Viện trưởng.
  *   baseUrl — gốc địa chỉ để đặt liên kết trong email.
  *   nhacTuDong — true thì bật hẹn giờ tự nhắc trước hạn (chỉ server thật; test gọi router.nhacHan.chayMotLan trực tiếp).
  */
-module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, baseUrl, nhacTuDong }) {
+module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacTuDong }) {
   const router = express.Router();
 
   // Module phụ không được phép làm sập cả hệ thống đang chạy thật: nếu khởi tạo bảng lỗi
@@ -717,6 +715,13 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         bao_cao,
         trinh_vt: trinhVt ? { lan: trinhVt.lan, trinh_luc: trinhVt.trinh_luc, nguoi_trinh: trinhVt.nguoi_trinh, loi_nhan: trinhVt.loi_nhan } : null,
         tien_do_vt: vt.tienDoDot(id),
+        // Lịch sử của đợt: trình Viện trưởng, kết xuất, sửa đợt, mở lại…
+        lich_su: db
+          .prepare(
+            `SELECT h.hanh_dong, h.ghi_chu, h.tao_luc, u.fullname AS nguoi
+               FROM bcp_dot_lich_su h LEFT JOIN users u ON u.id = h.nguoi_id WHERE h.dot_id = ? ORDER BY h.id`
+          )
+          .all(id),
       });
     })
   );
@@ -887,19 +892,6 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     })
   );
 
-  /** Hồ sơ trình đang chờ Viện trưởng duyệt, kèm người gửi, lời nhắn và tên tệp để thẻ việc hiện đủ không cần bấm thêm. */
-  function hoSoChoVienTruong() {
-    const ds = db
-      .prepare(
-        `SELECT t.dot_id, d.tieu_de, t.gui_luc, t.loi_nhan, u.fullname AS nguoi_gui
-           FROM bcp_trinh t JOIN bcp_dot d ON d.id = t.dot_id LEFT JOIN users u ON u.id = t.nguoi_gui_id
-          WHERE t.trang_thai = 'da_gui' ORDER BY t.gui_luc`
-      )
-      .all();
-    const tep = db.prepare('SELECT id, ten_goc FROM bcp_trinh_tep WHERE dot_id = ? ORDER BY id');
-    return ds.map((x) => ({ ...x, tep: tep.all(x.dot_id) }));
-  }
-
   /**
    * "Việc của tôi" cho MỌI người có vai trò, nhẹ để trang chủ gọi được: báo cáo của phòng mình đang cần nộp/chỉnh sửa
    * (trưởng phòng) và hồ sơ đang chờ mình duyệt (CHỈ Viện trưởng; người khác luôn nhận danh sách rỗng).
@@ -926,8 +918,8 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
             tre_han: treHan(r, { han_nop: r.han_nop, trang_thai: r.dot_trang_thai }, homNay),
           }));
       }
-      // ho_so_duyet: hồ sơ trình bằng tệp của cách làm CŨ còn đang chờ lúc chuyển đổi. dot_duyet: các đợt đã trình, còn báo cáo chờ Viện trưởng quyết định.
-      res.json({ bao_cao: baoCao, ho_so_duyet: laVienTruong ? hoSoChoVienTruong() : [], dot_duyet: laVienTruong ? vt.dotChoVienTruong() : [] });
+      // dot_duyet: các đợt đã trình mà còn báo cáo chờ Viện trưởng quyết định.
+      res.json({ bao_cao: baoCao, dot_duyet: laVienTruong ? vt.dotChoVienTruong() : [] });
     })
   );
 
@@ -1384,7 +1376,6 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       const choDuyet = db
         .prepare("SELECT COUNT(*) AS n FROM bcp_bao_cao b JOIN bcp_dot d ON d.id = b.dot_id WHERE b.trang_thai = 'da_nop' AND d.trang_thai IN ('dang_mo','dong')")
         .get().n;
-      const choVienTruong = hoSoChoVienTruong();
       const dotChoVt = vt.dotChoVienTruong();
       res.json({
         la_vien_truong: req.bcp.laVienTruong,
@@ -1395,8 +1386,6 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         cho_duyet: choDuyet,
         chua_nop: chuaNopTong,
         tre_han: treTong,
-        cho_vien_truong: choVienTruong.length,
-        ho_so_cho_vien_truong: choVienTruong,
         chi_tiet: chiTiet,
       });
     })
@@ -1496,11 +1485,6 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       res.end(buf);
     })
   );
-
-  // ══ HỒ SƠ TRÌNH VIỆN TRƯỞNG (thuộc về một đợt) ════════════════════════════
-  if (uploadsRoot) {
-    router.use('/dot/:id/trinh', canQuanLy, createTrinhRouter({ db, uploadsRoot, thongBao, guiNen, loi, bao, docId }));
-  }
 
   return router;
 };
