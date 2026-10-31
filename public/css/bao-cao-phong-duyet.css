@@ -10,9 +10,11 @@
 /* ── Đầu trang ──────────────────────────────────────────────────────────────── */
 .duyet-dau h2 { margin: 10px 0 2px; font-size: 20px; overflow-wrap: anywhere; }
 .duyet-meta { margin-bottom: 10px; }
-.duyet-nhan { max-width: 720px; margin: 0 0 12px; padding: 8px 12px; background: var(--trang); border-left: 3px solid var(--son); font-size: 15px; }
-.duyet-nhan summary { cursor: pointer; min-height: 28px; font-weight: 700; }
-.duyet-nhan p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.duyet-nhan { max-width: 720px; margin: 0 0 12px; padding: 8px 12px; background: var(--trang); border-left: 3px solid var(--son); font-size: 15px; overflow-wrap: anywhere; }
+.duyet-thong-tin { margin: 0 0 8px; border: 1px solid var(--ke); background: var(--trang); }
+.duyet-thong-tin summary { cursor: pointer; padding: 8px 12px; min-height: 40px; font-size: 14px; font-weight: 600; }
+.duyet-thong-tin[open] { padding: 0 12px 4px; }
+.duyet-thong-tin[open] summary { padding-left: 0; }
 .duyet-tien-do { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 4px 0 14px; }
 .duyet-tien-do progress {
   flex: 1 1 200px; max-width: 360px; height: 12px;
@@ -144,7 +146,13 @@ body.co-thanh-duyet .thong-bao { bottom: 110px; }
   .duyet-bai-ten { font-size: 21px; }
   .duyet-soan { padding: 8px 10px; margin-bottom: 8px; }
   .duyet-soan > label { font-size: 14px; margin-bottom: 2px; }
-  .duyet-soan .tro-giup { font-size: 13px; margin-bottom: 4px; }
+  .duyet-soan .tro-giup { display: none; }
+  .duyet-thao-tac.co-soan .duyet-dh { display: none; }
+  .duyet-soan textarea { min-height: 48px; max-height: 22vh; }
+  .duyet-tien-do { flex-wrap: nowrap; }
+  .duyet-tien-do progress { flex: 1 1 24px; min-width: 24px; }
+  .duyet-tien-do .con-so { white-space: nowrap; font-size: 13px; }
+  .duyet-tien-do .btn { padding: 0 10px; font-size: 13px; white-space: nowrap; }
   .duyet-soan textarea { min-height: 56px; padding: 6px 10px; }
   .duyet-soan .nhom-nut { margin-top: 6px; }
   .duyet-soan .nhom-nut .btn { min-height: 44px; }

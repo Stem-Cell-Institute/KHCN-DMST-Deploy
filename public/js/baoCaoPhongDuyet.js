@@ -145,26 +145,29 @@
         var xuLy = S.data.bao_cao.filter(function (b) { return DA_XU_LY[b.vt_trang_thai]; }).length;
         var cho = demTheo('cho_quyet_dinh');
         var chuaNop = demTheo('chua_nop') + demTheo('dang_sua');
-        var nodes = [
-          h('a', { class: 'btn btn-phu btn-nho', href: '#/duyet/ds' }, '← Các đợt đã trình'),
-          h('h2', { text: 'Duyệt báo cáo: ' + d.tieu_de }),
-          h('p', { class: 'phu duyet-meta', text: (LOAI_DOT_NHAN[d.loai] || '') + (d.ky ? ' ' + d.ky : '') + ' · hạn nộp ' + fmtNgay(d.han_nop) + (S.data.trinh ? ' · trình lúc ' + fmtGio(S.data.trinh.trinh_luc) + (S.data.trinh.nguoi_trinh ? ' bởi ' + S.data.trinh.nguoi_trinh : '') : '') }),
-        ];
-        // Lời nhắn: hiện sẵn trên màn hình rộng; trên điện thoại thu lại để báo cáo lên được màn hình đầu.
+        var heP = !!(window.matchMedia && window.matchMedia('(max-width: 640px)').matches);
+        var quayLai = h('a', { class: 'btn btn-phu btn-nho', href: '#/duyet/ds' }, '← Các đợt đã trình');
+        var thongTin = [h('p', { class: 'phu duyet-meta', text: (LOAI_DOT_NHAN[d.loai] || '') + (d.ky ? ' ' + d.ky : '') + ' · hạn nộp ' + fmtNgay(d.han_nop) + (S.data.trinh ? ' · trình lúc ' + fmtGio(S.data.trinh.trinh_luc) + (S.data.trinh.nguoi_trinh ? ' bởi ' + S.data.trinh.nguoi_trinh : '') : '') })];
         if (S.data.trinh && S.data.trinh.loi_nhan) {
-          var heP = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
-          nodes.push(h('details', { class: 'duyet-nhan', open: !heP }, h('summary', { text: 'Lời nhắn của người quản lý' }), h('p', { text: S.data.trinh.loi_nhan })));
+          thongTin.push(h('div', { class: 'duyet-nhan' }, h('strong', { text: 'Lời nhắn của người quản lý: ' }), S.data.trinh.loi_nhan));
         }
         if (!S.data.trinh) {
-          nodes.push(h('div', { class: 'luu-y', role: 'status' }, h('p', { text: 'Đợt này chưa được người quản lý module trình Viện trưởng. Bạn đọc được báo cáo nhưng chưa quyết định được.' })));
+          thongTin.push(h('div', { class: 'luu-y', role: 'status' }, h('p', { text: 'Đợt này chưa được người quản lý module trình Viện trưởng. Bạn đọc được báo cáo nhưng chưa quyết định được.' })));
         } else if (!S.data.co_the.quyet_dinh) {
-          nodes.push(h('div', { class: 'luu-y', role: 'status' }, h('p', { text: 'Bạn đang xem như Viện trưởng (chỉ đọc). Chỉ Viện trưởng đưa ra quyết định.' })));
+          thongTin.push(h('div', { class: 'luu-y', role: 'status' }, h('p', { text: 'Bạn đang xem như Viện trưởng (chỉ đọc). Chỉ Viện trưởng đưa ra quyết định.' })));
+        }
+        var nodes;
+        if (heP) {
+          // Điện thoại: tên đợt một dòng, mọi thông tin phụ (quay lại, kỳ, hạn, lời nhắn) gom vào một mục bấm mở, để báo cáo lên được màn hình đầu.
+          nodes = [h('h2', { text: d.tieu_de }), h('details', { class: 'duyet-thong-tin' }, h('summary', { text: 'Thông tin đợt và lời nhắn' }), quayLai, thongTin)];
+        } else {
+          nodes = [quayLai, h('h2', { text: 'Duyệt báo cáo: ' + d.tieu_de }), thongTin];
         }
         var tong = xuLy + cho;
-        var nutTiep = h('button', { type: 'button', class: 'btn btn-phu btn-nho', disabled: tiepChoXuLy() < 0, onclick: function () { var i = tiepChoXuLy(); if (i >= 0) chon(i, true); } }, 'Báo cáo chờ duyệt kế tiếp ›');
+        var nutTiep = h('button', { type: 'button', class: 'btn btn-phu btn-nho', disabled: tiepChoXuLy() < 0, onclick: function () { var i = tiepChoXuLy(); if (i >= 0) chon(i, true); } }, (heP ? 'Chờ duyệt kế tiếp ›' : 'Báo cáo chờ duyệt kế tiếp ›'));
         nodes.push(h('div', { class: 'duyet-tien-do' },
           h('progress', { max: tong || 1, value: xuLy, 'aria-label': 'Đã xử lý ' + xuLy + ' trên ' + tong + ' báo cáo đã nộp' }),
-          h('span', { class: 'con-so', text: 'Đã xử lý ' + xuLy + '/' + tong + ' báo cáo đã nộp' + (chuaNop ? ' · ' + chuaNop + ' chưa nộp hoặc đang sửa' : '') }),
+          h('span', { class: 'con-so', text: 'Đã xử lý ' + xuLy + '/' + tong + (heP ? '' : ' báo cáo đã nộp') + (chuaNop ? ' · ' + chuaNop + ' chưa nộp' + (heP ? '' : ' hoặc đang sửa') : '') }),
           nutTiep));
         // Điện thoại: danh sách thu lại thành một nút, bấm mới bung ra.
         var b = cur();
@@ -307,6 +310,7 @@
         var qd = b.vien_truong ? b.vien_truong.quyet_dinh : null;
         var n = S.data.bao_cao.length;
         var nodes = [];
+        thanh.classList.toggle('co-soan', !!(S.soan && coQuyen));
         if (S.soan && coQuyen) nodes.push(veSoan(b));
         var dieuHuong = h('div', { class: 'duyet-dh' },
           h('button', { type: 'button', class: 'btn btn-phu duyet-dh-nut', 'aria-label': 'Báo cáo trước (phím K)', title: 'Báo cáo trước (K)', onclick: function () { buoc(-1); } }, '‹'),
