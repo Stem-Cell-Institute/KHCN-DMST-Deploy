@@ -1,0 +1,184 @@
+/*
+ * Màn hình DUYỆT BÁO CÁO của Viện trưởng (#/duyet) — bổ sung cho bao-cao-phong.css, cùng thế giới "công báo":
+ * đường kẻ và khoảng trắng, mực xanh đen là màu chính, son đỏ chỉ để báo "cần chú ý". Không gradient, không bóng mờ.
+ * Trạng thái luôn kèm chữ và ký hiệu, không chỉ màu. Viền focus do public/css/a11y.css quản — đừng khai lại ở đây.
+ *
+ * Bố cục: từ 900px là hai cột (danh sách phòng dính bên trái, báo cáo bên phải); dưới 900px là một cột, danh sách thu thành
+ * một nút. Thanh thao tác dính ở ĐÁY màn hình để luôn thấy nút khi cuộn đọc báo cáo dài.
+ */
+
+/* ── Đầu trang ──────────────────────────────────────────────────────────────── */
+.duyet-dau h2 { margin: 10px 0 2px; font-size: 20px; overflow-wrap: anywhere; }
+.duyet-meta { margin-bottom: 10px; }
+.duyet-nhan { max-width: 720px; margin: 0 0 12px; padding: 8px 12px; background: var(--trang); border-left: 3px solid var(--son); font-size: 15px; overflow-wrap: anywhere; }
+.duyet-thong-tin { margin: 0 0 8px; border: 1px solid var(--ke); background: var(--trang); }
+.duyet-thong-tin summary { cursor: pointer; padding: 8px 12px; min-height: 40px; font-size: 14px; font-weight: 600; }
+.duyet-thong-tin[open] { padding: 0 12px 4px; }
+.duyet-thong-tin[open] summary { padding-left: 0; }
+.duyet-tien-do { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 4px 0 14px; }
+.duyet-tien-do progress {
+  flex: 1 1 200px; max-width: 360px; height: 12px;
+  appearance: none; -webkit-appearance: none; border: 1px solid var(--muc); border-radius: 0; background: var(--trang);
+}
+.duyet-tien-do progress::-webkit-progress-bar { background: var(--trang); }
+.duyet-tien-do progress::-webkit-progress-value { background: var(--muc); }
+.duyet-tien-do progress::-moz-progress-bar { background: var(--muc); }
+
+/* Nút bung danh sách: chỉ có trên màn hình hẹp */
+.duyet-chon { display: none; width: 100%; justify-content: space-between; text-align: left; margin-bottom: 12px; }
+
+/* ── Hai cột ────────────────────────────────────────────────────────────────── */
+.duyet-luoi { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 28px; align-items: start; }
+
+.duyet-ds {
+  position: sticky; top: 12px; max-height: calc(100vh - 150px); overflow-y: auto;
+  border-top: 2px solid var(--muc); background: var(--trang);
+}
+.duyet-ds ol { list-style: none; margin: 0; padding: 0; }
+.duyet-loc { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 10px 8px; border-bottom: 1px solid var(--ke); background: var(--nen-nhat); }
+.duyet-loc-nut {
+  min-height: 36px; padding: 0 10px; font: inherit; font-size: 13px; font-weight: 600; line-height: 1.2; color: var(--muc);
+  background: var(--trang); border: 1px solid var(--ke-dam); border-radius: 2px; cursor: pointer;
+}
+.duyet-loc-nut[aria-pressed='true'] { background: var(--muc); border-color: var(--muc); color: #fff; }
+.duyet-muc {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; min-height: 56px; padding: 10px 12px;
+  font: inherit; text-align: left; color: var(--muc); background: var(--trang);
+  border: 0; border-bottom: 1px solid var(--ke); border-left: 4px solid transparent; cursor: pointer;
+}
+.duyet-muc[aria-current='true'] { background: var(--nen-nhat); border-left-color: var(--son); }
+.duyet-muc-ten { font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.duyet-muc-phu { font-size: 13px; color: var(--chu-phu); }
+.duyet-muc .nhan { font-size: 12px; padding: 1px 7px; }
+.duyet-muc-trong { padding: 16px 12px; color: var(--chu-phu); font-size: 14px; }
+@media (hover: hover) { .duyet-muc:hover { background: var(--nen-nhat); } }
+
+/* ── Báo cáo đang đọc ───────────────────────────────────────────────────────── */
+.duyet-bai { min-width: 0; }
+.duyet-bai-so { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--chu-phu); }
+.duyet-bai-ten { margin: 2px 0 6px; font-size: 24px; line-height: 1.25; overflow-wrap: anywhere; }
+main .duyet-bai-ten[tabindex='-1']:focus, main .duyet-bai-ten[tabindex='-1']:focus-visible { outline: none !important; }
+.duyet-nhan-hang { margin: 8px 0 16px; display: flex; flex-wrap: wrap; gap: 6px; }
+.duyet-bai .luu-y { max-width: none; }
+.duyet-bai .xem-lai { max-width: none; }
+.duyet-bai .xem-lai dd { font-size: 16px; }
+/* Bảng công việc có nhiều cột chữ dài: cho tiêu đề cột xuống dòng để bảng vừa khung đọc, đỡ phải vuốt ngang */
+.duyet-bai .bang-xem th { white-space: normal; letter-spacing: .03em; }
+.duyet-bai .bang-xem th, .duyet-bai .bang-xem td { padding: 10px 10px; }
+.duyet-trong { margin: 8px 0 22px; padding: 36px 20px; text-align: center; border: 2px dashed var(--ke-dam); background: var(--trang); }
+.duyet-trong p { margin: 0 auto; max-width: 520px; }
+.duyet-trong p + p { margin-top: 8px; }
+.duyet-trong-chinh { font-size: 22px; font-weight: 700; }
+.duyet-y-kien:empty { display: none; }
+.duyet-lich-su { margin: 26px 0 0; border: 1px solid var(--ke); background: var(--trang); }
+.duyet-lich-su summary { cursor: pointer; padding: 12px 16px; min-height: 44px; font-weight: 600; }
+.duyet-lich-su .lich-su { padding: 0 16px 8px; max-width: none; border-top: 1px solid var(--ke); }
+
+/* ── Thanh thao tác dính ────────────────────────────────────────────────────── */
+.duyet-thao-tac {
+  position: sticky; bottom: 0; z-index: 20; margin: 22px -20px 0;
+  padding: 10px 20px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--trang); border-top: 2px solid var(--muc);
+}
+.duyet-hang { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.duyet-dh { display: flex; align-items: center; gap: 6px; }
+.duyet-dh-nut { min-width: 44px; padding: 0 12px; font-size: 22px; line-height: 1; }
+.duyet-vi-tri { min-width: 52px; text-align: center; font-weight: 600; }
+.duyet-nut { display: flex; flex-wrap: wrap; gap: 8px; }
+.duyet-qd { gap: 8px; min-height: 48px; padding: 0 16px; }
+.duyet-glyph { font-size: 17px; line-height: 1; }
+.duyet-phim {
+  display: inline-block; min-width: 20px; padding: 0 5px; font: inherit; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+  color: currentColor; border: 1px solid currentColor; border-radius: 2px; opacity: .7;
+}
+.duyet-phim-goi-y { margin: 8px 0 0; font-size: 13px; }
+/* Nút Duyệt: mực đặc. Không duyệt: viền son. Hai nút còn lại: nút phụ. Đã chọn thì đặc/đảo màu và có viền trong trắng. */
+.duyet-qd-duyet[aria-pressed='true'] { box-shadow: inset 0 0 0 3px #fff; background: var(--muc-sang); }
+.duyet-qd-khong, .duyet-qd-y-kien, .duyet-qd-sua { background: var(--trang); }
+.duyet-qd-khong { color: var(--son); border-color: var(--son); }
+.duyet-qd-y-kien, .duyet-qd-sua { color: var(--muc); border-color: var(--ke-dam); }
+.duyet-qd-khong[aria-pressed='true'] { background: var(--son); color: #fff; box-shadow: inset 0 0 0 3px #fff; }
+.duyet-qd-y-kien[aria-pressed='true'], .duyet-qd-sua[aria-pressed='true'] { background: var(--muc); color: #fff; border-color: var(--muc); box-shadow: inset 0 0 0 3px #fff; }
+@media (hover: hover) {
+  .duyet-qd-khong:not(:disabled):hover { background: var(--son-nen); }
+  .duyet-qd-y-kien:not(:disabled):hover, .duyet-qd-sua:not(:disabled):hover { background: var(--nen-nhat); }
+  .duyet-qd-khong[aria-pressed='true']:not(:disabled):hover { background: var(--son-dam); }
+}
+
+/* Ô nhập gọn, nằm ngay trên thanh (không phải hộp thoại che nội dung đang đọc) */
+.duyet-soan { margin: 0 0 12px; padding: 12px 14px; border: 1px solid var(--ke-dam); border-left: 4px solid var(--muc); background: var(--nen-nhat); }
+.duyet-soan > label { display: block; margin-bottom: 4px; font-size: 15px; font-weight: 600; }
+.duyet-soan .tro-giup { margin-bottom: 6px; }
+.duyet-soan textarea { min-height: 64px; max-height: 30vh; }
+.duyet-soan .nhom-nut { margin-top: 10px; }
+.duyet-goi-y { margin-left: auto; }
+
+/* Thông báo nổi không được che thanh thao tác */
+body.co-thanh-duyet .thong-bao { bottom: 110px; }
+
+/* ── Màn hình hẹp / điện thoại ──────────────────────────────────────────────── */
+@media (max-width: 899px) {
+  .duyet-luoi { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .duyet-chon { display: flex; }
+  .duyet-ds { display: none; position: static; max-height: calc(100vh - 290px); min-height: 160px; margin-bottom: 14px; }
+  .duyet-ds.mo { display: block; }
+  .duyet-phim, .duyet-phim-goi-y { display: none; }
+}
+@media (max-width: 640px) {
+  /* Thu gọn đầu trang để báo cáo lên được màn hình đầu tiên trên điện thoại */
+  body.co-thanh-duyet .mast .khung { padding-top: 6px; }
+  body.co-thanh-duyet .mast-nhan { display: none; }
+  body.co-thanh-duyet .mast h1 { margin: 0 0 6px; font-size: 18px; }
+  body.co-thanh-duyet .ve-trang-chu { min-height: 36px; }
+  body.co-thanh-duyet .dieu-huong a { min-height: 42px; }
+  body.co-thanh-duyet main { padding-top: 12px; }
+  .duyet-dau h2 { margin: 8px 0 2px; font-size: 17px; }
+  .duyet-meta { margin-bottom: 8px; font-size: 13px; }
+  .duyet-tien-do { gap: 6px 10px; margin: 2px 0 10px; font-size: 14px; }
+  .duyet-tien-do .btn { min-height: 40px; }
+  /* Thanh dưới THẤP: một hàng duy nhất ‹ [Duyệt][Không duyệt][Ý kiến][Sửa] › (vị trí 3/12 đã có ở nút chọn phòng phía trên). */
+  .duyet-thao-tac { margin: 14px -16px 0; padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .duyet-hang { flex-wrap: nowrap; gap: 4px; }
+  .duyet-hang:has(.duyet-nut) .duyet-dh { display: contents; }
+  .duyet-hang:has(.duyet-nut) .duyet-vi-tri { display: none; }
+  .duyet-hang:has(.duyet-nut) .duyet-dh-nut:first-child { order: 0; }
+  .duyet-hang:has(.duyet-nut) .duyet-dh-nut:last-child { order: 2; }
+  .duyet-hang:has(.duyet-nut) .duyet-nut { order: 1; flex: 1 1 auto; min-width: 0; }
+  .duyet-dh { width: 100%; justify-content: space-between; }
+  .duyet-dh-nut { min-width: 30px; min-height: 48px; padding: 0 6px; font-size: 20px; }
+  .duyet-nut { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; width: 100%; }
+  .duyet-qd { flex-direction: column; justify-content: center; gap: 0; min-height: 48px; padding: 3px 1px; font-size: 11.5px; line-height: 1.15; text-align: center; }
+  .duyet-glyph { font-size: 16px; line-height: 1; }
+  .duyet-bai-ten { font-size: 21px; }
+  .duyet-soan { padding: 8px 10px; margin-bottom: 8px; }
+  .duyet-soan > label { font-size: 14px; margin-bottom: 2px; }
+  .duyet-soan .tro-giup { display: none; }
+  .duyet-thao-tac.co-soan .duyet-dh { display: none; }
+  .duyet-soan textarea { min-height: 48px; max-height: 22vh; }
+  .duyet-tien-do { flex-wrap: nowrap; }
+  .duyet-tien-do progress { flex: 1 1 24px; min-width: 24px; }
+  .duyet-tien-do .con-so { white-space: nowrap; font-size: 13px; }
+  .duyet-tien-do .btn { padding: 0 10px; font-size: 13px; white-space: nowrap; }
+  .duyet-soan textarea { min-height: 56px; padding: 6px 10px; }
+  .duyet-soan .nhom-nut { margin-top: 6px; }
+  .duyet-soan .nhom-nut .btn { min-height: 44px; }
+  .duyet-thao-tac { max-height: 75vh; overflow-y: auto; }
+  .duyet-goi-y { display: none; }
+  body.co-thanh-duyet .thong-bao { bottom: 80px; }
+
+  /* Bảng nhiều dòng của báo cáo: mỗi dòng thành một thẻ "tên cột: giá trị", không bắt vuốt ngang để đọc */
+  .duyet-bai .cuon-ngang { overflow: visible; border-top: 0; }
+  .duyet-bai .cuon-ngang table { min-width: 0; background: transparent; }
+  .duyet-bai .bang-xem thead { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .duyet-bai .bang-xem, .duyet-bai .bang-xem tbody, .duyet-bai .bang-xem tr, .duyet-bai .bang-xem td, .duyet-bai .bang-xem th { display: block; width: 100%; }
+  .duyet-bai .bang-xem tr { margin: 0 0 10px; background: var(--trang); border: 1px solid var(--ke); border-left: 4px solid var(--muc); }
+  .duyet-bai .bang-xem tr.dong-nhom-xem { border-left-color: var(--son); background: var(--nen-nhat); }
+  .duyet-bai .bang-xem td { display: grid; grid-template-columns: 34% minmax(0, 1fr); gap: 8px; padding: 8px 10px; overflow-wrap: anywhere; }
+  .duyet-bai .bang-xem td::before { content: attr(data-nhan); font-size: 12px; font-weight: 600; color: var(--chu-phu); }
+  .duyet-bai .bang-xem td.con-so { text-align: left; }
+}
+
+@media print {
+  .duyet-thao-tac, .duyet-ds, .duyet-chon, .duyet-tien-do { display: none !important; }
+  .duyet-luoi { display: block; }
+}

@@ -54,6 +54,7 @@ async function taoDot(tieuDe, phongIds, cachNop, mo = true) {
   const r = await ung.json(QUAN_LY, 'POST', '/dot', { tieu_de: tieuDe, loai: 'thang', ky: '10/2026', han_nop: '2099-12-31', mau_id: ID.mau, phong_ids: phongIds, ...(cachNop ? { cach_nop: cachNop } : {}) });
   assert.equal(r.s, 201, JSON.stringify(r.d));
   if (mo) assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${r.d.id}/mo`, {})).s, 200);
+  if (mo) ung.daTrinh(r.d.id);
   await doi();
   ung.thu.length = 0;
   return r.d.id;
@@ -148,6 +149,7 @@ test('chỉ đổi cách nộp khi đợt còn Nháp (dựng lại báo cáo); �
   assert.equal(r.s, 200, JSON.stringify(r.d));
   assert.equal(hang(dot).length, 2, 'giờ mỗi người một báo cáo');
   assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dot}/mo`, {})).s, 200);
+  ung.daTrinh(dot);
   const sau = await ung.json(QUAN_LY, 'PUT', '/dot/' + dot, { tieu_de: 'Đợt đổi cách nộp', loai: 'thang', han_nop: '2099-12-31', cach_nop: 'mot_nguoi' });
   assert.equal(sau.s, 409);
   assert.equal(hang(dot).length, 2);
@@ -277,6 +279,7 @@ test('thư mở đợt: mỗi người nhận liên kết vào báo cáo RIÊNG 
   const dot = await ung.json(QUAN_LY, 'POST', '/dot', { tieu_de: 'Đợt thư riêng', loai: 'thang', han_nop: '2099-12-31', mau_id: ID.mau, phong_ids: [ID.phongA], cach_nop: 'tat_ca' });
   ung.thu.length = 0;
   await ung.json(QUAN_LY, 'POST', `/dot/${dot.d.id}/mo`, {});
+  ung.daTrinh(dot.d.id);
   await ung.doiThu(2);
   const rows = hang(dot.d.id);
   const idA = rows.find((x) => x.chu_id === TP_A).id;
@@ -291,6 +294,7 @@ test('thư mở đợt: mỗi người nhận liên kết vào báo cáo RIÊNG 
 test('nhắc hạn: mỗi người chưa nộp được nhắc riêng với liên kết của mình; người đã nộp thì không', async () => {
   const dot = await ung.json(QUAN_LY, 'POST', '/dot', { tieu_de: 'Đợt nhắc riêng', loai: 'thang', han_nop: '2090-05-10', mau_id: ID.mau, phong_ids: [ID.phongA], cach_nop: 'tat_ca' });
   await ung.json(QUAN_LY, 'POST', `/dot/${dot.d.id}/mo`, {});
+  ung.daTrinh(dot.d.id);
   const rows = hang(dot.d.id);
   const idA = rows.find((x) => x.chu_id === TP_A).id;
   const idB = rows.find((x) => x.chu_id === TP_B).id;

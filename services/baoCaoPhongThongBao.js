@@ -1,18 +1,21 @@
 /**
  * Thông báo email của module Báo cáo phòng ban.
  *
- * Ba sự kiện, ba nhóm người nhận:
+ * Các sự kiện và người nhận:
  *   phòng nộp / nộp lại báo cáo     → người quản lý module (vai trò quan_ly)
- *   quản lý module gửi / gửi lại hồ sơ cho Viện trưởng → Viện trưởng (vai trò vien_truong)
- *   Viện trưởng duyệt hồ sơ          → người quản lý module (chỉ Viện trưởng mới duyệt, không ai duyệt thay)
+ *   quản lý module TRÌNH / trình lại đợt cho Viện trưởng → Viện trưởng (vai trò vien_truong)
+ *   Viện trưởng KHÔNG DUYỆT hoặc ĐỀ NGHỊ CHỈNH SỬA một báo cáo → người phụ trách báo cáo đó + người quản lý module
+ *     (Viện trưởng DUYỆT một báo cáo: không gửi thư cho phòng, phòng thấy trạng thái ngay trong báo cáo)
+ *   Viện trưởng đã xử lý xong mọi báo cáo chờ duyệt của một đợt → người quản lý module (một thư)
+ *   phòng nộp lại đúng báo cáo Viện trưởng đã đề nghị chỉnh sửa → Viện trưởng
  *   quản lý MỞ đợt báo cáo           → trưởng phòng của các phòng được giao, kèm liên kết vào đúng báo cáo của phòng họ
  *   Viện trưởng có Ý KIẾN về báo cáo của một phòng → trưởng phòng của CHÍNH phòng đó VÀ người quản lý module (kèm nội dung ý kiến)
  *   hệ thống TỰ nhắc trước hạn nộp (còn 1–2 ngày, và đúng ngày hạn) → trưởng phòng của các phòng CHƯA nộp
  *   quản lý SỬA đợt đang mở (hạn nộp / tiêu đề / hướng dẫn) → trưởng phòng của các phòng CHƯA nộp
  *   quản lý mời / gán trưởng phòng   → người được mời (kèm mã nhận lời mời nếu họ chưa có tài khoản)
  *
- * Viện trưởng chỉ nhận thư khi hồ sơ được trình lên, KHÔNG nhận thư mỗi lần một phòng nộp: ông ấy
- * ít khi vào module, thư dồn dập sẽ thành rác và làm mất tác dụng của thư quan trọng.
+ * Viện trưởng chỉ nhận thư khi đợt được trình (hoặc trình lại) và khi một phòng nộp lại đúng báo cáo ông đã đề nghị sửa;
+ * KHÔNG nhận thư mỗi lần một phòng nộp: ông ấy ít khi vào module, thư dồn dập sẽ thành rác và làm mất tác dụng của thư quan trọng.
  *
  * Nguyên tắc:
  *   - Email KHÔNG BAO GIỜ làm hỏng thao tác chính. Mọi lỗi (SMTP chưa cấu hình, mạng, địa chỉ hỏng)
@@ -154,41 +157,27 @@ function taoThongBao({ db, mailSend, baseUrl }) {
   }
 
   /**
-   * Quản lý module gửi (hoặc GỬI LẠI để nhắc) hồ sơ cho Viện trưởng. Thư cố ý ngắn: Viện trưởng vào module
-   * đọc hồ sơ và duyệt. KHÔNG nêu tiến độ "đã duyệt x phòng" (đó là việc của quản lý với từng phòng, dễ
-   * nhầm với việc Viện trưởng duyệt hồ sơ).
+   * Quản lý module TRÌNH (hoặc trình lại để nhắc) một đợt cho Viện trưởng. Không có tệp: Viện trưởng vào module đọc báo cáo của từng phòng
+   * và bấm Duyệt / Không duyệt / Ý kiến / Đề nghị chỉnh sửa. Thư nêu số báo cáo đã nộp và phòng nào chưa nộp (để ông biết trước sẽ thấy
+   * "Chưa nộp"), KHÔNG nêu số báo cáo đã được người quản lý xác nhận (việc của quản lý, dễ nhầm với việc Viện trưởng duyệt).
    */
-  async function baoDaGuiVienTruong(dotId, nguoiGuiId, guiLai) {
+  async function baoTrinhVienTruong(dotId, nguoiTrinhId, trinhLai) {
     const d = db.prepare('SELECT id, tieu_de, han_nop FROM bcp_dot WHERE id = ?').get(dotId);
-    const t = db.prepare('SELECT loi_nhan, gui_luc FROM bcp_trinh WHERE dot_id = ?').get(dotId);
+    const t = db.prepare('SELECT loi_nhan, trinh_luc FROM bcp_trinh_lan WHERE dot_id = ? ORDER BY id DESC LIMIT 1').get(dotId);
     if (!d || !t) return { gui: 0, loi: 0, nguoi_nhan: 0 };
-    const nguoiGui = db.prepare('SELECT fullname FROM users WHERE id = ?').get(nguoiGuiId);
-    const tep = db.prepare('SELECT ten_goc FROM bcp_trinh_tep WHERE dot_id = ? ORDER BY id').all(dotId);
+    const nguoi = db.prepare('SELECT fullname FROM users WHERE id = ?').get(nguoiTrinhId);
+    const td = tienDo(dotId);
     const doan = [
-      { text: guiLai ? `Hồ sơ báo cáo của đợt «${d.tieu_de}» vừa được gửi lại, đang chờ Viện trưởng xem và duyệt.` : `Có hồ sơ báo cáo của đợt «${d.tieu_de}» đang chờ Viện trưởng xem và duyệt.` },
-      { nhan: 'Người gửi', text: (nguoiGui && nguoiGui.fullname) || '(không rõ)' },
-      { nhan: 'Thời điểm gửi', text: fmtGio(t.gui_luc) },
-      { nhan: `Tệp trong hồ sơ (${tep.length})`, text: tep.map((x) => x.ten_goc).join('; ') || '(chưa có)' },
+      { text: trinhLai ? `Đợt báo cáo «${d.tieu_de}» được trình lại, đang chờ Viện trưởng xem và duyệt.` : `Đợt báo cáo «${d.tieu_de}» được trình, đang chờ Viện trưởng xem và duyệt.` },
+      { nhan: 'Người trình', text: (nguoi && nguoi.fullname) || '(không rõ)' },
+      { nhan: 'Thời điểm', text: fmtGio(t.trinh_luc) },
+      { nhan: 'Đã nộp', text: `${td.da_nop}/${td.tong} ${td.don_vi}` },
+      { nhan: td.don_vi === 'phòng' ? 'Phòng chưa nộp' : 'Báo cáo chưa nộp', text: td.chua_nop.length ? td.chua_nop.join('; ') : 'không còn — tất cả đã nộp.' },
     ];
     if (t.loi_nhan) doan.push({ nhan: 'Lời nhắn', text: t.loi_nhan });
-    doan.push({ text: 'Cách làm: đăng nhập eoffice, mở hồ sơ, đọc các tệp rồi bấm "Duyệt hồ sơ" nếu đồng ý.' });
-    const tieuDe = guiLai ? `[Nhắc duyệt] Hồ sơ báo cáo — ${d.tieu_de}` : `[Cần duyệt] Hồ sơ báo cáo — ${d.tieu_de}`;
-    return guiDen(nguoiNhan('vien_truong', nguoiGuiId), tieuDe, dungThu(doan, lienKet(`#/dot/${d.id}`), goc));
-  }
-
-  /** Viện trưởng đã duyệt hồ sơ. Chỉ Viện trưởng duyệt được, nên chỉ cần báo người quản lý module. */
-  async function baoDaDuyetTrinh(dotId, nguoiDuyetId) {
-    const d = db.prepare('SELECT id, tieu_de FROM bcp_dot WHERE id = ?').get(dotId);
-    const t = db.prepare('SELECT nhan_xet, duyet_luc FROM bcp_trinh WHERE dot_id = ?').get(dotId);
-    if (!d || !t) return { gui: 0, loi: 0, nguoi_nhan: 0 };
-    const nguoi = db.prepare('SELECT fullname FROM users WHERE id = ?').get(nguoiDuyetId);
-    const ten = (nguoi && nguoi.fullname) || '(không rõ)';
-    const doan = [
-      { text: `Viện trưởng ${ten} đã duyệt hồ sơ báo cáo của đợt «${d.tieu_de}».` },
-      { nhan: 'Thời điểm', text: fmtGio(t.duyet_luc) },
-    ];
-    if (t.nhan_xet) doan.push({ nhan: 'Nhận xét', text: t.nhan_xet });
-    return guiDen(nguoiNhan('quan_ly', nguoiDuyetId), `[Viện trưởng đã duyệt] ${d.tieu_de}`, dungThu(doan, lienKet(`#/dot/${d.id}`), goc));
+    doan.push({ text: 'Cách làm: đăng nhập eoffice, mở mục "Duyệt báo cáo", đọc báo cáo của từng phòng rồi bấm Duyệt, Không duyệt, Ý kiến hoặc Đề nghị chỉnh sửa. Không cần tải tệp.' });
+    const tieuDe = trinhLai ? `[Nhắc duyệt] Báo cáo các phòng — ${d.tieu_de}` : `[Cần duyệt] Báo cáo các phòng — ${d.tieu_de}`;
+    return guiDen(nguoiNhan('vien_truong', nguoiTrinhId), tieuDe, dungThu(doan, lienKet(`#/duyet/${d.id}`), goc));
   }
 
   const homNayVN = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
@@ -347,6 +336,61 @@ function taoThongBao({ db, mailSend, baseUrl }) {
   }
 
   /**
+   * Viện trưởng KHÔNG DUYỆT hoặc ĐỀ NGHỊ CHỈNH SỬA một báo cáo: gửi nguyên văn lý do cho người phụ trách báo cáo đó và người quản lý module.
+   * `quyetDinh`: 'khong_duyet' | 'de_nghi_chinh_sua'. `moLaiDot` = đợt vừa được tự mở lại để phòng sửa được.
+   */
+  async function baoQuyetDinh(baoCaoId, nguoiId, quyetDinh, ghiChu, moLaiDot) {
+    const b = db
+      .prepare('SELECT b.id, p.ten AS phong_ten, d.tieu_de FROM bcp_bao_cao b JOIN bcp_phong p ON p.id = b.phong_id JOIN bcp_dot d ON d.id = b.dot_id WHERE b.id = ?')
+      .get(baoCaoId);
+    if (!b) return { gui: 0, loi: 0, nguoi_nhan: 0 };
+    const nguoi = db.prepare('SELECT fullname FROM users WHERE id = ?').get(nguoiId);
+    const ten = (nguoi && nguoi.fullname) || '';
+    const sua = quyetDinh === 'de_nghi_chinh_sua';
+    const doan = [
+      { text: `Viện trưởng ${ten} ${sua ? 'đề nghị chỉnh sửa' : 'không duyệt'} báo cáo của ${b.phong_ten} trong đợt «${b.tieu_de}».`.replace('  ', ' ') },
+      { nhan: sua ? 'Nội dung đề nghị chỉnh sửa' : 'Lý do', text: ghiChu },
+    ];
+    if (sua) doan.push({ text: 'Báo cáo đã trở về trạng thái "Cần chỉnh sửa". Người phụ trách vui lòng chỉnh sửa rồi nộp lại.' });
+    else doan.push({ text: 'Báo cáo vẫn giữ nguyên trạng thái đã nộp. Người phụ trách có thể trao đổi với người quản lý module nếu cần.' });
+    if (moLaiDot) doan.push({ text: 'Đợt báo cáo đã được mở lại để phòng chỉnh sửa. Người quản lý module đóng lại đợt khi các phòng đã nộp xong.' });
+    const truongPhong = nguoiNhanYKien(baoCaoId);
+    const ds = [...truongPhong, ...nguoiNhanQuanLyYKien(nguoiId, truongPhong)];
+    const tieuDe = `${sua ? '[Viện trưởng đề nghị chỉnh sửa]' : '[Viện trưởng không duyệt]'} ${b.phong_ten} — ${b.tieu_de}`;
+    return guiDen(ds, tieuDe, dungThu(doan, lienKet(`#/bao-cao/${b.id}`), goc));
+  }
+
+  /**
+   * Viện trưởng đã xử lý xong mọi báo cáo đang chờ quyết định của đợt: MỘT thư cho người quản lý module (không gửi thư cho từng lần Duyệt).
+   * `tong` = kết quả của demTienDo (services/baoCaoPhongVienTruong.js).
+   */
+  async function baoDaXuLyXong(dotId, nguoiId, tong) {
+    const d = db.prepare('SELECT id, tieu_de FROM bcp_dot WHERE id = ?').get(dotId);
+    if (!d) return { gui: 0, loi: 0, nguoi_nhan: 0 };
+    const nguoi = db.prepare('SELECT fullname FROM users WHERE id = ?').get(nguoiId);
+    const doan = [{ text: `Viện trưởng ${(nguoi && nguoi.fullname) || ''} đã xử lý xong các báo cáo đã nộp của đợt «${d.tieu_de}».`.replace('  ', ' ') }];
+    doan.push({ nhan: 'Kết quả', text: `duyệt ${tong.duyet} · không duyệt ${tong.khong_duyet} · đề nghị chỉnh sửa ${tong.de_nghi_chinh_sua}` });
+    const con = tong.chua_nop + tong.dang_sua;
+    if (con) doan.push({ nhan: 'Còn lại', text: `${con} báo cáo chưa nộp hoặc đang chỉnh sửa; khi được nộp, báo cáo sẽ lại hiện trong danh sách chờ của Viện trưởng.` });
+    return guiDen(nguoiNhan('quan_ly', nguoiId), `[Viện trưởng đã xử lý] ${d.tieu_de}`, dungThu(doan, lienKet(`#/dot/${d.id}`), goc));
+  }
+
+  /** Phòng nộp lại báo cáo mà Viện trưởng đã đề nghị chỉnh sửa: báo Viện trưởng để ông xem bản mới (các lần nộp khác không gửi thư cho ông). */
+  async function baoNopLaiTheoDeNghi(baoCaoId, nguoiNopId) {
+    const b = db
+      .prepare('SELECT b.id, b.dot_id, b.nop_luc, p.ten AS phong_ten, d.tieu_de FROM bcp_bao_cao b JOIN bcp_phong p ON p.id = b.phong_id JOIN bcp_dot d ON d.id = b.dot_id WHERE b.id = ?')
+      .get(baoCaoId);
+    if (!b) return { gui: 0, loi: 0, nguoi_nhan: 0 };
+    const nguoi = db.prepare('SELECT fullname FROM users WHERE id = ?').get(nguoiNopId);
+    const doan = [
+      { text: `${b.phong_ten} đã chỉnh sửa và nộp lại báo cáo theo đề nghị của Viện trưởng, trong đợt «${b.tieu_de}».` },
+      { nhan: 'Người nộp', text: (nguoi && nguoi.fullname) || '(không rõ)' },
+      { nhan: 'Thời điểm', text: fmtGio(b.nop_luc) },
+    ];
+    return guiDen(nguoiNhan('vien_truong', nguoiNopId), `[Đã chỉnh sửa theo đề nghị] ${b.phong_ten} — ${b.tieu_de}`, dungThu(doan, lienKet(`#/duyet/${b.dot_id}/${b.id}`), goc));
+  }
+
+  /**
    * Nhắc nộp báo cáo. `muc` = [{ bao_cao_id, loai: 'truoc_han'|'hom_nay' }]; `homNay` = 'YYYY-MM-DD' (giờ Việt Nam).
    * Mỗi trưởng phòng MỘT thư dù phụ trách nhiều phòng. Không loại ai (đây là nhắc việc, kể cả quản lý kiêm trưởng
    * phòng cũng cần): người đã nộp được lọc từ trước ở nơi chọn mục cần nhắc.
@@ -441,7 +485,10 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     return guiDen([{ email: u.email }], `[Báo cáo phòng ban] ${cd} — ${p.ten}: bạn đã được thêm vào module`, dungThu(doan, lienKet('#/cua-toi'), goc));
   }
 
-  return { baoDaNop, baoDaGuiVienTruong, baoDaDuyetTrinh, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoNhacHan, nguoiNhanYKien, nguoiNhanQuanLyYKien, baoYKien, baoLoiMoi, baoDuocGan, tienDo };
+  /** Viện trưởng sẽ nhận thư (có email hợp lệ), trừ `boQuaUserId`. Tách riêng để route đếm được số người nhận mà không cần gửi. */
+  const nguoiNhanVienTruong = (boQuaUserId) => nguoiNhan('vien_truong', boQuaUserId);
+
+  return { nguoiNhanVienTruong, baoDaNop, baoTrinhVienTruong, baoQuyetDinh, baoDaXuLyXong, baoNopLaiTheoDeNghi, baoMoDot, baoSuaDot, nguoiNhanSuaDot, baoNhacHan, nguoiNhanYKien, nguoiNhanQuanLyYKien, baoYKien, baoLoiMoi, baoDuocGan, tienDo };
 }
 
 module.exports = { taoThongBao, esc };

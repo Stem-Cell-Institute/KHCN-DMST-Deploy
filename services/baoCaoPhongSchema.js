@@ -17,7 +17,7 @@
  *   bcp_dot  ──> bcp_mau_phien_ban       (đợt ghim đúng phiên bản lúc tạo)
  *   bcp_dot ──< bcp_bao_cao >── bcp_phong (mỗi phòng một báo cáo trong mỗi đợt)
  *   bcp_bao_cao ──< bcp_lich_su
- *   bcp_dot ──1 bcp_trinh ──< (bcp_trinh_tep)   (hồ sơ quản lý module trình Viện trưởng của đợt)
+ *   bcp_dot ──< bcp_trinh_lan             (các lần quản lý module trình đợt cho Viện trưởng; Viện trưởng duyệt TRONG GIAO DIỆN)
  *   bcp_dot ──< bcp_dot_lich_su
  *   bcp_phong ──< bcp_loi_moi             (lời mời trưởng phòng cho email CHƯA có tài khoản)
  *   bcp_bao_cao ──< bcp_nhac_han          (nhật ký email nhắc trước hạn, để không nhắc trùng)
@@ -144,44 +144,6 @@ const CAU_LENH = [
   )`,
   `CREATE INDEX IF NOT EXISTS ix_bcp_lich_su_bao_cao ON bcp_lich_su(bao_cao_id)`,
 
-  // Hồ sơ trình Viện trưởng của MỘT đợt (mỗi đợt tối đa một dòng).
-  //   chua_gui — quản lý module đang chuẩn bị tệp (tải lên / xóa tệp được)
-  //   da_gui   — đã gửi, chờ Viện trưởng duyệt (khóa tệp; chỉ thu hồi hoặc duyệt)
-  //   da_duyet — đã duyệt. duyet_thay = 1 nếu người duyệt KHÔNG phải Viện trưởng (quản lý module
-  //              duyệt thay): ghi lại để minh bạch, không để lẫn với việc Viện trưởng tự duyệt.
-  `CREATE TABLE IF NOT EXISTS bcp_trinh (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dot_id INTEGER NOT NULL UNIQUE,
-    trang_thai TEXT NOT NULL DEFAULT 'chua_gui' CHECK (trang_thai IN ('chua_gui','da_gui','da_duyet')),
-    loi_nhan TEXT,
-    nguoi_gui_id INTEGER,
-    gui_luc TEXT,
-    nguoi_duyet_id INTEGER,
-    duyet_luc TEXT,
-    duyet_thay INTEGER NOT NULL DEFAULT 0,
-    nhan_xet TEXT,
-    cap_nhat_luc TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (dot_id) REFERENCES bcp_dot(id) ON DELETE CASCADE,
-    FOREIGN KEY (nguoi_gui_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (nguoi_duyet_id) REFERENCES users(id) ON DELETE SET NULL
-  )`,
-
-  // Tệp lưu dưới tên NGẪU NHIÊN (ten_luu), tên người dùng đặt chỉ giữ ở ten_goc để hiển thị:
-  // không bao giờ ghép tên người dùng vào đường dẫn trên đĩa.
-  `CREATE TABLE IF NOT EXISTS bcp_trinh_tep (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dot_id INTEGER NOT NULL,
-    ten_goc TEXT NOT NULL,
-    ten_luu TEXT NOT NULL UNIQUE,
-    loai TEXT NOT NULL,
-    kich_thuoc INTEGER NOT NULL,
-    nguoi_tai_id INTEGER,
-    tai_luc TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (dot_id) REFERENCES bcp_dot(id) ON DELETE CASCADE,
-    FOREIGN KEY (nguoi_tai_id) REFERENCES users(id) ON DELETE SET NULL
-  )`,
-  `CREATE INDEX IF NOT EXISTS ix_bcp_trinh_tep_dot ON bcp_trinh_tep(dot_id)`,
-
   `CREATE TABLE IF NOT EXISTS bcp_dot_lich_su (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     dot_id INTEGER NOT NULL,
@@ -243,6 +205,20 @@ const CAU_LENH = [
     FOREIGN KEY (nguoi_id) REFERENCES users(id) ON DELETE SET NULL
   )`,
   `CREATE INDEX IF NOT EXISTS ix_bcp_y_kien_bao_cao ON bcp_y_kien(bao_cao_id)`,
+
+  // Mỗi lần người quản lý module "trình" một đợt cho Viện trưởng là một dòng (trình lại = dòng mới, để nhắc). Không có tệp: toàn bộ
+  // báo cáo của đợt hiện ra trong giao diện của Viện trưởng. Quyết định của Viện trưởng không có bảng riêng, nằm ở bcp_lich_su
+  // (xem services/baoCaoPhongVienTruong.js).
+  `CREATE TABLE IF NOT EXISTS bcp_trinh_lan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dot_id INTEGER NOT NULL,
+    nguoi_trinh_id INTEGER,
+    trinh_luc TEXT NOT NULL,
+    loi_nhan TEXT,
+    FOREIGN KEY (dot_id) REFERENCES bcp_dot(id) ON DELETE CASCADE,
+    FOREIGN KEY (nguoi_trinh_id) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS ix_bcp_trinh_lan_dot ON bcp_trinh_lan(dot_id)`,
 ];
 
 /**

@@ -7,7 +7,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { dungUngDung, PDF_MAU } = require('./helpers/baoCaoPhongApp');
+const { dungUngDung } = require('./helpers/baoCaoPhongApp');
 
 const QUAN_LY = 2;
 const VIEN_TRUONG = 3;
@@ -50,9 +50,8 @@ async function nop(uid, id, ten) {
   assert.equal((await ung.json(uid, 'PUT', `/bao-cao/${id}/du-lieu`, { du_lieu: DU_LIEU(ten) })).s, 200);
   assert.equal((await ung.json(uid, 'POST', `/bao-cao/${id}/nop`, {})).s, 200);
 }
-async function trinh(dotId, tenTep, loiNhan) {
-  assert.equal((await ung.taiTep(QUAN_LY, `/dot/${dotId}/trinh/tep`, tenTep, PDF_MAU)).s, 201);
-  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dotId}/trinh/gui`, { loi_nhan: loiNhan })).s, 200);
+async function trinh(dotId, loiNhan) {
+  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dotId}/trinh-vien-truong`, { loi_nhan: loiNhan })).s, 200);
 }
 const viec = (uid) => ung.json(uid, 'GET', '/viec-cua-toi');
 
@@ -60,39 +59,34 @@ test('chưa đăng nhập thì 401; người không có vai trò gì nhận danh
   assert.equal((await viec(null)).s, 401);
   const r = await viec(NGOAI);
   assert.equal(r.s, 200);
-  assert.deepEqual(r.d, { bao_cao: [], ho_so_duyet: [] });
+  assert.deepEqual(r.d, { bao_cao: [], dot_duyet: [] });
 });
 
-test('Viện trưởng thấy hồ sơ chờ duyệt đủ thông tin: tiêu đề, người gửi, giờ gửi, lời nhắn, tên tệp', async () => {
+test('Viện trưởng thấy đợt đã trình: tiêu đề, người trình, lời nhắn, số báo cáo chờ; người khác nhận rỗng', async () => {
+  ID.dot1 = await taoDotMo('Đợt chưa nộp');
   const dot = await taoDotMo('Báo cáo tháng 9/2026');
-  await trinh(dot.id, 'Báo cáo tháng 9 – đã ký.pdf', 'Kính trình Viện trưởng.');
+  assert.deepEqual((await viec(VIEN_TRUONG)).d.dot_duyet, [], 'chưa trình thì chưa phải việc của Viện trưởng');
+  await nop(TP_A, dot.bc[ID.phongA], 'A');
+  await trinh(dot.id, 'Kính trình Viện trưởng.');
   const r = await viec(VIEN_TRUONG);
-  assert.equal(r.s, 200);
-  assert.equal(r.d.ho_so_duyet.length, 1);
-  const x = r.d.ho_so_duyet[0];
+  assert.equal(r.d.dot_duyet.length, 1);
+  const x = r.d.dot_duyet[0];
   assert.equal(x.dot_id, dot.id);
   assert.equal(x.tieu_de, 'Báo cáo tháng 9/2026');
-  assert.equal(x.nguoi_gui, 'Nguyễn Quản Lý');
+  assert.equal(x.nguoi_trinh, 'Nguyễn Quản Lý');
   assert.equal(x.loi_nhan, 'Kính trình Viện trưởng.');
-  assert.ok(x.gui_luc);
-  assert.deepEqual(x.tep.map((f) => f.ten_goc), ['Báo cáo tháng 9 – đã ký.pdf']);
-  assert.ok(Number.isInteger(x.tep[0].id), 'có id để dựng liên kết tải');
+  assert.equal(x.cho_quyet_dinh, 1);
   assert.deepEqual(r.d.bao_cao, [], 'Viện trưởng không có phòng nên không có báo cáo cần nộp');
-  ID.dot1 = dot;
-});
-
-test('KHÔNG lộ hồ sơ trình cho ai ngoài Viện trưởng: trưởng phòng, quản lý module, admin đều nhận rỗng', async () => {
-  for (const uid of [TP_A, TP_B, QUAN_LY, 1]) {
-    const r = await viec(uid);
-    assert.equal(r.s, 200, 'user ' + uid);
-    assert.deepEqual(r.d.ho_so_duyet, [], 'user ' + uid + ' không được thấy hồ sơ chờ Viện trưởng duyệt');
-  }
+  for (const uid of [TP_A, TP_B, QUAN_LY, 1]) assert.deepEqual((await viec(uid)).d.dot_duyet, [], 'user ' + uid);
+  const tq = await ung.json(VIEN_TRUONG, 'GET', '/tong-quan');
+  assert.equal(tq.d.bao_cao_cho_vien_truong, 1);
+  assert.equal((await ung.json(TP_A, 'GET', '/tong-quan')).s, 403, 'trưởng phòng vẫn không xem được tổng quan');
 });
 
 test('users.role = vien_truong nhưng CHƯA được gán trong module thì không thấy hồ sơ (như mọi quyền khác)', async () => {
   const r = await viec(7);
   assert.equal(r.s, 200);
-  assert.deepEqual(r.d, { bao_cao: [], ho_so_duyet: [] });
+  assert.deepEqual(r.d, { bao_cao: [], dot_duyet: [] });
 });
 
 test('trưởng phòng thấy báo cáo của phòng mình đang cần nộp; đã nộp thì biến mất; cần chỉnh sửa thì hiện lại', async () => {
@@ -100,7 +94,7 @@ test('trưởng phòng thấy báo cáo của phòng mình đang cần nộp; đ
   const x = r1.d.bao_cao.find((b) => b.id === ID.dot1.bc[ID.phongA]);
   assert.ok(x, 'phòng A chưa nộp đợt 1');
   assert.equal(x.phong_ten, 'Phòng A');
-  assert.equal(x.tieu_de, 'Báo cáo tháng 9/2026');
+  assert.equal(x.tieu_de, 'Đợt chưa nộp');
   assert.equal(x.trang_thai, 'chua_nop');
   assert.equal(x.han_nop, '2099-12-31');
   assert.equal(x.tre_han, false);
@@ -121,24 +115,3 @@ test('đợt đã đóng thì không còn là việc của trưởng phòng', as
   assert.ok(!(await viec(TP_B)).d.bao_cao.some((b) => b.id === dot.bc[ID.phongB]));
 });
 
-test('nhiều hồ sơ chờ: Viện trưởng thấy tất cả theo thứ tự gửi; duyệt xong thì hồ sơ đó biến mất', async () => {
-  const dot2 = await taoDotMo('Báo cáo tháng 10/2026');
-  await trinh(dot2.id, 'thang-10.pdf', '');
-  const r = await viec(VIEN_TRUONG);
-  assert.deepEqual(r.d.ho_so_duyet.map((x) => x.tieu_de), ['Báo cáo tháng 9/2026', 'Báo cáo tháng 10/2026']);
-
-  assert.equal((await ung.json(VIEN_TRUONG, 'POST', `/dot/${ID.dot1.id}/trinh/duyet`, {})).s, 200);
-  const r2 = await viec(VIEN_TRUONG);
-  assert.deepEqual(r2.d.ho_so_duyet.map((x) => x.tieu_de), ['Báo cáo tháng 10/2026']);
-});
-
-test('tổng quan của quản lý cũng có đủ thông tin hồ sơ chờ (thẻ trong module dùng đường này)', async () => {
-  const r = await ung.json(VIEN_TRUONG, 'GET', '/tong-quan');
-  assert.equal(r.s, 200);
-  assert.equal(r.d.cho_vien_truong, 1);
-  const x = r.d.ho_so_cho_vien_truong[0];
-  assert.equal(x.tieu_de, 'Báo cáo tháng 10/2026');
-  assert.equal(x.nguoi_gui, 'Nguyễn Quản Lý');
-  assert.deepEqual(x.tep.map((f) => f.ten_goc), ['thang-10.pdf']);
-  assert.equal((await ung.json(TP_A, 'GET', '/tong-quan')).s, 403, 'trưởng phòng vẫn không xem được tổng quan');
-});

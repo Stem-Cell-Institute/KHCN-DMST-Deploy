@@ -112,6 +112,9 @@ async function dungUngDung(tuyChon = {}) {
     return id;
   };
 
+  /** Đánh dấu đợt đã được người quản lý trình Viện trưởng (ghi thẳng DB, không gửi thư): Viện trưởng chỉ thấy đợt đã trình. */
+  ung.daTrinh = (dotId) => db.prepare('INSERT INTO bcp_trinh_lan (dot_id, trinh_luc) VALUES (?, ?)').run(dotId, new Date().toISOString());
+
   ung.dung = async () => {
     await new Promise((r) => server.close(r));
     db.close();

@@ -49,6 +49,7 @@ test.before(async () => {
   assert.equal(r.s, 201, JSON.stringify(r.d));
   ID.dot = r.d.id;
   assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${ID.dot}/mo`, {})).s, 200);
+  ung.daTrinh(ID.dot);
   const ct = await ung.json(QUAN_LY, 'GET', '/dot/' + ID.dot);
   ID.bcTchc = ct.d.bao_cao.find((b) => b.phong_id === ID.tchc).id;
   ID.bcA = ct.d.bao_cao.find((b) => b.phong_id === ID.phongA).id;
