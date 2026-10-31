@@ -5,8 +5,8 @@
  * họ không biết mình đang có việc. Nếu phòng của họ có báo cáo cần nộp / cần chỉnh sửa thì thẻ hiện khung đỏ
  * "Có 1 báo cáo cần nộp", hạn nộp, và nút "Làm báo cáo ngay →" dẫn thẳng vào đúng báo cáo.
  *
- * Chỉ dùng GET /api/bao-cao-phong/viec-cua-toi: báo cáo phòng mình cần nộp (trưởng phòng) và hồ sơ chờ mình duyệt
- * (chỉ Viện trưởng). Người không thuộc module nhận danh sách rỗng, thẻ giữ nguyên.
+ * Chỉ dùng GET /api/bao-cao-phong/viec-cua-toi: báo cáo phòng mình cần nộp (trưởng phòng), các đợt đã trình có báo cáo chờ
+ * mình quyết định và hồ sơ tệp cũ chờ mình duyệt (chỉ Viện trưởng). Người không thuộc module nhận danh sách rỗng, thẻ giữ nguyên.
  * Lỗi mạng hay chưa đăng nhập thì im lặng: thẻ vẫn như cũ, không làm hỏng trang chủ.
  */
 (function () {
@@ -27,12 +27,13 @@
    * viec: báo cáo cần nộp/chỉnh sửa của phòng mình; hoSo: hồ sơ chờ Viện trưởng duyệt (rỗng nếu không phải Viện trưởng).
    * Dữ liệu chỉ vào DOM qua textContent.
    */
-  function ap(card, viec, hoSo) {
+  function ap(card, viec, hoSo, dotDuyet) {
     var cu = card.querySelector('.viec-the');
     if (cu) cu.remove();
     viec = viec || [];
     hoSo = hoSo || [];
-    if ((!viec.length && !hoSo.length) || card.classList.contains('module-card--disabled')) return;
+    dotDuyet = dotDuyet || [];
+    if ((!viec.length && !hoSo.length && !dotDuyet.length) || card.classList.contains('module-card--disabled')) return;
     var ds = viec.slice().sort(function (a, b) { return a.han_nop < b.han_nop ? -1 : a.han_nop > b.han_nop ? 1 : 0; });
     var b = ds[0];
     var nhieu = ds.length > 1;
@@ -51,7 +52,11 @@
         khung.appendChild(s);
       }
     }
-    if (hoSo.length) them(hoSo.length > 1 ? 'Có ' + hoSo.length + ' hồ sơ chờ bạn duyệt' : 'Có 1 hồ sơ chờ bạn duyệt', hoSo[0].tieu_de);
+    if (dotDuyet.length) {
+      var soBaoCao = dotDuyet.reduce(function (n, x) { return n + (x.cho_quyet_dinh || 0); }, 0);
+      them('Có ' + soBaoCao + ' báo cáo chờ bạn duyệt', dotDuyet[0].tieu_de + (dotDuyet.length > 1 ? ' và ' + (dotDuyet.length - 1) + ' đợt khác' : ''));
+    }
+    if (hoSo.length) them(hoSo.length > 1 ? 'Có ' + hoSo.length + ' hồ sơ tệp cũ chờ bạn duyệt' : 'Có 1 hồ sơ tệp cũ chờ bạn duyệt', hoSo[0].tieu_de);
     if (ds.length) {
       them(nhieu ? 'Có ' + ds.length + ' báo cáo cần nộp' : canSua ? 'Có 1 báo cáo cần chỉnh sửa' : 'Có 1 báo cáo cần nộp',
         b.tieu_de + ' — hạn ' + ngay(b.han_nop) + ' (' + conLai(b.han_nop) + ')');
@@ -63,7 +68,8 @@
     card.classList.add('module-card--viec');
     if (nut) {
       var dich;
-      if (hoSo.length && ds.length) { nut.textContent = 'Xem việc của bạn →'; dich = 'bao-cao-phong.html'; }
+      if ((hoSo.length || dotDuyet.length) && ds.length) { nut.textContent = 'Xem việc của bạn →'; dich = 'bao-cao-phong.html'; }
+      else if (dotDuyet.length) { nut.textContent = 'Đọc và duyệt báo cáo →'; dich = 'bao-cao-phong.html#/duyet'; }
       else if (hoSo.length) { nut.textContent = 'Đọc và duyệt hồ sơ →'; dich = 'bao-cao-phong.html#/dot'; }
       else {
         nut.textContent = nhieu ? 'Xem các báo cáo cần nộp →' : canSua ? 'Chỉnh sửa báo cáo →' : 'Làm báo cáo ngay →';
@@ -82,7 +88,7 @@
     fetch('/api/bao-cao-phong/viec-cua-toi', { headers: { Authorization: 'Bearer ' + token } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        if (d && Array.isArray(d.bao_cao)) ap(card, d.bao_cao, Array.isArray(d.ho_so_duyet) ? d.ho_so_duyet : []);
+        if (d && Array.isArray(d.bao_cao)) ap(card, d.bao_cao, Array.isArray(d.ho_so_duyet) ? d.ho_so_duyet : [], Array.isArray(d.dot_duyet) ? d.dot_duyet : []);
       })
       .catch(function () { /* thẻ giữ nguyên */ });
   }

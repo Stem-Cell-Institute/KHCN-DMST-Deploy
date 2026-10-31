@@ -17,7 +17,8 @@
  *   bcp_dot  ──> bcp_mau_phien_ban       (đợt ghim đúng phiên bản lúc tạo)
  *   bcp_dot ──< bcp_bao_cao >── bcp_phong (mỗi phòng một báo cáo trong mỗi đợt)
  *   bcp_bao_cao ──< bcp_lich_su
- *   bcp_dot ──1 bcp_trinh ──< (bcp_trinh_tep)   (hồ sơ quản lý module trình Viện trưởng của đợt)
+ *   bcp_dot ──< bcp_trinh_lan             (các lần quản lý module trình đợt cho Viện trưởng; Viện trưởng duyệt TRONG GIAO DIỆN)
+ *   bcp_dot ──1 bcp_trinh ──< (bcp_trinh_tep)   (hồ sơ trình bằng tệp của cách làm CŨ: chỉ còn để đọc, không tạo mới)
  *   bcp_dot ──< bcp_dot_lich_su
  *   bcp_phong ──< bcp_loi_moi             (lời mời trưởng phòng cho email CHƯA có tài khoản)
  *   bcp_bao_cao ──< bcp_nhac_han          (nhật ký email nhắc trước hạn, để không nhắc trùng)
@@ -243,6 +244,20 @@ const CAU_LENH = [
     FOREIGN KEY (nguoi_id) REFERENCES users(id) ON DELETE SET NULL
   )`,
   `CREATE INDEX IF NOT EXISTS ix_bcp_y_kien_bao_cao ON bcp_y_kien(bao_cao_id)`,
+
+  // Mỗi lần người quản lý module "trình" một đợt cho Viện trưởng là một dòng (trình lại = dòng mới, để nhắc). Không có tệp: toàn bộ
+  // báo cáo của đợt hiện ra trong giao diện của Viện trưởng. Quyết định của Viện trưởng không có bảng riêng, nằm ở bcp_lich_su
+  // (xem services/baoCaoPhongVienTruong.js). bcp_trinh / bcp_trinh_tep ở trên là hồ sơ trình bằng tệp của cách làm cũ, chỉ còn để đọc.
+  `CREATE TABLE IF NOT EXISTS bcp_trinh_lan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dot_id INTEGER NOT NULL,
+    nguoi_trinh_id INTEGER,
+    trinh_luc TEXT NOT NULL,
+    loi_nhan TEXT,
+    FOREIGN KEY (dot_id) REFERENCES bcp_dot(id) ON DELETE CASCADE,
+    FOREIGN KEY (nguoi_trinh_id) REFERENCES users(id) ON DELETE SET NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS ix_bcp_trinh_lan_dot ON bcp_trinh_lan(dot_id)`,
 ];
 
 /**

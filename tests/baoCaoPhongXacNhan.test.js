@@ -1,12 +1,12 @@
 /**
  * tests/baoCaoPhongXacNhan.test.js
- * Ai làm gì: người quản lý module (và admin) XÁC NHẬN báo cáo từng phòng, yêu cầu chỉnh sửa, tải/gửi hồ sơ trình.
- * Viện trưởng chỉ đọc và DUYỆT hồ sơ — không xác nhận hộ, không tải/gửi hồ sơ. Một người giữ cả hai vai trò thì làm được cả hai.
+ * Ai làm gì: người quản lý module (và admin) XÁC NHẬN báo cáo từng phòng, yêu cầu chỉnh sửa, TRÌNH đợt cho Viện trưởng.
+ * Viện trưởng chỉ đọc và duyệt — không xác nhận hộ, không trình đợt. Một người giữ cả hai vai trò thì làm được cả hai.
  */
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { dungUngDung, PDF_MAU } = require('./helpers/baoCaoPhongApp');
+const { dungUngDung } = require('./helpers/baoCaoPhongApp');
 
 const ADMIN = 1;
 const QUAN_LY = 2;
@@ -94,29 +94,24 @@ test('người kiêm cả Viện trưởng và quản lý module thì xác nhậ
   assert.equal((await ung.json(VT_KIEM_QL, 'POST', `/bao-cao/${dot.a}/duyet`, {})).s, 200);
 });
 
-test('Viện trưởng KHÔNG tải/xóa tệp hay gửi hồ sơ (403), nhưng đọc (tải về) và duyệt được', async () => {
+test('Viện trưởng KHÔNG trình đợt (403); hồ sơ tệp cũ đang chờ thì ông vẫn đọc (tải về) và duyệt được', async () => {
   const dot = await dotDaNop('Đợt 3');
+  const hs = ung.taoHoSoCu(dot.id); // hồ sơ tệp của cách làm cũ, đang chờ lúc chuyển đổi
   const url = `/dot/${dot.id}/trinh`;
-  assert.equal((await ung.taiTep(QUAN_LY, url + '/tep', 'bao-cao.pdf', PDF_MAU)).s, 201);
   const ds = await ung.json(VIEN_TRUONG, 'GET', url);
-  assert.equal(ds.s, 200, 'Viện trưởng xem được hồ sơ');
-  const tepId = ds.d.tep[0].id;
+  assert.equal(ds.s, 200, 'Viện trưởng xem được hồ sơ cũ');
+  assert.equal(ds.d.tep[0].id, hs.tepId);
 
-  assert.equal((await ung.taiTep(VIEN_TRUONG, url + '/tep', 'them.pdf', PDF_MAU)).s, 403, 'không tải tệp lên');
-  assert.equal((await ung.json(VIEN_TRUONG, 'DELETE', `${url}/tep/${tepId}`)).s, 403, 'không xóa tệp');
-  assert.equal((await ung.json(VIEN_TRUONG, 'POST', url + '/gui', {})).s, 403, 'không gửi hồ sơ');
+  assert.equal((await ung.json(VIEN_TRUONG, 'POST', `/dot/${dot.id}/trinh-vien-truong`, {})).s, 403, 'trình đợt là việc của người quản lý module');
 
-  assert.equal((await ung.json(QUAN_LY, 'POST', url + '/gui', {})).s, 200);
-  const taiVe = await ung.goi(VIEN_TRUONG, 'GET', `${url}/tep/${tepId}/tai`);
+  const taiVe = await ung.goi(VIEN_TRUONG, 'GET', `${url}/tep/${hs.tepId}/tai`);
   assert.equal(taiVe.status, 200, 'Viện trưởng tải tệp về đọc được');
   assert.equal((await ung.json(VIEN_TRUONG, 'POST', url + '/duyet', { nhan_xet: 'Đồng ý.' })).s, 200, 'và duyệt được');
 });
 
-test('người kiêm Viện trưởng và quản lý module thì tải/gửi hồ sơ được', async () => {
+test('người kiêm Viện trưởng và quản lý module thì trình đợt được', async () => {
   const dot = await dotDaNop('Đợt 4');
-  const url = `/dot/${dot.id}/trinh`;
-  assert.equal((await ung.taiTep(VT_KIEM_QL, url + '/tep', 'bao-cao.pdf', PDF_MAU)).s, 201);
-  assert.equal((await ung.json(VT_KIEM_QL, 'POST', url + '/gui', {})).s, 200);
+  assert.equal((await ung.json(VT_KIEM_QL, 'POST', `/dot/${dot.id}/trinh-vien-truong`, {})).s, 200);
 });
 
 // ── Viện trưởng chỉ ĐỌC và DUYỆT: không quản lý đợt, biểu mẫu, phòng, phân quyền, lời mời ─────────────────────
@@ -130,6 +125,7 @@ test('Viện trưởng KHÔNG tạo/sửa/mở/đóng/xóa đợt (403), và KH�
     ['POST', `/dot/${dot.id}/dong`, {}],
     ['POST', `/dot/${dot.id}/mo-lai`, {}],
     ['POST', `/dot/${dot.id}/mo`, {}],
+    ['POST', `/dot/${dot.id}/trinh-vien-truong`, {}],
     ['DELETE', `/dot/${dot.id}`],
     ['GET', '/mau'], ['GET', `/mau/${ID.mau}`], ['POST', '/mau', { ten: 'x', truong: [] }], ['PUT', `/mau/${ID.mau}`, { ten: 'x', truong: [] }],
     ['GET', '/phong'], ['POST', '/phong', { ten: 'Phòng mới', ma: 'moi' }], ['PUT', `/phong/${phong}`, { ten: 'Đổi tên' }], ['POST', '/phong/nhap-tu-don-vi', {}],

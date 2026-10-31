@@ -50,9 +50,9 @@ async function nop(uid, id, ten) {
   assert.equal((await ung.json(uid, 'PUT', `/bao-cao/${id}/du-lieu`, { du_lieu: DU_LIEU(ten) })).s, 200);
   assert.equal((await ung.json(uid, 'POST', `/bao-cao/${id}/nop`, {})).s, 200);
 }
+/** Hồ sơ tệp của cách làm cũ đang chờ Viện trưởng duyệt (đã ngừng tạo mới, nên dựng thẳng vào DB như dữ liệu có sẵn). */
 async function trinh(dotId, tenTep, loiNhan) {
-  assert.equal((await ung.taiTep(QUAN_LY, `/dot/${dotId}/trinh/tep`, tenTep, PDF_MAU)).s, 201);
-  assert.equal((await ung.json(QUAN_LY, 'POST', `/dot/${dotId}/trinh/gui`, { loi_nhan: loiNhan })).s, 200);
+  ung.taoHoSoCu(dotId, { tenTep, loiNhan: loiNhan || null, nguoiGui: QUAN_LY });
 }
 const viec = (uid) => ung.json(uid, 'GET', '/viec-cua-toi');
 
@@ -60,7 +60,7 @@ test('chưa đăng nhập thì 401; người không có vai trò gì nhận danh
   assert.equal((await viec(null)).s, 401);
   const r = await viec(NGOAI);
   assert.equal(r.s, 200);
-  assert.deepEqual(r.d, { bao_cao: [], ho_so_duyet: [] });
+  assert.deepEqual(r.d, { bao_cao: [], ho_so_duyet: [], dot_duyet: [] });
 });
 
 test('Viện trưởng thấy hồ sơ chờ duyệt đủ thông tin: tiêu đề, người gửi, giờ gửi, lời nhắn, tên tệp', async () => {
@@ -92,7 +92,7 @@ test('KHÔNG lộ hồ sơ trình cho ai ngoài Viện trưởng: trưởng phò
 test('users.role = vien_truong nhưng CHƯA được gán trong module thì không thấy hồ sơ (như mọi quyền khác)', async () => {
   const r = await viec(7);
   assert.equal(r.s, 200);
-  assert.deepEqual(r.d, { bao_cao: [], ho_so_duyet: [] });
+  assert.deepEqual(r.d, { bao_cao: [], ho_so_duyet: [], dot_duyet: [] });
 });
 
 test('trưởng phòng thấy báo cáo của phòng mình đang cần nộp; đã nộp thì biến mất; cần chỉnh sửa thì hiện lại', async () => {
