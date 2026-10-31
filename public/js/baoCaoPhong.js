@@ -829,7 +829,6 @@
         if (d.nop_luc) node.push(h('p', { class: 'mo', text: 'Nộp lúc ' + fmtGio(d.nop_luc) }));
       }
 
-      if (d.y_kien_duoc) node.push(khoiYKien(id));
       if (d.duyet_duoc || d.yeu_cau_sua_duoc) node.push(khoiXuLy(id, d));
 
       if (d.lich_su.length) {
@@ -847,34 +846,6 @@
       form.hienLoi(e.data.loi);
       thongBao(tienTo + ' ' + (e.data.message || 'Có ô chưa hợp lệ.'), 'loi');
     } else thongBao(e.message, 'loi');
-  }
-
-  /** Viện trưởng góp ý về báo cáo của phòng: ý kiến lưu trong báo cáo và gửi email cho trưởng phòng của phòng đó. */
-  function khoiYKien(id) {
-    var nd = h('textarea', { id: 'y-kien-nd', rows: 4, maxlength: 2000 });
-    var loi = h('p', { class: 'loi-truong', role: 'alert', hidden: true });
-    var gui = h('button', { type: 'button', class: 'btn' }, 'Gửi ý kiến');
-    gui.addEventListener('click', function () {
-      loi.hidden = true;
-      if (!nd.value.trim()) { loi.textContent = 'Hãy nhập nội dung ý kiến.'; loi.hidden = false; nd.focus(); return; }
-      gui.disabled = true;
-      api('/bao-cao/' + id + '/y-kien', { method: 'POST', body: { noi_dung: nd.value } })
-        .then(function (kq) {
-          var nhan = [];
-          if (kq.da_bao) nhan.push(kq.da_bao + ' trưởng phòng');
-          if (kq.da_bao_quan_ly) nhan.push(kq.da_bao_quan_ly + ' người quản lý module');
-          thongBao(nhan.length ? 'Đã gửi ý kiến. Email đã được gửi tới ' + nhan.join(' và ') + '.' : 'Đã lưu ý kiến. Chưa có ai nhận email vì phòng này chưa có trưởng phòng.');
-          return route();
-        })
-        .catch(function (e) { loi.textContent = e.message; loi.hidden = false; gui.disabled = false; });
-    });
-    return h('section', { 'aria-labelledby': 'y-kien-tieu-de' },
-      h('h3', { id: 'y-kien-tieu-de', text: 'Ý kiến của Viện trưởng' }),
-      h('div', { class: 'truong' },
-        h('label', { for: 'y-kien-nd', text: 'Ý kiến về báo cáo này' }),
-        h('p', { class: 'tro-giup', text: 'Ý kiến được lưu trong báo cáo và gửi qua email cho trưởng phòng của phòng này và người quản lý module.' }),
-        nd, loi),
-      h('div', { class: 'nhom-nut' }, gui));
   }
 
   function khoiXuLy(id, d) {
