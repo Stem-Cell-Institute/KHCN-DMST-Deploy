@@ -55,7 +55,7 @@ module.exports = function createVienTruongRouter({ db, vt, thongBao, guiNen, loi
   // ── Tải cả đợt cho màn hình duyệt ──────────────────────────────────────────
   router.get(
     '/dot/:id/vien-truong',
-    canQuanLy,
+    (req, res, next) => (req.bcp.laVienTruong ? next() : loi(res, 403, 'Chỉ Viện trưởng mới dùng màn hình duyệt báo cáo.')),
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
@@ -67,8 +67,8 @@ module.exports = function createVienTruongRouter({ db, vt, thongBao, guiNen, loi
         .get(id);
       if (!d) return loi(res, 404, 'Không tìm thấy đợt báo cáo.');
       if (d.trang_thai === 'nhap') return loi(res, 409, 'Đợt còn ở trạng thái Nháp, chưa có báo cáo.');
-      // Viện trưởng chỉ đọc được đợt đã trình (người quản lý, admin thì xem trước được).
-      if (req.bcp.laVienTruong && !req.bcp.laQuanLyModule && !dotDaTrinh(id)) return loi(res, 404, 'Không tìm thấy đợt báo cáo.');
+      // Màn hình duyệt chỉ có với đợt đã trình.
+      if (!dotDaTrinh(id)) return loi(res, 404, 'Không tìm thấy đợt báo cáo.');
       const homNay = ngayVN(new Date());
       const rows = db
         .prepare(

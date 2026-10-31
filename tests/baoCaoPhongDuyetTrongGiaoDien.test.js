@@ -205,10 +205,10 @@ test('kết xuất Word/PDF vẫn là công cụ của người quản lý sau k
 
 // ══ Đọc cả đợt ══════════════════════════════════════════════════════════════════
 
-test('đọc cả đợt: Viện trưởng, quản lý, admin đọc được; trưởng phòng, người ngoài, người chưa đăng nhập thì không', async () => {
+test('đọc cả đợt: CHỈ Viện trưởng dùng được màn duyệt; quản lý, admin, trưởng phòng, người ngoài đều 403, người chưa đăng nhập 401', async () => {
   const dot = ID.dotChinh;
-  for (const uid of [VIEN_TRUONG, QUAN_LY, ADMIN]) assert.equal((await ung.json(uid, 'GET', `/dot/${dot.id}/vien-truong`)).s, 200, 'user ' + uid);
-  for (const uid of [TP_A, TP_B, NGOAI]) assert.equal((await ung.json(uid, 'GET', `/dot/${dot.id}/vien-truong`)).s, 403, 'user ' + uid);
+  assert.equal((await ung.json(VIEN_TRUONG, 'GET', `/dot/${dot.id}/vien-truong`)).s, 200);
+  for (const uid of [QUAN_LY, ADMIN, TP_A, TP_B, NGOAI]) assert.equal((await ung.json(uid, 'GET', `/dot/${dot.id}/vien-truong`)).s, 403, 'user ' + uid);
   assert.equal((await ung.json(null, 'GET', `/dot/${dot.id}/vien-truong`)).s, 401);
   assert.equal((await ung.json(VIEN_TRUONG, 'GET', '/dot/999999/vien-truong')).s, 404);
   const nhap = await ung.json(QUAN_LY, 'POST', '/dot', { tieu_de: 'Nháp 2', han_nop: '2099-12-31', mau_id: ID.mau, phong_ids: [ID.phongA] });
@@ -235,10 +235,9 @@ test('đọc cả đợt: có nội dung các phòng đã nộp, phòng chưa n�
   assert.equal(r.d.tien_do.tong, 3);
   assert.equal(r.d.tien_do.cho_quyet_dinh, 2);
   assert.equal(r.d.co_the.quyet_dinh, true, 'Viện trưởng quyết định được');
-  assert.equal((await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/vien-truong`)).d.co_the.quyet_dinh, false, 'người quản lý chỉ xem, không có nút quyết định');
 });
 
-test('đợt CHƯA TRÌNH: Viện trưởng chưa thấy gì (như không tồn tại); người quản lý xem trước được; trình xong thì Viện trưởng thấy đủ', async () => {
+test('đợt CHƯA TRÌNH: Viện trưởng chưa thấy gì (như không tồn tại); trình xong thì Viện trưởng thấy đủ', async () => {
   const dot = await taoDot('Đợt chưa trình');
   // Viện trưởng: không có trong danh sách, tiến độ, không đọc được đợt hay báo cáo, không góp ý, không quyết định
   assert.ok(!(await ung.json(VIEN_TRUONG, 'GET', '/dot')).d.dot.some((x) => x.id === dot.id), 'không có trong danh sách đợt');
@@ -249,11 +248,9 @@ test('đợt CHƯA TRÌNH: Viện trưởng chưa thấy gì (như không tồn 
   assert.equal((await quyetDinh(VIEN_TRUONG, dot.a, 'duyet', '', '2026-01-01T00:00:00.000Z')).s, 404);
   const tq = (await ung.json(VIEN_TRUONG, 'GET', '/tong-quan')).d;
   assert.ok(!tq.chi_tiet.some((x) => x.dot_id === dot.id), 'không có trong tiến độ');
-  // Người quản lý xem trước được, thấy rõ "chưa trình"
-  const ql = await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/vien-truong`);
-  assert.equal(ql.s, 200);
-  assert.equal(ql.d.trinh, null);
-  assert.equal(ql.d.co_the.quyet_dinh, false);
+  // Người quản lý không có màn "xem như Viện trưởng"; thấy đợt chưa trình ở danh sách đợt của mình
+  assert.equal((await ung.json(QUAN_LY, 'GET', `/dot/${dot.id}/vien-truong`)).s, 403);
+  assert.equal((await ung.json(QUAN_LY, 'GET', '/dot/' + dot.id)).d.trinh_vt, null);
   // Phòng vẫn đọc báo cáo của mình bình thường
   assert.equal((await ung.json(TP_A, 'GET', '/bao-cao/' + dot.a)).s, 200);
   // Trình xong: Viện trưởng thấy đủ

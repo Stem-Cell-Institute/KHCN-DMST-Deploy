@@ -1064,7 +1064,7 @@
       node.push(h('p', { class: 'mo', text: 'Đợt này chưa được người quản lý module trình Viện trưởng.' }));
     }
     var nut = [];
-    if (t) nut.push(h('a', { class: 'btn' + (me.quan_ly_module ? ' btn-phu' : ''), href: '#/duyet/' + dotId }, me.vien_truong ? 'Đọc và duyệt →' : 'Xem như Viện trưởng →'));
+    if (t && me.vien_truong) nut.push(h('a', { class: 'btn' + (me.quan_ly_module ? ' btn-phu' : ''), href: '#/duyet/' + dotId }, 'Đọc và duyệt →'));
     if (me.quan_ly_module && d.trang_thai !== 'nhap') {
       var chuaNop = kq.bao_cao.filter(function (b) { return b.trang_thai === 'chua_nop'; });
       var trinhLai = !!t;
@@ -1732,7 +1732,7 @@
     var p = (location.hash || '').replace(/^#\/?/, '').split('/').filter(Boolean);
     var ten = p[0] || (me.quan_ly ? (me.vien_truong && !me.quan_ly_module ? 'duyet' : 'dot') : 'cua-toi');
     var tham = p[1];
-    var QUAN_LY = { dot: 1, mau: 1, phong: 1, duyet: 1 };
+    var QUAN_LY = { dot: 1, mau: 1, phong: 1 };
     // Việc dọn dẹp của màn hình trước (gỡ phím tắt, bỏ lớp CSS riêng…) chạy mỗi khi đổi mục.
     donDep.splice(0).forEach(function (f) { try { f(); } catch (_) { /* dọn không được làm hỏng việc chuyển trang */ } });
 
@@ -1744,7 +1744,7 @@
     main.replaceChildren(h('p', { class: 'tai', text: 'Đang tải…' }));
 
     var xong;
-    if ((QUAN_LY[ten] && !me.quan_ly) || ((ten === 'mau' || ten === 'phong') && !me.quan_ly_module)) {
+    if ((ten === 'duyet' && !me.vien_truong) || (QUAN_LY[ten] && !me.quan_ly) || ((ten === 'mau' || ten === 'phong') && !me.quan_ly_module)) {
       xong = Promise.resolve(main.replaceChildren(h('h2', { text: 'Không có quyền' }), h('div', { class: 'luu-y luu-y-do' }, h('p', { text: 'Mục này chỉ dành cho người quản lý module.' }))));
     } else if (ten === 'duyet') {
       xong = BCP.views.duyet ? BCP.views.duyet(p.slice(1)) : Promise.reject(new Error('Chưa tải được màn hình duyệt báo cáo. Hãy tải lại trang.'));
