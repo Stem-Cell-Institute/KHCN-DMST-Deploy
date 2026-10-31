@@ -2,7 +2,7 @@
 
 Trang: `bao-cao-phong.html` · API: `/api/bao-cao-phong/*`
 
-Mã nguồn: `routes/baoCaoPhong.js` (+ `routes/baoCaoPhongTrinh.js`), `services/baoCaoPhongSchema.js`,
+Mã nguồn: `routes/baoCaoPhong.js` (+ `routes/baoCaoPhongVienTruong.js`, `services/baoCaoPhongVienTruong.js`), `services/baoCaoPhongSchema.js`,
 `services/baoCaoPhongMau.js`, `services/baoCaoPhongMauMacDinh.js`, `services/baoCaoPhongXuat.js`,
 `services/baoCaoPhongThongBao.js`, `services/fonts/`, `public/js/baoCaoPhong.js`,
 `public/css/bao-cao-phong.css`.
@@ -12,7 +12,7 @@ Mã nguồn: `routes/baoCaoPhong.js` (+ `routes/baoCaoPhongTrinh.js`), `services
 Trưởng phòng Tổ chức Hành chính giao **đợt báo cáo** cho các phòng; mỗi trưởng phòng **nhập báo cáo
 trực tiếp trên web** theo một **biểu mẫu do người quản lý tự cấu hình** (mẫu ban đầu lấy từ "Báo cáo
 kết quả hoạt động tháng" của Viện); người quản lý **xác nhận** hoặc **yêu cầu chỉnh sửa**, **kết xuất
-Word/PDF**, rồi **trình Viện trưởng** duyệt. Mọi thay đổi trạng thái quan trọng có **email báo**.
+Word/PDF**, rồi **trình Viện trưởng**: Viện trưởng đọc báo cáo từng phòng ngay trong hệ thống và **duyệt / không duyệt / góp ý / đề nghị chỉnh sửa** từng báo cáo (không tải tệp). Mọi thay đổi trạng thái quan trọng có **email báo**.
 
 ## Ba vai trò
 
@@ -20,8 +20,8 @@ Lưu trong bảng riêng `bcp_thanh_vien`, **không đụng vào cột `users.ro
 
 | Vai trò | Làm được gì |
 |---|---|
-| **Người quản lý module** (`quan_ly`) | Dựng biểu mẫu, giao đợt, xem mọi báo cáo, **xác nhận** báo cáo từng phòng, yêu cầu chỉnh sửa, kết xuất Word/PDF, trình (gửi, gửi lại để nhắc) Viện trưởng — **không duyệt thay Viện trưởng**, quản lý danh mục phòng, gán trưởng phòng. Nhận email khi có phòng nộp báo cáo. |
-| **Viện trưởng** (`vien_truong`) | **Xem, góp ý và duyệt**: xem tiến độ các đợt, đọc báo cáo từng phòng, **gửi ý kiến về báo cáo của từng phòng** (lưu trong báo cáo và email cho trưởng phòng của phòng đó), tải tệp hồ sơ về đọc, và **duyệt hồ sơ trình**. **KHÔNG** xác nhận / yêu cầu chỉnh sửa báo cáo từng phòng, **KHÔNG** tải/xóa tệp hay gửi hồ sơ, **KHÔNG** kết xuất Word/PDF (thanh kết xuất ẩn, `/dot/:id/xuat` trả 403), **KHÔNG** tạo/sửa/mở/đóng/xóa đợt, **KHÔNG** quản lý biểu mẫu, phòng, phân quyền, lời mời (việc của người quản lý module; server trả 403 qua `canQuanLyModule`/`canXacNhan`, giao diện không có nút và không có tab Biểu mẫu, Phòng & phân quyền; đợt Nháp không hiện trong danh sách của ông). Một người giữ cả hai vai trò thì làm được cả hai. Chỉ nhận email khi hồ sơ được trình lên (không nhận thư mỗi lần một phòng nộp). |
+| **Người quản lý module** (`quan_ly`) | Dựng biểu mẫu (nhiều biểu mẫu, nhân bản, xóa biểu mẫu chưa dùng), giao đợt, xem mọi báo cáo, **xác nhận** báo cáo từng phòng, yêu cầu chỉnh sửa, kết xuất Word/PDF, **trình / trình lại đợt cho Viện trưởng**, quản lý danh mục phòng, gán trưởng phòng. Thấy đợt nào đã trình, đợt nào chưa, và Viện trưởng đã xử lý đến đâu. Nhận email khi có phòng nộp báo cáo. **Không** có màn "xem như Viện trưởng" và không duyệt thay. |
+| **Viện trưởng** (`vien_truong`) | Chỉ thấy các đợt **đã được trình** (đợt chưa trình với ông như không tồn tại: không danh sách, không tiến độ, không đọc báo cáo, không góp ý, 404). Trong mục **Duyệt báo cáo** đọc báo cáo từng phòng và bấm **Duyệt · Không duyệt · Ý kiến · Đề nghị chỉnh sửa**. **KHÔNG** xác nhận / yêu cầu chỉnh sửa (việc của quản lý), **KHÔNG** kết xuất, **KHÔNG** trình đợt, **KHÔNG** tạo/sửa/mở/đóng/xóa đợt, **KHÔNG** quản lý biểu mẫu, phòng, phân quyền, lời mời (403). Một người giữ cả hai vai trò thì làm được cả hai. Chỉ nhận email khi đợt được trình/trình lại và khi phòng nộp lại đúng báo cáo ông đã đề nghị sửa. |
 | **Trưởng phòng** (`truong_phong`, gắn một phòng) | Chỉ thấy và nhập báo cáo **của phòng mình**. |
 
 - Admin hệ thống mặc nhiên là người quản lý.
@@ -108,26 +108,17 @@ Người vừa **đăng ký** xong mà chưa nhập mã thì **chưa có quyền
 
 **Ai xác nhận? Chỉ người quản lý module (và admin).** Viện trưởng không xác nhận hộ: ông đọc và duyệt hồ sơ. `/me` có `quan_ly_module` (admin hoặc có dòng `quan_ly`) phân biệt với `quan_ly` (gồm cả Viện trưởng).
 
-**Từ ngữ — hai việc khác nhau, hai từ khác nhau.** *Xác nhận* = người quản lý module kiểm báo cáo của **từng phòng** (nút "Xác nhận
-báo cáo", nhỏ, cạnh "Yêu cầu chỉnh sửa"; trạng thái "Đã xác nhận"). *Duyệt* = **chỉ Viện trưởng** duyệt **hồ sơ trình** gộp (nút "Duyệt hồ sơ",
-màu đỏ, to, trong thẻ việc của Viện trưởng; "Viện trưởng đã duyệt"). Chỉ đổi chữ hiển thị: tên trạng thái/đường dẫn trong mã vẫn là
-`da_duyet`, `/duyet`. Xác nhận từng phòng **không bắt buộc** trước khi trình (kết xuất được cả báo cáo "đã nộp"); nó là bước kiểm của quản lý, không thay cho
-việc Viện trưởng duyệt.
+**Từ ngữ — hai việc khác nhau, hai từ khác nhau.** *Xác nhận* = người quản lý module kiểm báo cáo của **từng phòng** (trạng thái "Đã xác nhận"). *Duyệt* = **chỉ Viện trưởng**, trên **từng báo cáo**, sau khi đợt được **trình**. Hai việc **độc lập**: Viện trưởng không cần chờ xác nhận, và xác nhận không thay việc duyệt. Tên trạng thái/đường dẫn trong mã vẫn là `da_duyet`, `/duyet` cho phần *xác nhận*.
 
 ```
-Biểu mẫu ──(ghim phiên bản mới nhất)──▶ Đợt  [Nháp] ─Mở─▶ [Đang mở] ─Đóng─▶ [Đã đóng]
-                                         │                    │                │
-                                         └─ mỗi phòng một báo cáo ─┘     (Mở lại được)
+Biểu mẫu ──(ghim phiên bản mới nhất)──▶ Đợt  [Nháp] ─Mở─▶ [Đang mở] ─Đóng─▶ [Đã đóng]   (Mở lại được)
 
-Báo cáo:  Chưa nộp ─Nộp─▶ Đã nộp ─Xác nhận─▶ Đã xác nhận
+Báo cáo:  Chưa nộp ─Nộp─▶ Đã nộp ─Xác nhận─▶ Đã xác nhận        (xác nhận của quản lý)
    │ ▲         ▲             │                 │
-   │ └─Lưu nháp (không khóa)  └─ Cần chỉnh sửa ◀─Yêu cầu sửa
-   └─ sửa/lưu nháp bao nhiêu lần cũng được       (trưởng phòng sửa rồi Nộp lại)
+   │ └─Lưu nháp (không khóa)  └─ Cần chỉnh sửa ◀─Yêu cầu sửa (quản lý) / Đề nghị chỉnh sửa (Viện trưởng)
 
-Hồ sơ trình Viện trưởng (mỗi đợt một hồ sơ):
-   Chưa gửi ─Gửi─▶ Đã gửi (= chưa duyệt) ─Viện trưởng duyệt─▶ Đã duyệt
-                     │ ▲
-                     └─┘ Gửi lại (nhắc việc); tải/xóa tệp thoải mái cho tới khi được duyệt
+Trình:    quản lý bấm "Trình Viện trưởng" (cả đợt, trình lại nhiều lần được) ─▶ đợt hiện trong mục Duyệt báo cáo của Viện trưởng
+Quyết định của Viện trưởng (từng báo cáo đã nộp):  Chờ duyệt ─▶ Duyệt | Không duyệt | Đề nghị chỉnh sửa   (đổi ý được, cả hai nằm trong lịch sử)
 ```
 
 - **Lưu nháp không khóa**: báo cáo vẫn "Chưa nộp", sửa và lưu lại bao nhiêu lần cũng được. Chỉ **Nộp** mới
@@ -138,12 +129,13 @@ Hồ sơ trình Viện trưởng (mỗi đợt một hồ sơ):
   nộp). Tính theo **giờ Việt Nam** (server có thể chạy UTC).
 - Mọi chuyển trạng thái nằm ngay trong câu `UPDATE … WHERE trang_thai IN (…)` và kiểm `changes`: hai
   người bấm cùng lúc thì chỉ một người thắng, người kia nhận 409.
-- **Hồ sơ trình: chỉ Viện trưởng duyệt, không ai duyệt thay** (quản lý module và admin hệ thống nhận 403). Viện trưởng
-  vào module đọc hồ sơ rồi bấm "Duyệt hồ sơ" = "đã xem, đồng ý" (kèm nhận xét tùy chọn). **Không có "từ chối"**: chưa
-  duyệt thì hồ sơ cứ ở trạng thái "Đã gửi, Viện trưởng chưa duyệt", không phải sự cố. Thường quản lý module kết xuất
-  lại, đổi tệp rồi **gửi lại** để nhắc (thư `[Nhắc duyệt]`, ghi `gui_lai` vào lịch sử). Hết duyệt thì khóa tệp và không
-  gửi lại được. Không còn "thu hồi". Cột `bcp_trinh.duyet_thay` chỉ còn để tương thích dữ liệu cũ, luôn 0.
-- Gửi hồ sơ cần ≥ 1 tệp **và** ≥ 1 Viện trưởng đã được gán (nếu không: 409 kèm lý do).
+- **Chỉ Viện trưởng quyết định, không ai quyết định thay** (quản lý module và admin nhận 403).
+- **Trình**: `POST /dot/:id/trinh-vien-truong` (quản lý module/admin). Không có tệp: toàn bộ báo cáo của đợt "kích hoạt" trong giao diện Viện trưởng. **Phòng chưa nộp hoặc trễ hạn vẫn trình được**; Viện trưởng thấy "Chưa nộp". Đợt Nháp thì 409; chưa có Viện trưởng được gán thì 409. Trình lại (nhắc) được bao nhiêu lần cũng được; mỗi lần ghi `trinh`/`trinh_lai` vào lịch sử đợt (bảng `bcp_trinh_lan`).
+- **Quyết định**: `POST /bao-cao/:id/quyet-dinh` `{quyet_dinh: duyet|khong_duyet|de_nghi_chinh_sua, ghi_chu, nop_luc}`. Chỉ khi đợt đã trình và báo cáo **đã nộp**. `nop_luc` bắt buộc = bản Viện trưởng đã đọc; lệch (phòng nộp lại trong lúc ông đọc) → 409. Không duyệt và đề nghị chỉnh sửa **bắt buộc có lý do**. Bấm lại đúng quyết định đang có thì bỏ qua.
+- **Quyết định không có cột riêng**: suy ra từ `bcp_lich_su` (`vt_duyet`, `vt_khong_duyet`, `vt_de_nghi_chinh_sua`; `services/baoCaoPhongVienTruong.js`). Chỉ áp dụng cho **bản nộp hiện tại**: nộp lại hoặc quản lý yêu cầu chỉnh sửa thì hết hiệu lực. Nhờ vậy cái hiện trên báo cáo và cái ghi trong lịch sử không bao giờ lệch.
+- **Ngữ nghĩa**: *Duyệt* / *Không duyệt* **không khóa gì** và không đổi trạng thái xác nhận. *Đề nghị chỉnh sửa* đưa báo cáo về "Cần chỉnh sửa" kèm nội dung; nếu đợt **đã đóng** thì **tự mở lại** (ghi `mo_lai_theo_de_nghi` vào lịch sử đợt; email nhắc quản lý đóng lại khi xong, hệ thống không tự đóng). Duyệt và không duyệt vẫn làm được khi đợt đã đóng nhưng không mở lại đợt.
+- **Phòng và quản lý thấy**: trạng thái và lý do của Viện trưởng hiện trong báo cáo (khung "Viện trưởng đã duyệt / không duyệt / đề nghị chỉnh sửa"), trong "Báo cáo của tôi" và cột "Viện trưởng" của bảng tiến độ đợt; mọi quyết định nằm trong lịch sử báo cáo.
+- **Chỉ thấy báo cáo đã nộp**: bản nháp của phòng chưa nộp không bao giờ về tới Viện trưởng (`du_lieu` = null).
 
 ## Biểu mẫu tùy chỉnh
 
@@ -208,8 +200,11 @@ người, chạy nền, **không bao giờ làm hỏng thao tác chính** (SMTP 
 | **Tự nhắc trước hạn** (hệ thống tự chạy, không ai bấm) | trưởng phòng của phòng **chưa nộp** hoặc đang **cần chỉnh sửa**, trong đợt **đang mở**; mỗi người một thư dù phụ trách nhiều phòng; không loại ai (nhắc việc) | hạn nộp kèm "còn N ngày", lưu ý nếu đang cần chỉnh sửa, liên kết vào đúng báo cáo. Hai mốc: **còn 1–2 ngày** (`[Nhắc nộp báo cáo]`) và **đúng ngày hạn** (`[Hạn nộp hôm nay]`). Quá hạn thì không nhắc nữa |
 | **Viện trưởng gửi ý kiến** về báo cáo của một phòng | trưởng phòng của **chính phòng đó** **và người quản lý module** (trưởng phòng của phòng khác không nhận; quản lý kiêm trưởng phòng nhận một thư; người viết không nhận thư của chính mình) | **nguyên văn ý kiến** + liên kết vào báo cáo; tiêu đề `[Ý kiến của Viện trưởng] <phòng> — <đợt>` |
 | Quản lý mời/gán trưởng phòng | người được mời/gán | thư mời + mã (nếu chưa có tài khoản); hoặc thư báo kèm đợt đang mở |
-| Quản lý gửi / **gửi lại** hồ sơ trình | Viện trưởng | tên tệp, lời nhắn, cách làm ("bấm Duyệt hồ sơ nếu đồng ý"), liên kết. Gửi lại: `[Nhắc duyệt]`. **Cố ý không nêu tiến độ "đã duyệt x phòng"** (dễ nhầm với việc Viện trưởng duyệt) |
-| Viện trưởng duyệt | người quản lý | nhận xét |
+| Quản lý **trình / trình lại** đợt | Viện trưởng | người trình, lời nhắn, **đã nộp x/y**, phòng chưa nộp, liên kết vào mục Duyệt báo cáo. Trình lại: `[Nhắc duyệt]`. Cố ý không nêu số báo cáo đã xác nhận (dễ nhầm với việc duyệt) |
+| Viện trưởng **không duyệt / đề nghị chỉnh sửa** một báo cáo | người phụ trách **báo cáo đó** + người quản lý (phòng khác không nhận) | nguyên văn lý do + liên kết; tiêu đề `[Viện trưởng không duyệt]` / `[Viện trưởng đề nghị chỉnh sửa]`; đợt tự mở lại thì có thêm câu nhắc |
+| Viện trưởng **duyệt** một báo cáo | **không gửi thư** (phòng thấy trong báo cáo) | — |
+| Viện trưởng xử lý xong báo cáo cuối cùng đang chờ | người quản lý (một thư) | `[Viện trưởng đã xử lý]` kết quả duyệt/không duyệt/đề nghị sửa; đổi ý sau đó không gửi lại |
+| Phòng nộp lại báo cáo Viện trưởng đã **đề nghị chỉnh sửa** | Viện trưởng | `[Đã chỉnh sửa theo đề nghị]` + liên kết thẳng tới báo cáo |
 
 Dữ liệu người dùng gõ được **escape** trước khi vào HTML thư. Chỉ URL thuộc **chính hệ thống** (cùng
 `BASE_URL`) mới được biến thành liên kết bấm được; URL do người dùng gõ (hướng dẫn đợt, lời nhắn) giữ dạng
@@ -230,12 +225,8 @@ có địa chỉ tuyệt đối; SMTP chưa cấu hình thì module vẫn chạy
 
 **Ý kiến của Viện trưởng về từng báo cáo** (`POST /bao-cao/:id/y-kien`, bảng `bcp_y_kien`): chỉ Viện trưởng gửi được (người khác 403), chỉ khi phòng đã nộp (chưa nộp → 409; đợt Nháp → 409), 1–2000 ký tự. Ý kiến **chỉ thêm, không sửa/xóa**; hiện ở đầu báo cáo cho chủ phòng, người quản lý và Viện trưởng (phòng khác không đọc được báo cáo nên không thấy). Không đổi trạng thái báo cáo. Gửi xong email nguyên văn cho các trưởng phòng của phòng đó; giao diện báo lại "Email đã được gửi tới N trưởng phòng và M người quản lý module" (hoặc nói rõ chưa có ai nhận vì phòng chưa có trưởng phòng); API trả `da_bao` và `da_bao_quan_ly`. Gửi thư lỗi (SMTP hỏng) không làm mất ý kiến.
 
-**Cho Viện trưởng — thẻ "Hồ sơ chờ bạn duyệt"**: mỗi hồ sơ đang chờ là một thẻ lớn ở **đầu mọi màn quản lý** (người gửi, giờ gửi, lời nhắn,
-các tệp cần đọc bấm tải được, ô nhận xét, nút "Duyệt hồ sơ" và "Xem chi tiết đợt") — Viện trưởng không phải đi tìm trong trang đợt.
-Không có nút "không duyệt": chưa đồng ý thì để đó. Thẻ là **nơi duy nhất** Viện trưởng duyệt, nên trong trang đợt mục "Hồ sơ trình"
-chỉ hiện với ông khi hồ sơ **đã duyệt** (xem kết quả và lịch sử); lúc đang chờ duyệt thì ẩn vì trùng với thẻ. Dải "Cần xử lý" của Viện trưởng (không kiêm quản lý module) được **rút gọn**: chỉ "Các đợt đang mở — đã nộp x/y phòng · hạn", không đỏ, không đếm việc của quản lý, không lặp hồ sơ chờ duyệt (đã có thẻ). Thẻ trang chủ cũng báo "Có N hồ sơ chờ bạn duyệt → Đọc và duyệt hồ sơ".
-Dữ liệu từ `GET /viec-cua-toi` (trang chủ) và `GET /tong-quan` (trong module). `/viec-cua-toi` chỉ trả hồ sơ cho đúng Viện trưởng được gán;
-mọi người khác nhận danh sách rỗng. Hệ quả: người vừa là Viện trưởng vừa là quản lý module cũng không thấy công cụ gửi/tải của mục hồ sơ trình ở trang đợt.
+**Cho Viện trưởng — mục "Duyệt báo cáo"** (`public/js/baoCaoPhongDuyet.js`, `public/css/bao-cao-phong-duyet.css`): thanh điều hướng có số báo cáo chờ duyệt; mở mục luôn ra **trang đầu** (danh sách đợt chờ duyệt kèm số báo cáo, nút "Đọc và duyệt"; không có đợt nào chờ thì nói rõ "Hiện không có báo cáo nào chờ bạn duyệt"). Trong màn đọc: danh sách phòng + bộ lọc, nội dung báo cáo dạng HTML, **thanh thao tác dính ở đáy** (Duyệt một chạm không hỏi lại, rồi tự nhảy sang báo cáo chờ kế tiếp; Không duyệt / Ý kiến / Đề nghị chỉnh sửa mở ô nhập gọn ngay trên thanh), phím tắt J/K, N, D, X, Y, E. Điện thoại: danh sách thu thành một nút chọn phòng, thanh dưới một hàng 64px, bảng xếp thành thẻ. Dữ liệu: `GET /viec-cua-toi` (`dot_duyet`, trang chủ), `GET /tong-quan` (`dot_cho_vien_truong`, `dot_da_trinh`), `GET /dot/:id/vien-truong` (cả đợt trong một lần tải; chỉ Viện trưởng, đợt chưa trình 404).
+Mục "Đợt báo cáo" của Viện trưởng đổi tên **"Lịch sử các đợt báo cáo"** (lưu trữ các đợt đã trình); của quản lý là **"Các đợt báo cáo"**, có cột **Trình Viện trưởng** (Đã trình lần N / Chưa trình).
 
 **Trong giao diện — "Cần xử lý"** (`GET /tong-quan`): dải đầu danh sách đợt cho biết bao nhiêu báo cáo
 chờ duyệt, bao nhiêu phòng chưa nộp / trễ hạn, bao nhiêu hồ sơ chờ Viện trưởng, kèm **từng đợt đã nộp
@@ -253,17 +244,6 @@ của đợt đã mở hoặc đã đóng đều ghi vào **lịch sử đợt**
 loại đợt hay thêm phòng không thuộc nhóm này (thêm phòng có thư riêng, xem bảng). `PUT /dot/:id` trả `da_bao` = số người sẽ
 nhận thư; giao diện hiện "Đã gửi email báo N trưởng phòng chưa nộp".
 
-## Hồ sơ trình Viện trưởng — bảo mật tệp
-
-Tệp do người quản lý tải lên (bản kết xuất đã chỉnh/đã ký). Đây là chỗ dễ sai nhất của module:
-
-- Chỉ nhận `.pdf`, `.docx`, `.doc` **và kiểm byte đầu** khớp loại (đổi đuôi không qua được); ≤ 25 MB, ≤ 10 tệp/đợt.
-- Lưu dưới **tên ngẫu nhiên** (32 hex) trong `<UPLOADS>/bao-cao-phong/<id đợt>/`; tên người dùng đặt chỉ
-  ở DB để hiển thị → không có path traversal. Truy cập tệp còn kiểm lại `ten_luu` khớp mẫu hex.
-- Không nằm trong thư mục phục vụ tĩnh; chỉ tải qua endpoint (sau `canQuanLy`), kèm `nosniff` + `no-store`.
-- **Trưởng phòng không tải được** hồ sơ này (đó là bộ báo cáo gộp nhiều phòng).
-- Xóa tệp là xóa đồng bộ trước khi trả lời, nên không có khoảnh khắc "bị từ chối mà tệp còn trên đĩa".
-
 ## Ai đọc được báo cáo?
 
 - **Người không có vai trò gì trong module: không đọc được gì** (API trả 403/404). Có test.
@@ -274,7 +254,7 @@ Tệp do người quản lý tải lên (bản kết xuất đã chỉnh/đã k�
 ## Bảng dữ liệu (tiền tố `bcp_`)
 
 `bcp_phong` · `bcp_thanh_vien` · `bcp_mau` · `bcp_mau_phien_ban` · `bcp_dot` · `bcp_bao_cao` ·
-`bcp_lich_su` · `bcp_trinh` · `bcp_trinh_tep` · `bcp_dot_lich_su` · `bcp_loi_moi`. Lược đồ + giải thích:
+`bcp_lich_su` · `bcp_trinh_lan` · `bcp_dot_lich_su` · `bcp_loi_moi` (+ `bcp_nhac_han`, `bcp_y_kien`). `bcp_trinh` / `bcp_trinh_tep` (hồ sơ tệp của cách làm cũ) **đã bỏ khỏi lược đồ**; DB đã có các bảng này giữ nguyên, không còn dùng. Lược đồ + giải thích:
 `services/baoCaoPhongSchema.js`.
 
 - `CREATE TABLE IF NOT EXISTS`, **không `ALTER` bảng của module khác** — chạy lại an toàn. Riêng
@@ -294,9 +274,9 @@ dòng DB và nối mã vào thứ tự kéo-thả đã lưu.
 
 ## Mount và thứ tự route
 
-Một dòng trong `server.js` (sau `/ytnn`), sau `authMiddleware`; truyền `db`, `uploadsRoot`, `baseUrl`,
-`mailSend`. Đường tĩnh (`/phong/nhap-tu-don-vi`, `/tong-quan`) khai báo **trước** đường có `:id`.
-Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
+Một dòng trong `server.js` (sau `/ytnn`), sau `authMiddleware`; truyền `db`, `baseUrl`, `mailSend`
+(`uploadsRoot` còn được truyền nhưng không dùng nữa). Đường tĩnh (`/phong/nhap-tu-don-vi`, `/tong-quan`) khai báo **trước** đường có `:id`.
+`routes/baoCaoPhongVienTruong.js` (trình, đọc cả đợt, quyết định) được gắn vào cùng router chính, không có tiền tố riêng.
 
 ## Test
 
@@ -304,8 +284,8 @@ Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
 - `baoCaoPhongXuat.test.js` — mô hình tài liệu (kể cả múi giờ), tệp Word (soi XML), tệp PDF.
 - `baoCaoPhongSchema.test.js` — lược đồ, chuyển đổi bảng cũ, ràng buộc.
 - `baoCaoPhong.test.js` — tích hợp trên server hộp cát (cổng 3217), trọng tâm ranh giới quyền.
-- `baoCaoPhongTrinh.test.js` — vai trò Viện trưởng, email, hồ sơ trình, tệp, kết xuất qua API; chạy trên
-  router thật + DB `:memory:` + hộp thư giả (`tests/helpers/baoCaoPhongApp.js`).
+- `baoCaoPhongTrinh.test.js` — vai trò Viện trưởng, email báo nộp, tổng quan, kết xuất Word/PDF qua API; chạy trên router thật + DB `:memory:` + hộp thư giả (`tests/helpers/baoCaoPhongApp.js`).
+- `baoCaoPhongDuyetTrongGiaoDien.test.js` — trình và duyệt trong giao diện: quyền, đợt chưa trình ẩn với Viện trưởng, quyết định (nop_luc, đổi ý, không lộ bản nháp), email đúng người/đúng mức, tự mở lại đợt đã đóng, cách nộp mỗi người một báo cáo, thẻ việc, nhiều biểu mẫu.
 - `baoCaoPhongMoi.test.js` — mời bằng email (kể cả kịch bản kẻ đăng ký giả email được mời), email mở đợt.
 - `baoCaoPhongTuDuyet.test.js` — cờ "tự duyệt" (người nộp = người duyệt), không dính lại sau chỉnh sửa/nộp lại.
 - `baoCaoPhongNhacHan.test.js` — nhắc trước hạn: đúng người/đúng mốc/đúng giờ VN, đúng một lần (chạy chồng, khởi động lại, dời hạn), SMTP hỏng.
@@ -317,8 +297,7 @@ Router con hồ sơ trình mount ở `/dot/:id/trinh` với `canQuanLy`.
 - `baoCaoPhongVienTruong.test.js` — dữ liệu thẻ việc: `/viec-cua-toi` (hồ sơ chỉ lộ cho Viện trưởng), `/tong-quan` có đủ thông tin hồ sơ chờ.
 - `baoCaoPhongSuaDot.test.js` — email khi sửa đợt đang mở: đúng người nhận, không gửi khi không đổi, tắt được, Nháp/đã đóng.
 
-Đã **kiểm chứng test bắt được lỗi** bằng cách cố ý phá: ranh giới phòng (4 test đỏ), kiểm byte đầu
-của tệp (4), quyền hồ sơ trình (2), chỉ Viện trưởng duyệt được (2), không duyệt lại/gửi lại sau khi duyệt (1), thư Viện trưởng không có tiến độ (1), kiểm email người nhận lời mời (4), giới hạn đuôi
+Đã **kiểm chứng test bắt được lỗi** bằng cách cố ý phá: ranh giới phòng (4 test đỏ), kiểm bản đã đọc `nop_luc` khi quyết định (4), chỉ Viện trưởng quyết định (4), đợt chưa trình ẩn với Viện trưởng (1), không lộ bản nháp của phòng chưa nộp (1), Duyệt không gửi thư cho phòng (2), quyết định hết hiệu lực khi quản lý yêu cầu sửa (1), kiểm email người nhận lời mời (4), giới hạn đuôi
 email (1), chỉ liên kết hóa URL của hệ thống (1), lưu băm thay vì mã gốc (1), điều kiện người nhận thư sửa đợt
 (phòng đã nộp 4, người vừa sửa 4), chỉ gửi khi đợt đang mở (1), cờ tắt thông báo (1), so sánh người nộp/người duyệt (2).
 
@@ -330,8 +309,8 @@ cụ phát triển không hiển thị PDF nội tuyến).
 
 ## Chưa làm (cố ý)
 
-- **Chưa email cho trưởng phòng** khi bị **yêu cầu chỉnh sửa** (đã có email khi mở đợt, khi sửa đợt và nhắc trước hạn).
-- **Chưa đính kèm tệp vào từng báo cáo phòng** (tệp hiện chỉ ở hồ sơ trình của đợt).
+- **Chưa email cho trưởng phòng** khi người **quản lý** yêu cầu chỉnh sửa (Viện trưởng đề nghị sửa/không duyệt thì đã có email).
+- **Chưa đính kèm tệp vào từng báo cáo phòng.**
 - Phần đầu thư (tên Trường/Viện, "Kính gửi Viện trưởng") là **hằng số** trong `baoCaoPhongXuat.js`
   (`CO_QUAN`), chưa chỉnh được trong giao diện.
 - Một phòng nhiều trưởng phòng: ai nộp cũng tính là cả phòng nộp (chưa phân biệt trưởng/phó).
