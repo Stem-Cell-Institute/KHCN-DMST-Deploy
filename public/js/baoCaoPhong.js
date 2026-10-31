@@ -916,16 +916,9 @@
    * (services/baoCaoPhongThongBao.js) dùng cùng cách tính tiến độ.
    */
   function dungDaiCanXuLy(t) {
-    // Viện trưởng (không kiêm quản lý module): việc của ông đã nằm ở thẻ duyệt, nên đây chỉ là tiến độ các đợt, không đỏ,
-    // không đếm việc của quản lý, không lặp lại hồ sơ chờ duyệt.
-    if (me.vien_truong && !me.quan_ly_module) {
-      if (!t.chi_tiet.length) return null;
-      return h('section', { class: 'luu-y dai-xu-ly', 'aria-label': 'Tiến độ các đợt đang mở' },
-        h('p', null, h('strong', { text: 'Các đợt đang mở' })),
-        h('ul', { class: 'dai-dot' }, t.chi_tiet.map(function (d) {
-          return h('li', null, h('a', { href: '#/dot/' + d.dot_id, text: d.tieu_de }), ' — đã nộp ' + d.da_nop + '/' + d.tong + ' ' + donVi(d.cach_nop) + ' · hạn ' + fmtNgay(d.han_nop));
-        })));
-    }
+    // Viện trưởng (không kiêm quản lý module): việc của ông đã có thẻ "Đợt chờ bạn duyệt" và tiến độ đã nằm ngay trong bảng đợt bên dưới,
+    // nên không dựng thêm dải này (sẽ chỉ lặp lại đúng thông tin của bảng).
+    if (me.vien_truong && !me.quan_ly_module) return null;
     if (!t.dot_dang_mo && !t.bao_cao_cho_vien_truong) return null;
     var khan = t.tre_han > 0 || (t.la_vien_truong && t.bao_cao_cho_vien_truong > 0);
     var tom = [];
