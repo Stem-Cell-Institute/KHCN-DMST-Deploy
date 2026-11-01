@@ -49,7 +49,7 @@ function dungPhieu(d) {
   const so = 'YC-' + String(yc.id).padStart(6, '0');
   const nguoiGiao = d.donViTen ? `Quản lý ${d.donViTen}` : 'Quản lý module';
   const xacNhan = duyet
-    ? `<p class="xn">Xác nhận: yêu cầu lấy mẫu nêu trên đã được <b>${esc(d.capTen)}</b> đồng ý bởi <b>${esc(ten(d.nguoiXuLy))}</b>${d.nguoiXuLy && d.nguoiXuLy.email ? ` (${esc(d.nguoiXuLy.email)})` : ''} lúc <b>${esc(gioVn(yc.xu_ly_luc))}</b>${d.xuLyThay ? ` — quản lý xử lý thay người duyệt${yc.ly_do_xu_ly ? ', lý do: ' + esc(yc.ly_do_xu_ly) : ''}` : yc.ly_do_xu_ly ? `. Ghi chú: ${esc(yc.ly_do_xu_ly)}` : ''}.<br>Người nhận mẫu xuất trình phiếu này cho ${esc(nguoiGiao)} khi nhận mẫu.</p>`
+    ? `<p class="xn">Xác nhận: yêu cầu lấy mẫu nêu trên đã được <b>${esc(d.capTen)}</b> đồng ý bởi <b>${esc(ten(d.nguoiXuLy) + (d.uyQuyenTen ? ' (theo ủy quyền của Viện trưởng ' + d.uyQuyenTen + ')' : ''))}</b>${d.nguoiXuLy && d.nguoiXuLy.email ? ` (${esc(d.nguoiXuLy.email)})` : ''} lúc <b>${esc(gioVn(yc.xu_ly_luc))}</b>${d.xuLyThay ? ` — quản lý xử lý thay người duyệt${yc.ly_do_xu_ly ? ', lý do: ' + esc(yc.ly_do_xu_ly) : ''}` : yc.ly_do_xu_ly ? `. Ghi chú: ${esc(yc.ly_do_xu_ly)}` : ''}.<br>Người nhận mẫu xuất trình phiếu này cho ${esc(nguoiGiao)} khi nhận mẫu.</p>`
     : yc.trang_thai === 'tu_choi'
       ? `<p class="xn">Yêu cầu đã bị từ chối bởi <b>${esc(ten(d.nguoiXuLy))}</b> lúc <b>${esc(gioVn(yc.xu_ly_luc))}</b>. Lý do: ${esc(yc.ly_do_xu_ly || '(không ghi)')}</p>`
       : '';

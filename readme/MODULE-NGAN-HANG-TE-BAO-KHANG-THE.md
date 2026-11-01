@@ -1,7 +1,7 @@
 # Module Ngân hàng Tế bào & Kháng thể
 
 Trang: `public/ngan-hang-te-bao-khang-the/index.html` (địa chỉ ngắn `/ngan-hang-te-bao-khang-the`) ·
-API: `/api/ngan-hang-te-bao-khang-the/*` (86 route)
+API: `/api/ngan-hang-te-bao-khang-the/*` (95 route)
 
 Mã nguồn: `routes/nganHangTeBaoKhangThe/` (`index.js`, `boiCanh.js`, `khoLuuTru.js`, `danhMuc.js`, `thanhVien.js`, `sinhVien.js`,
 `timKiem.js`, `yeuCau.js`, `phatHien.js`, `mau.js`), `services/nganHangTeBaoKhangThe.js` (hàm thuần), `services/nganHangTeBaoKhangTheKhoiTao.js` (tạo bảng,
@@ -46,6 +46,16 @@ Một module, hai ngân hàng. **Dùng chung:** tài khoản, nhóm nghiên cứ
 - **Lịch sử của mẫu** (`nhm_movements`, mở ở hộp thoại mẫu → Lịch sử) ghi đủ quá trình, mỗi dòng có người thao tác và giờ: gửi yêu cầu (người duyệt và quản lý theo dõi), duyệt hoặc từ chối (người duyệt, ghi chú, người được báo), hủy, giao (kèm người đã duyệt), nhận lại.
 - Bảng vai trò được dựng lại một lần khi khởi động để thêm cột phạm vi (giữ nguyên dữ liệu, id và quyền hiện có).
 
+## Ủy quyền duyệt (ngân hàng kháng thể)
+
+Viện trưởng không đủ thời gian duyệt hết nên có thể **giao quyền duyệt một phần kháng thể cho quản lý ngân hàng kháng thể**. Code: `routes/nganHangTeBaoKhangThe/uyQuyen.js` (3 endpoint), quy tắc ở `services/nganHangTeBaoKhangTheYeuCau.js` (`nguoiDuocUyQuyen`), bảng `nhm_uy_quyen_duyet`.
+
+- **Ai cấp:** CHỈ Viện trưởng (admin và quản lý thì không). Nút «Ủy quyền duyệt» ở thanh bên; quản lý bấm vào chỉ xem. Người nhận phải là quản lý ngân hàng kháng thể đang hoạt động, không phải chính Viện trưởng.
+- **Phạm vi** (chọn một): mọi kháng thể của ngân hàng, một thiết bị / Rack (kể cả hộp bên trong), một hộp, hoặc một loại kháng thể theo tên (so khớp không phân biệt hoa thường và dấu). **Hạn** tùy chọn (hết ngày đó thì tự mất hiệu lực); không đặt hạn thì tới khi thu hồi.
+- **Hiệu lực:** người được ủy quyền cùng Viện trưởng là người duyệt các yêu cầu thuộc phạm vi (ai duyệt trước thì yêu cầu đóng, người kia nhận 409). Tính tại thời điểm duyệt nên **thu hồi hoặc hết hạn có hiệu lực ngay, kể cả với yêu cầu đang chờ**. Không có quyền nào khác ngoài duyệt / từ chối; không tự duyệt yêu cầu của chính mình. Viện trưởng vẫn duyệt được mọi yêu cầu. Nếu Viện trưởng muốn lấy kháng thể mà có người được ủy quyền duyệt thì gửi yêu cầu được (người được ủy quyền duyệt).
+- **Dấu vết:** mỗi lần duyệt theo ủy quyền ghi `nhm_yeu_cau.uy_quyen_id`; lịch sử mẫu ghi «theo ủy quyền của Viện trưởng X (#id)»; thẻ yêu cầu, thư và phiếu in nêu rõ. Thu hồi chỉ ghi giờ thu hồi (không xóa) nên danh sách vẫn xem lại được ủy quyền đã thu hồi hoặc hết hạn. Người được ủy quyền nhận thư khi được cấp / bị thu hồi, và được báo yêu cầu mới như người duyệt.
+- **Khuyến nghị vận hành:** vì người duyệt cũng là người giao mẫu nếu là cùng một quản lý, nên ủy quyền cho người KHÁC với người thường giao mẫu khi có thể (sổ thể tích và lịch sử ghi rõ từng bước); xem lại danh sách ủy quyền định kỳ và đặt hạn cho ủy quyền tạm thời.
+
 ## Thể tích (µL) của ống kháng thể
 
 Chỉ ở ngân hàng kháng thể. Quản lý ngân hàng kháng thể (và admin) ghi; ai thấy mẫu đều xem được số liệu và sổ. Code: `services/nganHangTeBaoKhangTheTheTich.js`, `routes/nganHangTeBaoKhangThe/theTich.js` (6 endpoint), giao / nhận lại trong `yeuCau.js`.
@@ -78,7 +88,7 @@ thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở n
 - Vai trò module **không** đụng `users.role` dùng chung toàn hệ thống. **`users.role` = `manager` hay `phong_khcn` không còn tự có
   quyền quản lý** ở module này: phải được admin gán vai trò «Quản lý module».
 - Mọi người dùng đọc được toàn bộ kho (kể cả tên người sở hữu): kho là tài nguyên dùng chung của Viện.
-- Bảng phân quyền đầy đủ của 86 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
+- Bảng phân quyền đầy đủ của 95 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
   với danh sách route thật: thêm/bớt route mà quên cập nhật bảng thì test đỏ.
 
 ### Thiết bị Public và thiết bị có đơn vị quản lý

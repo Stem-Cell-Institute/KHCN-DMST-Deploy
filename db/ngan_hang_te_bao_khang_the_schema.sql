@@ -234,6 +234,8 @@ CREATE TABLE IF NOT EXISTS nhm_yeu_cau (
   -- ngân hàng kháng thể: số µL người xin cần và số µL quản lý đã giao (NULL ở ngân hàng tế bào)
   so_ul_yeu_cau REAL,
   so_ul_giao REAL,
+  -- ngân hàng kháng thể: yêu cầu được duyệt theo ỦY QUYỀN nào của Viện trưởng (nhm_uy_quyen_duyet); NULL = Viện trưởng tự duyệt
+  uy_quyen_id INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -415,3 +417,24 @@ CREATE TRIGGER IF NOT EXISTS trg_nhm_the_tich_khong_sua BEFORE UPDATE ON nhm_the
 BEGIN SELECT RAISE(ABORT, 'Sổ thể tích chỉ được thêm, không được sửa'); END;
 CREATE TRIGGER IF NOT EXISTS trg_nhm_the_tich_khong_xoa BEFORE DELETE ON nhm_the_tich
 BEGIN SELECT RAISE(ABORT, 'Sổ thể tích chỉ được thêm, không được xóa'); END;
+
+-- ═══ Ủy quyền duyệt (ngân hàng kháng thể) ═══════════════════════════════════════════════════════════════════════
+-- Viện trưởng giao quyền DUYỆT yêu cầu lấy một phần kháng thể cho một quản lý ngân hàng kháng thể. Viện trưởng vẫn duyệt được mọi yêu cầu.
+--   pham_vi  ngan_hang (mọi kháng thể) | vi_tri (một thiết bị / Rack và mọi hộp bên trong, vi_tri_id) | hop (hop_id) | ten_mau (một loại kháng thể theo tên)
+--   den_ngay hết NGÀY này (giờ Việt Nam) thì ủy quyền tự hết hiệu lực; NULL = không hạn, tới khi thu hồi
+-- Thu hồi chỉ ghi thu_hoi_luc (không xóa) để lịch sử duyệt vẫn truy được ai duyệt theo ủy quyền nào.
+CREATE TABLE IF NOT EXISTS nhm_uy_quyen_duyet (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nguoi_id INTEGER NOT NULL,
+  pham_vi TEXT NOT NULL CHECK (pham_vi IN ('ngan_hang','vi_tri','hop','ten_mau')),
+  vi_tri_id INTEGER,
+  hop_id INTEGER,
+  ten_mau TEXT,
+  den_ngay TEXT,
+  ghi_chu TEXT,
+  tao_boi INTEGER NOT NULL,
+  tao_luc TEXT NOT NULL DEFAULT (datetime('now')),
+  thu_hoi_luc TEXT,
+  thu_hoi_boi INTEGER
+);
+CREATE INDEX IF NOT EXISTS ix_nhm_uy_quyen_nguoi ON nhm_uy_quyen_duyet(nguoi_id);

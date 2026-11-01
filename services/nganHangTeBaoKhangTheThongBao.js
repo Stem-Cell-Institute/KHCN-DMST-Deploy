@@ -74,9 +74,9 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     lienKet,
 
     /** Có yêu cầu mới → người duyệt ở cấp hiện tại (ngân hàng kháng thể: thêm thư «để theo dõi» cho các quản lý). */
-    async yeuCauMoi({ yc, tube, nguoiGui, duongDan, nguoiDuyet }) {
+    async yeuCauMoi({ yc, tube, nguoiGui, duongDan, nguoiDuyet, uyQuyen }) {
       const khangThe = hopKhangThe(db, tube.box_id);
-      const thongTin = thongTinMau(tube, duongDan, yc).concat(yc.ly_do ? [{ nhan: 'Lý do', text: yc.ly_do }] : []);
+      const thongTin = thongTinMau(tube, duongDan, yc).concat(yc.ly_do ? [{ nhan: 'Lý do', text: yc.ly_do }] : []).concat(uyQuyen && uyQuyen.length ? [{ nhan: 'Được Viện trưởng ủy quyền duyệt', text: uyQuyen.join(', ') }] : []);
       const thu = dungThu(
         [{ text: `${ten(nguoiGui)} yêu cầu lấy một mẫu cần bạn duyệt (cấp duyệt: ${yc.cap_ten || CAP_VN[yc.cap]}).` }]
           .concat(thongTin)
@@ -96,9 +96,9 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     },
 
     /** Đã duyệt → người yêu cầu + quản lý module (để xử lý giao mẫu). Ngân hàng kháng thể: quản lý nhận thư riêng «hãy giao mẫu theo lệnh duyệt». */
-    async yeuCauDaDuyet({ yc, tube, nguoiGui, nguoiXuLy, duongDan, xuLyThay, donViTen, dongDuyet }) {
+    async yeuCauDaDuyet({ yc, tube, nguoiGui, nguoiXuLy, duongDan, xuLyThay, uyQuyenTen, donViTen, dongDuyet }) {
       if (hopKhangThe(db, tube.box_id)) {
-        const chung = [{ text: `Yêu cầu lấy mẫu của ${ten(nguoiGui)} đã được Viện trưởng duyệt${xuLyThay ? ' (admin xử lý thay: ' + (yc.ly_do_xu_ly || '') + ')' : ''}.` }]
+        const chung = [{ text: `Yêu cầu lấy mẫu của ${ten(nguoiGui)} đã được ${uyQuyenTen ? ten(nguoiXuLy) + ' duyệt theo ủy quyền của Viện trưởng ' + uyQuyenTen : 'Viện trưởng duyệt'}${xuLyThay ? ' (admin xử lý thay: ' + (yc.ly_do_xu_ly || '') + ')' : ''}.` }]
           .concat(thongTinMau(tube, duongDan, yc))
           .concat([{ nhan: 'Người duyệt', text: ten(nguoiXuLy) }].concat(yc.ly_do_xu_ly ? [{ nhan: 'Ghi chú của người duyệt', text: yc.ly_do_xu_ly }] : []));
         const toiNguoiXin = dungThu(chung.concat([{ text: `Quản lý ${donViTen || 'ngân hàng kháng thể'} sẽ liên hệ giao mẫu cho bạn.` }]).concat(linkPhieu(yc.id, tube.box_id)), lienKet('#cong-viec', tube.box_id));
@@ -155,6 +155,20 @@ function taoThongBao({ db, mailSend, baseUrl }) {
         lienKet('#cong-viec', tube.box_id)
       );
       return guiDen(gop(nguoiXuLy && nguoiXuLy.id, [nguoiGui]), `${tt(tube.box_id)} ${hanhDong === 'giao' ? 'Đã giao' : 'Đã nhận lại'} mẫu: ${tube.name}`, thu);
+    },
+
+    /** Viện trưởng cấp / thu hồi ủy quyền duyệt → người được ủy quyền. */
+    uyQuyen({ hanhDong, nguoi, vienTruong, phamVi, denNgay, ghiChu }) {
+      const cap = hanhDong === 'cap';
+      const thu = dungThu(
+        [{ text: cap ? `${ten(vienTruong)} vừa ủy quyền cho bạn duyệt yêu cầu lấy kháng thể.` : `${ten(vienTruong)} đã thu hồi ủy quyền duyệt của bạn.` }]
+          .concat([{ nhan: 'Phạm vi', text: phamVi }])
+          .concat(cap ? [{ nhan: 'Hiệu lực', text: denNgay ? 'đến hết ngày ' + denNgay.split('-').reverse().join('/') : 'cho tới khi thu hồi' }] : [])
+          .concat(cap && ghiChu ? [{ nhan: 'Ghi chú', text: ghiChu }] : [])
+          .concat(cap ? [{ text: 'Yêu cầu thuộc phạm vi này sẽ hiện ở «Việc cần xử lý». Mọi lần duyệt đều ghi «theo ủy quyền của Viện trưởng» vào lịch sử mẫu.' }] : []),
+        goc ? `${goc}${TRANG}?nh=khang_the#cong-viec` : ''
+      );
+      return guiDen(gop(vienTruong && vienTruong.id, [nguoi]), `[${NGAN_HANG.khang_the}] ${cap ? 'Bạn được ủy quyền duyệt yêu cầu' : 'Đã thu hồi ủy quyền duyệt'}`, thu);
     },
 
     /** Ống kháng thể vừa chuyển sang «sắp hết» hoặc «hết» → quản lý ngân hàng kháng thể (để chuẩn bị mua / pha thêm). */

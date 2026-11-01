@@ -557,3 +557,10 @@
 .nhm-tt-chip--chua_ghi { color: #6a5300; }
 .nhm-tt-so-ct { margin-top: 8px; }
 .nhm-tt-so-ct > summary { cursor: pointer; font-size: 0.88rem; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+
+/* ủy quyền duyệt: ô phạm vi gồm một lựa chọn và ô đối tượng tương ứng */
+.nhm-uq-pham { display: grid; gap: 8px; }
+
+/* hộp xác nhận trong trang (thay window.confirm) */
+.nhm-dialog--hoi { width: min(460px, 92vw); }
+.nhm-hoi { margin: 0 0 14px; font-size: 1rem; line-height: 1.5; }

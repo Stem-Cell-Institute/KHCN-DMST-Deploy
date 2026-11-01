@@ -14,10 +14,14 @@
  *   Quá hạn phản hồi (layHan(db).PHAN_HOI_NGAY) mà chưa ai xử lý → chuyển quản lý module.
  *   Ngân hàng KHÁNG THỂ: không có Public; mọi thiết bị thuộc AntibodyBank và CHỈ VIỆN TRƯỞNG (vai trò vien_truong) duyệt.
  *   Quản lý ngân hàng kháng thể được báo và theo dõi, rồi giao / nhận lại mẫu sau khi duyệt; không duyệt, không bị chuyển lên khi quá hạn.
+ *   ỦY QUYỀN: Viện trưởng giao quyền duyệt một phần kháng thể (cả ngân hàng, một thiết bị, một hộp hoặc một loại kháng thể) cho quản lý, có hạn và
+ *   thu hồi được; người được ủy quyền cùng Viện trưởng là người duyệt (ai duyệt trước thì yêu cầu đóng), tính tại thời điểm duyệt nên thu hồi có hiệu lực ngay.
  *   Không có người duyệt dự phòng (admin cũng không duyệt): chưa có Viện trưởng nào khác người gửi thì không gửi được yêu cầu (409);
  *   yêu cầu đã gửi mà Viện trưởng rời vai trò thì nằm chờ đến khi có Viện trưởng, người gửi hủy được.
  * Sinh viên KHÔNG BAO GIỜ là người duyệt: người ra trường không thể duyệt, nên người còn ở lại duyệt thay ngay từ đầu.
  */
+
+const { chuanHoaTen } = require('./nganHangTeBaoKhangThe');
 
 // Các hạn (ngày). Giá trị MẶC ĐỊNH; quản lý chỉnh được (bảng nhm_cau_hinh, Quản lý module → Cấu hình hạn). Luôn đọc qua layHan(db).
 const HAN_MAC_DINH = {
@@ -156,6 +160,50 @@ function nganHangCuaHop(db, boxId) {
   return (g && g.ngan_hang) || 'te_bao';
 }
 
+/** Ngày hôm nay theo giờ Việt Nam, 'YYYY-MM-DD'. */
+function homNayVn(ms = Date.now()) {
+  return new Date(ms + 7 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+/** Các ủy quyền đang CÓ HIỆU LỰC (chưa thu hồi, chưa quá hạn). */
+function uyQuyenHieuLuc(db) {
+  let rows = [];
+  try {
+    rows = db.prepare('SELECT * FROM nhm_uy_quyen_duyet WHERE thu_hoi_luc IS NULL').all();
+  } catch (e) {
+    return []; // bảng chưa có
+  }
+  const nay = homNayVn();
+  return rows.filter((r) => !r.den_ngay || r.den_ngay >= nay);
+}
+
+/** Ủy quyền `dq` có bao phủ mẫu này không (mẫu: {box_id, name})? */
+function phamViKhop(db, dq, tube) {
+  if (dq.pham_vi === 'ngan_hang') return true;
+  if (dq.pham_vi === 'ten_mau') return chuanHoaTen(dq.ten_mau) !== '' && chuanHoaTen(dq.ten_mau) === chuanHoaTen(tube.name);
+  if (!tube.box_id) return false;
+  if (dq.pham_vi === 'hop') return dq.hop_id === tube.box_id;
+  const box = db.prepare('SELECT container_id FROM nhm_boxes WHERE id = ?').get(tube.box_id);
+  let cur = box && db.prepare('SELECT id, parent_id FROM nhm_containers WHERE id = ?').get(box.container_id);
+  for (let i = 0; cur && i < 50; i++) {
+    if (cur.id === dq.vi_tri_id) return true;
+    cur = cur.parent_id != null ? db.prepare('SELECT id, parent_id FROM nhm_containers WHERE id = ?').get(cur.parent_id) : null;
+  }
+  return false;
+}
+
+/** Những người đang được ỦY QUYỀN duyệt mẫu này: [{user, uyQuyen}] (tài khoản còn hoạt động; trùng người thì lấy ủy quyền đầu). */
+function nguoiDuocUyQuyen(db, tube) {
+  const ten = tube.name != null ? tube.name : (tube.id ? (db.prepare('SELECT name FROM nhm_tubes WHERE id = ?').get(tube.id) || {}).name : null);
+  const ra = new Map();
+  for (const dq of uyQuyenHieuLuc(db)) {
+    if (ra.has(dq.nguoi_id) || !phamViKhop(db, dq, { box_id: tube.box_id, name: ten })) continue;
+    const u = nguoiConHoatDong(db, dq.nguoi_id);
+    if (u) ra.set(dq.nguoi_id, { user: u, uyQuyen: dq });
+  }
+  return [...ra.values()];
+}
+
 /** Hộp thuộc ngân hàng kháng thể? (chỉ Viện trưởng duyệt; quản lý theo dõi) */
 function hopKhangThe(db, boxId) {
   return nganHangCuaHop(db, boxId) === 'khang_the';
@@ -202,7 +250,9 @@ function xacDinhCap(db, tube, nguoiGuiId) {
   if (tube.box_id && hopTrongCellbank(db, tube.box_id)) {
     const donVi = donViCuaHop(db, tube.box_id);
     // dữ liệu cũ (kiểu Cellbank nhưng chưa gắn đơn vị) vẫn đi qua Trưởng CIPP
-    const ds = khacNguoiGui(donVi ? nguoiDuyetDonVi(db, donVi) : nguoiCoVaiTro(db, 'truong_cellbank'));
+    let ds = khacNguoiGui(donVi ? nguoiDuyetDonVi(db, donVi) : nguoiCoVaiTro(db, 'truong_cellbank'));
+    // ngân hàng kháng thể: cộng người được Viện trưởng ủy quyền duyệt mẫu này
+    if (hopKhangThe(db, tube.box_id)) ds = khacNguoiGui([...ds, ...nguoiDuocUyQuyen(db, tube).map((x) => x.user)].filter((u, i, a) => a.findIndex((v) => v.id === u.id) === i));
     if (ds.length) return { cap: 'truong_cellbank', nguoiDuyet: ds };
     if (hopKhangThe(db, tube.box_id)) return { cap: 'truong_cellbank', nguoiDuyet: [] }; // không dự phòng: quản lý và admin không duyệt thay Viện trưởng
     return { cap: 'quan_ly', nguoiDuyet: khacNguoiGui(quanLyModule(db, nganHangCuaHop(db, tube.box_id))) };
@@ -217,7 +267,11 @@ function xacDinhCap(db, tube, nguoiGuiId) {
 /** Những người ĐƯỢC CHỈ ĐỊNH duyệt ở cấp hiện tại của một yêu cầu (không tính quản lý / admin xử lý thay). */
 function nguoiDuyetHienTai(db, yc, tube) {
   // ngân hàng kháng thể: luôn là Viện trưởng, bất kể cấp ghi trong yêu cầu
-  if (tube.box_id && hopKhangThe(db, tube.box_id)) return nguoiDuyetDonVi(db, donViCuaHop(db, tube.box_id));
+  if (tube.box_id && hopKhangThe(db, tube.box_id)) {
+    const vt = nguoiDuyetDonVi(db, donViCuaHop(db, tube.box_id));
+    const uq = nguoiDuocUyQuyen(db, { box_id: tube.box_id, name: tube.name, id: tube.id || yc.tube_id }).map((x) => x.user);
+    return [...vt, ...uq].filter((u, i, a) => a.findIndex((v) => v.id === u.id) === i);
+  }
   if (yc.cap === 'chu_mau') return [nguoiConHoatDong(db, tube.owner_user_id)].filter(Boolean);
   if (yc.cap === 'truong_nhom') return [truongNhomHieuLuc(db, tube.nhom_id)].filter(Boolean);
   if (yc.cap === 'truong_cellbank') {
@@ -228,6 +282,6 @@ function nguoiDuyetHienTai(db, yc, tube) {
 }
 
 module.exports = {
-  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, nganHangCuaHop, gocCuaViTri, hopTrongCellbank, donViCuaHop, capTen, nhanNguoiDuyet, nguoiDuyetDonVi, nguoiCoVaiTro, quanLyModule, hopKhangThe,
+  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, nganHangCuaHop, gocCuaViTri, hopTrongCellbank, donViCuaHop, capTen, nhanNguoiDuyet, nguoiDuyetDonVi, nguoiCoVaiTro, quanLyModule, hopKhangThe, homNayVn, uyQuyenHieuLuc, phamViKhop, nguoiDuocUyQuyen,
   truongNhomHieuLuc, xacDinhCap, nguoiDuyetHienTai,
 };
