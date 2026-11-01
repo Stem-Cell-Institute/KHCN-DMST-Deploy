@@ -462,3 +462,15 @@
   .nhm-detail--ln > .nhm-ln { order: -1; margin-bottom: 14px; }
 }
 @media print { .nhm-ln { display: none; } }
+
+/* Thanh gập «Sơ đồ bình»: có nút chữ rõ ràng («Mở sơ đồ» / «Thu gọn») để biết bấm vào được */
+.nhm-ln > summary { min-height: 46px; align-items: center; gap: 10px; transition: background-color 140ms ease; }
+.nhm-ln > summary:hover { background: #eef0f5; }
+.nhm-ln > summary:focus-visible { outline: 3px solid var(--muc); outline-offset: -3px; }
+.nhm-ln > summary::after, .nhm-ln[open] > summary::after {
+  flex: none; padding: 5px 12px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0; text-transform: none;
+  color: var(--muc); background: #fff; border: 1px solid var(--muc); border-radius: 2px;
+}
+.nhm-ln > summary::after { content: "Mở sơ đồ ▾"; }
+.nhm-ln[open] > summary::after { content: "Thu gọn ▴"; }
+.nhm-ln > summary:hover::after { background: var(--muc); color: #fff; }
