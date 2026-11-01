@@ -322,22 +322,34 @@
   }
 
   /**
-   * Đường dẫn vị trí «Liquid Nitrogen › Rack 1» với MỖI cấp bấm được để quay lên (nhất là khi sơ đồ kho bên trái đã gập).
-   * containerId = vị trí chứa trực tiếp; trả null nếu không có gì để hiện.
+   * Vị trí lưu trữ dạng CÂY NHỎ từ lớn đến nhỏ (thiết bị → Rack / ngăn → hộp), thụt vào theo cấp.
+   * Mỗi cấp trên bấm được để quay lui (nhất là khi sơ đồ kho bên trái đã gập); dòng cuối là mục đang xem.
+   * containerId = vị trí chứa trực tiếp; hienTai = {ten, loai?, bieuTuong} của mục đang xem. Không có cấp trên thì không hiện.
    */
-  function duongDanBamDuoc(containerId) {
+  function duongDanBamDuoc(containerId, hienTai) {
     var chuoi = [];
     for (var c = containerById(containerId), i = 0; c && i < 50; c = containerById(c.parent_id), i++) chuoi.unshift(c);
     if (!chuoi.length) return null;
-    var kids = [];
-    chuoi.forEach(function (c, i) {
-      if (i) kids.push(h('span', { 'aria-hidden': 'true' }, ' › '));
-      kids.push(h('button', { type: 'button', class: 'nhm-link', title: 'Về ' + c.name, onclick: function () {
-        chuoi.forEach(function (x) { state.expanded[x.id] = true; }); // mở các cấp trên cây để vẫn thấy mình đang ở đâu
-        select('container', c.id);
-      } }, c.name));
+    var dong = chuoi.map(function (c, cap) {
+      return h('div', { class: 'nhm-ct__dong', style: 'padding-left:' + (cap * 18) + 'px' }, [
+        cap ? h('span', { class: 'nhm-ct__noi', 'aria-hidden': 'true' }, '└') : null,
+        h('span', { class: 'nhm-ct__ic' }, icon(c.parent_id == null ? 'tu' : 'ngan')),
+        h('button', { type: 'button', class: 'nhm-link', title: 'Về ' + c.name, onclick: function () {
+          chuoi.forEach(function (x) { state.expanded[x.id] = true; }); // mở các cấp trên cây để vẫn thấy mình đang ở đâu
+          select('container', c.id);
+        } }, c.name),
+        h('span', { class: 'nhm-ct__loai' }, c.type_name),
+      ]);
     });
-    return h('nav', { class: 'nhm-path nhm-crumbs', 'aria-label': 'Vị trí lưu trữ' }, kids);
+    if (hienTai) {
+      dong.push(h('div', { class: 'nhm-ct__dong nhm-ct__dong--nay', 'aria-current': 'location', style: 'padding-left:' + (chuoi.length * 18) + 'px' }, [
+        h('span', { class: 'nhm-ct__noi', 'aria-hidden': 'true' }, '└'),
+        h('span', { class: 'nhm-ct__ic' }, icon(hienTai.bieuTuong || 'ngan')),
+        h('span', { class: 'nhm-ct__ten' }, hienTai.ten),
+        hienTai.loai ? h('span', { class: 'nhm-ct__loai' }, hienTai.loai) : null,
+      ]));
+    }
+    return h('nav', { class: 'nhm-path nhm-ct', 'aria-label': 'Vị trí lưu trữ' }, dong);
   }
 
   function fact(label, value) { return h('div', { class: 'nhm-fact' }, [h('b', {}, label), value == null || value === '' ? '—' : String(value)]); }
@@ -417,7 +429,7 @@
     var cb = c.quan_ly_boi === 'cellbank';
     put(box,
       h('div', { class: 'nhm-title' }, [h('h2', {}, c.name), h('span', { class: 'nhm-muted' }, c.type_name + ' · ' + c.code)]),
-      c.parent_id != null ? duongDanBamDuoc(c.parent_id) : null,
+      c.parent_id != null ? duongDanBamDuoc(c.parent_id, { ten: c.name, loai: c.type_name, bieuTuong: 'ngan' }) : null,
       thongTinGon(c, cb),
       actions,
       subs.length ? h('div', { class: 'nhm-inside' }, [h('h3', {}, 'Bên trong'), h('ul', {}, subs.map(function (x) {
@@ -465,7 +477,7 @@
     ]) : null;
     put(root,
       h('div', { class: 'nhm-title' }, [h('h2', {}, b.name || b.code), h('span', { class: 'nhm-muted' }, (b.name ? b.code + ' · ' : '') + b.rows + '×' + b.cols + ' · ' + info.tubes.length + ' mẫu' + (cb ? ' · ' + (info.don_vi_ten || 'Đơn vị quản lý') : ''))]),
-      duongDanBamDuoc(b.container_id),
+      duongDanBamDuoc(b.container_id, { ten: b.name || b.code, loai: 'Hộp', bieuTuong: 'hop' }),
       cb && !m ? h('p', { class: 'nhm-hint nhm-hint--gon' }, (info.don_vi_ten || 'Đơn vị quản lý') + ' quản lý: không tự thêm / lấy mẫu. Bấm vào mẫu để gửi yêu cầu; ' + (info.don_vi_duyet || 'người duyệt của đơn vị') + ' duyệt, kết quả báo qua email.') : null,
       kkBar,
       h('div', { class: 'nhm-actions' }, [
