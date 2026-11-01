@@ -56,12 +56,6 @@
 
   function rowLabel(r) { return String.fromCharCode(64 + r); }
   function posLabel(r, c) { return rowLabel(r) + c; }
-  function parsePos(text, box) {
-    var m = /^\s*([A-Za-z])\s*(\d{1,2})\s*$/.exec(text || '');
-    if (!m) return null;
-    var r = m[1].toUpperCase().charCodeAt(0) - 64, c = parseInt(m[2], 10);
-    return r >= 1 && r <= box.rows && c >= 1 && c <= box.cols ? { r: r, c: c } : null;
-  }
 
   // ---------- hộp thoại biểu mẫu ----------
   function closeDialog() { var d = $('nhm-dialog'); if (d.open) d.close(); }
@@ -239,7 +233,7 @@
     var b = info.box, byPos = {};
     info.tubes.forEach(function (t) { byPos[t.row_no + ',' + t.col_no] = t; });
     var m = state.meta.canManage;
-    var grid = h('div', { class: 'nhm-grid', style: 'grid-template-columns: 26px repeat(' + b.cols + ', 62px)' });
+    var grid = h('div', { class: 'nhm-grid', style: 'grid-template-columns: 26px repeat(' + b.cols + ', var(--nhm-o, 64px))' });
     grid.appendChild(h('div', { class: 'nhm-gh' }));
     for (var c = 1; c <= b.cols; c++) grid.appendChild(h('div', { class: 'nhm-gh' }, c));
     for (var r = 1; r <= b.rows; r++) {
@@ -249,10 +243,11 @@
     put(root, 
       h('div', { class: 'nhm-title' }, [h('h2', {}, b.name || b.code), h('span', { class: 'nhm-muted' }, (b.name ? b.code + ' · ' : '') + b.rows + '×' + b.cols + ' · ' + info.tubes.length + ' mẫu')]),
       h('div', { class: 'nhm-path' }, info.path.join(' › ')),
-      m ? h('div', { class: 'nhm-actions' }, [
-        h('button', { class: 'nhm-btn', type: 'button', onclick: function () { boxEditForm(b); } }, 'Chỉnh sửa hộp'),
-        h('button', { class: 'nhm-btn nhm-btn--danger', type: 'button', onclick: function () { deleteBox(b); } }, 'Xóa hộp'),
-      ]) : null,
+      h('div', { class: 'nhm-actions' }, [
+        h('button', { class: 'nhm-btn', type: 'button', onclick: function () { window.print(); } }, 'In sơ đồ hộp'),
+        m ? h('button', { class: 'nhm-btn', type: 'button', onclick: function () { boxEditForm(b); } }, 'Chỉnh sửa hộp') : null,
+        m ? h('button', { class: 'nhm-btn nhm-btn--danger', type: 'button', onclick: function () { deleteBox(b); } }, 'Xóa hộp') : null,
+      ]),
       b.notes ? h('p', { class: 'nhm-muted' }, b.notes) : null,
       h('div', { class: 'nhm-gridwrap' }, [grid]),
       h('p', { class: 'nhm-muted' }, 'Bấm vào ô trống để thêm mẫu; bấm vào ô có mẫu để xem chi tiết. Kéo mẫu sang ô trống để di chuyển trong hộp.')
@@ -261,7 +256,8 @@
 
   function cell(box, r, c, t) {
     var cls = 'nhm-cell' + (t ? ' nhm-cell--full' + (t.status === 'checked_out' ? ' nhm-cell--out' : '') : '');
-    var el = h('div', { class: cls, role: 'button', tabindex: '0', title: posLabel(r, c) + (t ? ' — ' + t.name : ' (trống)'), 'data-r': r, 'data-c': c }, t ? t.name : '');
+    var nhan = posLabel(r, c) + (t ? ', ' + t.name + ', ' + (STATUS_VN[t.status] || t.status) : ', trống, thêm mẫu');
+    var el = h('div', { class: cls, role: 'button', tabindex: '0', title: posLabel(r, c) + (t ? ' — ' + t.name : ' (trống)'), 'aria-label': nhan, 'data-r': r, 'data-c': c }, t ? t.name : '');
     var open = function () { t ? tubeDialog(box, t) : tubeForm(box, r, c); };
     el.addEventListener('click', open);
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
@@ -378,22 +374,56 @@
     });
   }
 
+  /** Di chuyển mẫu: chọn hộp đích rồi bấm vào một ô trống trên lưới của hộp đó. */
   function moveForm(box, tube) {
-    var boxes = state.tree.boxes.map(function (b) { return { value: b.id, label: (b.name || b.code) + ' [' + b.code + '] ' + b.rows + '×' + b.cols }; });
-    openForm({
-      title: 'Di chuyển: ' + tube.name,
-      fields: [
-        { name: 'box_id', label: 'Hộp đích', type: 'select', options: boxes, value: box.id },
-        { name: 'pos', label: 'Vị trí đích (ví dụ B4)', required: true, placeholder: 'A1' },
-      ],
-      onSubmit: function (v) {
-        var target = state.tree.boxes.filter(function (b) { return b.id === Number(v.box_id); })[0];
-        var p = target && parsePos(v.pos, target);
-        if (!p) return Promise.reject(new Error('Vị trí không hợp lệ cho hộp đã chọn.'));
-        return api('POST', '/tubes/' + tube.id + '/move', { box_id: target.id, row_no: p.r, col_no: p.c })
-          .then(function () { say('Đã di chuyển mẫu tới ' + posLabel(p.r, p.c) + '.', 'ok'); return reload(true); });
-      },
-    });
+    var boxes = state.tree.boxes.map(function (b) { return h('option', { value: b.id }, (b.name || b.code) + ' [' + b.code + '] ' + b.rows + '×' + b.cols); });
+    var sel = h('select', { 'aria-label': 'Hộp đích' }, boxes);
+    sel.value = box.id;
+    var slot = h('div', { class: 'nhm-gridwrap' });
+    var err = h('div', { class: 'nhm-err' });
+    var chon = null; // {box, r, c}
+    var goBtn = h('button', { type: 'button', class: 'nhm-btn nhm-btn--primary', disabled: true, onclick: function () {
+      if (!chon) return;
+      goBtn.disabled = true;
+      api('POST', '/tubes/' + tube.id + '/move', { box_id: chon.box, row_no: chon.r, col_no: chon.c })
+        .then(function () { closeDialog(); say('Đã di chuyển mẫu tới ' + posLabel(chon.r, chon.c) + '.', 'ok'); return reload(true); })
+        .catch(function (e) { err.textContent = e.message; goBtn.disabled = false; });
+    } }, 'Di chuyển');
+
+    function veLuoi() {
+      chon = null; goBtn.disabled = true; goBtn.textContent = 'Di chuyển'; err.textContent = '';
+      put(slot, h('div', { class: 'nhm-loading' }, 'Đang tải hộp…'));
+      api('GET', '/boxes/' + sel.value).then(function (info) {
+        var b = info.box, byPos = {};
+        info.tubes.forEach(function (t) { byPos[t.row_no + ',' + t.col_no] = t; });
+        var grid = h('div', { class: 'nhm-grid nhm-grid--mini', style: 'grid-template-columns: 22px repeat(' + b.cols + ', var(--nhm-o-nho, 40px))' });
+        grid.appendChild(h('div', { class: 'nhm-gh' }));
+        for (var c = 1; c <= b.cols; c++) grid.appendChild(h('div', { class: 'nhm-gh' }, c));
+        for (var r = 1; r <= b.rows; r++) {
+          grid.appendChild(h('div', { class: 'nhm-gh' }, rowLabel(r)));
+          for (var cc = 1; cc <= b.cols; cc++) grid.appendChild(oDich(b, r, cc, byPos[r + ',' + cc], grid));
+        }
+        put(slot, grid);
+      }).catch(function (e) { put(slot, h('div', { class: 'nhm-err' }, e.message)); });
+    }
+
+    function oDich(b, r, c, t, grid) {
+      var la = t && t.id === tube.id;
+      var el = h('button', { type: 'button', class: 'nhm-cell' + (t ? ' nhm-cell--full' : '') + (la ? ' nhm-cell--self' : ''), disabled: !!t,
+        title: posLabel(r, c) + (t ? ' — ' + t.name : ' (trống)'), 'aria-label': posLabel(r, c) + (la ? ', vị trí hiện tại' : t ? ', đã có mẫu ' + t.name : ', trống') }, t ? '' : posLabel(r, c));
+      if (!t) el.addEventListener('click', function () {
+        [].forEach.call(grid.querySelectorAll('.nhm-cell--pick'), function (x) { x.classList.remove('nhm-cell--pick'); });
+        el.classList.add('nhm-cell--pick');
+        chon = { box: b.id, r: r, c: c };
+        goBtn.disabled = false;
+        goBtn.textContent = 'Di chuyển tới ' + (b.name || b.code) + ' ' + posLabel(r, c);
+      });
+      return el;
+    }
+
+    sel.addEventListener('change', veLuoi);
+    openInfo('Di chuyển: ' + tube.name, h('div', {}, [h('label', { class: 'nhm-lbl' }, ['Hộp đích', sel]), slot, err]), [goBtn]);
+    veLuoi();
   }
 
   var ACTION_VN = {
