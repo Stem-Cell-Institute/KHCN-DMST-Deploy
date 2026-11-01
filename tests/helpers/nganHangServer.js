@@ -15,15 +15,22 @@ const USERS = {
   manager: { id: 2, email: 'manager@sci.edu.vn', role: 'manager' },
   alice: { id: 3, email: 'alice@sci.edu.vn', role: 'researcher' },
   bob: { id: 4, email: 'bob@sci.edu.vn', role: 'researcher' },
+  sv: { id: 5, email: 'sv@sci.edu.vn', role: 'researcher' }, // sinh viên, KHÔNG có hồ sơ
+  truong: { id: 6, email: 'truong@sci.edu.vn', role: 'researcher' }, // trưởng nhóm
+  cellbank: { id: 7, email: 'cellbank@sci.edu.vn', role: 'researcher' }, // Trưởng CIPP
 };
 
 async function dungServer() {
   const db = new Database(':memory:');
   db.pragma('foreign_keys = ON');
-  db.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, fullname TEXT, email TEXT, is_banned INTEGER DEFAULT 0)');
-  for (const u of Object.values(USERS)) db.prepare('INSERT INTO users (id, fullname, email) VALUES (?, ?, ?)').run(u.id, u.email, u.email);
+  db.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, fullname TEXT, email TEXT, role TEXT, is_banned INTEGER DEFAULT 0)');
+  for (const u of Object.values(USERS)) db.prepare('INSERT INTO users (id, fullname, email, role) VALUES (?, ?, ?, ?)').run(u.id, u.email, u.email, u.role);
   db.prepare("INSERT INTO users (id, fullname, email, is_banned) VALUES (9, 'Bị khóa', 'locked@sci.edu.vn', 1)").run();
   db.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'ngan_hang_te_bao_khang_the_schema.sql'), 'utf8'));
+  // Vai trò module: manager là quản lý module (users.role = 'manager' KHÔNG tự cho quyền), cellbank là Trưởng CIPP.
+  db.prepare("INSERT INTO nhm_vai_tro (user_id, vai_tro) VALUES (2, 'quan_ly'), (7, 'truong_cellbank')").run();
+  // alice và bob có hồ sơ «cán bộ» (không cần nhóm) để các test thêm mẫu không phải khai loại chủ.
+  db.prepare("INSERT INTO nhm_ho_so (user_id, loai) VALUES (3, 'can_bo'), (4, 'can_bo')").run();
 
   const auditLog = [];
   const app = express();

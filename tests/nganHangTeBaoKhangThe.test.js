@@ -26,11 +26,13 @@ const auditLog = []; // các dòng nhật ký hoạt động module đã ghi
 test.before(async () => {
   db = new Database(':memory:');
   db.pragma('foreign_keys = ON');
-  db.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, fullname TEXT)');
-  for (const u of Object.values(USERS)) db.prepare('INSERT INTO users (id, fullname) VALUES (?, ?)').run(u.id, u.email);
+  db.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, fullname TEXT, email TEXT, is_banned INTEGER DEFAULT 0)');
+  for (const u of Object.values(USERS)) db.prepare('INSERT INTO users (id, fullname, email) VALUES (?, ?, ?)').run(u.id, u.email, u.email);
   db.exec(fs.readFileSync(path.join(__dirname, '..', 'db', 'ngan_hang_te_bao_khang_the_schema.sql'), 'utf8'));
   // chạy lần 2 để chắc chắn schema idempotent
   db.exec(fs.readFileSync(path.join(__dirname, '..', 'db', 'ngan_hang_te_bao_khang_the_schema.sql'), 'utf8'));
+  db.prepare("INSERT INTO nhm_vai_tro (user_id, vai_tro) VALUES (2, 'quan_ly')").run();
+  db.prepare("INSERT INTO nhm_ho_so (user_id, loai) VALUES (3, 'can_bo'), (4, 'can_bo')").run();
 
   const app = express();
   app.use(express.json());

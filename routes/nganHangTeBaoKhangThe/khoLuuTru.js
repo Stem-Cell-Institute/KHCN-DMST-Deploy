@@ -7,11 +7,11 @@
 
 const express = require('express');
 const {
-  HOLDING, toInt, toStr, parseSo, placeholders, isUniqueError, layThayDoi, moTaThayDoi,
+  HOLDING, LOAI_CHU_VN, toInt, toStr, parseSo, placeholders, isUniqueError, layThayDoi, moTaThayDoi,
 } = require('../../services/nganHangTeBaoKhangThe');
 
 module.exports = function createKhoLuuTruRouter(ctx) {
-  const { db, canManage, canEditTube, requireManage, audit, fail, subtreeIds, duongDan, activeTubeCountInBoxes, nextCode, logMove } = ctx;
+  const { db, laAdmin, canManage, canEditTube, requireManage, audit, fail, subtreeIds, duongDan, activeTubeCountInBoxes, nextCode, logMove } = ctx;
   const router = express.Router();
 
   // ---------- Danh mục & cây ----------
@@ -19,6 +19,8 @@ module.exports = function createKhoLuuTruRouter(ctx) {
   router.get('/meta', (req, res) => {
     res.json({
       canManage: canManage(req),
+      isAdmin: laAdmin(req),
+      loaiChu: LOAI_CHU_VN,
       containerTypes: db.prepare('SELECT * FROM nhm_container_types ORDER BY sort_order, name').all(),
       boxTemplates: db.prepare('SELECT * FROM nhm_box_templates ORDER BY rows, cols, name').all(),
       sampleTypes: db.prepare('SELECT * FROM nhm_sample_types ORDER BY name').all(),
@@ -28,7 +30,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
   router.get('/tree', (req, res) => {
     const containers = db
       .prepare(
-        `SELECT c.id, c.parent_id, c.type_id, c.code, c.name, c.temperature_c, c.location_note, c.sort_order, c.notes,
+        `SELECT c.id, c.parent_id, c.type_id, c.code, c.name, c.temperature_c, c.location_note, c.sort_order, c.notes, c.quan_ly_boi,
                 t.name AS type_name
          FROM nhm_containers c JOIN nhm_container_types t ON t.id = c.type_id
          WHERE c.deleted_at IS NULL ORDER BY c.sort_order, c.name`
@@ -42,6 +44,13 @@ module.exports = function createKhoLuuTruRouter(ctx) {
          FROM nhm_boxes b WHERE b.deleted_at IS NULL ORDER BY b.code`
       )
       .all();
+    // vị trí con thừa hưởng quan_ly_boi của thiết bị gốc
+    const byId = new Map(containers.map((c) => [c.id, c]));
+    const goc = (c) => {
+      for (let i = 0; c.parent_id != null && byId.has(c.parent_id) && i < 50; i++) c = byId.get(c.parent_id);
+      return c;
+    };
+    for (const c of containers) c.quan_ly_boi = goc(c).quan_ly_boi;
     res.json({ containers, boxes });
   });
 
@@ -62,6 +71,10 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     }
     if ('location_note' in body) out.location_note = toStr(body.location_note, 300);
     if ('notes' in body) out.notes = toStr(body.notes, 2000);
+    if ('quan_ly_boi' in body) {
+      if (!['cong_khai', 'cellbank'].includes(body.quan_ly_boi)) error = 'Kiểu quản lý thiết bị không hợp lệ (công khai hoặc Cellbank).';
+      else out.quan_ly_boi = body.quan_ly_boi;
+    }
     if ('sort_order' in body) {
       out.sort_order = body.sort_order == null || body.sort_order === '' ? 0 : toInt(body.sort_order);
       if (out.sort_order == null) error = 'Thứ tự sắp xếp phải là số nguyên.';
@@ -79,14 +92,15 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     if (b.parent_id != null && !db.prepare('SELECT 1 FROM nhm_containers WHERE id = ? AND deleted_at IS NULL').get(b.parent_id)) {
       return fail(res, 400, 'Vị trí lưu trữ cha không tồn tại.');
     }
+    if (b.parent_id != null && 'quan_ly_boi' in b) return fail(res, 400, 'Chỉ thiết bị gốc mới chọn được kiểu quản lý; vị trí con thừa hưởng từ thiết bị gốc.');
     try {
       const code = b.code || nextCode('nhm_containers', 'VC-');
       const info = db
         .prepare(
-          `INSERT INTO nhm_containers (parent_id, type_id, code, name, temperature_c, location_note, sort_order, notes, created_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO nhm_containers (parent_id, type_id, code, name, temperature_c, location_note, sort_order, notes, quan_ly_boi, created_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(b.parent_id ?? null, b.type_id, code, b.name, b.temperature_c ?? null, b.location_note ?? null, b.sort_order || 0, b.notes ?? null, req.user.id);
+        .run(b.parent_id ?? null, b.type_id, code, b.name, b.temperature_c ?? null, b.location_note ?? null, b.sort_order || 0, b.notes ?? null, b.quan_ly_boi || 'cong_khai', req.user.id);
       audit(req, 'container_create', `id=${info.lastInsertRowid} ${b.name}`);
       res.status(201).json({ id: Number(info.lastInsertRowid), code });
     } catch (e) {
@@ -112,6 +126,8 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       if (subtreeIds(id).includes(b.parent_id)) return fail(res, 400, 'Không thể chuyển vị trí lưu trữ vào chính nó hoặc vị trí lưu trữ con.');
     }
     if ('code' in b && !b.code) return fail(res, 400, 'Mã vị trí lưu trữ không được để trống.');
+    const chaMoi = 'parent_id' in b ? b.parent_id : cur.parent_id;
+    if ('quan_ly_boi' in b && chaMoi != null) return fail(res, 400, 'Chỉ thiết bị gốc mới chọn được kiểu quản lý; vị trí con thừa hưởng từ thiết bị gốc.');
     if (!Object.keys(b).length) return fail(res, 400, 'Không có dữ liệu cần cập nhật.');
     const thayDoi = layThayDoi(cur, b);
     const cols = Object.keys(thayDoi);
@@ -210,6 +226,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       .prepare(
         `SELECT t.id, t.row_no, t.col_no, t.name, t.passage, t.cell_count, t.volume_ml, t.freeze_date,
                 t.project, t.status, t.notes, t.owner_user_id, t.sample_type_id, s.name AS sample_type_name,
+                t.chu_loai, t.nhom_id, (SELECT ten FROM nhm_nhom WHERE id = t.nhom_id) AS nhom_ten,
                 (SELECT fullname FROM users WHERE id = t.owner_user_id) AS owner_name
          FROM nhm_tubes t LEFT JOIN nhm_sample_types s ON s.id = t.sample_type_id
          WHERE t.box_id = ? AND t.deleted_at IS NULL AND t.status IN ${HOLDING}`

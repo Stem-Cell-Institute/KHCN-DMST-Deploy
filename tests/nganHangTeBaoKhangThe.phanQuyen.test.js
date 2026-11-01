@@ -7,7 +7,8 @@
  * nên thêm / bớt route mà quên cập nhật bảng và quên nghĩ tới quyền là test báo ngay. Sửa bảng CÓ CHỦ ĐÍCH.
  *
  *   auth   — mọi người đã đăng nhập
- *   manage — chỉ Admin / Manager / Phòng KHCN (requireManage)
+ *   manage — Admin hoặc quản lý module (requireManage)
+ *   admin  — chỉ Admin (cấp / gỡ vai trò module)
  *   owner  — người đăng nhập, nhưng sửa/xóa/di chuyển chỉ chủ sở hữu hoặc quản lý (kiểm trong handler)
  *
  * Cổng riêng TEST_PORT_NGAN_HANG (mặc định 3202). Cần data/sci-ace.db và JWT_SECRET như `npm test`.
@@ -56,6 +57,20 @@ const ROUTES = [
   ['GET', '/users', 'manage'],
   ['POST', '/tubes/:id/transfer', 'manage'],
   ['GET', '/tubes/:id/history', 'auth'],
+  ['GET', '/me', 'auth'],
+  ['GET', '/roles', 'manage'],
+  ['POST', '/roles', 'admin'],
+  ['DELETE', '/roles/:id', 'admin'],
+  ['GET', '/users/search', 'auth'],
+  ['GET', '/groups', 'auth'],
+  ['POST', '/groups/propose', 'auth'],
+  ['POST', '/groups', 'manage'],
+  ['PATCH', '/groups/:id', 'manage'],
+  ['POST', '/groups/:id/confirm-leader', 'auth'],
+  ['POST', '/groups/:id/decline-leader', 'auth'],
+  ['POST', '/groups/:id/merge', 'manage'],
+  ['GET', '/profiles', 'manage'],
+  ['PUT', '/profiles/:userId', 'manage'],
 ];
 const cuThe = (p) => p.replace(/:[A-Za-z_]+/g, '99999');
 
@@ -116,7 +131,18 @@ test('route quản lý: nghiên cứu viên bị 403, kể cả khi mẫu / vị
     if (guard !== 'manage') continue;
     const r = await api(m, cuThe(p), nguoiThuong.token, {});
     assert.equal(r.s, 403, `${m} ${p}`);
-    assert.match(r.body.message, /Chỉ Admin \/ Manager \/ Phòng KHCN/);
+    assert.match(r.body.message, /Chỉ Admin hoặc Quản lý module/);
+  }
+});
+
+test('route chỉ admin: nghiên cứu viên 403; Admin qua được', async () => {
+  for (const [m, p, guard] of ROUTES) {
+    if (guard !== 'admin') continue;
+    const r = await api(m, cuThe(p), nguoiThuong.token, {});
+    assert.equal(r.s, 403, `${m} ${p}`);
+    assert.match(r.body.message, /Chỉ Admin mới có quyền/);
+    const a = await api(m, cuThe(p), admin, {});
+    assert.ok(a.s !== 401 && a.s !== 403, `${m} ${p} → ${a.s}`);
   }
 });
 
@@ -133,7 +159,7 @@ test('route chủ sở hữu: người lạ bị 403 trên mẫu của người 
   const c = await api('POST', '/containers', admin, { name: 'Tủ phân quyền', type_id: meta.containerTypes[0].id });
   const b = await api('POST', '/boxes', admin, { container_id: c.body.id, template_id: meta.boxTemplates[0].id });
   ids.box = b.body.ids[0];
-  const t = await api('POST', '/tubes', nguoiThuong.token, { box_id: ids.box, row_no: 1, col_no: 1, name: 'Mẫu của NCV' });
+  const t = await api('POST', '/tubes', nguoiThuong.token, { box_id: ids.box, row_no: 1, col_no: 1, name: 'Mẫu của NCV', chu_loai: 'can_bo' });
   assert.equal(t.s, 201);
   ids.tube = t.body.id;
   const nguoiLa = addUser(srv, { fullname: 'Người lạ NH', role: 'researcher' });

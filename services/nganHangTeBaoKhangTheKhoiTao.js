@@ -29,9 +29,28 @@ const LEGACY_PATHS = [
 ];
 const PAGE_URL = '/public/ngan-hang-te-bao-khang-the/index.html';
 
+// Cột thêm sau bản đầu: CREATE TABLE IF NOT EXISTS không thêm cột vào bảng đã có, nên thêm bằng ALTER TABLE
+// TRƯỚC khi chạy file schema (file schema có chỉ mục dùng các cột này).
+const COT_THEM_SAU = [
+  ['nhm_containers', 'quan_ly_boi', "TEXT NOT NULL DEFAULT 'cong_khai' CHECK (quan_ly_boi IN ('cong_khai','cellbank'))"],
+  ['nhm_tubes', 'chu_loai', "TEXT CHECK (chu_loai IS NULL OR chu_loai IN ('sinh_vien','nghien_cuu_vien','can_bo'))"],
+  ['nhm_tubes', 'nhom_id', 'INTEGER REFERENCES nhm_nhom(id)'],
+  ['nhm_movements', 'user_label', 'TEXT'],
+];
+
+function themCotNeuThieu(db) {
+  for (const [bang, cot, ddl] of COT_THEM_SAU) {
+    const coBang = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(bang);
+    if (!coBang) continue; // DB mới: CREATE TABLE trong file schema đã có đủ cột
+    const dacCot = db.prepare(`PRAGMA table_info(${bang})`).all().some((c) => c.name === cot);
+    if (!dacCot) db.exec(`ALTER TABLE ${bang} ADD COLUMN ${cot} ${ddl}`);
+  }
+}
+
 /** Tạo bảng nhm_* (idempotent). Thiếu file schema là lỗi nặng: ném ra để server.js ghi cảnh báo, không bỏ qua im lặng. */
 function ensureSchema(db) {
   if (!fs.existsSync(SCHEMA_PATH)) throw new Error('Thiếu file schema: ' + SCHEMA_PATH);
+  themCotNeuThieu(db);
   db.exec(fs.readFileSync(SCHEMA_PATH, 'utf8'));
 }
 

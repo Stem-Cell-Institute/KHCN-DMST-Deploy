@@ -9,7 +9,7 @@
 
 const express = require('express');
 const {
-  HOLDING, toInt, toStr, parseSo, parseNgay, isUniqueError, layThayDoi, moTaThayDoi, thayDoiJson,
+  HOLDING, LOAI_CHU, LOAI_CHU_VN, toInt, toStr, parseSo, parseNgay, isUniqueError, layThayDoi, moTaThayDoi, thayDoiJson,
 } = require('../../services/nganHangTeBaoKhangThe');
 
 // Vòng đời mẫu: hành động -> trạng thái được đi từ đâu, đi tới đâu.
@@ -23,7 +23,7 @@ const CHUYEN_TRANG_THAI = {
 };
 
 module.exports = function createMauRouter(ctx) {
-  const { db, canEditTube, requireManage, audit, fail, logMove } = ctx;
+  const { db, canManage, canEditTube, requireManage, hopTrongCellbank, audit, fail, logMove } = ctx;
   const router = express.Router();
 
   /** Trả [giá trị, lỗi]; lỗi là câu báo 400 hoặc null. */
@@ -68,17 +68,56 @@ module.exports = function createMauRouter(ctx) {
     return null;
   }
 
+  /**
+   * Loại chủ mẫu + nhóm nghiên cứu của mẫu sắp thêm. Hồ sơ thành viên (quản lý gán) quyết định nếu có; người chưa
+   * có hồ sơ tự khai trong body (chu_loai, nhom_id — nhóm mới thì gọi POST /groups/propose trước).
+   * Trả { chu_loai, nhom_id } hoặc { loi, status }.
+   */
+  function xacDinhChuMau(req, body) {
+    const hs = db.prepare('SELECT * FROM nhm_ho_so WHERE user_id = ?').get(req.user.id);
+    if (hs && hs.trang_thai === 'da_roi_di') {
+      return { status: 403, loi: 'Hồ sơ của bạn được đánh dấu đã rời đi, không thêm mẫu được. Liên hệ quản lý module.' };
+    }
+    const loai = hs ? hs.loai : body.chu_loai;
+    if (!LOAI_CHU.includes(loai)) {
+      return { status: 400, loi: 'Chọn loại chủ mẫu (sinh viên, nghiên cứu viên hoặc cán bộ).' };
+    }
+    let nhomId = 'nhom_id' in body && body.nhom_id !== '' && body.nhom_id != null ? toInt(body.nhom_id) : hs ? hs.nhom_id : null;
+    if (loai === 'sinh_vien' && hs && hs.nhom_id && nhomId !== hs.nhom_id) {
+      return { status: 400, loi: 'Sinh viên chỉ thêm mẫu cho nhóm nghiên cứu của mình.' };
+    }
+    if (loai !== 'can_bo' && nhomId == null) return { status: 400, loi: 'Chọn nhóm nghiên cứu của mẫu.' };
+    if (nhomId != null) {
+      const g = db.prepare("SELECT * FROM nhm_nhom WHERE id = ? AND trang_thai <> 'giai_the'").get(nhomId);
+      if (!g) return { status: 400, loi: 'Nhóm nghiên cứu không tồn tại hoặc đã giải thể.' };
+      if (loai === 'sinh_vien' && !g.truong_user_id) {
+        return { status: 400, loi: 'Nhóm này chưa có trưởng nhóm: sinh viên cần chọn trưởng nhóm khi đề xuất nhóm.' };
+      }
+    }
+    return { chu_loai: loai, nhom_id: nhomId };
+  }
+
+  const LOI_CELLBANK_THEM = 'Thiết bị này do Cellbank quản lý: chỉ quản lý module mới thêm hoặc di chuyển mẫu vào. Hãy dùng chức năng yêu cầu.';
+  const LOI_CELLBANK_MAU = 'Mẫu nằm trong thiết bị do Cellbank quản lý: chỉ quản lý module mới thao tác được. Hãy dùng chức năng yêu cầu.';
+  function chanCellbank(req, res, tube) {
+    if (tube.box_id && hopTrongCellbank(tube.box_id) && !canManage(req)) {
+      fail(res, 403, LOI_CELLBANK_MAU);
+      return true;
+    }
+    return false;
+  }
+
   /** Thêm một mẫu vào ô và ghi dòng «Nhập kho» vào lịch sử. Gọi trong transaction. */
-  function insertTube(t, boxId, row, col, userId) {
+  function insertTube(t, chu, boxId, row, col, userId) {
     const info = db
       .prepare(
         `INSERT INTO nhm_tubes (box_id, row_no, col_no, sample_type_id, name, passage, cell_count, volume_ml,
-                                freeze_date, owner_user_id, project, notes, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                                freeze_date, owner_user_id, project, notes, created_by, chu_loai, nhom_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         boxId, row, col, t.sample_type_id ?? null, t.name, t.passage ?? null, t.cell_count ?? null,
-        t.volume_ml ?? null, t.freeze_date ?? null, userId, t.project ?? null, t.notes ?? null, userId
+        t.volume_ml ?? null, t.freeze_date ?? null, userId, t.project ?? null, t.notes ?? null, userId, chu.chu_loai, chu.nhom_id
       );
     const tubeId = Number(info.lastInsertRowid);
     logMove(tubeId, 'store', null, { box_id: boxId, row_no: row, col_no: col }, userId, null);
@@ -102,6 +141,9 @@ module.exports = function createMauRouter(ctx) {
     }
     const first = checkPosition(boxId, row, col);
     if (first) return fail(res, first.status, first.message);
+    const chu = xacDinhChuMau(req, body);
+    if (chu.loi) return fail(res, chu.status, chu.loi);
+    if (hopTrongCellbank(boxId) && !canManage(req)) return fail(res, 403, LOI_CELLBANK_THEM);
     const hop = db.prepare('SELECT rows, cols FROM nhm_boxes WHERE id = ?').get(boxId);
     const oCan = [];
     for (let i = 0, r = row, c = col; i < count; i++) {
@@ -114,7 +156,7 @@ module.exports = function createMauRouter(ctx) {
     }
     try {
       const ids = db.transaction(() =>
-        oCan.map(([r, c]) => insertTube(t, boxId, r, c, req.user.id))
+        oCan.map(([r, c]) => insertTube(t, chu, boxId, r, c, req.user.id))
       )();
       audit(req, 'tube_bulk_create', `box=${boxId} ${ids.length} mẫu "${t.name}" từ r${row}c${col}`);
       res.status(201).json({ ids });
@@ -137,8 +179,11 @@ module.exports = function createMauRouter(ctx) {
     }
     const bad = checkPosition(boxId, row, col);
     if (bad) return fail(res, bad.status, bad.message);
+    const chu = xacDinhChuMau(req, body);
+    if (chu.loi) return fail(res, chu.status, chu.loi);
+    if (hopTrongCellbank(boxId) && !canManage(req)) return fail(res, 403, LOI_CELLBANK_THEM);
     try {
-      const id = db.transaction(() => insertTube(t, boxId, row, col, req.user.id))();
+      const id = db.transaction(() => insertTube(t, chu, boxId, row, col, req.user.id))();
       audit(req, 'tube_create', `id=${id} box=${boxId} r${row}c${col}`);
       res.status(201).json({ id });
     } catch (e) {
@@ -156,8 +201,24 @@ module.exports = function createMauRouter(ctx) {
     const cur = loadTube(id);
     if (!cur) return fail(res, 404, 'Không tìm thấy mẫu.');
     if (!canEditTube(req, cur)) return fail(res, 403, 'Chỉ người sở hữu hoặc quản lý mới được sửa mẫu này.');
-    const [t, loi] = readTubeBody(req.body || {});
+    const body = req.body || {};
+    const [t, loi] = readTubeBody(body);
     if (loi) return fail(res, 400, loi);
+    // Loại chủ và nhóm quyết định ai duyệt yêu cầu về mẫu: chỉ quản lý đổi được
+    if ('chu_loai' in body || 'nhom_id' in body) {
+      if (!canManage(req)) return fail(res, 403, 'Chỉ quản lý module mới đổi được loại chủ mẫu và nhóm nghiên cứu.');
+      if ('chu_loai' in body) {
+        if (body.chu_loai !== null && !LOAI_CHU.includes(body.chu_loai)) return fail(res, 400, 'Loại chủ mẫu không hợp lệ.');
+        t.chu_loai = body.chu_loai;
+      }
+      if ('nhom_id' in body) {
+        const n = body.nhom_id === null || body.nhom_id === '' ? null : toInt(body.nhom_id);
+        if (n != null && !db.prepare("SELECT 1 FROM nhm_nhom WHERE id = ? AND trang_thai <> 'giai_the'").get(n)) {
+          return fail(res, 400, 'Nhóm nghiên cứu không tồn tại hoặc đã giải thể.');
+        }
+        t.nhom_id = n;
+      }
+    }
     if ('name' in t && !t.name) return fail(res, 400, 'Tên mẫu không được để trống.');
     if (t.sample_type_id != null && !db.prepare('SELECT 1 FROM nhm_sample_types WHERE id = ?').get(t.sample_type_id)) {
       return fail(res, 400, 'Loại mẫu không hợp lệ.');
@@ -172,6 +233,10 @@ module.exports = function createMauRouter(ctx) {
       const ten = (v) => (v == null ? null : (db.prepare('SELECT name FROM nhm_sample_types WHERE id = ?').get(v) || {}).name || v);
       hienThi.sample_type_id = hienThi.sample_type_id.map(ten);
     }
+    if (hienThi.nhom_id) {
+      hienThi.nhom_id = hienThi.nhom_id.map((v) => (v == null ? null : (db.prepare('SELECT ten FROM nhm_nhom WHERE id = ?').get(v) || {}).ten || v));
+    }
+    if (hienThi.chu_loai) hienThi.chu_loai = hienThi.chu_loai.map((v) => (v == null ? null : LOAI_CHU_VN[v] || v));
     db.transaction(() => {
       db.prepare(`UPDATE nhm_tubes SET ${cols.map((c) => c + ' = ?').join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(
         ...cols.map((c) => t[c]),
@@ -188,6 +253,7 @@ module.exports = function createMauRouter(ctx) {
     const cur = loadTube(id);
     if (!cur) return fail(res, 404, 'Không tìm thấy mẫu.');
     if (!canEditTube(req, cur)) return fail(res, 403, 'Chỉ người sở hữu hoặc quản lý mới được di chuyển mẫu này.');
+    if (chanCellbank(req, res, cur)) return;
     if (cur.status === 'checked_out') return fail(res, 409, 'Mẫu đang được lấy ra: hãy trả lại trước khi di chuyển.');
     if (cur.status !== 'in_storage') return fail(res, 409, 'Mẫu đã rã đông hoặc đã hủy, không còn trong hộp để di chuyển.');
     const boxId = toInt((req.body || {}).box_id);
@@ -196,6 +262,7 @@ module.exports = function createMauRouter(ctx) {
     if (boxId === cur.box_id && row === cur.row_no && col === cur.col_no) return fail(res, 400, 'Mẫu đang ở đúng vị trí này.');
     const bad = checkPosition(boxId, row, col, id);
     if (bad) return fail(res, bad.status, bad.message);
+    if (hopTrongCellbank(boxId) && !canManage(req)) return fail(res, 403, LOI_CELLBANK_THEM);
     try {
       db.transaction(() => {
         db.prepare("UPDATE nhm_tubes SET box_id = ?, row_no = ?, col_no = ?, updated_at = datetime('now') WHERE id = ?").run(boxId, row, col, id);
@@ -214,6 +281,7 @@ module.exports = function createMauRouter(ctx) {
     const cur = loadTube(id);
     if (!cur) return fail(res, 404, 'Không tìm thấy mẫu.');
     if (!canEditTube(req, cur)) return fail(res, 403, 'Chỉ người sở hữu hoặc quản lý mới được xóa mẫu này.');
+    if (chanCellbank(req, res, cur)) return;
     db.transaction(() => {
       db.prepare("UPDATE nhm_tubes SET deleted_at = datetime('now') WHERE id = ?").run(id);
       logMove(id, 'delete', cur, null, req.user.id, null);
@@ -230,6 +298,7 @@ module.exports = function createMauRouter(ctx) {
       const cur = loadTube(id);
       if (!cur) return fail(res, 404, 'Không tìm thấy mẫu.');
       if (!canEditTube(req, cur)) return fail(res, 403, 'Chỉ người sở hữu hoặc quản lý mới được thao tác trên mẫu này.');
+      if (chanCellbank(req, res, cur)) return;
       if (!rule.tu.includes(cur.status)) return fail(res, 409, rule.loi);
       const note = toStr((req.body || {}).note, 500);
       db.transaction(() => {

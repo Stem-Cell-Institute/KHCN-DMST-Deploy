@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS nhm_containers (
   location_note TEXT,
   sort_order INTEGER NOT NULL DEFAULT 0,
   notes TEXT,
+  -- Chỉ có nghĩa ở thiết bị GỐC (parent_id NULL); vị trí con thừa hưởng từ gốc.
+  -- 'cellbank': Cellbank quản lý, người dùng gửi yêu cầu lấy mẫu. 'cong_khai': ai cũng thêm mẫu vào ô trống.
+  quan_ly_boi TEXT NOT NULL DEFAULT 'cong_khai' CHECK (quan_ly_boi IN ('cong_khai','cellbank')),
   deleted_at TEXT,
   created_by INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -61,6 +64,49 @@ CREATE TABLE IF NOT EXISTS nhm_sample_types (
   name TEXT NOT NULL UNIQUE
 );
 
+-- Vai trò TRONG module (không đụng users.role dùng chung toàn hệ thống). Chỉ admin cấp / gỡ.
+--   quan_ly         quản lý module: thiết bị lưu trữ, hộp, danh mục, nhóm, hồ sơ thành viên, mọi mẫu (2–3 người)
+--   truong_cellbank Trưởng CIPP (quản lý Cellbank): duyệt yêu cầu lấy mẫu ở thiết bị Cellbank
+CREATE TABLE IF NOT EXISTS nhm_vai_tro (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  vai_tro TEXT NOT NULL CHECK (vai_tro IN ('quan_ly','truong_cellbank')),
+  granted_by INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (user_id, vai_tro)
+);
+
+-- Nhóm nghiên cứu. truong_user_id là TÀI KHOẢN (để gửi email duyệt yêu cầu), không phải tên gõ tay.
+--   cho_xac_nhan  do người dùng tự đề xuất khi thêm mẫu, quản lý chưa kiểm
+--   da_xac_nhan   quản lý đã kiểm (hoặc do quản lý tạo)
+--   giai_the      nhóm đã giải thể (mẫu cũ giữ nguyên, không chọn được cho mẫu mới)
+-- truong_xac_nhan = 1 khi chính người được ghi là trưởng nhóm bấm xác nhận (hoặc quản lý xác nhận thay).
+CREATE TABLE IF NOT EXISTS nhm_nhom (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ten TEXT NOT NULL,
+  ten_khoa TEXT NOT NULL,
+  truong_user_id INTEGER,
+  truong_xac_nhan INTEGER NOT NULL DEFAULT 0,
+  trang_thai TEXT NOT NULL DEFAULT 'cho_xac_nhan' CHECK (trang_thai IN ('cho_xac_nhan','da_xac_nhan','giai_the')),
+  ghi_chu TEXT,
+  de_xuat_boi INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+-- ten_khoa = tên bỏ dấu, viết thường, gộp khoảng trắng: «Nhóm Nam» và «nhom  nam» là một nhóm
+CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_nhom_ten ON nhm_nhom(ten_khoa) WHERE trang_thai <> 'giai_the';
+
+-- Hồ sơ thành viên do quản lý gán: loại (sinh viên / nghiên cứu viên / cán bộ) và nhóm. Người chưa có hồ sơ
+-- vẫn dùng được module nhưng phải tự khai loại và nhóm khi thêm mẫu.
+CREATE TABLE IF NOT EXISTS nhm_ho_so (
+  user_id INTEGER PRIMARY KEY,
+  loai TEXT NOT NULL CHECK (loai IN ('sinh_vien','nghien_cuu_vien','can_bo')),
+  nhom_id INTEGER REFERENCES nhm_nhom(id),
+  trang_thai TEXT NOT NULL DEFAULT 'dang_hoat_dong' CHECK (trang_thai IN ('dang_hoat_dong','da_roi_di')),
+  updated_by INTEGER,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Mẫu lưu trữ (ống đông lạnh, kháng thể, sinh phẩm...)
 CREATE TABLE IF NOT EXISTS nhm_tubes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,6 +123,9 @@ CREATE TABLE IF NOT EXISTS nhm_tubes (
   project TEXT,
   status TEXT NOT NULL DEFAULT 'in_storage'
     CHECK (status IN ('in_storage','checked_out','thawed','discarded')),
+  -- Mẫu của sinh viên hay nghiên cứu viên / cán bộ (để lọc, và để biết ai duyệt yêu cầu khi sinh viên ra trường)
+  chu_loai TEXT CHECK (chu_loai IS NULL OR chu_loai IN ('sinh_vien','nghien_cuu_vien','can_bo')),
+  nhom_id INTEGER REFERENCES nhm_nhom(id),
   notes TEXT,
   deleted_at TEXT,
   created_by INTEGER,
@@ -89,8 +138,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_tube_position ON nhm_tubes(box_id, row_
 -- Mã vạch không được dùng: bỏ chỉ mục của bản nháp cũ (cột barcode ở DB cũ, nếu có, để nguyên và không dùng nữa)
 DROP INDEX IF EXISTS ux_nhm_tube_barcode;
 CREATE INDEX IF NOT EXISTS ix_nhm_tubes_box ON nhm_tubes(box_id);
+CREATE INDEX IF NOT EXISTS ix_nhm_tubes_nhom ON nhm_tubes(nhom_id);
 
--- Nhật ký chuỗi lưu giữ: chỉ thêm, không sửa/xóa
+-- Lịch sử MỌI thao tác trên mẫu: chỉ thêm, không sửa / xóa (có trigger chặn ở mức CSDL, bên dưới).
+-- user_label = tên người thao tác TẠI THỜI ĐIỂM đó, để lịch sử vẫn đọc được khi tài khoản đổi tên hoặc bị xóa.
 CREATE TABLE IF NOT EXISTS nhm_movements (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tube_id INTEGER NOT NULL REFERENCES nhm_tubes(id),
@@ -98,10 +149,15 @@ CREATE TABLE IF NOT EXISTS nhm_movements (
   from_box_id INTEGER, from_row INTEGER, from_col INTEGER,
   to_box_id INTEGER, to_row INTEGER, to_col INTEGER,
   user_id INTEGER,
+  user_label TEXT,
   note TEXT,
   at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS ix_nhm_movements_tube ON nhm_movements(tube_id);
+CREATE TRIGGER IF NOT EXISTS trg_nhm_movements_khong_sua BEFORE UPDATE ON nhm_movements
+BEGIN SELECT RAISE(ABORT, 'Lịch sử mẫu chỉ được thêm, không được sửa'); END;
+CREATE TRIGGER IF NOT EXISTS trg_nhm_movements_khong_xoa BEFORE DELETE ON nhm_movements
+BEGIN SELECT RAISE(ABORT, 'Lịch sử mẫu chỉ được thêm, không được xóa'); END;
 
 -- Đổi tên loại cũ «Canister» thành «Hộp» (chỉ khi chưa có loại «Hộp»)
 UPDATE nhm_container_types SET name = 'Hộp'

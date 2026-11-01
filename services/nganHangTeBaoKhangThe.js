@@ -5,8 +5,13 @@
  * Không biết `req`/`res`.
  */
 
-// Vai trò (users.role, viết thường) được quản lý kho: tạo/sửa/xóa vị trí lưu trữ và hộp, sửa mọi mẫu.
-const MANAGE_ROLES = new Set(['admin', 'manager', 'phong_khcn']);
+// Vai trò TRONG module (bảng nhm_vai_tro) — chỉ admin cấp / gỡ.
+const VAI_TRO_MODULE = ['quan_ly', 'truong_cellbank'];
+const VAI_TRO_VN = { quan_ly: 'Quản lý module', truong_cellbank: 'Trưởng CIPP (Cellbank)' };
+
+// Loại chủ mẫu, để lọc và để biết ai duyệt yêu cầu khi người gửi mẫu đã ra trường / nghỉ việc.
+const LOAI_CHU = ['sinh_vien', 'nghien_cuu_vien', 'can_bo'];
+const LOAI_CHU_VN = { sinh_vien: 'Sinh viên', nghien_cuu_vien: 'Nghiên cứu viên', can_bo: 'Cán bộ' };
 
 // Trạng thái mẫu còn "giữ chỗ" trong hộp (đang lưu hoặc đã lấy ra chờ trả lại).
 const HOLDING = "('in_storage','checked_out')";
@@ -51,6 +56,18 @@ function placeholders(n) {
   return Array.from({ length: n }, () => '?').join(',');
 }
 
+/** Tên so khớp: bỏ dấu, viết thường, gộp khoảng trắng — «Nhóm Nam» và «nhom  nam» là một. */
+function chuanHoaTen(s) {
+  return String(s == null ? '' : s)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function isUniqueError(e) {
   return !!(e && /UNIQUE constraint/i.test(String(e.message || '')));
 }
@@ -63,6 +80,8 @@ const NHAN_TRUONG = {
   name: 'Tên', sample_type_id: 'Loại mẫu', passage: 'Passage', cell_count: 'Số tế bào',
   volume_ml: 'Thể tích (mL)', freeze_date: 'Ngày đông lạnh', project: 'Đề tài', notes: 'Ghi chú', code: 'Mã',
   container_id: 'Vị trí lưu trữ', rows: 'Số hàng', cols: 'Số cột', type_id: 'Loại', parent_id: 'Thuộc vị trí',
+  ten: 'Tên nhóm', truong_user_id: 'Trưởng nhóm', trang_thai: 'Trạng thái', truong_xac_nhan: 'Trưởng nhóm đã xác nhận',
+  chu_loai: 'Loại chủ mẫu', nhom_id: 'Nhóm nghiên cứu', ghi_chu: 'Ghi chú', quan_ly_boi: 'Do ai quản lý',
   temperature_c: 'Nhiệt độ (°C)', location_note: 'Vị trí đặt', sort_order: 'Thứ tự', template_id: 'Mẫu hộp',
 };
 
@@ -96,6 +115,6 @@ function thayDoiJson(thayDoi) {
 }
 
 module.exports = {
-  MANAGE_ROLES, HOLDING, toInt, toStr, parseSo, parseNgay, placeholders, isUniqueError,
+  VAI_TRO_MODULE, VAI_TRO_VN, LOAI_CHU, LOAI_CHU_VN, chuanHoaTen, HOLDING, toInt, toStr, parseSo, parseNgay, placeholders, isUniqueError,
   TRANG_THAI_VN, NHAN_TRUONG, layThayDoi, moTaThayDoi, thayDoiJson,
 };
