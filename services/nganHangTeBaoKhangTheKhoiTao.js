@@ -36,6 +36,7 @@ const COT_THEM_SAU = [
   ['nhm_tubes', 'chu_loai', "TEXT CHECK (chu_loai IS NULL OR chu_loai IN ('sinh_vien','nghien_cuu_vien','can_bo'))"],
   ['nhm_tubes', 'nhom_id', 'INTEGER REFERENCES nhm_nhom(id)'],
   ['nhm_movements', 'user_label', 'TEXT'],
+  ['nhm_tubes', 'thay_luc', 'TEXT'],
 ];
 
 function themCotNeuThieu(db) {

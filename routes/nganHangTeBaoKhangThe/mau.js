@@ -52,7 +52,7 @@ module.exports = function createMauRouter(ctx) {
   }
 
   /** Kiểm tra hộp tồn tại, vị trí trong lưới và còn trống. Trả về lỗi hoặc null. */
-  function checkPosition(boxId, row, col, ignoreTubeId) {
+  function checkPosition(boxId, row, col, ignoreTubeId, ignoreFindingId) {
     const box = boxId && db.prepare('SELECT id, rows, cols FROM nhm_boxes WHERE id = ? AND deleted_at IS NULL').get(boxId);
     if (!box) return { status: 400, message: 'Hộp không tồn tại.' };
     if (!row || !col || row < 1 || row > box.rows || col < 1 || col > box.cols) {
@@ -65,6 +65,10 @@ module.exports = function createMauRouter(ctx) {
       )
       .get(boxId, row, col, ignoreTubeId || 0);
     if (taken) return { status: 409, message: 'Vị trí này đã có mẫu khác.' };
+    const phatHien = db
+      .prepare("SELECT id FROM nhm_phat_hien WHERE box_id = ? AND row_no = ? AND col_no = ? AND trang_thai = 'cho_chu_mau' AND id <> ?")
+      .get(boxId, row, col, ignoreFindingId || 0);
+    if (phatHien) return { status: 409, message: 'Ô này đang có mẫu chưa khai báo chờ chủ mẫu nhận. Nếu là mẫu của bạn, hãy nhận mẫu đó.' };
     return null;
   }
 
@@ -283,6 +287,7 @@ module.exports = function createMauRouter(ctx) {
     if (!canEditTube(req, cur)) return fail(res, 403, 'Chỉ người sở hữu hoặc quản lý mới được xóa mẫu này.');
     if (chanCellbank(req, res, cur)) return;
     db.transaction(() => {
+      db.prepare("UPDATE nhm_yeu_cau SET trang_thai = 'da_huy', ly_do_xu_ly = 'Mẫu đã bị xóa', updated_at = datetime('now') WHERE tube_id = ? AND trang_thai IN ('cho_duyet','da_duyet')").run(id);
       db.prepare("UPDATE nhm_tubes SET deleted_at = datetime('now') WHERE id = ?").run(id);
       logMove(id, 'delete', cur, null, req.user.id, null);
     })();
@@ -303,6 +308,11 @@ module.exports = function createMauRouter(ctx) {
       const note = toStr((req.body || {}).note, 500);
       db.transaction(() => {
         db.prepare("UPDATE nhm_tubes SET status = ?, updated_at = datetime('now') WHERE id = ?").run(rule.den, id);
+        // mẫu đang giao cho người xin mà được trả / dùng hết / hủy thì yêu cầu kết thúc; yêu cầu chờ duyệt thì đóng lại
+        db.prepare("UPDATE nhm_yeu_cau SET trang_thai = 'da_tra', updated_at = datetime('now') WHERE tube_id = ? AND trang_thai = 'da_giao'").run(id);
+        if (rule.den === 'thawed' || rule.den === 'discarded') {
+          db.prepare("UPDATE nhm_yeu_cau SET trang_thai = 'da_huy', ly_do_xu_ly = 'Mẫu đã rã đông / hủy', updated_at = datetime('now') WHERE tube_id = ? AND trang_thai IN ('cho_duyet','da_duyet')").run(id);
+        }
         logMove(id, hanhDong, cur.box_id ? cur : null, null, req.user.id, note);
       })();
       audit(req, `tube_${hanhDong}`, `id=${id} ${cur.name}${note ? ' — ' + note : ''}`);
@@ -335,6 +345,9 @@ module.exports = function createMauRouter(ctx) {
     audit(req, 'tube_transfer', `id=${id} ${ten(cu)} → ${ten(nguoi)}`);
     res.json({ ok: true });
   });
+
+  // Cho router phát hiện / yêu cầu dùng lại cùng cách đọc, kiểm tra và thêm mẫu
+  ctx.tubeKit = { readTubeBody, xacDinhChuMau, insertTube, checkPosition };
 
   router.get('/tubes/:id/history', (req, res) => {
     const id = toInt(req.params.id);

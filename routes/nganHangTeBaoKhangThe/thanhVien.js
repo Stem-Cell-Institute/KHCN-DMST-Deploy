@@ -63,6 +63,9 @@ module.exports = function createThanhVienRouter(ctx) {
       vaiTro: [...vaiTroModule(req)],
       hoSo: hoSo || null,
       nhomChoXacNhan: choXacNhan,
+      yeuCau: ctx.demYeuCau ? ctx.demYeuCau(req) : { mine: 0, inbox: 0 },
+      phatHienMo: db.prepare("SELECT COUNT(*) AS c FROM nhm_phat_hien WHERE trang_thai = 'cho_chu_mau'").get().c,
+      vuViecMo: db.prepare("SELECT COUNT(*) AS c FROM nhm_vu_viec WHERE trang_thai IN ('mo','cho_chu_xac_nhan')").get().c,
     });
   });
 
@@ -217,6 +220,7 @@ module.exports = function createThanhVienRouter(ctx) {
         logNhieuMau(mauCuaNhom(id), hanhDong, req.user.id, `Nhóm «${cur.ten}»: ${moTaThayDoi(hienThi)}`);
         thayDoi._hienThi = hienThi;
       })();
+      if (ctx.dinhTuyenLai) ctx.dinhTuyenLai();
       audit(req, 'group_update', `id=${id} ${cur.ten}: ${moTaThayDoi(thayDoi._hienThi)}`);
       res.json({ ok: true, changed: cols.length });
     } catch (e) {
@@ -237,6 +241,7 @@ module.exports = function createThanhVienRouter(ctx) {
       db.prepare("UPDATE nhm_nhom SET truong_xac_nhan = 1, updated_at = datetime('now') WHERE id = ?").run(id);
       logNhieuMau(mauCuaNhom(id), 'nhom_truong_xac_nhan', req.user.id, `Nhóm «${cur.ten}»: ${tenNguoi(cur.truong_user_id)} xác nhận là trưởng nhóm`);
     })();
+    if (ctx.dinhTuyenLai) ctx.dinhTuyenLai();
     audit(req, 'group_confirm_leader', `id=${id} ${cur.ten}: ${tenNguoi(cur.truong_user_id)}${cur.truong_user_id !== req.user.id ? ' (quản lý xác nhận thay)' : ''}`);
     res.json({ ok: true, changed: 1 });
   });
@@ -251,6 +256,7 @@ module.exports = function createThanhVienRouter(ctx) {
       db.prepare("UPDATE nhm_nhom SET truong_user_id = NULL, truong_xac_nhan = 0, updated_at = datetime('now') WHERE id = ?").run(id);
       logNhieuMau(mauCuaNhom(id), 'nhom_truong_tu_choi', req.user.id, `Nhóm «${cur.ten}»: ${tenNguoi(req.user.id)} từ chối là trưởng nhóm`);
     })();
+    if (ctx.dinhTuyenLai) ctx.dinhTuyenLai();
     audit(req, 'group_decline_leader', `id=${id} ${cur.ten}: ${tenNguoi(req.user.id)}`);
     res.json({ ok: true });
   });
@@ -325,6 +331,7 @@ module.exports = function createThanhVienRouter(ctx) {
         );
       }
     })();
+    if (ctx.dinhTuyenLai) ctx.dinhTuyenLai();
     audit(req, 'profile_set', `${tenNguoi(userId)} (id=${userId}): ${LOAI_CHU_VN[loai]}, nhóm ${nhomId || '—'}, ${trangThai}`);
     res.json({ ok: true });
   });

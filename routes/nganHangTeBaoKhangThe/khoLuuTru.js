@@ -232,7 +232,19 @@ module.exports = function createKhoLuuTruRouter(ctx) {
          WHERE t.box_id = ? AND t.deleted_at IS NULL AND t.status IN ${HOLDING}`
       )
       .all(id);
-    res.json({ box, path, tubes: tubes.map((t) => ({ ...t, can_edit: canEditTube(req, t) })) });
+    const nghiMat = new Set(
+      db.prepare("SELECT tube_id FROM nhm_vu_viec WHERE trang_thai IN ('mo','cho_chu_xac_nhan')").all().map((r) => r.tube_id)
+    );
+    const phatHien = db
+      .prepare("SELECT id, row_no, col_no, mo_ta, nhac_lan FROM nhm_phat_hien WHERE box_id = ? AND trang_thai = 'cho_chu_mau'")
+      .all(id);
+    res.json({
+      box,
+      path,
+      tubes: tubes.map((t) => ({ ...t, can_edit: canEditTube(req, t), nghi_mat: nghiMat.has(t.id) })),
+      phat_hien: phatHien,
+      quan_ly_boi: (ctx.YeuCau.thietBiGocCuaHop(db, id) || {}).quan_ly_boi || 'cong_khai',
+    });
   });
 
   router.patch('/boxes/:id', requireManage, (req, res) => {

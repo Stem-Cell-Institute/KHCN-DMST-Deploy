@@ -13205,7 +13205,7 @@ try {
 
 /** Ngân hàng tế bào & Kháng thể — routes/nganHangTeBaoKhangThe.js (bảng nhm_*, chuyển hướng địa chỉ cũ, API) */
 try {
-  require('./routes/nganHangTeBaoKhangThe').mount(app, { db, authMiddleware, insertUserActivityLog });
+  require('./routes/nganHangTeBaoKhangThe').mount(app, { db, authMiddleware, insertUserActivityLog, baseUrl: process.env.BASE_URL || '', nhacTuDong: true, mailSend: (o) => (transporter ? transporter.sendMail({ from: getSmtpFrom(), ...o }) : Promise.reject(new Error('mail_not_configured'))) });
   console.log('[NGAN-HANG] Đã mount /api/ngan-hang-te-bao-khang-the');
 } catch (e) {
   console.warn('[NGAN-HANG] Không mount ngan-hang-te-bao-khang-the:', e.message);

@@ -6,9 +6,14 @@
  */
 
 const { HOLDING, placeholders } = require('../../services/nganHangTeBaoKhangThe');
+const YeuCau = require('../../services/nganHangTeBaoKhangTheYeuCau');
+const { taoThongBao } = require('../../services/nganHangTeBaoKhangTheThongBao');
 
 function taoBoiCanh(deps) {
-  const { db, insertUserActivityLog } = deps;
+  const { db, insertUserActivityLog, mailSend, baseUrl } = deps;
+  const thongBao = taoThongBao({ db, mailSend, baseUrl });
+  /** Thư báo chạy NỀN: không chờ, không để lỗi (SMTP, mạng…) làm hỏng thao tác chính đã thành công. */
+  const guiNen = (p) => Promise.resolve(p).catch((e) => console.warn('[ngan-hang] thông báo lỗi:', e && e.message));
 
   // ---------- Phân quyền ----------
   // Admin (users.role = 'admin'): toàn quyền, và là người DUY NHẤT cấp / gỡ vai trò module.
@@ -99,20 +104,21 @@ function taoBoiCanh(deps) {
     return taoTraDuongDan()(containerId);
   }
 
-  /** Thiết bị GỐC chứa vị trí lưu trữ này (đi ngược parent_id). */
-  function thietBiGoc(containerId) {
-    let cur = db.prepare('SELECT id, parent_id, quan_ly_boi FROM nhm_containers WHERE id = ?').get(containerId);
-    for (let i = 0; cur && cur.parent_id != null && i < 50; i++) {
-      cur = db.prepare('SELECT id, parent_id, quan_ly_boi FROM nhm_containers WHERE id = ?').get(cur.parent_id);
-    }
-    return cur || null;
-  }
-
   /** Hộp nằm trong thiết bị do Cellbank quản lý? */
   function hopTrongCellbank(boxId) {
-    const box = boxId && db.prepare('SELECT container_id FROM nhm_boxes WHERE id = ?').get(boxId);
-    const goc = box && thietBiGoc(box.container_id);
-    return !!goc && goc.quan_ly_boi === 'cellbank';
+    return YeuCau.hopTrongCellbank(db, boxId);
+  }
+
+  /** «Tủ › Ngăn › Giá › HOP-0001 › A1» — để ghi vào email và danh sách. */
+  function moTaViTri(boxId, row, col) {
+    const b = boxId && db.prepare('SELECT code, container_id FROM nhm_boxes WHERE id = ?').get(boxId);
+    if (!b) return '';
+    return duongDan(b.container_id).concat([b.code]).concat(row ? [String.fromCharCode(64 + row) + col] : []).join(' › ');
+  }
+
+  /** Người dùng (id) → {id, fullname, email}. */
+  function nguoiDung(id) {
+    return (id && db.prepare('SELECT id, fullname, email FROM users WHERE id = ?').get(id)) || null;
   }
 
   function activeTubeCountInBoxes(boxIds) {
@@ -166,7 +172,7 @@ function taoBoiCanh(deps) {
     for (const id of tubeIds) logMove(id, action, null, null, userId, note);
   }
 
-  return { db, laAdmin, vaiTroModule, laTruongCellbank, requireAdmin, thietBiGoc, hopTrongCellbank, logNhieuMau, canManage, requireManage, canEditTube, audit, fail, subtreeIds, duongDan, taoTraDuongDan, activeTubeCountInBoxes, nextCode, logMove };
+  return { db, laAdmin, vaiTroModule, laTruongCellbank, requireAdmin, hopTrongCellbank, logNhieuMau, thongBao, guiNen, moTaViTri, nguoiDung, nhanNguoi, YeuCau, canManage, requireManage, canEditTube, audit, fail, subtreeIds, duongDan, taoTraDuongDan, activeTubeCountInBoxes, nextCode, logMove };
 }
 
 module.exports = taoBoiCanh;

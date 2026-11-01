@@ -126,6 +126,8 @@ CREATE TABLE IF NOT EXISTS nhm_tubes (
   -- Mẫu của sinh viên hay nghiên cứu viên / cán bộ (để lọc, và để biết ai duyệt yêu cầu khi sinh viên ra trường)
   chu_loai TEXT CHECK (chu_loai IS NULL OR chu_loai IN ('sinh_vien','nghien_cuu_vien','can_bo')),
   nhom_id INTEGER REFERENCES nhm_nhom(id),
+  -- lần cuối kiểm kê hộp thấy mẫu còn ở ô này (UTC); NULL = chưa kiểm kê lần nào
+  thay_luc TEXT,
   notes TEXT,
   deleted_at TEXT,
   created_by INTEGER,
@@ -158,6 +160,100 @@ CREATE TRIGGER IF NOT EXISTS trg_nhm_movements_khong_sua BEFORE UPDATE ON nhm_mo
 BEGIN SELECT RAISE(ABORT, 'Lịch sử mẫu chỉ được thêm, không được sửa'); END;
 CREATE TRIGGER IF NOT EXISTS trg_nhm_movements_khong_xoa BEFORE DELETE ON nhm_movements
 BEGIN SELECT RAISE(ABORT, 'Lịch sử mẫu chỉ được thêm, không được xóa'); END;
+
+-- ═══ Đợt 2: yêu cầu lấy mẫu, mẫu chưa khai báo, mẫu nghi mất ═══════════════════════════════════════════════
+
+-- Yêu cầu lấy mẫu của người khác. cap = ai đang là người duyệt:
+--   chu_mau         chủ mẫu (cán bộ / nghiên cứu viên còn hoạt động) — thiết bị công khai
+--   truong_nhom     trưởng nhóm (mẫu sinh viên, hoặc chủ mẫu đã rời đi) — thiết bị công khai
+--   truong_cellbank Trưởng CIPP — thiết bị Cellbank
+--   quan_ly         quản lý module (khi cấp trên không có hoặc quá hạn phản hồi)
+-- Quản lý và admin luôn xử lý được (xu_ly_thay = 1 khi không phải người duyệt của cấp hiện tại, kèm ly_do_xu_ly).
+CREATE TABLE IF NOT EXISTS nhm_yeu_cau (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tube_id INTEGER NOT NULL REFERENCES nhm_tubes(id),
+  nguoi_gui_id INTEGER NOT NULL,
+  ly_do TEXT,
+  cap TEXT NOT NULL CHECK (cap IN ('chu_mau','truong_nhom','truong_cellbank','quan_ly')),
+  han_phan_hoi TEXT NOT NULL,
+  trang_thai TEXT NOT NULL DEFAULT 'cho_duyet'
+    CHECK (trang_thai IN ('cho_duyet','da_duyet','tu_choi','da_giao','da_tra','da_huy')),
+  leo_thang_luc TEXT,
+  xu_ly_boi INTEGER,
+  xu_ly_luc TEXT,
+  xu_ly_thay INTEGER NOT NULL DEFAULT 0,
+  ly_do_xu_ly TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+-- Mỗi mẫu chỉ có MỘT yêu cầu đang xử lý tại một thời điểm
+CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_yeu_cau_mo ON nhm_yeu_cau(tube_id) WHERE trang_thai IN ('cho_duyet','da_duyet','da_giao');
+CREATE INDEX IF NOT EXISTS ix_nhm_yeu_cau_gui ON nhm_yeu_cau(nguoi_gui_id);
+
+-- Mẫu có thật trong ô nhưng chưa khai báo (thiết bị công khai). Ô bị giữ chỗ cho tới khi chủ mẫu nhận hoặc quản lý bỏ mẫu.
+CREATE TABLE IF NOT EXISTS nhm_phat_hien (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  box_id INTEGER NOT NULL REFERENCES nhm_boxes(id),
+  row_no INTEGER NOT NULL,
+  col_no INTEGER NOT NULL,
+  mo_ta TEXT NOT NULL,
+  nghi_user_id INTEGER,
+  nghi_nhom_id INTEGER REFERENCES nhm_nhom(id),
+  trang_thai TEXT NOT NULL DEFAULT 'cho_chu_mau' CHECK (trang_thai IN ('cho_chu_mau','da_khai_bao','da_bo','da_huy')),
+  nguoi_phat_hien_id INTEGER NOT NULL,
+  nhac_lan INTEGER NOT NULL DEFAULT 0,
+  nhac_dau_luc TEXT,
+  nhac_cuoi_luc TEXT,
+  tube_id INTEGER REFERENCES nhm_tubes(id),
+  xu_ly_boi INTEGER,
+  xu_ly_luc TEXT,
+  bo_som INTEGER NOT NULL DEFAULT 0,
+  ly_do_xu_ly TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_phat_hien_o ON nhm_phat_hien(box_id, row_no, col_no) WHERE trang_thai = 'cho_chu_mau';
+
+-- Lịch sử riêng của từng lần phát hiện (không gắn với bản ghi mẫu vì mẫu chưa có bản ghi): chỉ thêm, không sửa / xóa
+CREATE TABLE IF NOT EXISTS nhm_phat_hien_ls (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  phat_hien_id INTEGER NOT NULL REFERENCES nhm_phat_hien(id),
+  action TEXT NOT NULL,
+  user_id INTEGER,
+  user_label TEXT,
+  note TEXT,
+  at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_nhm_phat_hien_ls ON nhm_phat_hien_ls(phat_hien_id);
+CREATE TRIGGER IF NOT EXISTS trg_nhm_phat_hien_ls_khong_sua BEFORE UPDATE ON nhm_phat_hien_ls
+BEGIN SELECT RAISE(ABORT, 'Lịch sử phát hiện chỉ được thêm, không được sửa'); END;
+CREATE TRIGGER IF NOT EXISTS trg_nhm_phat_hien_ls_khong_xoa BEFORE DELETE ON nhm_phat_hien_ls
+BEGIN SELECT RAISE(ABORT, 'Lịch sử phát hiện chỉ được thêm, không được xóa'); END;
+
+-- Mẫu nghi mất / bị lấy không qua yêu cầu. Mẫu vẫn giữ ô trong hộp trong lúc vụ việc còn mở.
+--   mo                đang tìm, ai cũng thấy; người đã lấy có thể tự nhận
+--   cho_chu_xac_nhan  có người nhận đã lấy, chờ chủ mẫu xác nhận
+--   da_xac_nhan_lay   chủ mẫu xác nhận có người lấy không xin phép (tính vào số lần vi phạm của người lấy)
+--   da_tim_thay       tìm thấy mẫu
+--   that_lac          hết hạn không ai nhận, quản lý chốt thất lạc
+--   da_huy            báo nhầm
+CREATE TABLE IF NOT EXISTS nhm_vu_viec (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tube_id INTEGER NOT NULL REFERENCES nhm_tubes(id),
+  nguon TEXT NOT NULL CHECK (nguon IN ('chu_mau','kiem_ke','quan_ly')),
+  nguoi_bao_id INTEGER NOT NULL,
+  mo_ta TEXT,
+  trang_thai TEXT NOT NULL DEFAULT 'mo'
+    CHECK (trang_thai IN ('mo','cho_chu_xac_nhan','da_xac_nhan_lay','da_tim_thay','that_lac','da_huy')),
+  nguoi_nhan_id INTEGER,
+  nhan_luc TEXT,
+  nhan_ghi_chu TEXT,
+  han_nhan TEXT NOT NULL,
+  xu_ly_boi INTEGER,
+  xu_ly_luc TEXT,
+  ly_do_xu_ly TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_vu_viec_mo ON nhm_vu_viec(tube_id) WHERE trang_thai IN ('mo','cho_chu_xac_nhan');
 
 -- Đổi tên loại cũ «Canister» thành «Hộp» (chỉ khi chưa có loại «Hộp»)
 UPDATE nhm_container_types SET name = 'Hộp'

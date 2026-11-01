@@ -33,6 +33,7 @@ async function dungServer() {
   db.prepare("INSERT INTO nhm_ho_so (user_id, loai) VALUES (3, 'can_bo'), (4, 'can_bo')").run();
 
   const auditLog = [];
+  const mails = []; // thư đã gửi (mailSend giả)
   const app = express();
   app.use(express.json());
   const fakeAuth = (req, res, next) => {
@@ -41,7 +42,17 @@ async function dungServer() {
     req.user = u;
     next();
   };
-  app.use('/api/ngan-hang-te-bao-khang-the', createRouter({ db, authMiddleware: fakeAuth, insertUserActivityLog: (req, row) => auditLog.push(row) }));
+  const router = createRouter({
+    db,
+    authMiddleware: fakeAuth,
+    insertUserActivityLog: (req, row) => auditLog.push(row),
+    baseUrl: 'https://eoffice.test',
+    mailSend: async (o) => {
+      if (ret.mailLoi) throw new Error('smtp hỏng (giả lập)');
+      mails.push(o);
+    },
+  });
+  app.use('/api/ngan-hang-te-bao-khang-the', router);
   const server = await new Promise((r) => {
     const s = http.createServer(app).listen(0, '127.0.0.1', () => r(s));
   });
@@ -71,11 +82,14 @@ async function dungServer() {
     return { type, tpl99, container: f.json.id, box: b.json.ids[0], box2: b.json.ids[1], meta };
   }
 
-  return {
+  const ret = {
+    mailLoi: false, // bật để giả lập SMTP hỏng
     api,
     base,
     db,
     auditLog,
+    mails,
+    router,
     taoKho,
     USERS,
     async dong() {
@@ -83,6 +97,7 @@ async function dungServer() {
       db.close();
     },
   };
+  return ret;
 }
 
 module.exports = { dungServer, USERS };
