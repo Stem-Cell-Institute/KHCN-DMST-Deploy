@@ -288,7 +288,7 @@ module.exports = function createThanhVienRouter(ctx) {
     res.json({
       profiles: db
         .prepare(
-          `SELECT h.user_id, h.loai, h.nhom_id, h.trang_thai, h.updated_at, u.fullname, u.email, g.ten AS nhom_ten
+          `SELECT h.user_id, h.loai, h.nhom_id, h.trang_thai, h.chuc_danh, h.updated_at, u.fullname, u.email, g.ten AS nhom_ten
            FROM nhm_ho_so h LEFT JOIN users u ON u.id = h.user_id LEFT JOIN nhm_nhom g ON g.id = h.nhom_id
            ORDER BY u.fullname COLLATE NOCASE`
         )
@@ -311,12 +311,14 @@ module.exports = function createThanhVienRouter(ctx) {
     if (loai !== 'can_bo' && nhomId == null) return fail(res, 400, 'Sinh viên và nghiên cứu viên phải thuộc một nhóm nghiên cứu.');
     const trangThai = 'trang_thai' in body ? body.trang_thai : cur ? cur.trang_thai : 'dang_hoat_dong';
     if (!['dang_hoat_dong', 'da_roi_di'].includes(trangThai)) return fail(res, 400, 'Trạng thái không hợp lệ.');
+    // lời chào hiển thị (vd «Viện trưởng»): bỏ trống = chào bằng tên; không gửi trường này thì giữ nguyên giá trị cũ
+    const chucDanh = 'chuc_danh' in body ? toStr(body.chuc_danh, 60) || null : cur ? cur.chuc_danh : null;
     db.transaction(() => {
       db.prepare(
-        `INSERT INTO nhm_ho_so (user_id, loai, nhom_id, trang_thai, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'))
-         ON CONFLICT(user_id) DO UPDATE SET loai = excluded.loai, nhom_id = excluded.nhom_id, trang_thai = excluded.trang_thai,
+        `INSERT INTO nhm_ho_so (user_id, loai, nhom_id, trang_thai, chuc_danh, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(user_id) DO UPDATE SET loai = excluded.loai, nhom_id = excluded.nhom_id, trang_thai = excluded.trang_thai, chuc_danh = excluded.chuc_danh,
                                             updated_by = excluded.updated_by, updated_at = excluded.updated_at`
-      ).run(userId, loai, nhomId, trangThai, req.user.id);
+      ).run(userId, loai, nhomId, trangThai, chucDanh, req.user.id);
       // Người sở hữu rời đi / quay lại: ghi vào lịch sử mọi mẫu của họ (ai sẽ duyệt yêu cầu phụ thuộc vào đây)
       const truoc = cur ? cur.trang_thai : 'dang_hoat_dong';
       if (truoc !== trangThai) {
@@ -333,7 +335,7 @@ module.exports = function createThanhVienRouter(ctx) {
       }
     })();
     if (ctx.dinhTuyenLai) ctx.dinhTuyenLai();
-    audit(req, 'profile_set', `${tenNguoi(userId)} (id=${userId}): ${LOAI_CHU_VN[loai]}, nhóm ${nhomId || '—'}, ${trangThai}`);
+    audit(req, 'profile_set', `${tenNguoi(userId)} (id=${userId}): ${LOAI_CHU_VN[loai]}, nhóm ${nhomId || '—'}, ${trangThai}${chucDanh ? ', chào «' + chucDanh + '»' : ''}`);
     res.json({ ok: true });
   });
 

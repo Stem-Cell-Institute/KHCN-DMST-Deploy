@@ -245,3 +245,18 @@ test('lịch sử mẫu không sửa / xóa được ở mức CSDL, và lưu t�
   s.db.prepare("DELETE FROM users WHERE id = 20").run();
   assert.equal((await s.api('alice', 'GET', `/tubes/${t.json.id}/history`)).json.history[0].user_label, 'alice@sci.edu.vn');
 });
+
+test('lời chào ở đầu trang: quản lý đặt «Viện trưởng» trong hồ sơ; để trống thì chào bằng tên; không gửi trường thì giữ nguyên', async () => {
+  const hoSo = async (user) => (await s.api(user, 'GET', '/me')).json.hoSo;
+  assert.equal((await s.api('manager', 'PUT', '/profiles/3', { loai: 'can_bo', chuc_danh: 'Viện trưởng' })).status, 200);
+  assert.equal((await hoSo('alice')).chuc_danh, 'Viện trưởng');
+  assert.equal((await s.api('alice', 'PUT', '/profiles/3', { chuc_danh: 'Tự phong' })).status, 403, 'người thường không tự đặt lời chào');
+  // cập nhật trạng thái mà không gửi chuc_danh thì không làm mất lời chào
+  assert.equal((await s.api('manager', 'PUT', '/profiles/3', { trang_thai: 'dang_hoat_dong' })).status, 200);
+  assert.equal((await hoSo('alice')).chuc_danh, 'Viện trưởng');
+  assert.ok((await s.api('manager', 'GET', '/profiles')).json.profiles.some((p) => p.user_id === 3 && p.chuc_danh === 'Viện trưởng'));
+  assert.equal((await s.api('manager', 'PUT', '/profiles/3', { chuc_danh: '   ' })).status, 200);
+  assert.equal((await hoSo('alice')).chuc_danh, null, 'để trống thì xóa');
+  assert.equal((await s.api('manager', 'PUT', '/profiles/3', { chuc_danh: 'x'.repeat(200) })).status, 200);
+  assert.equal((await hoSo('alice')).chuc_danh.length, 60, 'cắt ở 60 ký tự');
+});

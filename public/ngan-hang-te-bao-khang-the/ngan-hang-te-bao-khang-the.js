@@ -1081,11 +1081,12 @@
         { name: 'nguoi', label: 'Người dùng', type: 'custom', widget: p ? { node: h('div', { class: 'nhm-fixed' }, p.fullname || p.email), get: function () { return { id: p.user_id }; } } : nguoi },
         { name: 'loai', label: 'Loại', type: 'select', options: LOAI_CHU.map(function (l) { return { value: l[0], label: l[1] }; }), value: p && p.loai },
         { name: 'nhom_id', label: 'Nhóm nghiên cứu (bắt buộc với sinh viên và nghiên cứu viên)', type: 'select', options: nhomOpts, value: p && p.nhom_id ? p.nhom_id : '' },
+        { name: 'chuc_danh', label: 'Lời chào ở đầu trang (để trống = chào bằng tên; vd: Viện trưởng)', value: p && p.chuc_danh ? p.chuc_danh : '' },
         { name: 'trang_thai', label: 'Trạng thái', type: 'select', options: [{ value: 'dang_hoat_dong', label: 'Đang hoạt động' }, { value: 'da_roi_di', label: 'Đã rời đi (ra trường / nghỉ việc)' }], value: p ? p.trang_thai : 'dang_hoat_dong' },
       ],
       onSubmit: function (v) {
         if (!v.nguoi) return Promise.reject(new Error('Chọn người dùng.'));
-        return api('PUT', '/profiles/' + v.nguoi.id, { loai: v.loai, nhom_id: v.nhom_id === '' ? null : Number(v.nhom_id), trang_thai: v.trang_thai })
+        return api('PUT', '/profiles/' + v.nguoi.id, { loai: v.loai, nhom_id: v.nhom_id === '' ? null : Number(v.nhom_id), trang_thai: v.trang_thai, chuc_danh: v.chuc_danh })
           .then(function () { say('Đã lưu hồ sơ.', 'ok'); reopen(); });
       },
     });
@@ -1414,7 +1415,7 @@
     var conNgay = sv ? Math.ceil((new Date(sv.het_han + 'T23:59:59+07:00').getTime() - Date.now()) / 86400000) : null;
     var thongBaoHan = sv && conNgay <= 30 ? h('div', { class: 'nhm-hint', role: 'status' }, 'Quyền vào Ngân hàng tế bào & Kháng thể của tài khoản sinh viên đến hết ngày ' + sv.het_han.split('-').reverse().join('/') + ' (còn ' + Math.max(conNgay, 0) + ' ngày). Cần gia hạn thì liên hệ quản lý module.') : null;
     put(slot, thongBaoHan, ds.length ? h('div', { class: 'nhm-notice', role: 'alert' }, ds.map(function (g) {
-      var xong = function () { return api('GET', '/me').then(function (m) { state.me = m; return taiNhom(); }).then(renderBanner); };
+      var xong = function () { return api('GET', '/me').then(function (m) { state.me = m; capNhatLoiChao(); return taiNhom(); }).then(renderBanner); };
       return h('div', { class: 'nhm-notice-row' }, [
         h('span', {}, 'Bạn được ghi là trưởng nhóm «' + g.ten + '»' + (g.de_xuat_ten ? ' (do ' + g.de_xuat_ten + ' đề xuất)' : '') + '. Khi có người xin lấy mẫu của nhóm, bạn là người duyệt. Đúng không?'),
         h('span', { class: 'nhm-notice-act' }, [
@@ -1427,7 +1428,7 @@
 
   // ---------- yêu cầu lấy mẫu, mẫu chưa khai báo, mẫu nghi mất ----------
   function taiMe() {
-    return api('GET', '/me').then(function (m) { state.me = m; capNhatHuy(); return m; });
+    return api('GET', '/me').then(function (m) { state.me = m; capNhatHuy(); capNhatLoiChao(); return m; });
   }
 
   /** Số việc chờ trên nút «Việc cần xử lý»: yêu cầu cần tôi xử lý + mẫu chưa khai báo + mẫu nghi mất đang mở. */
@@ -1732,6 +1733,14 @@
     });
   }
 
+  /** Lời chào: «Xin chào <lời chào trong hồ sơ>» (vd Viện trưởng); chưa đặt thì chào bằng tên tài khoản. */
+  var loiChaoNode = null;
+  function capNhatLoiChao() {
+    if (!loiChaoNode) return;
+    var chao = (state.me && state.me.hoSo && state.me.hoSo.chuc_danh) || state.tenChao;
+    loiChaoNode.textContent = chao ? 'Xin chào ' + chao : 'Xin chào';
+  }
+
   function initHeader() {
     var box = $('auth-status');
     if (!box) return;
@@ -1740,9 +1749,11 @@
       .then(function (me) {
         if (!me) return;
         var u = me.user || me;
-        var name = (u.fullname && String(u.fullname).trim()) || (u.email ? String(u.email).split('@')[0] : '');
+        state.tenChao = (u.fullname && String(u.fullname).trim()) || (u.email ? String(u.email).split('@')[0] : '');
+        loiChaoNode = h('span', { class: 'auth-user-info' });
+        capNhatLoiChao();
         put(box, 
-          h('span', { class: 'auth-user-info' }, name ? 'Xin chào ' + name : 'Xin chào'),
+          loiChaoNode,
           h('a', { href: '/index.html', class: 'auth-btn-admin' }, 'Trang chủ'),
           h('button', { type: 'button', class: 'auth-btn-logout', onclick: logout }, 'Đăng xuất')
         );
@@ -1766,7 +1777,7 @@
         qlDm.classList.remove('nhm-hide');
         qlDm.addEventListener('click', function () { quanTriDialog('danhmuc'); });
       }
-      return Promise.all([api('GET', '/tree'), api('GET', '/me'), taiNhom()]).then(function (rs) { state.me = rs[1]; renderBanner(); return rs[0]; });
+      return Promise.all([api('GET', '/tree'), api('GET', '/me'), taiNhom()]).then(function (rs) { state.me = rs[1]; capNhatLoiChao(); renderBanner(); return rs[0]; });
     }).then(function (tree) {
       state.tree = tree;
       var m = /^#(container|box)=(\d+)$/.exec(location.hash);

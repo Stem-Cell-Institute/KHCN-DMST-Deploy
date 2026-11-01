@@ -82,6 +82,7 @@ kiếm, và để biết **ai duyệt yêu cầu khi người gửi mẫu đã r
 mẫu đã tạo (chúng quyết định đường duyệt).
 
 - **Hồ sơ thành viên** (`nhm_ho_so`, do quản lý gán): loại + nhóm + trạng thái (đang hoạt động / **đã rời đi**). Người có hồ sơ
+- **Lời chào ở đầu trang** (`nhm_ho_so.chuc_danh`, ≤ 60 ký tự, quản lý đặt ở form hồ sơ): ví dụ «Viện trưởng» thì đầu trang module ghi «Xin chào Viện trưởng»; để trống thì chào bằng tên tài khoản. Chỉ quản lý module / admin đặt được, người dùng không tự đặt.
   thì khi thêm mẫu hệ thống tự lấy loại và nhóm từ hồ sơ; sinh viên chỉ thêm mẫu cho nhóm của mình; hồ sơ «đã rời đi» chặn thêm
   mẫu mới và ghi vào lịch sử mọi mẫu của họ.
 - **Người chưa có hồ sơ** vẫn dùng được nhưng phải tự khai loại chủ và nhóm khi thêm mẫu (cán bộ không bắt buộc nhóm; sinh viên

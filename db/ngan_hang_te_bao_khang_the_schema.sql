@@ -109,6 +109,8 @@ CREATE TABLE IF NOT EXISTS nhm_ho_so (
   loai TEXT NOT NULL CHECK (loai IN ('sinh_vien','nghien_cuu_vien','can_bo')),
   nhom_id INTEGER REFERENCES nhm_nhom(id),
   trang_thai TEXT NOT NULL DEFAULT 'dang_hoat_dong' CHECK (trang_thai IN ('dang_hoat_dong','da_roi_di')),
+  -- Lời chào hiển thị ở đầu trang module thay cho tên (vd «Viện trưởng»); để trống thì chào bằng tên tài khoản
+  chuc_danh TEXT,
   updated_by INTEGER,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
