@@ -1639,9 +1639,9 @@
   }
 
   // ----- bảng «Việc cần xử lý» -----
-  function moCongViec(tab) {
+  function moCongViec(tab, gapSan) {
     state.search = null; state.sel = null; state.box = null; state.audit = null;
-    state.cv = { tab: tab || 'inbox', data: null };
+    state.cv = { tab: tab || 'inbox', data: null, dsMo: !gapSan };
     if (location.hash !== '#cong-viec') location.hash = 'cong-viec';
     renderTree();
     renderDetail();
@@ -1680,7 +1680,19 @@
       })) : h('p', { class: 'nhm-muted' }, 'Chưa có trường hợp lấy mẫu không xin phép nào được chủ mẫu xác nhận.');
     } else if (!c.data.length) noiDung = h('p', { class: 'nhm-muted' }, { inbox: 'Không có yêu cầu nào đang chờ bạn xử lý.', mine: 'Bạn chưa gửi yêu cầu nào.', done: 'Chưa có yêu cầu nào đã được xử lý. Yêu cầu đã duyệt hoặc từ chối sẽ được lưu ở đây (quản lý module thấy tất cả).', phathien: 'Không có mẫu nào đang chờ chủ mẫu khai báo.', nghimat: 'Không có mẫu nào đang bị báo nghi mất.', all: 'Chưa có yêu cầu nào.' }[c.tab]);
     else noiDung = h('div', { class: 'nhm-cards' }, c.data.map(c.tab === 'phathien' ? theMauChuaKhaiBao : c.tab === 'nghimat' ? theNghiMat : theYeuCau));
+    if (c.tab === 'inbox' && c.data && c.data.length) noiDung = gapDanhSach(c, noiDung); // danh sách việc: gập sẵn khi mở từ địa chỉ / thư
     put(root, h('div', { class: 'nhm-title' }, [h('h2', {}, 'Việc cần xử lý')]), bar, noiDung, c.tab === 'inbox' && c.data ? lichSuXuLy(c) : null);
+  }
+
+  /** Bọc danh sách «Cần tôi xử lý» trong khung gập (người ít dùng máy chỉ cần thanh đỏ báo việc; bấm «Xem và xử lý» để mở). */
+  function gapDanhSach(c, noiDung) {
+    var det = h('details', { class: 'nhm-ls nhm-ls--viec' }, [
+      h('summary', {}, h('span', { class: 'nhm-ls__tit' }, 'Cần tôi xử lý (' + c.data.length + ')')),
+      noiDung,
+    ]);
+    det.open = !!c.dsMo;
+    det.addEventListener('toggle', function () { c.dsMo = det.open; });
+    return det;
   }
 
   /**
@@ -1760,7 +1772,7 @@
     }).then(function () {
       $('nhm-work').addEventListener('click', function () { moCongViec('inbox'); });
       renderTree(); renderDetail(); capNhatHuy();
-      if (location.hash === '#cong-viec') moCongViec('inbox');
+      if (location.hash === '#cong-viec') moCongViec('inbox', true);
       else if (state.sel) manHinhHep(false); // mở thẳng một hộp / vị trí: điện thoại gập sơ đồ lại để thấy nội dung
     }).catch(function (e) {
       $('nhm-tree').textContent = '';
