@@ -68,3 +68,29 @@ test('Viện trưởng xử lý trước thì Trưởng CIPP cũng nhận kết 
   assert.equal((await s.api('cellbank', 'POST', `/requests/${r.json.id}/reject`, { ly_do: 'x' })).status, 409);
   assert.ok((await s.api('cellbank', 'GET', '/requests?view=done')).json.requests.some((y) => y.id === r.json.id));
 });
+
+test('người duyệt của đơn vị (Viện trưởng, Trưởng CIPP) không bị chặn thêm / lấy mẫu ở thiết bị Cellbank; người thường vẫn bị chặn', async () => {
+  const them = (user, r, c) => s.api(user, 'POST', '/tubes', { box_id: hop, row_no: r, col_no: c, name: `Q${r}${c}`, chu_loai: 'can_bo' });
+  assert.equal((await them('bob', 6, 1)).status, 403, 'người thường bị chặn');
+  const a = await them('truong', 6, 2); // Viện trưởng (người duyệt được chỉ định)
+  assert.equal(a.status, 201, 'Viện trưởng thêm mẫu được');
+  const b = await them('cellbank', 6, 3); // Trưởng CIPP (người duyệt theo vai trò)
+  assert.equal(b.status, 201, 'Trưởng CIPP thêm mẫu được');
+  // thao tác mẫu của người khác ở thiết bị của đơn vị mình: lấy ra, trả lại
+  const mauAlice = (await them('manager', 6, 4)).json.id;
+  assert.equal((await s.api('bob', 'POST', `/tubes/${mauAlice}/checkout`, { note: 'x' })).status, 403);
+  assert.equal((await s.api('truong', 'POST', `/tubes/${mauAlice}/checkout`, { note: 'Viện trưởng lấy kiểm tra' })).status, 200);
+  assert.equal((await s.api('truong', 'POST', `/tubes/${mauAlice}/checkin`, { note: 'Trả lại đủ' })).status, 200);
+  // cờ cho giao diện
+  const hopInfo = (u) => s.api(u, 'GET', `/boxes/${hop}`);
+  assert.equal((await hopInfo('truong')).json.duoc_don_vi, true);
+  assert.equal((await hopInfo('cellbank')).json.duoc_don_vi, true);
+  assert.equal((await hopInfo('bob')).json.duoc_don_vi, false);
+  const cay = (await s.api('truong', 'GET', '/tree')).json.containers.find((c) => c.quan_ly_boi === 'cellbank');
+  assert.equal(cay.duoc_don_vi, true);
+  assert.equal((await s.api('bob', 'GET', '/tree')).json.containers.find((c) => c.quan_ly_boi === 'cellbank').duoc_don_vi, false);
+  // người duyệt của đơn vị KHÁC không được miễn ở thiết bị Cellbank
+  const dv2 = (await s.api('admin', 'POST', '/units', { ten: 'Đơn vị khác', nguoi_duyet: [3] })).json.id;
+  assert.ok(dv2);
+  assert.equal((await them('alice', 6, 5)).status, 403, 'alice duyệt cho đơn vị khác, không phải Cellbank');
+});

@@ -48,6 +48,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       .all();
     // vị trí con thừa hưởng quan_ly_boi và đơn vị quản lý của thiết bị gốc
     const donVi = new Map(db.prepare('SELECT * FROM nhm_don_vi').all().map((r) => [r.id, r]));
+    const donViCuaToi = new Set([...donVi.values()].filter((d) => ctx.YeuCau.nguoiDuyetDonVi(db, d).some((u) => u.id === req.user.id)).map((d) => d.id));
     const byId = new Map(containers.map((c) => [c.id, c]));
     const goc = (c) => {
       for (let i = 0; c.parent_id != null && byId.has(c.parent_id) && i < 50; i++) c = byId.get(c.parent_id);
@@ -60,6 +61,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       const dv = g.don_vi_id ? donVi.get(g.don_vi_id) : null;
       c.don_vi_ten = dv ? dv.ten : null;
       c.don_vi_duyet = dv ? ctx.YeuCau.nhanNguoiDuyet(dv) : null; // ai duyệt yêu cầu lấy mẫu ở thiết bị này
+      c.duoc_don_vi = !!dv && donViCuaToi.has(dv.id); // tôi là người duyệt của đơn vị này
     }
     res.json({ containers, boxes });
   });
@@ -279,7 +281,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     const tubes = db
       .prepare(
         `SELECT t.id, t.row_no, t.col_no, t.name, t.passage, t.cell_count, t.volume_ml, t.freeze_date,
-                t.project, t.status, t.notes, t.owner_user_id, t.sample_type_id, s.name AS sample_type_name,
+                t.project, t.status, t.notes, t.owner_user_id, t.box_id, t.sample_type_id, s.name AS sample_type_name,
                 t.chu_loai, t.nhom_id, (SELECT ten FROM nhm_nhom WHERE id = t.nhom_id) AS nhom_ten,
                 (SELECT fullname FROM users WHERE id = t.owner_user_id) AS owner_name
          FROM nhm_tubes t LEFT JOIN nhm_sample_types s ON s.id = t.sample_type_id
@@ -300,6 +302,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       quan_ly_boi: (ctx.YeuCau.thietBiGocCuaHop(db, id) || {}).quan_ly_boi || 'cong_khai',
       don_vi_ten: (ctx.YeuCau.donViCuaHop(db, id) || {}).ten || null,
       don_vi_duyet: ctx.YeuCau.nhanNguoiDuyet(ctx.YeuCau.donViCuaHop(db, id)),
+      duoc_don_vi: ctx.quanLyDonVi(req, id), // người duyệt của đơn vị: không bị chặn thêm / lấy mẫu ở thiết bị của đơn vị mình
     });
   });
 

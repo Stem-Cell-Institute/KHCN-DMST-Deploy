@@ -411,7 +411,7 @@
     var cb = c.quan_ly_boi === 'cellbank';
     put(box,
       h('div', { class: 'nhm-title' }, [h('h2', {}, c.name), h('span', { class: 'nhm-muted' }, c.type_name + ' · ' + c.code)]),
-      cb && !m ? loiNhacDonVi(c.don_vi_ten, c.don_vi_duyet) : null,
+      cb && !m && !c.duoc_don_vi ? loiNhacDonVi(c.don_vi_ten, c.don_vi_duyet) : null,
       actions,
       subs.length ? h('div', { class: 'nhm-inside' }, [h('h3', {}, 'Bên trong'), h('ul', {}, subs.map(function (x) {
         return h('li', {}, h('button', { type: 'button', class: 'nhm-sub', onclick: function () { state.expanded[c.id] = true; state.expanded[x.id] = true; select('container', x.id); } },
@@ -451,7 +451,7 @@
     ]) : null;
     put(root,
       h('div', { class: 'nhm-title' }, [h('h2', {}, b.name || b.code), h('span', { class: 'nhm-muted' }, (b.name ? b.code + ' · ' : '') + b.rows + '×' + b.cols + ' · ' + info.tubes.length + ' mẫu' + (cb ? ' · ' + (info.don_vi_ten || 'Đơn vị quản lý') : ''))]),
-      cb && !m ? loiNhacDonVi(info.don_vi_ten, info.don_vi_duyet) : null,
+      cb && !m && !info.duoc_don_vi ? loiNhacDonVi(info.don_vi_ten, info.don_vi_duyet) : null,
       kkBar,
       h('div', { class: 'nhm-actions' }, [
         h('button', { class: 'nhm-btn', type: 'button', onclick: function () { window.print(); } }, 'In sơ đồ hộp'),
@@ -492,14 +492,14 @@
     } else if (ph) open = function () { phatHienDialog(box, ph.id); };
     else if (t) open = function () { tubeDialog(box, t); };
     else open = function () {
-      if (info && info.quan_ly_boi === 'cellbank' && !state.meta.canManage) { say('Thiết bị này do ' + (info.don_vi_ten || 'đơn vị quản lý') + ' quản lý: chỉ quản lý module mới thêm mẫu. Bạn có thể gửi yêu cầu cho mẫu đã có.', 'err'); return; }
+      if (info && info.quan_ly_boi === 'cellbank' && !state.meta.canManage && !info.duoc_don_vi) { say('Thiết bị này do ' + (info.don_vi_ten || 'đơn vị quản lý') + ' quản lý: chỉ quản lý module mới thêm mẫu. Bạn có thể gửi yêu cầu cho mẫu đã có.', 'err'); return; }
       tubeForm(box, r, c);
     };
     el.addEventListener('click', open);
     var lnChon = function () { if (state.ln) state.ln.chon({ hop: box.id, row: r, col: c }); };
     ['mouseenter', 'focus', 'click'].forEach(function (ev) { el.addEventListener(ev, lnChon); });
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
-    if (!kk && t && t.can_edit && t.status === 'in_storage' && !(info && info.quan_ly_boi === 'cellbank' && !state.meta.canManage)) {
+    if (!kk && t && t.can_edit && t.status === 'in_storage' && !(info && info.quan_ly_boi === 'cellbank' && !state.meta.canManage && !info.duoc_don_vi)) {
       el.draggable = true;
       el.addEventListener('dragstart', function (e) { e.dataTransfer.setData('text/plain', String(t.id)); e.dataTransfer.effectAllowed = 'move'; });
     }
@@ -812,7 +812,7 @@
     ]);
     var btn = function (label, cls, fn) { return h('button', { type: 'button', class: 'nhm-btn' + (cls ? ' nhm-btn--' + cls : ''), onclick: fn }, label); };
     var buttons = [];
-    var cbKhoa = state.box && state.box.quan_ly_boi === 'cellbank' && !state.meta.canManage; // mẫu ở thiết bị Cellbank: người dùng thường chỉ sửa mô tả
+    var cbKhoa = state.box && state.box.quan_ly_boi === 'cellbank' && !state.meta.canManage && !state.box.duoc_don_vi; // mẫu ở thiết bị Cellbank: người dùng thường chỉ sửa mô tả
     var laChu = state.me && t.owner_user_id === state.me.id;
     if (t.can_edit) {
       buttons.push(btn('Chỉnh sửa', '', function () { tubeForm(box, t.row_no, t.col_no, t); }));
@@ -830,7 +830,7 @@
     }
     // người khác muốn lấy mẫu: gửi yêu cầu (quản lý tự thao tác được nên không cần)
     // (chủ mẫu có mẫu ở thiết bị Cellbank cũng phải gửi yêu cầu vì không được tự lấy)
-    if ((!laChu || cbKhoa) && !state.meta.canManage && t.status === 'in_storage' && !t.nghi_mat) buttons.unshift(btn('Xin lấy mẫu này', 'primary', function () { xinMauForm(t); }));
+    if ((!laChu || cbKhoa) && !state.meta.canManage && !(state.box && state.box.duoc_don_vi) && t.status === 'in_storage' && !t.nghi_mat) buttons.unshift(btn('Xin lấy mẫu này', 'primary', function () { xinMauForm(t); }));
     if (t.nghi_mat) buttons.unshift(btn('Mẫu nghi mất — xem vụ việc', 'danger', function () { closeDialog(); moCongViec('nghimat'); }));
     if (state.meta.canManage) buttons.push(btn('Chuyển chủ', '', function () { transferForm(t); }));
     openInfo(t.name, body, buttons);

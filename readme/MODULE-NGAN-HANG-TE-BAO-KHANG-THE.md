@@ -50,10 +50,12 @@ Chọn ở ô «Ai quản lý thiết bị này» khi **Thêm / Chỉnh sửa th
 
 | | Public | Có đơn vị quản lý (Cellbank hoặc đơn vị khác) |
 |---|---|---|
-| Thêm mẫu vào ô trống | ai cũng được | **chỉ quản lý module** |
+| Thêm mẫu vào ô trống | ai cũng được | **quản lý module và người duyệt của đơn vị** |
 | Sửa thông tin mô tả mẫu | chủ mẫu / quản lý | chủ mẫu / quản lý |
-| Di chuyển, lấy ra, rã đông, hủy, xóa mẫu | chủ mẫu / quản lý | **chỉ quản lý module** |
+| Di chuyển, lấy ra, rã đông, hủy, xóa mẫu | chủ mẫu / quản lý | **quản lý module và người duyệt của đơn vị** |
 | Lấy mẫu của người khác | gửi yêu cầu, **chủ mẫu** duyệt | gửi yêu cầu, **người duyệt của đơn vị** duyệt |
+
+**Người duyệt của đơn vị là cấp quản lý của thiết bị đó** (vd Viện trưởng, Trưởng CIPP với Cellbank): không bị chặn thêm / lấy / di chuyển mẫu ở thiết bị của đơn vị mình (`quanLyDonVi` trong `boiCanh.js`), không phải gửi yêu cầu; ở thiết bị của đơn vị KHÁC thì vẫn như người thường. Họ không có quyền quản lý kho (thêm thiết bị, hộp, danh mục) — quyền đó vẫn là của quản lý module / admin.
 
 **Đơn vị quản lý** (bảng `nhm_don_vi`, `nhm_don_vi_duyet`; `routes/nganHangTeBaoKhangThe/donVi.js`, tab **Quản lý module → Đơn vị quản lý**):
 - Có sẵn đơn vị **Cellbank** (không xóa được): người duyệt = những người giữ vai trò **Trưởng CIPP** (+ người được chỉ định thêm).

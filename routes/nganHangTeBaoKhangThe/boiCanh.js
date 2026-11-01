@@ -54,8 +54,19 @@ function taoBoiCanh(deps) {
     next();
   }
 
+  /** Người duyệt của đơn vị quản lý thiết bị chứa hộp (vd Viện trưởng, Trưởng CIPP với Cellbank): là cấp quản lý của thiết bị đó. */
+  function quanLyDonVi(req, boxId) {
+    const dv = boxId && YeuCau.donViCuaHop(db, boxId);
+    return !!dv && YeuCau.nguoiDuyetDonVi(db, dv).some((u) => u.id === req.user.id);
+  }
+
+  /** Thiết bị có đơn vị quản lý mà người này KHÔNG phải quản lý module / người duyệt của đơn vị: chỉ được gửi yêu cầu, không tự thêm / lấy mẫu. */
+  function biChanDonVi(req, boxId) {
+    return !!boxId && YeuCau.hopTrongCellbank(db, boxId) && !canManage(req) && !quanLyDonVi(req, boxId);
+  }
+
   function canEditTube(req, tube) {
-    return canManage(req) || (tube.owner_user_id != null && tube.owner_user_id === req.user.id);
+    return canManage(req) || (tube.owner_user_id != null && tube.owner_user_id === req.user.id) || (tube.box_id != null && quanLyDonVi(req, tube.box_id));
   }
 
   function audit(req, action, detail) {
@@ -172,7 +183,7 @@ function taoBoiCanh(deps) {
     for (const id of tubeIds) logMove(id, action, null, null, userId, note);
   }
 
-  return { db, laAdmin, vaiTroModule, laTruongCellbank, requireAdmin, hopTrongCellbank, logNhieuMau, thongBao, guiNen, moTaViTri, nguoiDung, nhanNguoi, YeuCau, canManage, requireManage, canEditTube, audit, fail, subtreeIds, duongDan, taoTraDuongDan, activeTubeCountInBoxes, nextCode, logMove };
+  return { db, laAdmin, vaiTroModule, laTruongCellbank, requireAdmin, hopTrongCellbank, quanLyDonVi, biChanDonVi, logNhieuMau, thongBao, guiNen, moTaViTri, nguoiDung, nhanNguoi, YeuCau, canManage, requireManage, canEditTube, audit, fail, subtreeIds, duongDan, taoTraDuongDan, activeTubeCountInBoxes, nextCode, logMove };
 }
 
 module.exports = taoBoiCanh;
