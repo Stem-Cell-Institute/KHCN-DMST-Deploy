@@ -277,7 +277,16 @@
 .nhm-chip--ok { color: #1e6b3a; border-color: #1e6b3a; background: #eaf5ee; }
 .nhm-chip--no { color: var(--son); border-color: var(--son); background: #fbeceb; }
 .nhm-ls { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--ke); }
-.nhm-ls h3 { margin: 0 0 2px; font-size: 1rem; }
+.nhm-ls > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 46px; cursor: pointer; list-style: none; }
+.nhm-ls > summary::-webkit-details-marker { display: none; }
+.nhm-ls__tit { font-size: 1rem; font-weight: 700; }
+.nhm-ls > summary::after, .nhm-ls[open] > summary::after {
+  flex: none; padding: 5px 12px; font-size: 0.78rem; font-weight: 600; color: var(--muc); background: #fff; border: 1px solid var(--muc); border-radius: 2px;
+}
+.nhm-ls > summary::after { content: "Xem lịch sử ▾"; }
+.nhm-ls[open] > summary::after { content: "Thu gọn ▴"; }
+.nhm-ls > summary:hover::after { background: var(--muc); color: #fff; }
+.nhm-ls > summary:focus-visible { outline: 3px solid var(--muc); outline-offset: 2px; }
 .nhm-chip--tt.nhm-chip--giai_the { color: var(--chu-phu); background: none; }
 .nhm-pick-list ul { list-style: none; margin: 0; padding: 0; border: 1px solid var(--ke-dam); max-height: 200px; overflow: auto; }
 .nhm-pick { display: block; width: 100%; min-height: 40px; padding: 6px 10px; text-align: left; font: inherit; font-size: 0.88rem; color: var(--muc); background: var(--giay-trang); border: 0; border-bottom: 1px solid var(--ke); cursor: pointer; }

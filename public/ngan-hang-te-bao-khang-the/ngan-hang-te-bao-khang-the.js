@@ -1683,18 +1683,23 @@
     put(root, h('div', { class: 'nhm-title' }, [h('h2', {}, 'Việc cần xử lý')]), bar, noiDung, c.tab === 'inbox' && c.data ? lichSuXuLy(c) : null);
   }
 
-  /** Lịch sử yêu cầu đã xử lý, hiện dưới danh sách «Cần tôi xử lý»: 10 mục gần nhất, bấm để xem hết. Không có gì thì không hiện. */
+  /**
+   * Lịch sử yêu cầu đã xử lý, dưới danh sách «Cần tôi xử lý». GẬP SẴN (người ít dùng máy chỉ thấy việc cần làm); bấm «Xem lịch sử» để mở.
+   * Mở rồi hiện 10 mục gần nhất, bấm để xem hết. Không có gì thì không hiện.
+   */
   function lichSuXuLy(c) {
     var ds = c.lichSu || [];
     if (!ds.length) return null;
     var hetHet = !!c.lichSuHet;
-    var danhSach = (hetHet ? ds : ds.slice(0, 10)).map(theYeuCau);
-    return h('section', { class: 'nhm-ls', 'aria-label': 'Lịch sử xử lý' }, [
-      h('h3', {}, 'Lịch sử xử lý (' + ds.length + ')'),
+    var det = h('details', { class: 'nhm-ls', 'aria-label': 'Lịch sử xử lý' }, [
+      h('summary', {}, h('span', { class: 'nhm-ls__tit' }, 'Lịch sử xử lý (' + ds.length + ')')),
       h('p', { class: 'nhm-muted nhm-small' }, 'Yêu cầu đã duyệt hoặc từ chối được lưu lại ở đây.'),
-      h('div', { class: 'nhm-cards' }, danhSach),
+      h('div', { class: 'nhm-cards' }, (hetHet ? ds : ds.slice(0, 10)).map(theYeuCau)),
       ds.length > 10 ? h('p', {}, nutNho(hetHet ? 'Thu gọn' : 'Xem tất cả ' + ds.length + ' mục', '', function () { c.lichSuHet = !hetHet; renderDetail(); })) : null,
     ]);
+    det.open = !!c.lichSuMo; // nhớ trạng thái mở khi bảng được vẽ lại
+    det.addEventListener('toggle', function () { c.lichSuMo = det.open; });
+    return det;
   }
 
   // ---------- măng-sét: lời chào, về trang chủ, đăng xuất ----------
