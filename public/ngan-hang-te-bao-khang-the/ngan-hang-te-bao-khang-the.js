@@ -143,7 +143,7 @@
     state.sel = { type: type, id: id };
     state.box = null;
     location.hash = type + '=' + id;
-    manHinhHep(true);
+    if (type === 'box') cuonToiChiTiet();
     if (type === 'box') {
       api('GET', '/boxes/' + id).then(function (b) { state.box = b; renderTree(); renderDetail(); }).catch(function (e) { say(e.message, 'err'); });
     } else {
@@ -245,6 +245,16 @@
   // ---------- cây thư mục ----------
   function renderTree() {
     var t = state.tree;
+    // sơ đồ kho luôn bung tới mục đang chọn (kể cả mở thẳng bằng địa chỉ / liên kết), để thấy các cấp trên và các hộp bên trong
+    // chỉ bung khi mục chọn ĐỔI (để người dùng vẫn gập lại được bằng tay)
+    if (state.sel && state.bungChoMuc !== state.sel.type + state.sel.id) {
+      state.bungChoMuc = state.sel.type + state.sel.id;
+      var viTriChon = state.sel.type === 'box' ? (t.boxes.filter(function (b) { return b.id === state.sel.id; })[0] || {}).container_id : state.sel.id;
+      for (var cc = t.containers.filter(function (x) { return x.id === viTriChon; })[0], buoc = 0; cc && buoc < 50; buoc++) {
+        state.expanded[cc.id] = true;
+        cc = t.containers.filter(function (x) { return x.id === cc.parent_id; })[0];
+      }
+    }
     var kids = {}, boxesBy = {}, tong = {};
     t.containers.forEach(function (c) { (kids[c.parent_id == null ? 0 : c.parent_id] = kids[c.parent_id == null ? 0 : c.parent_id] || []).push(c); });
     t.boxes.forEach(function (b) { (boxesBy[b.container_id] = boxesBy[b.container_id] || []).push(b); });
@@ -304,11 +314,10 @@
   }
 
   /** Màn hình điện thoại / máy tính bảng dọc: sơ đồ kho nằm trên đầu, nên chọn xong thì gập lại và cuộn tới nội dung. */
-  function manHinhHep(cuon) {
+  /** Màn hình hẹp: sơ đồ kho GIỮ NGUYÊN (không tự gập); chọn đến Hộp thì cuộn xuống chi tiết để lưới hộp hiện ngay bên dưới. */
+  function cuonToiChiTiet() {
     if (!window.matchMedia || !window.matchMedia('(max-width: 900px)').matches) return;
-    var r = $('nhm-rail');
-    if (r) r.open = false;
-    if (cuon) setTimeout(function () { var d = $('nhm-detail'); if (d && d.scrollIntoView) d.scrollIntoView({ block: 'start' }); }, 60);
+    setTimeout(function () { var d = $('nhm-detail'); if (d && d.scrollIntoView) d.scrollIntoView({ block: 'start' }); }, 60);
   }
 
   // ---------- khu vực chi tiết ----------
@@ -319,37 +328,6 @@
     if (c.location_note) muc.push(['Vị trí đặt', c.location_note]);
     if (c.notes) muc.push(['Ghi chú', c.notes]);
     return h('p', { class: 'nhm-meta' }, muc.map(function (m) { return h('span', {}, [h('b', {}, m[0] + ': '), m[1]]); }));
-  }
-
-  /**
-   * Vị trí lưu trữ dạng CÂY NHỎ từ lớn đến nhỏ (thiết bị → Rack / ngăn → hộp), thụt vào theo cấp.
-   * Mỗi cấp trên bấm được để quay lui (nhất là khi sơ đồ kho bên trái đã gập); dòng cuối là mục đang xem.
-   * containerId = vị trí chứa trực tiếp; hienTai = {ten, loai?, bieuTuong} của mục đang xem. Không có cấp trên thì không hiện.
-   */
-  function duongDanBamDuoc(containerId, hienTai) {
-    var chuoi = [];
-    for (var c = containerById(containerId), i = 0; c && i < 50; c = containerById(c.parent_id), i++) chuoi.unshift(c);
-    if (!chuoi.length) return null;
-    var dong = chuoi.map(function (c, cap) {
-      return h('div', { class: 'nhm-ct__dong', style: 'padding-left:' + (cap * 18) + 'px' }, [
-        cap ? h('span', { class: 'nhm-ct__noi', 'aria-hidden': 'true' }, '└') : null,
-        h('span', { class: 'nhm-ct__ic' }, icon(c.parent_id == null ? 'tu' : 'ngan')),
-        h('button', { type: 'button', class: 'nhm-link', title: 'Về ' + c.name, onclick: function () {
-          chuoi.forEach(function (x) { state.expanded[x.id] = true; }); // mở các cấp trên cây để vẫn thấy mình đang ở đâu
-          select('container', c.id);
-        } }, c.name),
-        h('span', { class: 'nhm-ct__loai' }, c.type_name),
-      ]);
-    });
-    if (hienTai) {
-      dong.push(h('div', { class: 'nhm-ct__dong nhm-ct__dong--nay', 'aria-current': 'location', style: 'padding-left:' + (chuoi.length * 18) + 'px' }, [
-        h('span', { class: 'nhm-ct__noi', 'aria-hidden': 'true' }, '└'),
-        h('span', { class: 'nhm-ct__ic' }, icon(hienTai.bieuTuong || 'ngan')),
-        h('span', { class: 'nhm-ct__ten' }, hienTai.ten),
-        hienTai.loai ? h('span', { class: 'nhm-ct__loai' }, hienTai.loai) : null,
-      ]));
-    }
-    return h('nav', { class: 'nhm-path nhm-ct', 'aria-label': 'Vị trí lưu trữ' }, dong);
   }
 
   function fact(label, value) { return h('div', { class: 'nhm-fact' }, [h('b', {}, label), value == null || value === '' ? '—' : String(value)]); }
@@ -407,7 +385,7 @@
     root.classList.add('nhm-detail--ln');
     // Màn hình hẹp: khung đặt SAU phần thông tin vị trí (tiêu đề, cây vị trí, dòng nhắc) và trước lưới hộp, để thông tin không bị đứt quãng.
     // Màn hình rộng: CSS đưa khung sang cột phải nên vị trí trong DOM không ảnh hưởng.
-    var cuoiThongTin = root.querySelectorAll('.nhm-title, .nhm-ct, .nhm-meta, .nhm-hint');
+    var cuoiThongTin = root.querySelectorAll('.nhm-title, .nhm-meta, .nhm-hint');
     var moc = cuoiThongTin.length ? cuoiThongTin[cuoiThongTin.length - 1] : null;
     if (moc && moc.parentNode === root) root.insertBefore(det, moc.nextSibling);
     else root.appendChild(det);
@@ -434,21 +412,13 @@
     var cb = c.quan_ly_boi === 'cellbank';
     put(box,
       h('div', { class: 'nhm-title' }, [h('h2', {}, c.name), h('span', { class: 'nhm-muted' }, c.type_name + ' · ' + c.code)]),
-      c.parent_id != null ? duongDanBamDuoc(c.parent_id, { ten: c.name, loai: c.type_name, bieuTuong: 'ngan' }) : null,
       thongTinGon(c, cb),
       actions,
       subs.length ? h('div', { class: 'nhm-inside' }, [h('h3', {}, 'Bên trong'), h('ul', {}, subs.map(function (x) {
         return h('li', {}, h('button', { type: 'button', class: 'nhm-sub', onclick: function () { state.expanded[c.id] = true; state.expanded[x.id] = true; select('container', x.id); } },
           [icon('ngan'), h('span', { class: 'nhm-sub__name' }, x.name), h('span', { class: 'nhm-muted nhm-small' }, x.type_name)]));
       }))]) : null,
-      boxes.length ? h('div', { class: 'nhm-boxlist' }, boxes.map(function (b) {
-        var total = b.rows * b.cols;
-        return h('button', { type: 'button', class: 'nhm-boxcard', onclick: function () { state.expanded[c.id] = true; select('box', b.id); } }, [
-          h('strong', {}, (b.vi_tri ? 'Vị trí ' + b.vi_tri + ' · ' : '') + (b.name || b.code)), h('div', { class: 'nhm-muted' }, b.code + ' · ' + b.rows + '×' + b.cols),
-          h('div', {}, b.tube_count + ' / ' + total + ' mẫu'),
-          h('div', { class: 'nhm-bar' }, [h('i', { style: 'width:' + Math.round((100 * b.tube_count) / total) + '%' })]),
-        ]);
-      })) : (subs.length ? null : h('p', { class: 'nhm-muted' }, 'Chưa có hộp hay ngăn nào bên trong.'))
+      boxes.length || subs.length ? null : h('p', { class: 'nhm-muted' }, 'Chưa có hộp hay ngăn nào bên trong.')
     );
     ganBinh(box, c.id, null);
   }
@@ -482,8 +452,6 @@
     ]) : null;
     put(root,
       h('div', { class: 'nhm-title' }, [h('h2', {}, b.name || b.code), h('span', { class: 'nhm-muted' }, (b.name ? b.code + ' · ' : '') + b.rows + '×' + b.cols + ' · ' + info.tubes.length + ' mẫu' + (cb ? ' · ' + (info.don_vi_ten || 'Đơn vị quản lý') : ''))]),
-      duongDanBamDuoc(b.container_id, { ten: b.name || b.code, loai: 'Hộp', bieuTuong: 'hop' }),
-      cb && !m ? h('p', { class: 'nhm-hint nhm-hint--gon' }, (info.don_vi_ten || 'Đơn vị quản lý') + ' quản lý: không tự thêm / lấy mẫu. Bấm vào mẫu để gửi yêu cầu; ' + (info.don_vi_duyet || 'người duyệt của đơn vị') + ' duyệt, kết quả báo qua email.') : null,
       kkBar,
       h('div', { class: 'nhm-actions' }, [
         h('button', { class: 'nhm-btn', type: 'button', onclick: function () { window.print(); } }, 'In sơ đồ hộp'),
@@ -1689,7 +1657,6 @@
     renderTree();
     renderDetail();
     taiCv();
-    var rail = $('nhm-rail'); if (rail && window.matchMedia('(max-width: 900px)').matches) rail.open = false;
   }
 
   function taiCv() {
@@ -1816,7 +1783,7 @@
       $('nhm-work').addEventListener('click', function () { moCongViec('inbox'); });
       renderTree(); renderDetail(); capNhatHuy();
       if (location.hash === '#cong-viec') moCongViec('inbox', true);
-      else if (state.sel) manHinhHep(false); // mở thẳng một hộp / vị trí: điện thoại gập sơ đồ lại để thấy nội dung
+      else if (state.sel && state.sel.type === 'box') cuonToiChiTiet(); // mở thẳng một hộp: cuộn tới lưới hộp
     }).catch(function (e) {
       $('nhm-tree').textContent = '';
       say(e.message, 'err');
