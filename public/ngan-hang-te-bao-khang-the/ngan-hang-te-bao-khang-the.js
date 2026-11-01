@@ -321,6 +321,14 @@
   }
 
   // ---------- khu vực chi tiết ----------
+  /**
+   * Giải thích cho người dùng thường ở thiết bị có đơn vị quản lý (Cellbank...): không tự thêm / lấy mẫu mà gửi yêu cầu, ai duyệt.
+   * Chỉ hiện trên màn hình rộng (CSS ẩn ở màn hình hẹp để nhường chỗ cho sơ đồ). ten / nguoiDuyet lấy từ máy chủ.
+   */
+  function loiNhacDonVi(ten, nguoiDuyet) {
+    return h('p', { class: 'nhm-hint nhm-hint--rong' }, 'Thiết bị do ' + (ten || 'đơn vị quản lý') + ' quản lý: bạn không tự thêm hay lấy mẫu ở đây. Muốn lấy mẫu, bấm vào mẫu rồi gửi yêu cầu; ' + (nguoiDuyet || 'người duyệt của đơn vị') + ' sẽ duyệt và hệ thống gửi email báo kết quả cho bạn.');
+  }
+
   function fact(label, value) { return h('div', { class: 'nhm-fact' }, [h('b', {}, label), value == null || value === '' ? '—' : String(value)]); }
 
   // ---------- bình nitơ lỏng: giá (rack) rồi hộp theo vị trí số, kèm mô hình xuyên thấu ----------
@@ -403,6 +411,7 @@
     var cb = c.quan_ly_boi === 'cellbank';
     put(box,
       h('div', { class: 'nhm-title' }, [h('h2', {}, c.name), h('span', { class: 'nhm-muted' }, c.type_name + ' · ' + c.code)]),
+      cb && !m ? loiNhacDonVi(c.don_vi_ten, c.don_vi_duyet) : null,
       actions,
       subs.length ? h('div', { class: 'nhm-inside' }, [h('h3', {}, 'Bên trong'), h('ul', {}, subs.map(function (x) {
         return h('li', {}, h('button', { type: 'button', class: 'nhm-sub', onclick: function () { state.expanded[c.id] = true; state.expanded[x.id] = true; select('container', x.id); } },
@@ -442,6 +451,7 @@
     ]) : null;
     put(root,
       h('div', { class: 'nhm-title' }, [h('h2', {}, b.name || b.code), h('span', { class: 'nhm-muted' }, (b.name ? b.code + ' · ' : '') + b.rows + '×' + b.cols + ' · ' + info.tubes.length + ' mẫu' + (cb ? ' · ' + (info.don_vi_ten || 'Đơn vị quản lý') : ''))]),
+      cb && !m ? loiNhacDonVi(info.don_vi_ten, info.don_vi_duyet) : null,
       kkBar,
       h('div', { class: 'nhm-actions' }, [
         h('button', { class: 'nhm-btn', type: 'button', onclick: function () { window.print(); } }, 'In sơ đồ hộp'),

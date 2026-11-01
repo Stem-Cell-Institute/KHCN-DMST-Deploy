@@ -472,3 +472,6 @@
 .nhm-ln > summary::after { content: "Mở sơ đồ ▾"; }
 .nhm-ln[open] > summary::after { content: "Thu gọn ▴"; }
 .nhm-ln > summary:hover::after { background: var(--muc); color: #fff; }
+
+/* Dòng giải thích Cellbank / đơn vị quản lý: chỉ màn hình rộng */
+@media (max-width: 900px) { .nhm-hint--rong { display: none; } }
