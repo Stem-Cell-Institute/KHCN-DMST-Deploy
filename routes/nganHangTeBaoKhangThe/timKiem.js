@@ -49,10 +49,10 @@ module.exports = function createTimKiemRouter(ctx) {
     if (tuKhoa) {
       const like = '%' + escapeLike(tuKhoa) + '%';
       where.push(
-        `(t.name LIKE ? ESCAPE '\\' OR t.barcode LIKE ? ESCAPE '\\' OR t.project LIKE ? ESCAPE '\\'
+        `(t.name LIKE ? ESCAPE '\\' OR t.project LIKE ? ESCAPE '\\'
           OR t.passage LIKE ? ESCAPE '\\' OR t.notes LIKE ? ESCAPE '\\')`
       );
-      params.push(like, like, like, like, like);
+      params.push(like, like, like, like);
     }
     if (q.sample_type_id != null && q.sample_type_id !== '') {
       const id = toInt(q.sample_type_id);
@@ -75,7 +75,7 @@ module.exports = function createTimKiemRouter(ctx) {
     return [{ where: where.join(' AND '), params }, null];
   }
 
-  const CHON = `SELECT t.id, t.name, t.barcode, t.status, t.passage, t.cell_count, t.volume_ml, t.freeze_date, t.project, t.notes,
+  const CHON = `SELECT t.id, t.name, t.status, t.passage, t.cell_count, t.volume_ml, t.freeze_date, t.project, t.notes,
                        t.row_no, t.col_no, t.box_id, t.sample_type_id, t.owner_user_id, t.updated_at,
                        s.name AS sample_type_name, b.code AS box_code, b.name AS box_name, b.container_id,
                        (SELECT COALESCE(NULLIF(fullname, ''), email) FROM users WHERE id = t.owner_user_id) AS owner_name
@@ -109,10 +109,10 @@ module.exports = function createTimKiemRouter(ctx) {
       .prepare(`${CHON} WHERE ${loc.where} ORDER BY b.code, t.row_no, t.col_no, t.id LIMIT ?`)
       .all(...loc.params, GIOI_HAN_XUAT);
     const duongDan = taoTraDuongDan();
-    const dau = ['Mã nội bộ', 'Tên mẫu', 'Mã vạch', 'Loại mẫu', 'Passage', 'Số tế bào', 'Thể tích (mL)', 'Ngày đông lạnh', 'Đề tài',
+    const dau = ['Mã nội bộ', 'Tên mẫu', 'Loại mẫu', 'Passage', 'Số tế bào', 'Thể tích (mL)', 'Ngày đông lạnh', 'Đề tài',
       'Trạng thái', 'Vị trí lưu trữ', 'Mã hộp', 'Ô', 'Người sở hữu', 'Ghi chú'];
     const dong = rows.map((r) => [
-      r.id, r.name, r.barcode, r.sample_type_name, r.passage, r.cell_count, r.volume_ml, r.freeze_date, r.project,
+      r.id, r.name, r.sample_type_name, r.passage, r.cell_count, r.volume_ml, r.freeze_date, r.project,
       TRANG_THAI_VN[r.status] || r.status, r.container_id ? duongDan(r.container_id).join(' › ') : '', r.box_code,
       r.row_no ? String.fromCharCode(64 + r.row_no) + r.col_no : '', r.owner_name, r.notes,
     ]);

@@ -74,12 +74,13 @@ in_storage ──checkout──▶ checked_out ──checkin──▶ in_storage
 
 ## Tìm kiếm, xuất, nhập hàng loạt
 
-- `GET /tubes/search`: `q` (tên, mã vạch, đề tài, passage, ghi chú), `sample_type_id`, `owner` (`me` hoặc id), `box_id`,
+- `GET /tubes/search`: `q` (tên, đề tài, passage, ghi chú), `sample_type_id`, `owner` (`me` hoặc id), `box_id`,
   `status` (mặc định chỉ mẫu còn trong kho; `all` gồm cả đã rã đông / hủy), `limit` (≤ 200), `offset`.
 - `GET /tubes/export.csv` (chỉ quản lý): cùng bộ lọc, tối đa 20.000 dòng, UTF-8 có BOM để Excel đọc đúng tiếng Việt;
   ô bắt đầu bằng `= + - @` được thêm dấu nháy đơn để không bị Excel hiểu là công thức.
-- `POST /tubes/bulk`: n ống (1–100) vào các ô liên tiếp theo hàng từ ô bắt đầu, mã vạch = `barcode_prefix` + số thứ tự
-  3 chữ số; **tất cả hoặc không** (một ô bị chiếm / vượt lưới / trùng mã vạch thì không thêm mẫu nào).
+- `POST /tubes/bulk`: n ống (1–100) cùng lô vào các ô liên tiếp theo hàng từ ô bắt đầu; **tất cả hoặc không** (một ô
+  bị chiếm hoặc vượt lưới thì không thêm mẫu nào).
+- Module **không dùng mã vạch** (đã bỏ khỏi giao diện, API và CSV; cột `barcode` ở DB cũ nếu có thì để nguyên, không dùng).
 - Route tĩnh (`/tubes/search`, `/tubes/bulk`, `/tubes/export.csv`) đứng **trước** các route `/tubes/:id...` — xem
   «Thứ tự đăng ký route» trong `KIEN-TRUC-VA-CAM-BAY.md`.
 

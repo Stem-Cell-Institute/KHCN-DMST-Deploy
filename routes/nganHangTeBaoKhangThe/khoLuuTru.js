@@ -208,7 +208,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     const path = duongDan(box.container_id);
     const tubes = db
       .prepare(
-        `SELECT t.id, t.barcode, t.row_no, t.col_no, t.name, t.passage, t.cell_count, t.volume_ml, t.freeze_date,
+        `SELECT t.id, t.row_no, t.col_no, t.name, t.passage, t.cell_count, t.volume_ml, t.freeze_date,
                 t.project, t.status, t.notes, t.owner_user_id, t.sample_type_id, s.name AS sample_type_name,
                 (SELECT fullname FROM users WHERE id = t.owner_user_id) AS owner_name
          FROM nhm_tubes t LEFT JOIN nhm_sample_types s ON s.id = t.sample_type_id

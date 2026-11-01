@@ -64,7 +64,6 @@ CREATE TABLE IF NOT EXISTS nhm_sample_types (
 -- Mẫu lưu trữ (ống đông lạnh, kháng thể, sinh phẩm...)
 CREATE TABLE IF NOT EXISTS nhm_tubes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  barcode TEXT,
   box_id INTEGER REFERENCES nhm_boxes(id),
   row_no INTEGER,
   col_no INTEGER,
@@ -87,8 +86,8 @@ CREATE TABLE IF NOT EXISTS nhm_tubes (
 -- Một vị trí chỉ chứa một ống đang giữ chỗ (lưu kho hoặc đang lấy ra chờ trả lại)
 CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_tube_position ON nhm_tubes(box_id, row_no, col_no)
   WHERE status IN ('in_storage','checked_out') AND deleted_at IS NULL AND box_id IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_tube_barcode ON nhm_tubes(barcode)
-  WHERE barcode IS NOT NULL AND deleted_at IS NULL;
+-- Mã vạch không được dùng: bỏ chỉ mục của bản nháp cũ (cột barcode ở DB cũ, nếu có, để nguyên và không dùng nữa)
+DROP INDEX IF EXISTS ux_nhm_tube_barcode;
 CREATE INDEX IF NOT EXISTS ix_nhm_tubes_box ON nhm_tubes(box_id);
 
 -- Nhật ký chuỗi lưu giữ: chỉ thêm, không sửa/xóa

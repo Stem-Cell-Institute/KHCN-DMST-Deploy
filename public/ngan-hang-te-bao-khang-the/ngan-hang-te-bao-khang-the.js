@@ -348,7 +348,6 @@
       title: tube ? 'Chỉnh sửa thông tin mẫu' : 'Thêm mẫu tại ' + posLabel(r, c),
       fields: [
         { name: 'name', label: 'Tên mẫu', required: true, value: tube && tube.name },
-        { name: 'barcode', label: 'Mã vạch', value: tube && tube.barcode },
         { name: 'sample_type_id', label: 'Loại mẫu', type: 'select', options: sampleTypeOptions(), value: tube ? (tube.sample_type_id || '') : '' },
         { name: 'passage', label: 'Passage', value: tube && tube.passage },
         { name: 'cell_count', label: 'Số tế bào', type: 'number', value: tube && tube.cell_count },
@@ -357,17 +356,16 @@
         { name: 'project', label: 'Đề tài / dự án', value: tube && tube.project },
         { name: 'notes', label: 'Ghi chú', type: 'textarea', value: tube && tube.notes },
       ].concat(tube ? [] : [
-        // Thêm cùng lô: n ống liên tiếp từ ô này (sang hàng kế khi hết cột), mã vạch = tiền tố + số thứ tự
+        // Thêm cùng lô: n ống liên tiếp từ ô này (sang hàng kế khi hết cột)
         { name: 'count', label: 'Số ống cùng lô (1–100, đặt vào các ô liên tiếp từ ô này)', type: 'number', value: 1 },
-        { name: 'barcode_prefix', label: 'Tiền tố mã vạch cho cả lô (nếu thêm nhiều ống)', placeholder: 'ví dụ HELA-' },
       ]),
       onSubmit: function (v) {
-        var body = { name: v.name, barcode: v.barcode, sample_type_id: v.sample_type_id === '' ? null : Number(v.sample_type_id), passage: v.passage,
+        var body = { name: v.name, sample_type_id: v.sample_type_id === '' ? null : Number(v.sample_type_id), passage: v.passage,
           cell_count: v.cell_count, volume_ml: v.volume_ml, freeze_date: v.freeze_date, project: v.project, notes: v.notes };
         var n = tube ? 1 : Number(v.count) || 1;
         var p;
         if (tube) p = api('PATCH', '/tubes/' + tube.id, body);
-        else if (n > 1) p = api('POST', '/tubes/bulk', Object.assign({ box_id: box.id, row_no: r, col_no: c, count: n, barcode_prefix: v.barcode_prefix }, body));
+        else if (n > 1) p = api('POST', '/tubes/bulk', Object.assign({ box_id: box.id, row_no: r, col_no: c, count: n }, body));
         else p = api('POST', '/tubes', Object.assign({ box_id: box.id, row_no: r, col_no: c }, body));
         return p.then(function () { say(tube ? 'Đã cập nhật thông tin mẫu.' : n > 1 ? 'Đã thêm ' + n + ' mẫu.' : 'Đã thêm mẫu.', 'ok'); return reload(true); });
       },
@@ -432,7 +430,7 @@
   };
   var STATUS_VN = { in_storage: 'Đang lưu kho', checked_out: 'Đã lấy ra', thawed: 'Đã rã đông', discarded: 'Đã hủy' };
   var FIELD_VN = {
-    name: 'Tên', barcode: 'Mã vạch', sample_type_id: 'Loại mẫu', passage: 'Passage', cell_count: 'Số tế bào',
+    name: 'Tên', sample_type_id: 'Loại mẫu', passage: 'Passage', cell_count: 'Số tế bào',
     volume_ml: 'Thể tích (mL)', freeze_date: 'Ngày đông lạnh', project: 'Đề tài', notes: 'Ghi chú',
   };
 
@@ -498,7 +496,7 @@
     var body = h('div', {}, [
       h('div', { class: 'nhm-facts' }, [
         fact('Vị trí', posLabel(t.row_no, t.col_no)), fact('Trạng thái', STATUS_VN[t.status] || t.status), fact('Loại mẫu', t.sample_type_name),
-        fact('Mã vạch', t.barcode), fact('Passage', t.passage), fact('Số tế bào', t.cell_count), fact('Thể tích (mL)', t.volume_ml),
+        fact('Passage', t.passage), fact('Số tế bào', t.cell_count), fact('Thể tích (mL)', t.volume_ml),
         fact('Ngày đông lạnh', t.freeze_date), fact('Người sở hữu', t.owner_name), fact('Đề tài', t.project), fact('Ghi chú', t.notes),
       ]),
       h('strong', {}, 'Lịch sử thao tác'),
@@ -600,7 +598,7 @@
     var typeSel = h('select', { name: 'sample_type_id', 'aria-label': 'Loại mẫu' }, [h('option', { value: '' }, 'Mọi loại mẫu')].concat(
       state.meta.sampleTypes.map(function (x) { return h('option', { value: x.id }, x.name); })));
     typeSel.value = p.sample_type_id || '';
-    var qIn = h('input', { name: 'q', type: 'search', placeholder: 'Tên, mã vạch, đề tài, passage, ghi chú…', 'aria-label': 'Từ khóa' });
+    var qIn = h('input', { name: 'q', type: 'search', placeholder: 'Tên, đề tài, passage, ghi chú…', 'aria-label': 'Từ khóa' });
     qIn.value = p.q || '';
     var mine = h('input', { type: 'checkbox', name: 'owner' }); mine.checked = p.owner === 'me';
     var all = h('input', { type: 'checkbox', name: 'status' }); all.checked = p.status === 'all';
@@ -623,7 +621,7 @@
         var vt = it.box_id ? it.path.concat([it.box_code]).join(' › ') + (it.row_no ? ' › ' + posLabel(it.row_no, it.col_no) : '') : '—';
         return h('tr', {}, [
           h('td', {}, h('button', { type: 'button', class: 'nhm-link', onclick: function () { moMauTuKetQua(it); } }, it.name)),
-          h('td', {}, it.barcode || ''), h('td', {}, it.sample_type_name || ''), h('td', {}, vt),
+          h('td', {}, it.sample_type_name || ''), h('td', {}, vt),
           h('td', {}, STATUS_VN[it.status] || it.status), h('td', {}, it.owner_name || ''),
         ]);
       });
@@ -631,7 +629,7 @@
       var sau = h('button', { type: 'button', class: 'nhm-btn nhm-btn--sm', disabled: r.offset + r.items.length >= r.total, onclick: function () { runSearch(Object.assign({}, p, { offset: r.offset + TRANG })); } }, 'Sau ›');
       body = h('div', {}, [
         h('div', { class: 'nhm-gridwrap' }, h('table', { class: 'nhm-hist nhm-results' }, [
-          h('tr', {}, ['Tên mẫu', 'Mã vạch', 'Loại mẫu', 'Vị trí', 'Trạng thái', 'Người sở hữu'].map(function (x) { return h('th', {}, x); })),
+          h('tr', {}, ['Tên mẫu', 'Loại mẫu', 'Vị trí', 'Trạng thái', 'Người sở hữu'].map(function (x) { return h('th', {}, x); })),
         ].concat(rows))),
         h('div', { class: 'nhm-pager' }, [truoc, h('span', { class: 'nhm-muted' }, (r.offset + 1) + '–' + (r.offset + r.items.length) + ' / ' + r.total), sau]),
       ]);

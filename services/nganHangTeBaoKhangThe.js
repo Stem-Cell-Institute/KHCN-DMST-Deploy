@@ -60,7 +60,7 @@ const TRANG_THAI_VN = { in_storage: 'Đang lưu kho', checked_out: 'Đã lấy r
 // ---------- Truy vết thay đổi ----------
 
 const NHAN_TRUONG = {
-  name: 'Tên', barcode: 'Mã vạch', sample_type_id: 'Loại mẫu', passage: 'Passage', cell_count: 'Số tế bào',
+  name: 'Tên', sample_type_id: 'Loại mẫu', passage: 'Passage', cell_count: 'Số tế bào',
   volume_ml: 'Thể tích (mL)', freeze_date: 'Ngày đông lạnh', project: 'Đề tài', notes: 'Ghi chú', code: 'Mã',
   container_id: 'Vị trí lưu trữ', rows: 'Số hàng', cols: 'Số cột', type_id: 'Loại', parent_id: 'Thuộc vị trí',
   temperature_c: 'Nhiệt độ (°C)', location_note: 'Vị trí đặt', sort_order: 'Thứ tự', template_id: 'Mẫu hộp',

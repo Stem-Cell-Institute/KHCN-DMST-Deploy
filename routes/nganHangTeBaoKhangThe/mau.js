@@ -37,7 +37,6 @@ module.exports = function createMauRouter(ctx) {
       else out[key] = r.value;
     };
     if ('name' in body) out.name = toStr(body.name, 200);
-    if ('barcode' in body) out.barcode = toStr(body.barcode, 100);
     if ('sample_type_id' in body) out.sample_type_id = body.sample_type_id == null || body.sample_type_id === '' ? null : toInt(body.sample_type_id);
     if ('passage' in body) out.passage = toStr(body.passage, 50);
     so('cell_count', 'Số tế bào');
@@ -73,12 +72,12 @@ module.exports = function createMauRouter(ctx) {
   function insertTube(t, boxId, row, col, userId) {
     const info = db
       .prepare(
-        `INSERT INTO nhm_tubes (barcode, box_id, row_no, col_no, sample_type_id, name, passage, cell_count, volume_ml,
+        `INSERT INTO nhm_tubes (box_id, row_no, col_no, sample_type_id, name, passage, cell_count, volume_ml,
                                 freeze_date, owner_user_id, project, notes, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
-        t.barcode ?? null, boxId, row, col, t.sample_type_id ?? null, t.name, t.passage ?? null, t.cell_count ?? null,
+        boxId, row, col, t.sample_type_id ?? null, t.name, t.passage ?? null, t.cell_count ?? null,
         t.volume_ml ?? null, t.freeze_date ?? null, userId, t.project ?? null, t.notes ?? null, userId
       );
     const tubeId = Number(info.lastInsertRowid);
@@ -101,10 +100,6 @@ module.exports = function createMauRouter(ctx) {
     if (t.sample_type_id != null && !db.prepare('SELECT 1 FROM nhm_sample_types WHERE id = ?').get(t.sample_type_id)) {
       return fail(res, 400, 'Loại mẫu không hợp lệ.');
     }
-    delete t.barcode; // mã vạch mỗi ống một khác: sinh từ tiền tố bên dưới
-    const tienTo = toStr(body.barcode_prefix, 80);
-    const batDau = body.barcode_start == null || body.barcode_start === '' ? 1 : toInt(body.barcode_start);
-    if (batDau == null || batDau < 0) return fail(res, 400, 'Số bắt đầu của mã vạch không hợp lệ.');
     const first = checkPosition(boxId, row, col);
     if (first) return fail(res, first.status, first.message);
     const hop = db.prepare('SELECT rows, cols FROM nhm_boxes WHERE id = ?').get(boxId);
@@ -119,14 +114,12 @@ module.exports = function createMauRouter(ctx) {
     }
     try {
       const ids = db.transaction(() =>
-        oCan.map(([r, c], i) =>
-          insertTube({ ...t, barcode: tienTo ? tienTo + String(batDau + i).padStart(3, '0') : null }, boxId, r, c, req.user.id)
-        )
+        oCan.map(([r, c]) => insertTube(t, boxId, r, c, req.user.id))
       )();
       audit(req, 'tube_bulk_create', `box=${boxId} ${ids.length} mẫu "${t.name}" từ r${row}c${col}`);
       res.status(201).json({ ids });
     } catch (e) {
-      if (isUniqueError(e)) return fail(res, 409, 'Một mã vạch sinh ra đã tồn tại. Hãy đổi tiền tố hoặc số bắt đầu.');
+      if (isUniqueError(e)) return fail(res, 409, 'Một ô vừa có người khác đặt mẫu vào. Hãy thử lại.');
       throw e;
     }
   });
@@ -149,7 +142,7 @@ module.exports = function createMauRouter(ctx) {
       audit(req, 'tube_create', `id=${id} box=${boxId} r${row}c${col}`);
       res.status(201).json({ id });
     } catch (e) {
-      if (isUniqueError(e)) return fail(res, 409, 'Vị trí đã có mẫu hoặc mã vạch đã tồn tại.');
+      if (isUniqueError(e)) return fail(res, 409, 'Vị trí này đã có mẫu khác.');
       throw e;
     }
   });
@@ -179,20 +172,15 @@ module.exports = function createMauRouter(ctx) {
       const ten = (v) => (v == null ? null : (db.prepare('SELECT name FROM nhm_sample_types WHERE id = ?').get(v) || {}).name || v);
       hienThi.sample_type_id = hienThi.sample_type_id.map(ten);
     }
-    try {
-      db.transaction(() => {
-        db.prepare(`UPDATE nhm_tubes SET ${cols.map((c) => c + ' = ?').join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(
-          ...cols.map((c) => t[c]),
-          id
-        );
-        logMove(id, 'edit', null, null, req.user.id, thayDoiJson(hienThi));
-      })();
-      audit(req, 'tube_update', `id=${id} ${moTaThayDoi(hienThi)}`);
-      res.json({ ok: true, changed: cols.length });
-    } catch (e) {
-      if (isUniqueError(e)) return fail(res, 409, 'Mã vạch đã tồn tại.');
-      throw e;
-    }
+    db.transaction(() => {
+      db.prepare(`UPDATE nhm_tubes SET ${cols.map((c) => c + ' = ?').join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(
+        ...cols.map((c) => t[c]),
+        id
+      );
+      logMove(id, 'edit', null, null, req.user.id, thayDoiJson(hienThi));
+    })();
+    audit(req, 'tube_update', `id=${id} ${moTaThayDoi(hienThi)}`);
+    res.json({ ok: true, changed: cols.length });
   });
 
   router.post('/tubes/:id/move', (req, res) => {

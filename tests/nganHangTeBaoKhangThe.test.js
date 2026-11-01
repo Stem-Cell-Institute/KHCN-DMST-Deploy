@@ -132,7 +132,7 @@ test('tạo hộp từ mẫu, tạo hàng loạt, kích thước sai bị từ c
 });
 
 test('thêm ống: kiểm tra vị trí trong lưới và vị trí trống', async () => {
-  const t1 = await api('alice', 'POST', '/tubes', { box_id: ids.box, row_no: 1, col_no: 1, name: 'HEK293 P12', barcode: 'BC-1' });
+  const t1 = await api('alice', 'POST', '/tubes', { box_id: ids.box, row_no: 1, col_no: 1, name: 'HEK293 P12' });
   assert.equal(t1.status, 201);
   ids.tubeA = t1.json.id;
   assert.equal((await api('alice', 'POST', '/tubes', { box_id: ids.box, row_no: 1, col_no: 1, name: 'trùng' })).status, 409);
@@ -140,7 +140,6 @@ test('thêm ống: kiểm tra vị trí trong lưới và vị trí trống', as
   assert.equal((await api('alice', 'POST', '/tubes', { box_id: ids.box, row_no: 0, col_no: 1, name: 'ngoài' })).status, 400);
   assert.equal((await api('alice', 'POST', '/tubes', { box_id: ids.box, row_no: 2, col_no: 2 })).status, 400);
   assert.equal((await api('alice', 'POST', '/tubes', { box_id: 99999, row_no: 1, col_no: 1, name: 'x' })).status, 400);
-  assert.equal((await api('alice', 'POST', '/tubes', { box_id: ids.box, row_no: 2, col_no: 2, name: 'trùng mã vạch', barcode: 'BC-1' })).status, 409);
 });
 
 test('hộp trả về ống, đường dẫn và quyền sửa theo chủ sở hữu', async () => {

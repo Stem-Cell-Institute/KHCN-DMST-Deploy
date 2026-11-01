@@ -48,13 +48,10 @@ test('hộp: sửa mã trùng 409, đổi sang vật chứa không tồn tại 4
   assert.equal((await s.api('manager', 'POST', '/boxes', { container_id: kho.container, template_id: kho.tpl99, code: 'C', count: 2 })).status, 400);
 });
 
-test('mẫu: loại mẫu sai khi sửa 400, mã vạch trùng khi sửa 409, mã vạch rỗng thì xóa mã', async () => {
-  const a = await s.api('alice', 'POST', '/tubes', { box_id: kho.box, row_no: 1, col_no: 1, name: 'A', barcode: 'MV-1' });
+test('mẫu: loại mẫu sai khi sửa 400, sửa không có trường nào 400, mẫu không tồn tại 404', async () => {
+  await s.api('alice', 'POST', '/tubes', { box_id: kho.box, row_no: 1, col_no: 1, name: 'A' });
   const b = await s.api('alice', 'POST', '/tubes', { box_id: kho.box, row_no: 1, col_no: 2, name: 'B' });
   assert.equal((await s.api('alice', 'PATCH', `/tubes/${b.json.id}`, { sample_type_id: 99999 })).status, 400);
-  assert.equal((await s.api('alice', 'PATCH', `/tubes/${b.json.id}`, { barcode: 'MV-1' })).status, 409);
-  assert.equal((await s.api('alice', 'PATCH', `/tubes/${a.json.id}`, { barcode: '' })).status, 200);
-  assert.equal(s.db.prepare('SELECT barcode FROM nhm_tubes WHERE id = ?').get(a.json.id).barcode, null);
   assert.equal((await s.api('alice', 'PATCH', `/tubes/${b.json.id}`, {})).status, 400);
   assert.equal((await s.api('alice', 'PATCH', '/tubes/99999', { name: 'x' })).status, 404);
   assert.equal((await s.api('alice', 'POST', '/tubes', { box_id: kho.box, row_no: 3, col_no: 3, name: 'L', sample_type_id: 99999 })).status, 400);

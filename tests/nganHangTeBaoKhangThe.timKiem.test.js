@@ -14,7 +14,7 @@ test.before(async () => {
   kho = await s.taoKho();
   const loai = kho.meta.sampleTypes.find((x) => x.name === 'Kháng thể').id;
   const mau = [
-    ['alice', 1, 1, { name: 'HEK293 P12', barcode: 'BC-100', project: 'Đề tài A', sample_type_id: loai }],
+    ['alice', 1, 1, { name: 'HEK293 P12', project: 'Đề tài A', sample_type_id: loai }],
     ['alice', 1, 2, { name: 'HEK293 P13', project: 'Đề tài A' }],
     ['bob', 2, 1, { name: 'MSC dây rốn', project: '50% đề tài_B' }],
     ['bob', 2, 2, { name: '=CMD("calc")', notes: 'có "dấu nháy", phẩy' }],
@@ -28,10 +28,9 @@ test.after(() => s.dong());
 
 const tim = (qs, user = 'alice') => s.api(user, 'GET', '/tubes/search' + qs);
 
-test('tìm mẫu: cần đăng nhập; theo tên, mã vạch, đề tài; không phân biệt hoa thường', async () => {
+test('tìm mẫu: cần đăng nhập; theo tên, đề tài; không phân biệt hoa thường', async () => {
   assert.equal((await tim('', null)).status, 401);
   assert.equal((await tim('?q=hek')).json.total, 2);
-  assert.equal((await tim('?q=bc-100')).json.items[0].name, 'HEK293 P12');
   assert.equal((await tim('?q=' + encodeURIComponent('đề tài a'))).json.total, 0); // LIKE của SQLite không bỏ dấu / hoa thường Unicode
   assert.equal((await tim('?q=' + encodeURIComponent('Đề tài A'))).json.total, 2);
 });
@@ -95,16 +94,15 @@ test('xuất CSV: chỉ quản lý; có BOM, tiêu đề, thoát dấu nháy / p
   assert.ok(s.auditLog.some((a) => a.action === 'nhm_tube_export'));
 });
 
-test('thêm hàng loạt: đặt vào các ô liên tiếp, sang hàng kế khi hết cột, sinh mã vạch', async () => {
+test('thêm hàng loạt: đặt vào các ô liên tiếp, sang hàng kế khi hết cột', async () => {
   const r = await s.api('alice', 'POST', '/tubes/bulk', {
-    box_id: kho.box2, row_no: 1, col_no: 8, count: 4, name: 'Lô HeLa', barcode_prefix: 'HELA-', barcode_start: 5, passage: 'P3',
+    box_id: kho.box2, row_no: 1, col_no: 8, count: 4, name: 'Lô HeLa', passage: 'P3',
   });
   assert.equal(r.status, 201);
   assert.equal(r.json.ids.length, 4);
   const hop = (await s.api('alice', 'GET', `/boxes/${kho.box2}`)).json.tubes;
   const vt = hop.map((t) => `${t.row_no},${t.col_no}`).sort();
   assert.deepEqual(vt, ['1,8', '1,9', '2,1', '2,2']);
-  assert.deepEqual(hop.map((t) => t.barcode).sort(), ['HELA-005', 'HELA-006', 'HELA-007', 'HELA-008']);
   assert.ok(hop.every((t) => t.owner_user_id === 3 && t.passage === 'P3'));
   const h = (await s.api('alice', 'GET', `/tubes/${r.json.ids[0]}/history`)).json.history;
   assert.equal(h[0].action, 'store');
@@ -123,8 +121,5 @@ test('thêm hàng loạt: tất cả hoặc không — ô bị chiếm, vượt 
   assert.equal((await s.api('alice', 'POST', '/tubes/bulk', { ...goc, row_no: 4, col_no: 1, count: 2, name: '' })).status, 400);
   assert.equal((await s.api('alice', 'POST', '/tubes/bulk', { ...goc, row_no: 4, col_no: 1, count: 2, cell_count: 'abc' })).status, 400);
   assert.equal((await s.api(null, 'POST', '/tubes/bulk', { ...goc, count: 2 })).status, 401);
-  // mã vạch sinh ra trùng mã đã có => 409 và rollback toàn bộ
-  const trung = await s.api('alice', 'POST', '/tubes/bulk', { ...goc, row_no: 5, col_no: 1, count: 3, barcode_prefix: 'BC-', barcode_start: 100 });
-  assert.equal(trung.status, 409);
-  assert.equal(dem(), n0);
+  assert.equal(dem(), n0, 'không có lỗi nào để lại mẫu dở dang');
 });
