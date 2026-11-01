@@ -8,6 +8,8 @@
  *
  * Đường duyệt và quy tắc chuyển lên quản lý: services/nganHangTeBaoKhangTheYeuCau.js.
  * Quản lý module và admin luôn xử lý được; nếu không phải người duyệt ở cấp hiện tại thì là «xử lý thay» và BẮT BUỘC có lý do.
+ * NGOẠI LỆ ngân hàng kháng thể: chỉ Viện trưởng duyệt (admin xử lý thay khi chưa có Viện trưởng); quản lý ngân hàng kháng thể
+ * chỉ THEO DÕI yêu cầu đang chờ (co_the_xu_ly = false, theo_doi = true) và giao / nhận lại mẫu sau khi duyệt.
  * Không ai duyệt được yêu cầu của chính mình. Mọi bước ghi vào lịch sử của mẫu; email chạy nền, không làm hỏng thao tác chính.
  */
 
@@ -41,12 +43,16 @@ module.exports = function createYeuCauRouter(ctx) {
     return yc.nguoi_gui_id === req.user.id || yc.xu_ly_boi === req.user.id || canManage(req) || laNguoiDuyet(req, yc, tube);
   }
 
+  /** Yêu cầu thuộc ngân hàng kháng thể (chỉ Viện trưởng duyệt)? */
+  const laKhangThe = (boxId) => YeuCau.hopKhangThe(db, boxId);
+
   /** {coTheXuLy, thay} cho một yêu cầu đang chờ duyệt. */
   function quyenXuLy(req, yc, tube) {
     if (yc.nguoi_gui_id === req.user.id) return { coTheXuLy: false, thay: false };
     const dungCap = laNguoiDuyet(req, yc, tube);
     if (dungCap) return { coTheXuLy: true, thay: false };
-    if (canManage(req)) return { coTheXuLy: true, thay: yc.cap !== 'quan_ly' };
+    // ngân hàng kháng thể: quản lý không duyệt được, chỉ admin xử lý thay
+    if (laKhangThe(tube.box_id) ? ctx.laAdmin(req) : canManage(req)) return { coTheXuLy: true, thay: yc.cap !== 'quan_ly' };
     return { coTheXuLy: false, thay: false };
   }
 
@@ -54,6 +60,8 @@ module.exports = function createYeuCauRouter(ctx) {
     const tube = { owner_user_id: y.owner_user_id, nhom_id: y.nhom_id, box_id: y.box_id };
     const cho = y.trang_thai === 'cho_duyet';
     const q = cho ? quyenXuLy(req, y, tube) : { coTheXuLy: false, thay: false };
+    // quản lý ngân hàng kháng thể thấy yêu cầu đang chờ Viện trưởng để theo dõi (không phải việc của họ)
+    const theoDoi = cho && !q.coTheXuLy && canManage(req) && laKhangThe(y.box_id) && y.nguoi_gui_id !== req.user.id;
     return {
       id: y.id, tube_id: y.tube_id, mau_ten: y.mau_ten, mau_status: y.mau_status, vi_tri: moTaViTri(y.box_id, y.row_no, y.col_no),
       nguoi_gui_id: y.nguoi_gui_id, nguoi_gui_ten: y.nguoi_gui_ten, chu_ten: y.chu_ten, nhom_ten: y.nhom_ten, chu_loai: y.chu_loai,
@@ -61,6 +69,7 @@ module.exports = function createYeuCauRouter(ctx) {
       leo_thang_luc: y.leo_thang_luc, xu_ly_ten: y.xu_ly_ten, xu_ly_luc: y.xu_ly_luc, xu_ly_thay: !!y.xu_ly_thay, ly_do_xu_ly: y.ly_do_xu_ly,
       created_at: y.created_at,
       co_the_xu_ly: q.coTheXuLy, can_ly_do: q.coTheXuLy && q.thay, // xử lý thay: phải có lý do
+      theo_doi: theoDoi,
       co_the_in: duocXemPhieu(req, y, tube),
       co_the_huy: y.nguoi_gui_id === req.user.id && (y.trang_thai === 'cho_duyet' || y.trang_thai === 'da_duyet'),
       co_the_giao: canManage(req) && y.trang_thai === 'da_duyet',
@@ -130,7 +139,7 @@ module.exports = function createYeuCauRouter(ctx) {
     const an = ctx.tapAn(req).boxes;
     if (an.size) rows = rows.filter((y) => !an.has(y.box_id)); // yêu cầu về mẫu ở thiết bị riêng của người khác
     let items = rows.map((y) => dinhDang(req, y));
-    if (view === 'inbox') items = items.filter((x) => x.co_the_xu_ly || x.co_the_giao || x.co_the_nhan_lai);
+    if (view === 'inbox') items = items.filter((x) => x.co_the_xu_ly || x.co_the_giao || x.co_the_nhan_lai || x.theo_doi);
     res.json({ requests: items });
   });
 
@@ -154,7 +163,7 @@ module.exports = function createYeuCauRouter(ctx) {
     if (y.trang_thai !== 'cho_duyet') return fail(res, 409, 'Yêu cầu này đã được xử lý.');
     if (y.nguoi_gui_id === req.user.id) return fail(res, 403, 'Bạn không thể tự xử lý yêu cầu của chính mình.');
     const q = quyenXuLy(req, y, tube);
-    if (!q.coTheXuLy) return fail(res, 403, 'Bạn không phải người duyệt yêu cầu này.');
+    if (!q.coTheXuLy) return fail(res, 403, laKhangThe(tube.box_id) ? 'Ở ngân hàng kháng thể chỉ Viện trưởng duyệt yêu cầu; quản lý theo dõi và giao mẫu sau khi duyệt.' : 'Bạn không phải người duyệt yêu cầu này.');
     const lyDo = toStr((req.body || {}).ly_do, 500);
     if (q.thay && (!lyDo || lyDo.length < 5)) return fail(res, 400, 'Xử lý thay người duyệt phải ghi lý do (ít nhất 5 ký tự).');
     if (ketQua === 'tu_choi' && !lyDo) return fail(res, 400, 'Từ chối phải ghi lý do.');
@@ -255,6 +264,7 @@ module.exports = function createYeuCauRouter(ctx) {
     const ds = db.prepare(`${SELECT} WHERE y.trang_thai = 'cho_duyet' AND y.cap <> 'quan_ly' AND y.han_phan_hoi <= ?`).all(hanNay);
     let leoThang = 0;
     for (const y of ds) {
+      if (laKhangThe(y.box_id)) continue; // ngân hàng kháng thể: quá hạn không chuyển cho quản lý (quản lý không duyệt), Viện trưởng vẫn là người duyệt
       const ok = db.transaction(() => {
         const r = db
           .prepare("UPDATE nhm_yeu_cau SET cap = 'quan_ly', leo_thang_luc = datetime('now'), updated_at = datetime('now') WHERE id = ? AND trang_thai = 'cho_duyet' AND cap = ?")

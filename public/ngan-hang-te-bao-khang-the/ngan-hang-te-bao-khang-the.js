@@ -562,7 +562,7 @@
         { name: 'temperature_c', label: 'Nhiệt độ (°C)', type: 'number', value: c && c.temperature_c },
         { name: 'location_note', label: 'Vị trí đặt (phòng…)', value: c && c.location_note },
         { name: 'notes', label: 'Ghi chú', type: 'textarea', value: c && c.notes },
-      ].concat(viTriGiaField(c, parentId)).concat(!parentId && (!c || c.parent_id == null) ? [
+      ].concat(viTriGiaField(c, parentId)).concat(!parentId && (!c || c.parent_id == null) && !state.meta.khongPublic ? [
         // chỉ thiết bị gốc; ngăn, giá bên trong thừa hưởng
         { name: 'don_vi_id', label: 'Ai quản lý thiết bị này', type: 'select', value: c && c.rieng ? 'rieng' : c && c.don_vi_id ? String(c.don_vi_id) : '',
           options: [{ value: '', label: 'Public — ai cũng thêm mẫu vào ô trống' }].concat(state.meta.laVienTruong ? [{ value: 'rieng', label: 'Riêng tư — không hiện với người khác' }] : []).concat((state.meta.donVi || []).map(function (d) {
@@ -1389,9 +1389,9 @@
       var cards = r.units.map(function (u) {
         var chips = u.nguoi_duyet.map(function (x) {
           return h('span', { class: 'nhm-chip' }, [x.ten, laAdmin ? h('button', { type: 'button', 'aria-label': 'Bỏ ' + x.ten, onclick: function () { luu(u, u.nguoi_duyet.filter(function (y) { return y.user_id !== x.user_id; })); } }, '×') : null]);
-        }).concat(u.nguoi_theo_vai_tro.map(function (x) { return h('span', { class: 'nhm-chip nhm-chip--vt' }, x.ten + ' (Trưởng CIPP)'); }));
+        }).concat(u.nguoi_theo_vai_tro.map(function (x) { return h('span', { class: 'nhm-chip nhm-chip--vt' }, x.ten + (u.chi_vien_truong ? ' (Viện trưởng)' : ' (Trưởng CIPP)')); }));
         var them = null;
-        if (laAdmin) {
+        if (laAdmin && !u.chi_vien_truong) {
           var nguoi = chonNguoi({ label: 'Thêm người duyệt cho ' + u.ten, placeholder: 'Gõ tên hoặc email người duyệt…' });
           them = h('div', { class: 'nhm-addrole' }, [nguoi.node, nutNho('Thêm người duyệt', '', function () {
             var x = nguoi.get();
@@ -1402,7 +1402,7 @@
         }
         var act = laAdmin ? h('div', { class: 'nhm-card-act' }, [
           nutNho('Sửa tên / mô tả', '', function () { donViForm(u, reopen); }),
-          u.mac_dinh ? null : nutNho('Xóa', 'danger', function () {
+          u.mac_dinh || u.chi_vien_truong ? null : nutNho('Xóa', 'danger', function () {
             if (!window.confirm('Xóa đơn vị «' + u.ten + '»?')) return;
             api('DELETE', '/units/' + u.id).then(function () { reopen(); }).catch(function (e) { err.textContent = e.message; });
           }),
@@ -1410,14 +1410,18 @@
         return h('div', { class: 'nhm-card' }, [
           h('div', { class: 'nhm-card-top' }, [h('strong', {}, u.ten), h('span', { class: 'nhm-chip' }, u.so_thiet_bi + ' thiết bị')]),
           u.mo_ta ? h('div', { class: 'nhm-small nhm-muted' }, u.mo_ta) : null,
-          h('div', { class: 'nhm-lbl nhm-small' }, 'Người duyệt yêu cầu lấy mẫu'),
-          chips.length ? h('div', { class: 'nhm-chips' }, chips) : h('p', { class: 'nhm-hint' }, 'Chưa có người duyệt: yêu cầu sẽ chuyển thẳng cho quản lý module.'),
+          h('div', { class: 'nhm-lbl nhm-small' }, u.chi_vien_truong ? 'Người duyệt yêu cầu lấy mẫu (chỉ Viện trưởng)' : 'Người duyệt yêu cầu lấy mẫu'),
+          chips.length ? h('div', { class: 'nhm-chips' }, chips) : h('p', { class: 'nhm-hint' }, u.chi_vien_truong ? 'Chưa có ai giữ vai trò Viện trưởng: admin xử lý yêu cầu cho đến khi cấp vai trò (tab Vai trò).' : 'Chưa có người duyệt: yêu cầu sẽ chuyển thẳng cho quản lý module.'),
+          u.chi_vien_truong ? h('div', { class: 'nhm-lbl nhm-small' }, 'Quản lý ngân hàng kháng thể (theo dõi, giao và nhận lại mẫu)') : null,
+          u.chi_vien_truong ? (u.quan_ly.length ? h('div', { class: 'nhm-chips' }, u.quan_ly.map(function (x) { return h('span', { class: 'nhm-chip' }, x.ten); })) : h('p', { class: 'nhm-hint' }, 'Chưa có quản lý: admin cấp ở tab Vai trò (Quản lý, phạm vi Ngân hàng kháng thể).')) : null,
           them, act,
         ]);
       });
       put(body, h('div', {}, [
-        h('div', { class: 'nhm-dm-head' }, [h('strong', {}, 'Đơn vị quản lý thiết bị (' + r.units.length + ')'), laAdmin ? nutNho('+ Thêm đơn vị', 'primary', function () { donViForm(null, reopen); }) : null]),
-        h('p', { class: 'nhm-muted nhm-small' }, 'Thiết bị gắn với một đơn vị (chọn ở Thêm / Chỉnh sửa thiết bị) thì người dùng không tự thêm hay lấy mẫu mà gửi yêu cầu; người duyệt của đơn vị quyết định. Thiết bị không gắn đơn vị là Public: chủ mẫu, rồi trưởng nhóm, rồi quản lý module duyệt. ' + (laAdmin ? '' : 'Chỉ Admin thêm, sửa đơn vị và gán người duyệt.')),
+        h('div', { class: 'nhm-dm-head' }, [h('strong', {}, 'Đơn vị quản lý thiết bị (' + r.units.length + ')'), laAdmin && nganHang !== 'khang_the' ? nutNho('+ Thêm đơn vị', 'primary', function () { donViForm(null, reopen); }) : null]),
+        nganHang === 'khang_the'
+          ? h('p', { class: 'nhm-muted nhm-small' }, 'Ngân hàng kháng thể không có Public: mọi thiết bị thuộc AntibodyBank. Người dùng gửi yêu cầu; chỉ Viện trưởng duyệt. Quản lý ngân hàng kháng thể được báo, theo dõi yêu cầu, rồi giao và nhận lại mẫu theo quyết định của Viện trưởng.' + (laAdmin ? '' : ' Chỉ Admin cấp vai trò.'))
+          : h('p', { class: 'nhm-muted nhm-small' }, 'Thiết bị gắn với một đơn vị (chọn ở Thêm / Chỉnh sửa thiết bị) thì người dùng không tự thêm hay lấy mẫu mà gửi yêu cầu; người duyệt của đơn vị quyết định. Thiết bị không gắn đơn vị là Public: chủ mẫu, rồi trưởng nhóm, rồi quản lý module duyệt. ' + (laAdmin ? '' : 'Chỉ Admin thêm, sửa đơn vị và gán người duyệt.')),
         h('div', { class: 'nhm-cards' }, cards), err]));
     }).catch(loiTrongSlot(body));
   }
@@ -1500,7 +1504,9 @@
       submitLabel: 'Gửi yêu cầu',
       onSubmit: function (v) {
         return api('POST', '/tubes/' + t.id + '/requests', { ly_do: v.ly_do }).then(function (r) {
-          say('Đã gửi yêu cầu tới ' + r.cap_ten + '. Nếu quá ' + gioDia(r.han_phan_hoi) + ' chưa ai phản hồi, yêu cầu sẽ chuyển cho quản lý module. Theo dõi ở «Việc cần xử lý».', 'ok');
+          say(nganHang === 'khang_the'
+            ? 'Đã gửi yêu cầu tới Viện trưởng; quản lý ngân hàng kháng thể cũng được báo. Sau khi duyệt, quản lý sẽ giao mẫu cho bạn. Theo dõi ở «Việc cần xử lý».'
+            : 'Đã gửi yêu cầu tới ' + r.cap_ten + '. Nếu quá ' + gioDia(r.han_phan_hoi) + ' chưa ai phản hồi, yêu cầu sẽ chuyển cho quản lý module. Theo dõi ở «Việc cần xử lý».', 'ok');
           return taiMe();
         });
       },
@@ -1530,7 +1536,7 @@
         label: tuChoi ? 'Lý do từ chối (người xin sẽ đọc được)' : y.can_ly_do ? 'Lý do xử lý thay ' + y.cap_ten + ' (bắt buộc, ghi vào lịch sử)' : 'Ghi chú (không bắt buộc)',
       }],
       submitLabel: tuChoi ? 'Từ chối' : 'Duyệt',
-      onSubmit: function (v) { return api('POST', '/requests/' + y.id + '/' + ketQua, { ly_do: v.ly_do }).then(function () { say(tuChoi ? 'Đã từ chối.' : 'Đã duyệt. Người xin và quản lý module đã được thông báo.', 'ok'); return lamMoiCv(); }); },
+      onSubmit: function (v) { return api('POST', '/requests/' + y.id + '/' + ketQua, { ly_do: v.ly_do }).then(function () { say(tuChoi ? 'Đã từ chối.' : (nganHang === 'khang_the' ? 'Đã duyệt. Người xin và quản lý ngân hàng kháng thể đã được thông báo; quản lý sẽ giao mẫu.' : 'Đã duyệt. Người xin và quản lý module đã được thông báo.'), 'ok'); return lamMoiCv(); }); },
     });
   }
 
@@ -1538,7 +1544,7 @@
 
   /** Thẻ một yêu cầu. */
   function theYeuCau(y) {
-    var trangThai = { cho_duyet: 'Chờ ' + y.cap_ten + ' duyệt', da_duyet: 'Đã duyệt — chờ quản lý giao mẫu', tu_choi: 'Bị từ chối', da_giao: 'Đã giao cho người xin', da_tra: 'Đã trả', da_huy: 'Đã hủy' }[y.trang_thai] || y.trang_thai;
+    var trangThai = { cho_duyet: 'Chờ ' + y.cap_ten + ' duyệt' + (y.theo_doi ? ' · bạn theo dõi' : ''), da_duyet: 'Đã duyệt — chờ quản lý giao mẫu', tu_choi: 'Bị từ chối', da_giao: 'Đã giao cho người xin', da_tra: 'Đã trả', da_huy: 'Đã hủy' }[y.trang_thai] || y.trang_thai;
     var nut = [];
     if (y.co_the_xu_ly) {
       nut.push(nutNho('Duyệt', 'primary', function () { dongYForm(y, 'approve'); }));
@@ -1725,27 +1731,39 @@
         [t[1], t[2] ? h('span', { class: 'nhm-count' }, String(t[2])) : null]);
     }));
     var noiDung;
+    // quản lý ngân hàng kháng thể: yêu cầu đang chờ Viện trưởng duyệt chỉ để THEO DÕI, tách khỏi việc của mình
+    var theo = c.tab === 'inbox' && c.data ? c.data.filter(function (y) { return y.theo_doi; }) : [];
+    var ds = c.tab === 'inbox' && c.data ? c.data.filter(function (y) { return !y.theo_doi; }) : c.data;
     if (!c.data) noiDung = h('div', { class: 'nhm-loading' }, 'Đang tải…');
     else if (c.tab === 'vipham') {
       noiDung = c.data.length ? h('div', { class: 'nhm-cards' }, c.data.map(function (x) {
         return h('div', { class: 'nhm-card' }, [h('div', { class: 'nhm-card-top' }, [h('strong', {}, x.ten), h('span', { class: 'nhm-chip nhm-chip--warn' }, x.so_lan + ' lần')]),
           h('div', { class: 'nhm-small nhm-muted' }, (x.nhom_ten ? 'Nhóm ' + x.nhom_ten + ' · ' : '') + 'gần nhất ' + gioDia(x.gan_nhat))]);
       })) : h('p', { class: 'nhm-muted' }, 'Chưa có trường hợp lấy mẫu không xin phép nào được chủ mẫu xác nhận.');
-    } else if (!c.data.length) noiDung = h('p', { class: 'nhm-muted' }, { inbox: 'Không có yêu cầu nào đang chờ bạn xử lý.', mine: 'Bạn chưa gửi yêu cầu nào.', done: 'Chưa có yêu cầu nào đã được xử lý. Yêu cầu đã duyệt hoặc từ chối sẽ được lưu ở đây (quản lý module thấy tất cả).', phathien: 'Không có mẫu nào đang chờ chủ mẫu khai báo.', nghimat: 'Không có mẫu nào đang bị báo nghi mất.', all: 'Chưa có yêu cầu nào.' }[c.tab]);
-    else noiDung = h('div', { class: 'nhm-cards' }, c.data.map(c.tab === 'phathien' ? theMauChuaKhaiBao : c.tab === 'nghimat' ? theNghiMat : theYeuCau));
-    if (c.tab === 'inbox' && c.data && c.data.length) noiDung = gapDanhSach(c, noiDung); // danh sách việc: gập sẵn khi mở từ địa chỉ / thư
-    put(root, h('div', { class: 'nhm-title' }, [h('h2', {}, 'Việc cần xử lý')]), bar, noiDung, c.tab === 'inbox' && c.data ? lichSuXuLy(c) : null);
+    } else if (!ds.length) noiDung = h('p', { class: 'nhm-muted' }, { inbox: 'Không có yêu cầu nào đang chờ bạn xử lý.', mine: 'Bạn chưa gửi yêu cầu nào.', done: 'Chưa có yêu cầu nào đã được xử lý. Yêu cầu đã duyệt hoặc từ chối sẽ được lưu ở đây (quản lý module thấy tất cả).', phathien: 'Không có mẫu nào đang chờ chủ mẫu khai báo.', nghimat: 'Không có mẫu nào đang bị báo nghi mất.', all: 'Chưa có yêu cầu nào.' }[c.tab]);
+    else noiDung = h('div', { class: 'nhm-cards' }, ds.map(c.tab === 'phathien' ? theMauChuaKhaiBao : c.tab === 'nghimat' ? theNghiMat : theYeuCau));
+    if (c.tab === 'inbox' && ds && ds.length) noiDung = gapDanhSach(c, noiDung, ds.length); // danh sách việc: gập sẵn khi mở từ địa chỉ / thư
+    put(root, h('div', { class: 'nhm-title' }, [h('h2', {}, 'Việc cần xử lý')]), bar, noiDung, theo.length ? theoDoiViTruong(theo) : null, c.tab === 'inbox' && c.data ? lichSuXuLy(c) : null);
   }
 
   /** Bọc danh sách «Cần tôi xử lý» trong khung gập (người ít dùng máy chỉ cần thanh đỏ báo việc; bấm «Xem và xử lý» để mở). */
-  function gapDanhSach(c, noiDung) {
+  function gapDanhSach(c, noiDung, n) {
     var det = h('details', { class: 'nhm-ls nhm-ls--viec' }, [
-      h('summary', {}, h('span', { class: 'nhm-ls__tit' }, 'Cần tôi xử lý (' + c.data.length + ')')),
+      h('summary', {}, h('span', { class: 'nhm-ls__tit' }, 'Cần tôi xử lý (' + n + ')')),
       noiDung,
     ]);
     det.open = !!c.dsMo;
     det.addEventListener('toggle', function () { c.dsMo = det.open; });
     return det;
+  }
+
+  /** Ngân hàng kháng thể: yêu cầu đang chờ Viện trưởng duyệt, quản lý chỉ xem (không có nút duyệt). Gập sẵn. */
+  function theoDoiViTruong(ds) {
+    return h('details', { class: 'nhm-ls nhm-ls--theo', 'aria-label': 'Đang chờ Viện trưởng duyệt' }, [
+      h('summary', {}, h('span', { class: 'nhm-ls__tit' }, 'Đang chờ Viện trưởng duyệt — bạn theo dõi (' + ds.length + ')')),
+      h('p', { class: 'nhm-muted nhm-small' }, 'Chỉ Viện trưởng duyệt. Khi yêu cầu được duyệt, nó chuyển lên «Cần tôi xử lý» để bạn giao mẫu.'),
+      h('div', { class: 'nhm-cards' }, ds.map(theYeuCau)),
+    ]);
   }
 
   /**
@@ -1834,7 +1852,7 @@
         runSearch({ q: $('nhm-search-q').value.trim(), sample_type_id: '', owner: '', status: '', offset: 0 });
       });
       var addRoot = $('nhm-add-root');
-      if (meta.canManage || meta.laVienTruong) {
+      if (meta.canManage || (meta.laVienTruong && !meta.khongPublic)) { // Viện trưởng chỉ tạo thiết bị riêng, ngân hàng kháng thể không có
         addRoot.classList.remove('nhm-hide');
         addRoot.addEventListener('click', function () { containerForm(null, null); });
       }

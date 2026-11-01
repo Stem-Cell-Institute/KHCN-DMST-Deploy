@@ -13,7 +13,7 @@
  */
 
 const { esc } = require('./baoCaoPhongThongBao');
-const { layHan, CAP_VN, quanLyModule, nganHangCuaHop, nguoiConHoatDong, truongNhomHieuLuc } = require('./nganHangTeBaoKhangTheYeuCau');
+const { layHan, CAP_VN, quanLyModule, nganHangCuaHop, nguoiConHoatDong, truongNhomHieuLuc, hopKhangThe } = require('./nganHangTeBaoKhangTheYeuCau');
 const { NGAN_HANG } = require('./nganHangTeBaoKhangThe');
 
 const EMAIL_HOP_LE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -72,20 +72,42 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     guiDen,
     lienKet,
 
-    /** Có yêu cầu mới → người duyệt ở cấp hiện tại. */
-    yeuCauMoi({ yc, tube, nguoiGui, duongDan, nguoiDuyet }) {
+    /** Có yêu cầu mới → người duyệt ở cấp hiện tại (ngân hàng kháng thể: thêm thư «để theo dõi» cho các quản lý). */
+    async yeuCauMoi({ yc, tube, nguoiGui, duongDan, nguoiDuyet }) {
+      const khangThe = hopKhangThe(db, tube.box_id);
+      const thongTin = thongTinMau(tube, duongDan).concat(yc.ly_do ? [{ nhan: 'Lý do', text: yc.ly_do }] : []);
       const thu = dungThu(
         [{ text: `${ten(nguoiGui)} xin lấy một mẫu cần bạn duyệt (cấp duyệt: ${yc.cap_ten || CAP_VN[yc.cap]}).` }]
-          .concat(thongTinMau(tube, duongDan))
-          .concat(yc.ly_do ? [{ nhan: 'Lý do', text: yc.ly_do }] : [])
-          .concat([{ text: `Vui lòng duyệt hoặc từ chối trong vòng ${layHan(db).PHAN_HOI_NGAY} ngày; quá hạn yêu cầu sẽ chuyển cho quản lý module.` }]),
+          .concat(thongTin)
+          .concat([{ text: khangThe ? 'Vui lòng duyệt hoặc từ chối trong hệ thống. Sau khi duyệt, quản lý ngân hàng kháng thể sẽ giao mẫu theo quyết định của bạn.' : `Vui lòng duyệt hoặc từ chối trong vòng ${layHan(db).PHAN_HOI_NGAY} ngày; quá hạn yêu cầu sẽ chuyển cho quản lý module.` }]),
         lienKet('#cong-viec', tube.box_id)
       );
-      return guiDen(gop(nguoiGui.id, nguoiDuyet), `${tt(tube.box_id)} Yêu cầu lấy mẫu: ${tube.name}`, thu);
+      const kq = await guiDen(gop(nguoiGui.id, nguoiDuyet), `${tt(tube.box_id)} Yêu cầu lấy mẫu: ${tube.name}`, thu);
+      if (!khangThe) return kq;
+      // quản lý ngân hàng kháng thể: được báo để theo dõi, KHÔNG duyệt (chỉ Viện trưởng duyệt)
+      const duyet = new Set((nguoiDuyet || []).map((u) => u.id));
+      const theoDoi = dungThu(
+        [{ text: `${ten(nguoiGui)} vừa gửi yêu cầu lấy mẫu của ngân hàng kháng thể. Viện trưởng sẽ duyệt; bạn theo dõi và sẽ giao mẫu sau khi được duyệt.` }].concat(thongTin),
+        lienKet('#cong-viec', tube.box_id)
+      );
+      const kq2 = await guiDen(gop(nguoiGui.id, ql(tube.box_id).filter((u) => !duyet.has(u.id))), `${tt(tube.box_id)} Yêu cầu lấy mẫu chờ Viện trưởng duyệt: ${tube.name}`, theoDoi);
+      return { gui: kq.gui + kq2.gui, loi: kq.loi + kq2.loi, nguoi_nhan: kq.nguoi_nhan + kq2.nguoi_nhan };
     },
 
-    /** Đã duyệt → người yêu cầu + quản lý module (để xử lý giao mẫu). */
-    yeuCauDaDuyet({ yc, tube, nguoiGui, nguoiXuLy, duongDan, xuLyThay, donViTen, dongDuyet }) {
+    /** Đã duyệt → người yêu cầu + quản lý module (để xử lý giao mẫu). Ngân hàng kháng thể: quản lý nhận thư riêng «hãy giao mẫu theo lệnh duyệt». */
+    async yeuCauDaDuyet({ yc, tube, nguoiGui, nguoiXuLy, duongDan, xuLyThay, donViTen, dongDuyet }) {
+      if (hopKhangThe(db, tube.box_id)) {
+        const chung = [{ text: `Yêu cầu lấy mẫu của ${ten(nguoiGui)} đã được Viện trưởng duyệt${xuLyThay ? ' (admin xử lý thay: ' + (yc.ly_do_xu_ly || '') + ')' : ''}.` }]
+          .concat(thongTinMau(tube, duongDan))
+          .concat([{ nhan: 'Người duyệt', text: ten(nguoiXuLy) }].concat(yc.ly_do_xu_ly ? [{ nhan: 'Ghi chú của người duyệt', text: yc.ly_do_xu_ly }] : []));
+        const toiNguoiXin = dungThu(chung.concat([{ text: `Quản lý ${donViTen || 'ngân hàng kháng thể'} sẽ liên hệ giao mẫu cho bạn.` }]).concat(linkPhieu(yc.id, tube.box_id)), lienKet('#cong-viec', tube.box_id));
+        const toiQuanLy = dungThu(chung.concat([{ nhan: 'Người nhận mẫu', text: ten(nguoiGui) }, { text: 'Việc của quản lý: giao mẫu cho người xin theo đúng quyết định của Viện trưởng, rồi ghi nhận trong hệ thống («Giao mẫu»).' }]).concat(linkPhieu(yc.id, tube.box_id)), lienKet('#cong-viec', tube.box_id));
+        const quanLy = ql(tube.box_id);
+        const ids = new Set(quanLy.map((u) => u.id));
+        const a = await guiDen(gop(nguoiXuLy && nguoiXuLy.id, [nguoiGui], (dongDuyet || []).filter((u) => !ids.has(u.id))), `${tt(tube.box_id)} Đã duyệt yêu cầu lấy mẫu: ${tube.name}`, toiNguoiXin);
+        const b = await guiDen(gop(nguoiXuLy && nguoiXuLy.id, quanLy), `${tt(tube.box_id)} Đã duyệt — cần giao mẫu: ${tube.name}`, toiQuanLy);
+        return { gui: a.gui + b.gui, loi: a.loi + b.loi, nguoi_nhan: a.nguoi_nhan + b.nguoi_nhan };
+      }
       const thu = dungThu(
         [{ text: `Yêu cầu lấy mẫu của ${ten(nguoiGui)} đã được duyệt${xuLyThay ? ' (quản lý xử lý thay: ' + (yc.ly_do_xu_ly || '') + ')' : ''}.` }]
           .concat(thongTinMau(tube, duongDan))

@@ -1,7 +1,7 @@
 'use strict';
 
 // Hai ngân hàng (tế bào / kháng thể) trong một module: dùng chung tài khoản, tách thiết bị, mẫu, người quản lý, đơn vị.
-// Ngân hàng không chọn bị ẩn hoàn toàn (kể cả với admin); quản lý theo ngân hàng; Ab-bank là đơn vị của ngân hàng kháng thể.
+// Ngân hàng không chọn bị ẩn hoàn toàn (kể cả với admin); quản lý theo ngân hàng; AntibodyBank là đơn vị duy nhất của ngân hàng kháng thể (không có Public), chỉ Viện trưởng duyệt, quản lý theo dõi và giao mẫu.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -41,7 +41,9 @@ test('thiết bị tạo ở ngân hàng kháng thể: tế bào không thấy; 
   const hop = await s.api('manager', 'POST', '/boxes', { container_id: tbKt, template_id: kho.tpl99, name: 'Hộp KT' }, KT);
   assert.equal(hop.status, 201);
   hopKt = hop.json.ids[0];
-  const m = await s.api('alice', 'POST', '/tubes', { box_id: hopKt, row_no: 1, col_no: 1, name: 'Kháng thể anti-CD34', chu_loai: 'can_bo' }, KT);
+  // thiết bị kháng thể thuộc AntibodyBank (không có Public): người thường không tự thêm mẫu, quản lý thêm
+  assert.equal((await s.api('alice', 'POST', '/tubes', { box_id: hopKt, row_no: 1, col_no: 1, name: 'Kháng thể anti-CD34', chu_loai: 'can_bo' }, KT)).status, 403);
+  const m = await s.api('manager', 'POST', '/tubes', { box_id: hopKt, row_no: 1, col_no: 1, name: 'Kháng thể anti-CD34', chu_loai: 'can_bo' }, KT);
   assert.equal(m.status, 201);
   mauKt = m.json.id;
 
@@ -83,46 +85,118 @@ test('quản lý theo ngân hàng: cấp Quản lý kháng thể cho alice thì 
   assert.equal((await s.api('alice', 'GET', '/meta', null, TB)).json.canManage, true);
 });
 
-test('đơn vị theo ngân hàng: Ab-bank của ngân hàng kháng thể, Cellbank của ngân hàng tế bào', async () => {
+test('đơn vị theo ngân hàng: AntibodyBank của ngân hàng kháng thể, Cellbank của ngân hàng tế bào; kháng thể không có Public', async () => {
   const donVi = async (nh) => (await s.api('manager', 'GET', '/units', null, nh)).json.units;
   assert.deepEqual((await donVi(TB)).map((u) => u.ma), ['cellbank']);
-  assert.deepEqual((await donVi(KT)).map((u) => u.ma), ['ab-bank']);
-  assert.deepEqual((await s.api('bob', 'GET', '/meta', null, KT)).json.donVi.map((d) => d.ten), ['Ab-bank']);
+  assert.deepEqual((await donVi(KT)).map((u) => u.ma), ['antibodybank']);
+  assert.deepEqual((await s.api('bob', 'GET', '/meta', null, KT)).json.donVi.map((d) => d.ten), ['AntibodyBank']);
+  assert.equal((await s.api('bob', 'GET', '/meta', null, KT)).json.khongPublic, true);
+  assert.equal((await s.api('bob', 'GET', '/meta', null, TB)).json.khongPublic, false);
   const ab = (await donVi(KT))[0];
   const cb = (await donVi(TB))[0];
   assert.equal(ab.mac_dinh, true);
-  assert.equal((await s.api('admin', 'DELETE', `/units/${ab.id}`, null, KT)).status, 400, 'Ab-bank không xóa được');
+  assert.equal(ab.chi_vien_truong, true);
+  assert.deepEqual(ab.nguoi_duyet, [], 'không gán tay người duyệt');
+  assert.ok(ab.quan_ly.some((u) => u.user_id === 2), 'liệt kê quản lý ngân hàng kháng thể');
+  assert.equal((await s.api('admin', 'DELETE', `/units/${ab.id}`, null, KT)).status, 400, 'AntibodyBank không xóa được');
   assert.equal((await s.api('admin', 'DELETE', `/units/${ab.id}`, null, TB)).status, 404, 'đơn vị của ngân hàng khác như không có');
-  // gắn đơn vị đúng ngân hàng
+  assert.equal((await s.api('admin', 'POST', '/units', { ten: 'Phòng Ab phụ' }, KT)).status, 400, 'ngân hàng kháng thể chỉ có một đơn vị');
+  assert.equal((await s.api('admin', 'PATCH', `/units/${ab.id}`, { nguoi_duyet: [6] }, KT)).status, 400, 'người duyệt luôn là Viện trưởng');
+  // thiết bị: gắn đúng ngân hàng; kháng thể luôn thuộc AntibodyBank
   assert.equal((await s.api('manager', 'PATCH', `/containers/${tbKt}`, { don_vi_id: cb.id }, KT)).status, 400, 'thiết bị kháng thể không gắn Cellbank');
+  assert.equal((await s.api('manager', 'PATCH', `/containers/${tbKt}`, { don_vi_id: null }, KT)).status, 400, 'không có Public');
+  assert.equal((await s.api('manager', 'PATCH', `/containers/${tbKt}`, { rieng: true }, KT)).status, 400, 'không có thiết bị riêng');
   assert.equal((await s.api('manager', 'PATCH', `/containers/${tbKt}`, { don_vi_id: ab.id }, KT)).status, 200);
-  // đơn vị mới tạo thuộc ngân hàng đang chọn
-  const moi = await s.api('admin', 'POST', '/units', { ten: 'Phòng Ab phụ' }, KT);
+  const cay = (await s.api('manager', 'GET', '/tree', null, KT)).json.containers;
+  assert.ok(cay.filter((c) => c.parent_id == null).every((c) => c.don_vi_id === ab.id && c.don_vi_ten === 'AntibodyBank'), 'mọi thiết bị gốc thuộc AntibodyBank');
+  assert.equal(cay.find((c) => c.id === tbKt).don_vi_duyet, 'Viện trưởng');
+  // thiết bị tạo không nói đơn vị vẫn thuộc AntibodyBank (không thành Public)
+  const moi = await s.api('manager', 'POST', '/containers', { name: 'Tủ KT chưa chọn đơn vị', type_id: kho.type }, KT);
   assert.equal(moi.status, 201);
-  assert.ok((await donVi(KT)).some((u) => u.ten === 'Phòng Ab phụ'));
-  assert.ok(!(await donVi(TB)).some((u) => u.ten === 'Phòng Ab phụ'));
+  assert.equal((await s.api('manager', 'GET', '/tree', null, KT)).json.containers.find((c) => c.id === moi.json.id).don_vi_id, ab.id);
 });
 
-test('yêu cầu ở ngân hàng kháng thể: người duyệt Ab-bank; chưa có người duyệt thì quản lý đúng ngân hàng; thư ghi tên ngân hàng', async () => {
-  const ab = (await s.api('manager', 'GET', '/units', null, KT)).json.units.find((u) => u.ma === 'ab-bank');
-  // chưa có người duyệt → quản lý kháng thể (alice được cấp cả hai ngân hàng ở test trên; manager cấp cả hai từ đầu)
+test('yêu cầu ở ngân hàng kháng thể: chỉ Viện trưởng duyệt, quản lý theo dõi và giao mẫu, thư gửi đúng người', async () => {
+  const doi = () => new Promise((r) => setTimeout(r, 60));
+  const toi = (email) => s.mails.filter((m) => m.to === email);
+  // chưa có Viện trưởng: yêu cầu về admin (không phải quản lý), quản lý không duyệt được
+  const r0 = await s.api('bob', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Chưa có Viện trưởng' }, KT);
+  assert.equal(r0.status, 201);
+  assert.equal(r0.json.cap, 'quan_ly');
+  assert.equal(r0.json.cap_ten, 'Admin');
+  assert.equal((await s.api('manager', 'POST', `/requests/${r0.json.id}/approve`, {}, KT)).status, 403, 'quản lý không duyệt');
+  assert.equal((await s.api('bob', 'POST', `/requests/${r0.json.id}/cancel`, null, KT)).status, 200);
+
+  // cấp vai trò Viện trưởng (user 6)
+  assert.equal((await s.api('admin', 'POST', '/roles', { user_id: 6, vai_tro: 'vien_truong' })).status, 201);
+  assert.equal((await s.api('truong', 'POST', '/containers', { name: 'Tủ riêng KT', type_id: kho.type, rieng: true }, KT)).status, 400, 'Viện trưởng cũng không tạo thiết bị riêng ở ngân hàng kháng thể');
   s.mails.length = 0;
   const r1 = await s.api('bob', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Cần dùng' }, KT);
   assert.equal(r1.status, 201);
-  assert.equal(r1.json.cap, 'quan_ly');
-  await new Promise((r) => setTimeout(r, 40));
-  assert.ok(s.mails.length >= 1 && s.mails.every((m) => m.subject.startsWith('[Ngân hàng kháng thể]')), 'tiêu đề thư ghi ngân hàng kháng thể');
-  assert.equal((await s.api('bob', 'POST', `/requests/${r1.json.id}/cancel`, null, KT)).status, 200);
-  // gán người duyệt Ab-bank (user 6)
-  assert.equal((await s.api('admin', 'PATCH', `/units/${ab.id}`, { nguoi_duyet: [6] }, KT)).status, 200);
+  assert.equal(r1.json.cap, 'truong_cellbank');
+  assert.equal(r1.json.cap_ten, 'Viện trưởng');
+  await doi();
+  assert.ok(s.mails.every((m) => m.subject.startsWith('[Ngân hàng kháng thể]')), 'tiêu đề thư ghi ngân hàng kháng thể');
+  assert.equal(toi('truong@sci.edu.vn').length, 1, 'Viện trưởng được báo để duyệt');
+  assert.match(toi('truong@sci.edu.vn')[0].subject, /Yêu cầu lấy mẫu:/);
+  assert.equal(toi('manager@sci.edu.vn').length, 1, 'quản lý được báo để theo dõi');
+  assert.match(toi('manager@sci.edu.vn')[0].subject, /chờ Viện trưởng duyệt/);
+  assert.equal(toi('bob@sci.edu.vn').length, 0, 'người gửi không nhận thư về yêu cầu của mình');
+
+  // quản lý theo dõi (có trong «Cần tôi xử lý» nhưng đánh dấu theo_doi, không có quyền duyệt)
+  const hop = (await s.api('manager', 'GET', '/requests?view=inbox', null, KT)).json.requests.find((y) => y.id === r1.json.id);
+  assert.equal(hop.theo_doi, true);
+  assert.equal(hop.co_the_xu_ly, false);
+  assert.equal(hop.co_the_giao, false);
+  assert.equal((await s.api('manager', 'POST', `/requests/${r1.json.id}/approve`, {}, KT)).status, 403);
+  assert.equal((await s.api('manager', 'POST', `/requests/${r1.json.id}/reject`, { ly_do: 'không' }, KT)).status, 403);
+  assert.equal((await s.api('manager', 'POST', `/requests/${r1.json.id}/deliver`, null, KT)).status, 409, 'chưa duyệt thì chưa giao');
+  const choTruong = (await s.api('truong', 'GET', '/requests?view=inbox', null, KT)).json.requests.find((y) => y.id === r1.json.id);
+  assert.equal(choTruong.co_the_xu_ly, true);
+  assert.equal(choTruong.theo_doi, false);
+
+  // quá hạn không chuyển cho quản lý
+  assert.deepEqual(await s.router.quetQuaHan(Date.now() + 10 * 86400000), { leoThang: 0 });
+  assert.equal((await s.api('truong', 'GET', '/requests?view=inbox', null, KT)).json.requests.find((y) => y.id === r1.json.id).cap, 'truong_cellbank');
+
+  // Viện trưởng duyệt → thư cho người xin và quản lý (quản lý nhận thư riêng «cần giao mẫu»)
+  s.mails.length = 0;
+  assert.equal((await s.api('truong', 'POST', `/requests/${r1.json.id}/approve`, {}, KT)).status, 200);
+  await doi();
+  assert.equal(toi('bob@sci.edu.vn').length, 1);
+  assert.match(toi('bob@sci.edu.vn')[0].subject, /Đã duyệt yêu cầu lấy mẫu/);
+  assert.equal(toi('manager@sci.edu.vn').length, 1);
+  assert.match(toi('manager@sci.edu.vn')[0].subject, /cần giao mẫu/);
+  assert.equal(toi('truong@sci.edu.vn').length, 0, 'người vừa duyệt không nhận lại');
+
+  // quản lý thực thi: giao rồi nhận lại; người thường và Viện trưởng không giao
+  assert.equal((await s.api('bob', 'POST', `/requests/${r1.json.id}/deliver`, null, KT)).status, 403);
+  assert.equal((await s.api('truong', 'POST', `/requests/${r1.json.id}/deliver`, null, KT)).status, 403, 'Viện trưởng duyệt, không giao');
+  const daDuyet = (await s.api('manager', 'GET', '/requests?view=inbox', null, KT)).json.requests.find((y) => y.id === r1.json.id);
+  assert.equal(daDuyet.co_the_giao, true);
+  assert.equal(daDuyet.theo_doi, false);
+  assert.equal((await s.api('manager', 'POST', `/requests/${r1.json.id}/deliver`, null, KT)).status, 200);
+  assert.equal((await s.api('manager', 'POST', `/requests/${r1.json.id}/return`, null, KT)).status, 200);
+
+  // Viện trưởng từ chối: người xin và quản lý được báo
   const r2 = await s.api('bob', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Lần hai' }, KT);
-  assert.equal(r2.json.cap, 'truong_cellbank');
-  assert.equal(r2.json.cap_ten, 'Ab-bank');
-  assert.equal((await s.api('truong', 'POST', `/requests/${r2.json.id}/approve`, {}, KT)).status, 200);
-  // yêu cầu thuộc ngân hàng kháng thể: không hiện ở ngân hàng tế bào
-  assert.equal((await s.api('truong', 'GET', '/requests?view=done', null, TB)).json.requests.some((y) => y.id === r2.json.id), false);
-  assert.equal((await s.api('bob', 'GET', `/requests/${r2.json.id}/print`, null, TB)).status, 404);
-  const p = await fetch(`${s.base}/requests/${r2.json.id}/print?nh=khang_the`, { headers: { 'x-test-user': 'bob' } });
+  await doi();
+  s.mails.length = 0;
+  assert.equal((await s.api('truong', 'POST', `/requests/${r2.json.id}/reject`, { ly_do: 'Chưa cần' }, KT)).status, 200);
+  await doi();
+  assert.equal(toi('bob@sci.edu.vn').length, 1);
+  assert.equal(toi('manager@sci.edu.vn').length, 1);
+
+  // Viện trưởng tự xin: không có người duyệt khác → admin; yêu cầu kháng thể không hiện ở ngân hàng tế bào
+  const r3 = await s.api('truong', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Viện trưởng tự xin' }, KT);
+  assert.equal(r3.status, 201);
+  assert.equal(r3.json.cap_ten, 'Admin');
+  assert.equal((await s.api('admin', 'POST', `/requests/${r3.json.id}/approve`, {}, KT)).status, 200);
+  assert.equal((await s.api('truong', 'GET', '/requests?view=done', null, TB)).json.requests.some((y) => y.id === r1.json.id), false);
+  assert.equal((await s.api('bob', 'GET', `/requests/${r1.json.id}/print`, null, TB)).status, 404);
+  const p = await fetch(`${s.base}/requests/${r1.json.id}/print?nh=khang_the`, { headers: { 'x-test-user': 'bob' } });
   assert.equal(p.status, 200);
-  assert.match(await p.text(), /Ngân hàng kháng thể/);
+  const html = await p.text();
+  assert.match(html, /Ngân hàng kháng thể/);
+  assert.match(html, /AntibodyBank/);
 });

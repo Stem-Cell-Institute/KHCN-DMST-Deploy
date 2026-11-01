@@ -32,7 +32,16 @@ Một module, hai ngân hàng. **Dùng chung:** tài khoản, nhóm nghiên cứ
   **Admin cũng chỉ thấy ngân hàng đang chọn.** Số liệu thẻ trang chủ cộng cả hai.
 - **Người quản lý theo ngân hàng:** `nhm_vai_tro.ngan_hang` (`te_bao` | `khang_the` | NULL = cả hai; chỉ vai trò Quản lý có phạm vi). Quản lý kháng thể không thấy và không quản lý được ngân hàng tế bào và ngược lại; quản lý đã có từ trước (không ghi phạm vi) giữ cả hai. Admin cấp ở tab Vai trò (ô «Phạm vi ngân hàng»).
   Thư báo cho quản lý (yêu cầu quá hạn, đã duyệt, đã khai báo, nghi mất…) gửi đúng quản lý của ngân hàng chứa mẫu; tiêu đề thư ghi tên ngân hàng; phiếu in ghi tên ngân hàng.
-- **Đơn vị quản lý theo ngân hàng:** `nhm_don_vi.ngan_hang`. Ngân hàng tế bào có **Cellbank**, ngân hàng kháng thể có **Ab-bank** (cả hai có sẵn, không xóa được); thiết bị chỉ gắn được đơn vị cùng ngân hàng. Người duyệt Ab-bank do admin chỉ định; chưa có thì yêu cầu về quản lý kháng thể.
+- **Đơn vị quản lý theo ngân hàng:** `nhm_don_vi.ngan_hang`. Ngân hàng tế bào có **Cellbank**, ngân hàng kháng thể có **AntibodyBank** (cả hai có sẵn, không xóa được; AntibodyBank là tên mới của «Ab-bank», được đổi tên tại chỗ khi khởi động nên giữ nguyên id, thiết bị và yêu cầu); thiết bị chỉ gắn được đơn vị cùng ngân hàng.
+
+### Ngân hàng kháng thể: không có Public, chỉ Viện trưởng duyệt
+
+- **Không có Public và không có thiết bị riêng.** Mọi thiết bị gốc thuộc AntibodyBank: tạo mới không chọn đơn vị vẫn gắn AntibodyBank, `PATCH` bỏ đơn vị hoặc đặt riêng là 400, form thiết bị ẩn ô «Ai quản lý thiết bị này» (`/meta.khongPublic`). Thiết bị kháng thể còn Public hoặc riêng từ bản trước được đưa về AntibodyBank khi khởi động. Vì vậy người dùng thường **không tự thêm hay lấy mẫu**, chỉ gửi yêu cầu (người duyệt đơn vị và quản lý vẫn thao tác bình thường).
+- **Người duyệt = Viện trưởng** (vai trò `vien_truong`, admin cấp ở tab Vai trò), **không gán tay**: tab Đơn vị quản lý không có ô thêm người duyệt, `POST /units` và `PATCH nguoi_duyet` ở ngân hàng này là 400. Có thể có nhiều Viện trưởng; ai duyệt trước thì yêu cầu đóng.
+- **Quản lý ngân hàng kháng thể** (vai trò Quản lý, phạm vi «Ngân hàng kháng thể»; thêm hai người trở lên được): **được báo và theo dõi**, không duyệt (403). Yêu cầu đang chờ hiện ở «Việc cần xử lý» trong khung riêng «Đang chờ Viện trưởng duyệt — bạn theo dõi» (`theo_doi: true`, không tính vào số việc cần xử lý). Sau khi duyệt, yêu cầu chuyển lên «Cần tôi xử lý» để **quản lý giao mẫu** (`/deliver`) theo quyết định rồi **nhận lại** (`/return`). Viện trưởng không giao mẫu.
+- **Luồng thư:** gửi yêu cầu → thư cho Viện trưởng (duyệt) và thư riêng «chờ Viện trưởng duyệt» cho các quản lý (theo dõi); duyệt → thư cho người xin («quản lý sẽ giao mẫu») và thư riêng «đã duyệt — cần giao mẫu» cho quản lý; từ chối → người xin và quản lý; giao / nhận lại → người xin. Tiêu đề thư ghi «[Ngân hàng kháng thể]».
+- **Không chuyển cấp khi quá hạn:** quản lý không duyệt được nên bộ quét quá hạn bỏ qua yêu cầu kháng thể; Viện trưởng vẫn là người duyệt.
+- **Dự phòng:** chưa có Viện trưởng nào khác người gửi (chưa cấp vai trò, hoặc chính Viện trưởng xin mẫu) thì yêu cầu về **admin** (cấp hiển thị «Admin»; `cap = quan_ly`), không về quản lý.
 - Bảng vai trò được dựng lại một lần khi khởi động để thêm cột phạm vi (giữ nguyên dữ liệu, id và quyền hiện có).
 
 ## Ai làm được gì
@@ -256,6 +265,7 @@ mẫu đang nghi mất hoặc không còn lưu kho thì không xin được.
 | Mẫu | Người duyệt | Nếu không có / chính là người xin |
 |---|---|---|
 | Ở thiết bị **có đơn vị quản lý** (Cellbank hoặc đơn vị khác) | người duyệt của đơn vị | quản lý module |
+| Ở thiết bị **ngân hàng kháng thể** (AntibodyBank) | **Viện trưởng** (chỉ Viện trưởng) | admin; quản lý chỉ theo dõi và giao mẫu |
 | Công khai, chủ mẫu là cán bộ / nghiên cứu viên **còn hoạt động** | chủ mẫu | trưởng nhóm → quản lý |
 | Công khai, mẫu của **sinh viên** (kể cả đang học), hoặc chủ mẫu đã rời đi | **trưởng nhóm** (đã tự xác nhận, nhóm chưa giải thể) | quản lý |
 

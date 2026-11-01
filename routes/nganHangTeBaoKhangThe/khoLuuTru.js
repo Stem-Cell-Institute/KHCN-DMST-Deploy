@@ -27,7 +27,8 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       boxTemplates: db.prepare('SELECT * FROM nhm_box_templates ORDER BY rows, cols, name').all(),
       nganHang: req.nganHang,
       nganHangTen: NGAN_HANG[req.nganHang],
-      donVi: db.prepare("SELECT id, ten FROM nhm_don_vi WHERE ngan_hang = ? ORDER BY (ma IN ('cellbank','ab-bank')) DESC, ten").all(req.nganHang), // đơn vị quản lý thiết bị của ngân hàng này (chỉ tên)
+      donVi: db.prepare("SELECT id, ten FROM nhm_don_vi WHERE ngan_hang = ? ORDER BY (ma IN ('cellbank','antibodybank')) DESC, ten").all(req.nganHang), // đơn vị quản lý thiết bị của ngân hàng này (chỉ tên)
+      khongPublic: req.nganHang === 'khang_the', // ngân hàng kháng thể: mọi thiết bị thuộc AntibodyBank, không có Public / thiết bị riêng
       sampleTypes: db.prepare('SELECT * FROM nhm_sample_types ORDER BY name').all(),
     });
   });
@@ -137,6 +138,10 @@ module.exports = function createKhoLuuTruRouter(ctx) {
   const trungViTriHop = (containerId, viTri, boQua) =>
     viTri != null && !!db.prepare('SELECT 1 FROM nhm_boxes WHERE container_id = ? AND vi_tri = ? AND id <> ? AND deleted_at IS NULL').get(containerId, viTri, boQua || 0);
 
+  /** Đơn vị AntibodyBank: đơn vị quản lý duy nhất của ngân hàng kháng thể. */
+  const donViKhangThe = () => (db.prepare("SELECT id FROM nhm_don_vi WHERE ngan_hang = 'khang_the' ORDER BY (ma = 'antibodybank') DESC, id LIMIT 1").get() || {}).id || null;
+  const LOI_KHONG_PUBLIC = 'Ngân hàng kháng thể không có Public hay thiết bị riêng: mọi thiết bị thuộc AntibodyBank.';
+
   const LOI_QUYEN = 'Chỉ Admin, Quản lý module hoặc chủ thiết bị riêng mới có quyền thao tác này.';
   const khongCoQuyen = (req) => !canManage(req) && !laVienTruong(req);
 
@@ -162,6 +167,10 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     }
     // thiết bị mới thuộc ngân hàng đang dùng; vị trí con theo thiết bị gốc
     b.ngan_hang = cha != null ? (ctx.YeuCau.gocCuaViTri(db, cha) || {}).ngan_hang || req.nganHang : req.nganHang;
+    if (b.parent_id == null && b.ngan_hang === 'khang_the') {
+      if (rieng) return fail(res, 400, LOI_KHONG_PUBLIC);
+      if (b.don_vi_id == null) { b.don_vi_id = donViKhangThe(); b.quan_ly_boi = 'cellbank'; } // thiết bị mới luôn thuộc AntibodyBank
+    }
     if (b.don_vi_id != null) {
       const dv = db.prepare('SELECT ngan_hang FROM nhm_don_vi WHERE id = ?').get(b.don_vi_id);
       if (!dv || dv.ngan_hang !== b.ngan_hang) return fail(res, 400, 'Đơn vị quản lý không thuộc ngân hàng này.');
@@ -200,6 +209,9 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     const body = req.body || {};
     const [b, loi] = readContainerBody(body, true);
     if (loi) return fail(res, 400, loi);
+    if (cur.parent_id == null && cur.ngan_hang === 'khang_the' && (body.rieng === true || ('don_vi_id' in b && b.don_vi_id == null) || b.quan_ly_boi === 'cong_khai')) {
+      return fail(res, 400, LOI_KHONG_PUBLIC);
+    }
     if (b.don_vi_id != null) {
       const dv = db.prepare('SELECT ngan_hang FROM nhm_don_vi WHERE id = ?').get(b.don_vi_id);
       const nhThietBi = (ctx.YeuCau.gocCuaViTri(db, id) || {}).ngan_hang;

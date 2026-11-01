@@ -12,6 +12,9 @@
  *     mẫu của SINH VIÊN (kể cả đang học) hoặc chủ mẫu đã rời đi → trưởng nhóm đã xác nhận
  *     không có trưởng nhóm, trưởng nhóm chưa xác nhận / đã rời đi, nhóm giải thể → quản lý module
  *   Quá hạn phản hồi (layHan(db).PHAN_HOI_NGAY) mà chưa ai xử lý → chuyển quản lý module.
+ *   Ngân hàng KHÁNG THỂ: không có Public; mọi thiết bị thuộc AntibodyBank và CHỈ VIỆN TRƯỞNG (vai trò vien_truong) duyệt.
+ *   Quản lý ngân hàng kháng thể được báo và theo dõi, rồi giao / nhận lại mẫu sau khi duyệt; không duyệt, không bị chuyển lên khi quá hạn.
+ *   Chưa có Viện trưởng nào khác người gửi thì admin xử lý (không để yêu cầu kẹt).
  * Sinh viên KHÔNG BAO GIỜ là người duyệt: người ra trường không thể duyệt, nên người còn ở lại duyệt thay ngay từ đầu.
  */
 
@@ -119,6 +122,8 @@ function donViCuaHop(db, boxId) {
 
 /** Tên cấp duyệt để hiện cho người dùng: cấp «đơn vị» thì nêu tên đơn vị của thiết bị. */
 function capTen(db, cap, boxId) {
+  // ngân hàng kháng thể: người duyệt là Viện trưởng; không có Viện trưởng khác người gửi thì admin xử lý
+  if (boxId && nganHangCuaHop(db, boxId) === 'khang_the') return cap === 'truong_cellbank' ? 'Viện trưởng' : cap === 'quan_ly' ? 'Admin' : CAP_VN[cap];
   if (cap !== 'truong_cellbank') return CAP_VN[cap];
   const dv = donViCuaHop(db, boxId);
   return dv ? dv.ten : CAP_VN.truong_cellbank;
@@ -130,12 +135,15 @@ const NHAN_VAI_TRO_DUYET = { truong_cellbank: 'Quản lý Cellbank' };
 /** Câu chỉ người duyệt để hiện cho người dùng: «Quản lý Cellbank», «Quản lý <đơn vị>». */
 function nhanNguoiDuyet(donVi) {
   if (!donVi) return null;
+  if (donVi.ngan_hang === 'khang_the') return 'Viện trưởng'; // AntibodyBank: chỉ Viện trưởng duyệt
   return (donVi.vai_tro_duyet && NHAN_VAI_TRO_DUYET[donVi.vai_tro_duyet]) || 'Quản lý ' + donVi.ten;
 }
 
 /** Người duyệt của một đơn vị còn hoạt động: tài khoản được chỉ định + người giữ vai trò gắn với đơn vị (Cellbank: Trưởng CIPP). */
 function nguoiDuyetDonVi(db, donVi) {
   if (!donVi) return [];
+  // đơn vị của ngân hàng kháng thể: chỉ Viện trưởng, không có danh sách người duyệt chỉ định
+  if (donVi.ngan_hang === 'khang_the') return nguoiCoVaiTro(db, 'vien_truong');
   const ids = new Set(db.prepare('SELECT user_id FROM nhm_don_vi_duyet WHERE don_vi_id = ?').all(donVi.id).map((r) => r.user_id));
   if (donVi.vai_tro_duyet) for (const r of db.prepare('SELECT user_id FROM nhm_vai_tro WHERE vai_tro = ?').all(donVi.vai_tro_duyet)) ids.add(r.user_id);
   return [...ids].map((id) => nguoiConHoatDong(db, id)).filter(Boolean);
@@ -145,6 +153,20 @@ function nguoiDuyetDonVi(db, donVi) {
 function nganHangCuaHop(db, boxId) {
   const g = boxId ? thietBiGocCuaHop(db, boxId) : null;
   return (g && g.ngan_hang) || 'te_bao';
+}
+
+/** Admin còn hoạt động: người xử lý dự phòng của ngân hàng kháng thể khi chưa có Viện trưởng nào khác người gửi. */
+function quanTri(db) {
+  return db
+    .prepare("SELECT id FROM users WHERE LOWER(COALESCE(role, '')) = 'admin'")
+    .all()
+    .map((r) => nguoiConHoatDong(db, r.id))
+    .filter(Boolean);
+}
+
+/** Hộp thuộc ngân hàng kháng thể? (chỉ Viện trưởng duyệt; quản lý theo dõi) */
+function hopKhangThe(db, boxId) {
+  return nganHangCuaHop(db, boxId) === 'khang_the';
 }
 
 /** Người giữ một vai trò module và còn hoạt động. */
@@ -190,6 +212,7 @@ function xacDinhCap(db, tube, nguoiGuiId) {
     // dữ liệu cũ (kiểu Cellbank nhưng chưa gắn đơn vị) vẫn đi qua Trưởng CIPP
     const ds = khacNguoiGui(donVi ? nguoiDuyetDonVi(db, donVi) : nguoiCoVaiTro(db, 'truong_cellbank'));
     if (ds.length) return { cap: 'truong_cellbank', nguoiDuyet: ds };
+    if (hopKhangThe(db, tube.box_id)) return { cap: 'quan_ly', nguoiDuyet: khacNguoiGui(quanTri(db)) }; // quản lý kháng thể không duyệt
     return { cap: 'quan_ly', nguoiDuyet: khacNguoiGui(quanLyModule(db, nganHangCuaHop(db, tube.box_id))) };
   }
   const chu = nguoiConHoatDong(db, tube.owner_user_id);
@@ -207,10 +230,11 @@ function nguoiDuyetHienTai(db, yc, tube) {
     const donVi = tube.box_id ? donViCuaHop(db, tube.box_id) : null;
     return donVi ? nguoiDuyetDonVi(db, donVi) : nguoiCoVaiTro(db, 'truong_cellbank');
   }
+  if (tube.box_id && hopKhangThe(db, tube.box_id)) return quanTri(db);
   return quanLyModule(db, nganHangCuaHop(db, tube.box_id));
 }
 
 module.exports = {
-  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, nganHangCuaHop, gocCuaViTri, hopTrongCellbank, donViCuaHop, capTen, nhanNguoiDuyet, nguoiDuyetDonVi, nguoiCoVaiTro, quanLyModule,
+  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, nganHangCuaHop, gocCuaViTri, hopTrongCellbank, donViCuaHop, capTen, nhanNguoiDuyet, nguoiDuyetDonVi, nguoiCoVaiTro, quanLyModule, quanTri, hopKhangThe,
   truongNhomHieuLuc, xacDinhCap, nguoiDuyetHienTai,
 };

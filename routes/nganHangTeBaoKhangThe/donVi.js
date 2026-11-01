@@ -5,6 +5,8 @@
  * Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js).
  *
  * Thiết bị gắn với một đơn vị thì mọi yêu cầu lấy mẫu phải được NGƯỜI DUYỆT CỦA ĐƠN VỊ đồng ý; thiết bị không gắn đơn vị là Public.
+ * Ngân hàng kháng thể chỉ có đơn vị AntibodyBank: người duyệt luôn là Viện trưởng (vai trò vien_truong, không gán tay), quản lý
+ * ngân hàng kháng thể (vai trò quan_ly có phạm vi khang_the) theo dõi và giao mẫu.
  * Gán người duyệt là trao quyền quyết định nên CHỈ ADMIN tạo / sửa / xóa đơn vị (cùng quy tắc cấp vai trò). Quản lý module xem được
  * danh sách để chọn đơn vị khi tạo thiết bị. Đường duyệt: services/nganHangTeBaoKhangTheYeuCau.js.
  */
@@ -16,7 +18,7 @@ module.exports = function createDonViRouter(ctx) {
   const { db, requireManage, requireAdmin, audit, fail, YeuCau } = ctx;
   const router = express.Router();
 
-  const MA_MAC_DINH = ['cellbank', 'ab-bank']; // đơn vị có sẵn của mỗi ngân hàng: không xóa được
+  const MA_MAC_DINH = ['cellbank', 'antibodybank']; // đơn vị có sẵn của mỗi ngân hàng: không xóa được
 
   /** Tài khoản chọn làm người duyệt: có thật, không bị khóa, không phải tài khoản chỉ dùng Đặt lịch thiết bị. */
   function nguoiHopLe(id) {
@@ -27,6 +29,15 @@ module.exports = function createDonViRouter(ctx) {
   const tenNguoi = (u) => (u ? u.fullname || u.email : '(không rõ)');
 
   function dinhDang(dv) {
+    if (dv.ngan_hang === 'khang_the') {
+      const nguoi = (r) => ({ user_id: r.id, ten: r.fullname || r.email || '(không rõ)', email: r.email });
+      return {
+        id: dv.id, ma: dv.ma, ten: dv.ten, mo_ta: dv.mo_ta, mac_dinh: MA_MAC_DINH.includes(dv.ma), chi_vien_truong: true,
+        vai_tro_duyet: 'vien_truong', nguoi_duyet: [], nguoi_theo_vai_tro: YeuCau.nguoiDuyetDonVi(db, dv).map(nguoi),
+        quan_ly: YeuCau.quanLyModule(db, 'khang_the').map(nguoi),
+        so_thiet_bi: db.prepare('SELECT COUNT(*) AS c FROM nhm_containers WHERE don_vi_id = ? AND deleted_at IS NULL').get(dv.id).c,
+      };
+    }
     const duyet = db
       .prepare(
         `SELECT d.user_id, u.fullname, u.email FROM nhm_don_vi_duyet d LEFT JOIN users u ON u.id = d.user_id
@@ -64,10 +75,11 @@ module.exports = function createDonViRouter(ctx) {
   }
 
   router.get('/units', requireManage, (req, res) => {
-    res.json({ units: db.prepare("SELECT * FROM nhm_don_vi WHERE ngan_hang = ? ORDER BY (ma IN ('cellbank','ab-bank')) DESC, ten").all(req.nganHang).map(dinhDang) });
+    res.json({ units: db.prepare("SELECT * FROM nhm_don_vi WHERE ngan_hang = ? ORDER BY (ma IN ('cellbank','antibodybank')) DESC, ten").all(req.nganHang).map(dinhDang) });
   });
 
   router.post('/units', requireAdmin, (req, res) => {
+    if (req.nganHang === 'khang_the') return fail(res, 400, 'Ngân hàng kháng thể chỉ có một đơn vị quản lý: AntibodyBank.');
     const body = req.body || {};
     const ten = toStr(body.ten, 100);
     if (!ten) return fail(res, 400, 'Thiếu tên đơn vị.');
@@ -95,6 +107,7 @@ module.exports = function createDonViRouter(ctx) {
     const cur = id && db.prepare('SELECT * FROM nhm_don_vi WHERE id = ? AND ngan_hang = ?').get(id, req.nganHang);
     if (!cur) return fail(res, 404, 'Không tìm thấy đơn vị.');
     const body = req.body || {};
+    if (cur.ngan_hang === 'khang_the' && 'nguoi_duyet' in body) return fail(res, 400, 'Người duyệt của AntibodyBank luôn là Viện trưởng (cấp ở tab Vai trò), không gán tay.');
     const [ids, loi] = docNguoiDuyet(body);
     if (loi) return fail(res, 400, loi);
     const ten = 'ten' in body ? toStr(body.ten, 100) : cur.ten;
@@ -120,7 +133,7 @@ module.exports = function createDonViRouter(ctx) {
     const id = toInt(req.params.id);
     const cur = id && db.prepare('SELECT * FROM nhm_don_vi WHERE id = ? AND ngan_hang = ?').get(id, req.nganHang);
     if (!cur) return fail(res, 404, 'Không tìm thấy đơn vị.');
-    if (MA_MAC_DINH.includes(cur.ma)) return fail(res, 400, 'Không xóa được đơn vị có sẵn của ngân hàng (Cellbank, Ab-bank).');
+    if (MA_MAC_DINH.includes(cur.ma)) return fail(res, 400, 'Không xóa được đơn vị có sẵn của ngân hàng (Cellbank, AntibodyBank).');
     const dung = db.prepare('SELECT COUNT(*) AS c FROM nhm_containers WHERE don_vi_id = ? AND deleted_at IS NULL').get(id).c;
     if (dung > 0) return fail(res, 409, `Không xóa được: còn ${dung} thiết bị thuộc đơn vị này. Hãy chuyển các thiết bị sang đơn vị khác hoặc Public trước.`);
     db.transaction(() => {

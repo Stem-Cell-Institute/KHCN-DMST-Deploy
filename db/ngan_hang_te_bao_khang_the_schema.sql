@@ -368,9 +368,15 @@ CREATE TABLE IF NOT EXISTS nhm_don_vi_duyet (
 
 INSERT OR IGNORE INTO nhm_don_vi (ma, ten, mo_ta, vai_tro_duyet)
   VALUES ('cellbank', 'Cellbank', 'Thiết bị do Cellbank (CIPP) quản lý; Trưởng CIPP duyệt yêu cầu lấy mẫu.', 'truong_cellbank');
--- Ab-bank: đơn vị quản lý của ngân hàng kháng thể (người duyệt do admin chỉ định; chưa có thì yêu cầu về quản lý ngân hàng kháng thể)
+-- AntibodyBank: đơn vị quản lý DUY NHẤT của ngân hàng kháng thể (không có Public). Người duyệt luôn là Viện trưởng (vai trò vien_truong);
+-- người quản lý ngân hàng kháng thể chỉ theo dõi và giao / nhận lại mẫu. Tên cũ «Ab-bank» được đổi tên tại chỗ (giữ id, thiết bị, yêu cầu).
+UPDATE nhm_don_vi SET ma = 'antibodybank', ten = 'AntibodyBank', mo_ta = 'Đơn vị quản lý toàn bộ thiết bị của ngân hàng kháng thể; Viện trưởng duyệt yêu cầu lấy mẫu, quản lý ngân hàng kháng thể giao và nhận lại mẫu.'
+  WHERE ma = 'ab-bank' AND NOT EXISTS (SELECT 1 FROM nhm_don_vi WHERE ma = 'antibodybank');
 INSERT OR IGNORE INTO nhm_don_vi (ma, ten, mo_ta, ngan_hang)
-  VALUES ('ab-bank', 'Ab-bank', 'Thiết bị do Ab-bank (ngân hàng kháng thể) quản lý; người duyệt do admin chỉ định.', 'khang_the');
+  VALUES ('antibodybank', 'AntibodyBank', 'Đơn vị quản lý toàn bộ thiết bị của ngân hàng kháng thể; Viện trưởng duyệt yêu cầu lấy mẫu, quản lý ngân hàng kháng thể giao và nhận lại mẫu.', 'khang_the');
+-- Ngân hàng kháng thể không có Public / thiết bị riêng: mọi thiết bị gốc thuộc AntibodyBank
+UPDATE nhm_containers SET don_vi_id = (SELECT id FROM nhm_don_vi WHERE ma = 'antibodybank'), quan_ly_boi = 'cellbank', rieng_user_id = NULL
+  WHERE ngan_hang = 'khang_the' AND parent_id IS NULL AND (don_vi_id IS NULL OR rieng_user_id IS NOT NULL);
 -- thiết bị Cellbank tạo từ bản trước chưa có đơn vị: gắn vào đơn vị Cellbank
 UPDATE nhm_containers SET don_vi_id = (SELECT id FROM nhm_don_vi WHERE ma = 'cellbank')
   WHERE quan_ly_boi = 'cellbank' AND don_vi_id IS NULL AND parent_id IS NULL;
