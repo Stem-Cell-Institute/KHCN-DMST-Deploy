@@ -492,3 +492,10 @@
 /* Thông tin phụ của thiết bị: một dòng nhỏ, nhường chỗ cho sơ đồ */
 .nhm-meta { display: flex; flex-wrap: wrap; gap: 2px 18px; margin: 4px 0 12px; font-size: 0.8rem; line-height: 1.5; color: var(--chu-phu); }
 .nhm-meta b { font-weight: 600; }
+
+/* Đường dẫn bấm được: mỗi cấp là một nút dạng chữ, rê chuột có gạch chân */
+.nhm-crumbs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 2px; }
+.nhm-crumbs .nhm-link { padding: 4px 2px; font: inherit; color: var(--muc); font-weight: 600; text-decoration: underline; text-decoration-color: var(--ke-dam); text-underline-offset: 3px; background: none; border: 0; cursor: pointer; }
+.nhm-crumbs .nhm-link:hover { text-decoration-color: var(--muc); }
+.nhm-crumbs .nhm-link:focus-visible { outline: 2px solid var(--muc); outline-offset: 1px; }
+@media (hover: none) { .nhm-crumbs .nhm-link { padding: 10px 4px; } } /* chạm: vùng bấm đủ lớn */
