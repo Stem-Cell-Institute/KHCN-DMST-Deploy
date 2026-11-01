@@ -65,8 +65,85 @@ function taoBoiCanh(deps) {
     return !!boxId && YeuCau.hopTrongCellbank(db, boxId) && !canManage(req) && !quanLyDonVi(req, boxId);
   }
 
+  // ---------- Thiết bị RIÊNG (Viện trưởng) ----------
+  // Chủ (vai trò vien_truong, đặt ở nhm_vai_tro) tạo thiết bị riêng: CHỈ chủ và admin thấy thiết bị đó, vị trí con, hộp, mẫu bên trong.
+  // Mọi người khác (kể cả quản lý module) gặp 404 như thể không tồn tại, và dữ liệu không lọt vào danh sách / tìm kiếm / xuất / số đếm.
+
+  function laVienTruong(req) {
+    return vaiTroModule(req).has('vien_truong');
+  }
+
+  /** Chủ của thiết bị riêng chứa vị trí này (null nếu không phải thiết bị riêng). */
+  function chuRiengCuaViTri(containerId) {
+    const g = containerId != null ? YeuCau.gocCuaViTri(db, containerId) : null;
+    return g && g.rieng_user_id != null ? g.rieng_user_id : null;
+  }
+
+  function chuRiengCuaHop(boxId) {
+    const b = boxId != null ? db.prepare('SELECT container_id FROM nhm_boxes WHERE id = ?').get(boxId) : null;
+    return b ? chuRiengCuaViTri(b.container_id) : null;
+  }
+
+  /**
+   * Quản lý module / admin, hoặc chủ thiết bị: được thêm, sửa, xóa thiết bị / Rack / hộp ở đó. Chủ = người đang giữ thiết bị riêng,
+   * hoặc Viện trưởng đã TẠO thiết bị (vẫn giữ quyền sau khi chuyển sang Public / đơn vị, để đổi lại được).
+   */
+  function quyenViTri(req, containerId) {
+    if (canManage(req)) return true;
+    const g = containerId != null ? YeuCau.gocCuaViTri(db, containerId) : null;
+    return !!g && (g.rieng_user_id === req.user.id || (g.created_by === req.user.id && laVienTruong(req)));
+  }
+
+  /** Vị trí và hộp BỊ ẨN với người này (thiết bị riêng của người khác); admin thấy hết. Tính một lần cho mỗi yêu cầu. */
+  function tapAn(req) {
+    if (req._nhmAn) return req._nhmAn;
+    const an = { containers: new Set(), boxes: new Set() };
+    if (!laAdmin(req)) {
+      const goc = 'WITH RECURSIVE t(id) AS (SELECT id FROM nhm_containers WHERE parent_id IS NULL AND rieng_user_id IS NOT NULL AND rieng_user_id <> ? UNION SELECT c.id FROM nhm_containers c JOIN t ON c.parent_id = t.id)';
+      for (const r of db.prepare(goc + ' SELECT id FROM t').all(req.user.id)) an.containers.add(r.id);
+      for (const r of db.prepare(goc + ' SELECT id FROM nhm_boxes WHERE container_id IN (SELECT id FROM t)').all(req.user.id)) an.boxes.add(r.id);
+    }
+    req._nhmAn = an;
+    return an;
+  }
+
+  /** Điều kiện SQL loại các hộp bị ẩn; col là cột chứa id hộp (có thể NULL). id lấy từ DB, là số nên nối thẳng vào câu lệnh. */
+  function dkKhongAn(req, col) {
+    const ids = [...tapAn(req).boxes];
+    return ids.length ? `(${col} IS NULL OR ${col} NOT IN (${ids.join(',')}))` : '1=1';
+  }
+
+  /** Chặn truy cập trực tiếp theo id (đường dẫn và các id trong body) tới dữ liệu bị ẩn: trả 404 giống như không có. */
+  function chanDuLieuRieng(req, res, next) {
+    if (laAdmin(req)) return next();
+    const an = tapAn(req);
+    if (!an.containers.size) return next();
+    const khongThay = () => fail(res, 404, 'Không tìm thấy.');
+    const m = /^\/(containers|boxes|tubes|requests|findings|incidents)\/(\d+)(?:\/|$)/.exec(req.path);
+    if (m) {
+      const id = Number(m[2]);
+      let boxId = null;
+      if (m[1] === 'containers') {
+        if (an.containers.has(id)) return khongThay();
+      } else if (m[1] === 'boxes') boxId = id;
+      else if (m[1] === 'tubes') boxId = (db.prepare('SELECT box_id FROM nhm_tubes WHERE id = ?').get(id) || {}).box_id;
+      else if (m[1] === 'requests') boxId = (db.prepare('SELECT t.box_id FROM nhm_yeu_cau y JOIN nhm_tubes t ON t.id = y.tube_id WHERE y.id = ?').get(id) || {}).box_id;
+      else if (m[1] === 'findings') boxId = (db.prepare('SELECT box_id FROM nhm_phat_hien WHERE id = ?').get(id) || {}).box_id;
+      else boxId = (db.prepare('SELECT t.box_id FROM nhm_vu_viec v JOIN nhm_tubes t ON t.id = v.tube_id WHERE v.id = ?').get(id) || {}).box_id;
+      if (boxId != null && an.boxes.has(boxId)) return khongThay();
+    }
+    const b = req.body;
+    if (b && typeof b === 'object' && !Array.isArray(b)) {
+      for (const k of ['box_id', 'container_id', 'parent_id']) {
+        const v = Number(b[k]);
+        if (b[k] != null && Number.isInteger(v) && (k === 'box_id' ? an.boxes.has(v) : an.containers.has(v))) return khongThay();
+      }
+    }
+    next();
+  }
+
   function canEditTube(req, tube) {
-    return canManage(req) || (tube.owner_user_id != null && tube.owner_user_id === req.user.id) || (tube.box_id != null && quanLyDonVi(req, tube.box_id));
+    return canManage(req) || (tube.owner_user_id != null && tube.owner_user_id === req.user.id) || (tube.box_id != null && (quanLyDonVi(req, tube.box_id) || chuRiengCuaHop(tube.box_id) === req.user.id));
   }
 
   function audit(req, action, detail) {
@@ -183,7 +260,7 @@ function taoBoiCanh(deps) {
     for (const id of tubeIds) logMove(id, action, null, null, userId, note);
   }
 
-  return { db, laAdmin, vaiTroModule, laTruongCellbank, requireAdmin, hopTrongCellbank, quanLyDonVi, biChanDonVi, logNhieuMau, thongBao, guiNen, moTaViTri, nguoiDung, nhanNguoi, YeuCau, canManage, requireManage, canEditTube, audit, fail, subtreeIds, duongDan, taoTraDuongDan, activeTubeCountInBoxes, nextCode, logMove };
+  return { db, laAdmin, vaiTroModule, laTruongCellbank, requireAdmin, hopTrongCellbank, quanLyDonVi, biChanDonVi, laVienTruong, chuRiengCuaViTri, chuRiengCuaHop, quyenViTri, tapAn, dkKhongAn, chanDuLieuRieng, logNhieuMau, thongBao, guiNen, moTaViTri, nguoiDung, nhanNguoi, YeuCau, canManage, requireManage, canEditTube, audit, fail, subtreeIds, duongDan, taoTraDuongDan, activeTubeCountInBoxes, nextCode, logMove };
 }
 
 module.exports = taoBoiCanh;

@@ -127,6 +127,8 @@ module.exports = function createYeuCauRouter(ctx) {
       }
     }
     else rows = db.prepare(`${SELECT} WHERE ${dongMo} ORDER BY y.id DESC LIMIT 500`).all();
+    const an = ctx.tapAn(req).boxes;
+    if (an.size) rows = rows.filter((y) => !an.has(y.box_id)); // yêu cầu về mẫu ở thiết bị riêng của người khác
     let items = rows.map((y) => dinhDang(req, y));
     if (view === 'inbox') items = items.filter((x) => x.co_the_xu_ly || x.co_the_giao || x.co_the_nhan_lai);
     res.json({ requests: items });
@@ -293,7 +295,7 @@ module.exports = function createYeuCauRouter(ctx) {
   ctx.dinhDangYeuCau = dinhDang;
   ctx.demYeuCau = (req) => {
     const mine = db.prepare("SELECT COUNT(*) AS c FROM nhm_yeu_cau WHERE nguoi_gui_id = ? AND trang_thai IN ('cho_duyet','da_duyet','da_giao')").get(req.user.id).c;
-    const inbox = db.prepare(`${SELECT} WHERE y.trang_thai IN ('cho_duyet','da_duyet','da_giao')`).all().map((y) => dinhDang(req, y)).filter((x) => x.co_the_xu_ly || x.co_the_giao || x.co_the_nhan_lai).length;
+    const inbox = db.prepare(`${SELECT} WHERE y.trang_thai IN ('cho_duyet','da_duyet','da_giao')`).all().filter((y) => !ctx.tapAn(req).boxes.has(y.box_id)).map((y) => dinhDang(req, y)).filter((x) => x.co_the_xu_ly || x.co_the_giao || x.co_the_nhan_lai).length;
     return { mine, inbox };
   };
 

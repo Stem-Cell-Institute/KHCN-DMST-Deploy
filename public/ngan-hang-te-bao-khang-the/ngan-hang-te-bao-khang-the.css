@@ -509,6 +509,7 @@
   color: var(--chu-phu); border: 1px solid var(--ke-dam); border-radius: 2px;
 }
 .nhm-tag--cb { color: var(--muc); border-color: var(--muc); }
+.nhm-tag--rieng { color: #fff; background: var(--muc); border-color: var(--muc); }
 
 /* Màn hình hẹp / cảm ứng: hàng cao hơn để chạm */
 @media (max-width: 900px), (hover: none) {

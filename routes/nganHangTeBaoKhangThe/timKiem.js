@@ -37,7 +37,7 @@ module.exports = function createTimKiemRouter(ctx) {
   /** Đọc bộ lọc từ query string -> [{where, params, tuKhoa}, lỗi]. */
   function docBoLoc(req) {
     const q = req.query || {};
-    const where = ['t.deleted_at IS NULL'];
+    const where = ['t.deleted_at IS NULL', ctx.dkKhongAn(req, 't.box_id')]; // thiết bị riêng của người khác không lọt vào kết quả
     const params = [];
     const tt = typeof q.status === 'string' ? q.status : '';
     if (tt === 'all') {

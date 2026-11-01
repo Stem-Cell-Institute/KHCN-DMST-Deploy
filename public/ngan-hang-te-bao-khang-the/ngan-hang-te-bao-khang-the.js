@@ -308,7 +308,7 @@
         var open = !!state.expanded[c.id];
         var la = state.sel && state.sel.type === 'container' && state.sel.id === c.id;
         var laGoc = c.parent_id == null;
-        var tag = laGoc ? h('span', { class: 'nhm-tag' + (c.quan_ly_boi === 'cellbank' ? ' nhm-tag--cb' : '') }, c.quan_ly_boi === 'cellbank' ? (c.don_vi_ten || 'Đơn vị') : 'Public') : null;
+        var tag = laGoc ? h('span', { class: 'nhm-tag' + (c.rieng ? ' nhm-tag--rieng' : c.quan_ly_boi === 'cellbank' ? ' nhm-tag--cb' : '') }, c.rieng ? 'Riêng tư' : c.quan_ly_boi === 'cellbank' ? (c.don_vi_ten || 'Đơn vị') : 'Public') : null;
         var li = h('li', { role: 'treeitem', 'aria-expanded': children ? String(open) : null }, [
           nutCay({
             cap: laGoc ? 'l0' : 'l1', on: la, duong: !!duongTo[c.id] && !la, icon: laGoc ? 'tu' : 'ngan', ten: c.name, viTri: c.vi_tri,
@@ -429,7 +429,7 @@
     if (!c) { put(box, h('p', { class: 'nhm-muted' }, 'Không còn mục này.')); return; }
     var boxes = state.tree.boxes.filter(function (b) { return b.container_id === c.id; }).sort(function (a, b) { return (a.vi_tri || 999) - (b.vi_tri || 999); });
     var subs = state.tree.containers.filter(function (x) { return x.parent_id === c.id; });
-    var m = state.meta.canManage;
+    var m = state.meta.canManage || c.quan_ly_duoc;
     var actions = m ? h('div', { class: 'nhm-actions' }, [
       h('button', { class: 'nhm-btn nhm-btn--primary', type: 'button', onclick: function () { containerForm(null, c.id); } }, '+ Ngăn / Rack bên trong'),
       h('button', { class: 'nhm-btn nhm-btn--primary', type: 'button', onclick: function () { boxForm(c.id); } }, '+ Hộp'),
@@ -457,7 +457,7 @@
     $('nhm-crumb').textContent = info.path.concat([b.name || b.code]).join(' › ');
     info.tubes.forEach(function (t) { byPos[t.row_no + ',' + t.col_no] = t; });
     (info.phat_hien || []).forEach(function (p) { byPos[p.row_no + ',' + p.col_no] = { phat_hien: p }; });
-    var m = state.meta.canManage;
+    var m = state.meta.canManage || info.quan_ly_duoc;
     var cb = info.quan_ly_boi === 'cellbank';
     var kk = state.audit && state.audit.boxId === b.id;
     var grid = h('div', { class: 'nhm-grid' + (kk ? ' nhm-grid--kk' : ''), style: 'grid-template-columns: 26px repeat(' + b.cols + ', var(--nhm-o, 64px))' });
@@ -561,15 +561,21 @@
         { name: 'notes', label: 'Ghi chú', type: 'textarea', value: c && c.notes },
       ].concat(viTriGiaField(c, parentId)).concat(!parentId && (!c || c.parent_id == null) ? [
         // chỉ thiết bị gốc; ngăn, giá bên trong thừa hưởng
-        { name: 'don_vi_id', label: 'Ai quản lý thiết bị này', type: 'select', value: c && c.don_vi_id ? String(c.don_vi_id) : '',
-          options: [{ value: '', label: 'Public — ai cũng thêm mẫu vào ô trống' }].concat((state.meta.donVi || []).map(function (d) {
+        { name: 'don_vi_id', label: 'Ai quản lý thiết bị này', type: 'select', value: c && c.rieng ? 'rieng' : c && c.don_vi_id ? String(c.don_vi_id) : '',
+          options: [{ value: '', label: 'Public — ai cũng thêm mẫu vào ô trống' }].concat(state.meta.laVienTruong ? [{ value: 'rieng', label: 'Riêng tư — không hiện với người khác' }] : []).concat((state.meta.donVi || []).map(function (d) {
             return { value: String(d.id), label: d.ten + ' quản lý — người dùng gửi yêu cầu, người duyệt của đơn vị quyết định' };
           })) },
       ] : []),
       onSubmit: function (v) {
         var body = { name: v.name, type_id: Number(v.type_id), code: v.code || undefined, temperature_c: v.temperature_c, location_note: v.location_note, notes: v.notes };
         if ('vi_tri' in v) body.vi_tri = v.vi_tri === '' || v.vi_tri == null ? null : Number(v.vi_tri);
-        if ('don_vi_id' in v) body.don_vi_id = v.don_vi_id === '' ? null : Number(v.don_vi_id);
+        if ('don_vi_id' in v) {
+          if (v.don_vi_id === 'rieng') { body.rieng = true; body.don_vi_id = null; }
+          else {
+            body.don_vi_id = v.don_vi_id === '' ? null : Number(v.don_vi_id);
+            if (c && c.rieng) body.rieng = false; // đang riêng tư mà chọn Public / đơn vị: bỏ riêng tư
+          }
+        }
         if (c) { if (!v.code) delete body.code; return api('PATCH', '/containers/' + c.id, body).then(function () { return reload(true); }); }
         if (parentId) body.parent_id = parentId;
         return api('POST', '/containers', body).then(function (r) { if (parentId) state.expanded[parentId] = true; say('Đã thêm vị trí lưu trữ.', 'ok'); return reload(true).then(function () { select('container', r.id); }); });
@@ -1014,7 +1020,7 @@
 
   // ---------- quản trị: danh mục, nhóm, thành viên, vai trò ----------
   var NHOM_TT = { cho_xac_nhan: 'Chờ quản lý xác nhận', da_xac_nhan: 'Đã xác nhận', giai_the: 'Đã giải thể' };
-  var VAI_TRO_VN = { quan_ly: 'Quản lý module', truong_cellbank: 'Trưởng CIPP (Cellbank)' };
+  var VAI_TRO_VN = { quan_ly: 'Quản lý module', truong_cellbank: 'Trưởng CIPP (Cellbank)', vien_truong: 'Viện trưởng (thiết bị riêng)' };
 
   function loiTrongSlot(slot) { return function (e) { put(slot, h('p', { class: 'nhm-err' }, e.message)); }; }
   function nutNho(label, cls, fn) { return h('button', { type: 'button', class: 'nhm-btn nhm-btn--sm' + (cls ? ' nhm-btn--' + cls : ''), onclick: fn }, label); }
@@ -1798,9 +1804,11 @@
         runSearch({ q: $('nhm-search-q').value.trim(), sample_type_id: '', owner: '', status: '', offset: 0 });
       });
       var addRoot = $('nhm-add-root');
-      if (meta.canManage) {
+      if (meta.canManage || meta.laVienTruong) {
         addRoot.classList.remove('nhm-hide');
         addRoot.addEventListener('click', function () { containerForm(null, null); });
+      }
+      if (meta.canManage) {
         var qlDm = $('nhm-manage-catalog');
         qlDm.classList.remove('nhm-hide');
         qlDm.addEventListener('click', function () { quanTriDialog('danhmuc'); });

@@ -11,7 +11,7 @@ const {
 } = require('../../services/nganHangTeBaoKhangThe');
 
 module.exports = function createKhoLuuTruRouter(ctx) {
-  const { db, laAdmin, canManage, canEditTube, requireManage, audit, fail, subtreeIds, duongDan, activeTubeCountInBoxes, nextCode, logMove } = ctx;
+  const { db, laAdmin, canManage, canEditTube, quyenViTri, laVienTruong, tapAn, audit, fail, subtreeIds, duongDan, activeTubeCountInBoxes, nextCode, logMove } = ctx;
   const router = express.Router();
 
   // ---------- Danh mục & cây ----------
@@ -19,6 +19,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
   router.get('/meta', (req, res) => {
     res.json({
       canManage: canManage(req),
+      laVienTruong: laVienTruong(req), // được tạo thiết bị riêng
       isAdmin: laAdmin(req),
       han: ctx.YeuCau.layHan(db),
       loaiChu: LOAI_CHU_VN,
@@ -32,7 +33,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
   router.get('/tree', (req, res) => {
     const containers = db
       .prepare(
-        `SELECT c.id, c.parent_id, c.type_id, c.code, c.name, c.temperature_c, c.location_note, c.sort_order, c.notes, c.quan_ly_boi, c.don_vi_id, c.vi_tri,
+        `SELECT c.id, c.parent_id, c.type_id, c.code, c.name, c.temperature_c, c.location_note, c.sort_order, c.notes, c.quan_ly_boi, c.don_vi_id, c.vi_tri, c.rieng_user_id, c.created_by,
                 t.name AS type_name
          FROM nhm_containers c JOIN nhm_container_types t ON t.id = c.type_id
          WHERE c.deleted_at IS NULL ORDER BY c.sort_order, c.name`
@@ -46,6 +47,10 @@ module.exports = function createKhoLuuTruRouter(ctx) {
          FROM nhm_boxes b WHERE b.deleted_at IS NULL ORDER BY b.code`
       )
       .all();
+    // thiết bị riêng của người khác: bỏ khỏi cây hoàn toàn (kể cả vị trí con và hộp)
+    const an = tapAn(req);
+    for (let i = containers.length - 1; i >= 0; i--) if (an.containers.has(containers[i].id)) containers.splice(i, 1);
+    for (let i = boxes.length - 1; i >= 0; i--) if (an.boxes.has(boxes[i].id)) boxes.splice(i, 1);
     // vị trí con thừa hưởng quan_ly_boi và đơn vị quản lý của thiết bị gốc
     const donVi = new Map(db.prepare('SELECT * FROM nhm_don_vi').all().map((r) => [r.id, r]));
     const donViCuaToi = new Set([...donVi.values()].filter((d) => ctx.YeuCau.nguoiDuyetDonVi(db, d).some((u) => u.id === req.user.id)).map((d) => d.id));
@@ -62,6 +67,14 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       c.don_vi_ten = dv ? dv.ten : null;
       c.don_vi_duyet = dv ? ctx.YeuCau.nhanNguoiDuyet(dv) : null; // ai duyệt yêu cầu lấy mẫu ở thiết bị này
       c.duoc_don_vi = !!dv && donViCuaToi.has(dv.id); // tôi là người duyệt của đơn vị này
+      c.rieng = g.rieng_user_id != null; // thiết bị riêng (chỉ chủ và admin tới được đây)
+      c.rieng_cua_toi = g.rieng_user_id === req.user.id;
+      // được thêm / sửa / xóa ở thiết bị này: quản lý module, chủ thiết bị riêng, hoặc Viện trưởng đã tạo thiết bị
+      c.quan_ly_duoc = canManage(req) || g.rieng_user_id === req.user.id || (g.created_by === req.user.id && laVienTruong(req));
+    }
+    for (const c of containers) {
+      delete c.rieng_user_id; // không đưa id người khác ra giao diện
+      delete c.created_by;
     }
     res.json({ containers, boxes });
   });
@@ -122,9 +135,29 @@ module.exports = function createKhoLuuTruRouter(ctx) {
   const trungViTriHop = (containerId, viTri, boQua) =>
     viTri != null && !!db.prepare('SELECT 1 FROM nhm_boxes WHERE container_id = ? AND vi_tri = ? AND id <> ? AND deleted_at IS NULL').get(containerId, viTri, boQua || 0);
 
-  router.post('/containers', requireManage, (req, res) => {
-    const [b, loi] = readContainerBody(req.body || {}, false);
+  const LOI_QUYEN = 'Chỉ Admin, Quản lý module hoặc chủ thiết bị riêng mới có quyền thao tác này.';
+  const khongCoQuyen = (req) => !canManage(req) && !laVienTruong(req);
+
+  router.post('/containers', (req, res) => {
+    const body = req.body || {};
+    const rieng = body.rieng === true;
+    const cha = body.parent_id == null || body.parent_id === '' ? null : toInt(body.parent_id);
+    if (rieng && cha != null) return fail(res, 400, 'Chỉ thiết bị gốc mới là thiết bị riêng.');
+    if (cha != null) {
+      if (!quyenViTri(req, cha)) return fail(res, 403, LOI_QUYEN);
+    } else if (rieng) {
+      if (!laVienTruong(req)) return fail(res, 403, 'Chỉ Viện trưởng mới tạo được thiết bị riêng.');
+    } else if (!canManage(req)) {
+      return fail(res, 403, 'Chỉ Admin hoặc Quản lý module mới có quyền thao tác này.');
+    }
+    const [b, loi] = readContainerBody(body, false);
     if (loi) return fail(res, 400, loi);
+    if (rieng) {
+      // thiết bị riêng: không công khai, không gắn đơn vị; chủ = người tạo
+      b.quan_ly_boi = 'cong_khai';
+      b.don_vi_id = null;
+      b.rieng_user_id = req.user.id;
+    }
     if (!b.name) return fail(res, 400, 'Thiếu tên vị trí lưu trữ.');
     if (b.type_id == null || !db.prepare('SELECT 1 FROM nhm_container_types WHERE id = ?').get(b.type_id)) {
       return fail(res, 400, 'Loại vị trí lưu trữ không hợp lệ.');
@@ -138,10 +171,10 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       const code = b.code || nextCode('nhm_containers', 'VC-');
       const info = db
         .prepare(
-          `INSERT INTO nhm_containers (parent_id, type_id, code, name, temperature_c, location_note, sort_order, notes, quan_ly_boi, don_vi_id, vi_tri, created_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO nhm_containers (parent_id, type_id, code, name, temperature_c, location_note, sort_order, notes, quan_ly_boi, don_vi_id, vi_tri, rieng_user_id, created_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(b.parent_id ?? null, b.type_id, code, b.name, b.temperature_c ?? null, b.location_note ?? null, b.sort_order || 0, b.notes ?? null, b.quan_ly_boi || 'cong_khai', b.don_vi_id ?? null, b.vi_tri ?? null, req.user.id);
+        .run(b.parent_id ?? null, b.type_id, code, b.name, b.temperature_c ?? null, b.location_note ?? null, b.sort_order || 0, b.notes ?? null, b.quan_ly_boi || 'cong_khai', b.don_vi_id ?? null, b.vi_tri ?? null, b.rieng_user_id ?? null, req.user.id);
       audit(req, 'container_create', `id=${info.lastInsertRowid} ${b.name}`);
       res.status(201).json({ id: Number(info.lastInsertRowid), code });
     } catch (e) {
@@ -150,12 +183,29 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     }
   });
 
-  router.patch('/containers/:id', requireManage, (req, res) => {
+  router.patch('/containers/:id', (req, res) => {
+    if (khongCoQuyen(req)) return fail(res, 403, 'Chỉ Admin hoặc Quản lý module mới có quyền thao tác này.');
     const id = toInt(req.params.id);
     const cur = id && db.prepare('SELECT * FROM nhm_containers WHERE id = ? AND deleted_at IS NULL').get(id);
     if (!cur) return fail(res, 404, 'Không tìm thấy vị trí lưu trữ.');
-    const [b, loi] = readContainerBody(req.body || {}, true);
+    if (!quyenViTri(req, id)) return fail(res, 403, LOI_QUYEN);
+    const body = req.body || {};
+    const [b, loi] = readContainerBody(body, true);
     if (loi) return fail(res, 400, loi);
+    // chuyển Public / đơn vị ⇄ riêng: chỉ ở thiết bị gốc; đặt thành riêng chỉ Viện trưởng và chỉ với thiết bị do chính mình tạo / đang là của mình
+    if ('rieng' in body) {
+      if (cur.parent_id != null) return fail(res, 400, 'Chỉ thiết bị gốc mới là thiết bị riêng.');
+      if (body.rieng === true) {
+        if (!laVienTruong(req) || !(cur.rieng_user_id === req.user.id || cur.created_by === req.user.id)) {
+          return fail(res, 403, 'Chỉ Viện trưởng đặt được thiết bị do chính mình tạo thành thiết bị riêng.');
+        }
+        b.rieng_user_id = req.user.id;
+        b.quan_ly_boi = 'cong_khai';
+        b.don_vi_id = null;
+      } else if (cur.rieng_user_id != null) {
+        b.rieng_user_id = null; // bỏ riêng: thành Public, hoặc theo đơn vị nếu body có don_vi_id
+      }
+    }
     if ('name' in b && !b.name) return fail(res, 400, 'Tên vị trí lưu trữ không được để trống.');
     if ('type_id' in b && (b.type_id == null || !db.prepare('SELECT 1 FROM nhm_container_types WHERE id = ?').get(b.type_id))) {
       return fail(res, 400, 'Loại vị trí lưu trữ không hợp lệ.');
@@ -182,12 +232,13 @@ module.exports = function createKhoLuuTruRouter(ctx) {
         id
       );
       // người đang chờ duyệt ở thiết bị này có thể phải đổi cấp (Public ⇄ có đơn vị)
-      if ((thayDoi.don_vi_id || thayDoi.quan_ly_boi) && ctx.dinhTuyenLai) ctx.dinhTuyenLai();
+      if ((thayDoi.don_vi_id || thayDoi.quan_ly_boi || thayDoi.rieng_user_id) && ctx.dinhTuyenLai) ctx.dinhTuyenLai();
       const hienThi = { ...thayDoi };
       if (hienThi.don_vi_id) {
         const ten = (v) => (v ? (db.prepare('SELECT ten FROM nhm_don_vi WHERE id = ?').get(v) || {}).ten || v : 'Public');
         hienThi.don_vi_id = hienThi.don_vi_id.map(ten);
       }
+      if (hienThi.rieng_user_id) hienThi.rieng_user_id = hienThi.rieng_user_id.map((v) => (v ? 'riêng' : 'không riêng'));
       audit(req, 'container_update', `id=${id} ${cur.name}: ${moTaThayDoi(hienThi)}`);
       res.json({ ok: true, changed: cols.length });
     } catch (e) {
@@ -196,10 +247,12 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     }
   });
 
-  router.delete('/containers/:id', requireManage, (req, res) => {
+  router.delete('/containers/:id', (req, res) => {
+    if (khongCoQuyen(req)) return fail(res, 403, 'Chỉ Admin hoặc Quản lý module mới có quyền thao tác này.');
     const id = toInt(req.params.id);
     const cur = id && db.prepare('SELECT id, name FROM nhm_containers WHERE id = ? AND deleted_at IS NULL').get(id);
     if (!cur) return fail(res, 404, 'Không tìm thấy vị trí lưu trữ.');
+    if (!quyenViTri(req, id)) return fail(res, 403, LOI_QUYEN);
     const ids = subtreeIds(id);
     const boxIds = db
       .prepare(`SELECT id FROM nhm_boxes WHERE deleted_at IS NULL AND container_id IN (${placeholders(ids.length)})`)
@@ -221,12 +274,14 @@ module.exports = function createKhoLuuTruRouter(ctx) {
 
   // ---------- Hộp ----------
 
-  router.post('/boxes', requireManage, (req, res) => {
+  router.post('/boxes', (req, res) => {
+    if (khongCoQuyen(req)) return fail(res, 403, 'Chỉ Admin hoặc Quản lý module mới có quyền thao tác này.');
     const body = req.body || {};
     const containerId = toInt(body.container_id);
     if (!containerId || !db.prepare('SELECT 1 FROM nhm_containers WHERE id = ? AND deleted_at IS NULL').get(containerId)) {
       return fail(res, 400, 'Vị trí lưu trữ không tồn tại.');
     }
+    if (!quyenViTri(req, containerId)) return fail(res, 403, LOI_QUYEN);
     let rows = toInt(body.rows);
     let cols = toInt(body.cols);
     const templateId = body.template_id == null || body.template_id === '' ? null : toInt(body.template_id);
@@ -302,14 +357,18 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       quan_ly_boi: (ctx.YeuCau.thietBiGocCuaHop(db, id) || {}).quan_ly_boi || 'cong_khai',
       don_vi_ten: (ctx.YeuCau.donViCuaHop(db, id) || {}).ten || null,
       don_vi_duyet: ctx.YeuCau.nhanNguoiDuyet(ctx.YeuCau.donViCuaHop(db, id)),
+      rieng_cua_toi: ctx.chuRiengCuaViTri(box.container_id) === req.user.id, // tôi là chủ thiết bị riêng chứa hộp này
+      quan_ly_duoc: quyenViTri(req, box.container_id), // được thêm / sửa / xóa ở thiết bị chứa hộp này
       duoc_don_vi: ctx.quanLyDonVi(req, id), // người duyệt của đơn vị: không bị chặn thêm / lấy mẫu ở thiết bị của đơn vị mình
     });
   });
 
-  router.patch('/boxes/:id', requireManage, (req, res) => {
+  router.patch('/boxes/:id', (req, res) => {
+    if (khongCoQuyen(req)) return fail(res, 403, 'Chỉ Admin hoặc Quản lý module mới có quyền thao tác này.');
     const id = toInt(req.params.id);
     const cur = id && db.prepare('SELECT * FROM nhm_boxes WHERE id = ? AND deleted_at IS NULL').get(id);
     if (!cur) return fail(res, 404, 'Không tìm thấy hộp.');
+    if (!quyenViTri(req, cur.container_id)) return fail(res, 403, LOI_QUYEN);
     const body = req.body || {};
     const upd = {};
     if ('name' in body) upd.name = toStr(body.name, 150);
@@ -327,6 +386,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       if (!cid || !db.prepare('SELECT 1 FROM nhm_containers WHERE id = ? AND deleted_at IS NULL').get(cid)) {
         return fail(res, 400, 'Vị trí lưu trữ không tồn tại.');
       }
+      if (!quyenViTri(req, cid)) return fail(res, 403, LOI_QUYEN);
       upd.container_id = cid;
     }
     if ('rows' in body || 'cols' in body) {
@@ -390,10 +450,12 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     }
   });
 
-  router.delete('/boxes/:id', requireManage, (req, res) => {
+  router.delete('/boxes/:id', (req, res) => {
+    if (khongCoQuyen(req)) return fail(res, 403, 'Chỉ Admin hoặc Quản lý module mới có quyền thao tác này.');
     const id = toInt(req.params.id);
-    const cur = id && db.prepare('SELECT id, code FROM nhm_boxes WHERE id = ? AND deleted_at IS NULL').get(id);
+    const cur = id && db.prepare('SELECT id, code, container_id FROM nhm_boxes WHERE id = ? AND deleted_at IS NULL').get(id);
     if (!cur) return fail(res, 404, 'Không tìm thấy hộp.');
+    if (!quyenViTri(req, cur.container_id)) return fail(res, 403, LOI_QUYEN);
     const tubes = activeTubeCountInBoxes([id]);
     if (tubes > 0) return fail(res, 409, `Không thể xóa: hộp còn ${tubes} mẫu.`);
     db.prepare("UPDATE nhm_boxes SET deleted_at = datetime('now') WHERE id = ?").run(id);

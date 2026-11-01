@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS nhm_containers (
   -- 'cellbank' = có ĐƠN VỊ QUẢN LÝ (don_vi_id): người dùng gửi yêu cầu, người duyệt của đơn vị quyết định. Hai cột luôn đi đôi.
   quan_ly_boi TEXT NOT NULL DEFAULT 'cong_khai' CHECK (quan_ly_boi IN ('cong_khai','cellbank')),
   don_vi_id INTEGER REFERENCES nhm_don_vi(id),
+  -- Thiết bị RIÊNG: chỉ người này (và admin) thấy; chỉ có nghĩa ở thiết bị gốc. NULL = không riêng (Public hoặc có đơn vị quản lý).
+  rieng_user_id INTEGER,
   -- Vị trí SỐ của giá (rack) trong bình nitơ lỏng (1–50); NULL = không đánh số
   vi_tri INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50),
   deleted_at TEXT,
@@ -73,10 +75,11 @@ CREATE TABLE IF NOT EXISTS nhm_sample_types (
 -- Vai trò TRONG module (không đụng users.role dùng chung toàn hệ thống). Chỉ admin cấp / gỡ.
 --   quan_ly         quản lý module: thiết bị lưu trữ, hộp, danh mục, nhóm, hồ sơ thành viên, mọi mẫu (2–3 người)
 --   truong_cellbank Trưởng CIPP (quản lý Cellbank): duyệt yêu cầu lấy mẫu ở thiết bị Cellbank
+--   vien_truong     Viện trưởng: được tạo THIẾT BỊ RIÊNG (chỉ mình và admin thấy) và toàn quyền với thiết bị đó
 CREATE TABLE IF NOT EXISTS nhm_vai_tro (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
-  vai_tro TEXT NOT NULL CHECK (vai_tro IN ('quan_ly','truong_cellbank')),
+  vai_tro TEXT NOT NULL CHECK (vai_tro IN ('quan_ly','truong_cellbank','vien_truong')),
   granted_by INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (user_id, vai_tro)

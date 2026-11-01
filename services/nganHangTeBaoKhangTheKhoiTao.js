@@ -34,6 +34,7 @@ const PAGE_URL = '/public/ngan-hang-te-bao-khang-the/index.html';
 const COT_THEM_SAU = [
   ['nhm_containers', 'quan_ly_boi', "TEXT NOT NULL DEFAULT 'cong_khai' CHECK (quan_ly_boi IN ('cong_khai','cellbank'))"],
   ['nhm_containers', 'don_vi_id', 'INTEGER REFERENCES nhm_don_vi(id)'],
+  ['nhm_containers', 'rieng_user_id', 'INTEGER'],
   ['nhm_containers', 'vi_tri', 'INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50)'],
   ['nhm_boxes', 'vi_tri', 'INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50)'],
   ['nhm_ho_so', 'chuc_danh', 'TEXT'],
@@ -52,14 +53,40 @@ function themCotNeuThieu(db) {
   }
 }
 
+/**
+ * Bảng vai trò tạo từ bản trước có ràng buộc CHECK chưa cho 'vien_truong'; SQLite không sửa được CHECK nên dựng lại bảng
+ * (sao chép nguyên dữ liệu, giữ id) khi phát hiện ràng buộc cũ. Chạy một lần, idempotent.
+ */
+function nangCapVaiTro(db) {
+  const r = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'nhm_vai_tro'").get();
+  if (!r || String(r.sql).includes('vien_truong')) return;
+  db.transaction(() => {
+    db.exec(`CREATE TABLE nhm_vai_tro_moi (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      vai_tro TEXT NOT NULL CHECK (vai_tro IN ('quan_ly','truong_cellbank','vien_truong')),
+      granted_by INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (user_id, vai_tro)
+    )`);
+    db.exec('INSERT INTO nhm_vai_tro_moi (id, user_id, vai_tro, granted_by, created_at) SELECT id, user_id, vai_tro, granted_by, created_at FROM nhm_vai_tro');
+    db.exec('DROP TABLE nhm_vai_tro');
+    db.exec('ALTER TABLE nhm_vai_tro_moi RENAME TO nhm_vai_tro');
+  })();
+}
+
 /** Tạo bảng nhm_* (idempotent). Thiếu file schema là lỗi nặng: ném ra để server.js ghi cảnh báo, không bỏ qua im lặng. */
 function ensureSchema(db) {
   if (!fs.existsSync(SCHEMA_PATH)) throw new Error('Thiếu file schema: ' + SCHEMA_PATH);
   themCotNeuThieu(db);
+  nangCapVaiTro(db);
   db.exec(fs.readFileSync(SCHEMA_PATH, 'utf8'));
 }
 
 /** Số liệu thẻ module trên trang chủ; bảng chưa có thì trả 0. */
+// vị trí thuộc một thiết bị RIÊNG (kể cả chính nó và mọi cấp con cháu)
+const CTE_RIENG = 'WITH RECURSIVE rieng(id) AS (SELECT id FROM nhm_containers WHERE rieng_user_id IS NOT NULL UNION SELECT c.id FROM nhm_containers c JOIN rieng r ON c.parent_id = r.id)';
+
 function miniStats(db) {
   const count = (sql) => {
     try {
@@ -69,9 +96,10 @@ function miniStats(db) {
     }
   };
   return {
-    containers: count('SELECT COUNT(*) AS c FROM nhm_containers WHERE deleted_at IS NULL'),
-    boxes: count('SELECT COUNT(*) AS c FROM nhm_boxes WHERE deleted_at IS NULL'),
-    samples: count(`SELECT COUNT(*) AS c FROM nhm_tubes WHERE deleted_at IS NULL AND status IN ${HOLDING}`),
+    // thiết bị RIÊNG (rieng_user_id) và mọi thứ bên trong không tính vào số liệu công khai của trang chủ
+    containers: count(`${CTE_RIENG} SELECT COUNT(*) AS c FROM nhm_containers WHERE deleted_at IS NULL AND id NOT IN (SELECT id FROM rieng)`),
+    boxes: count(`${CTE_RIENG} SELECT COUNT(*) AS c FROM nhm_boxes b WHERE b.deleted_at IS NULL AND b.container_id NOT IN (SELECT id FROM rieng)`),
+    samples: count(`${CTE_RIENG} SELECT COUNT(*) AS c FROM nhm_tubes t WHERE t.deleted_at IS NULL AND t.status IN ${HOLDING} AND (t.box_id IS NULL OR t.box_id NOT IN (SELECT b.id FROM nhm_boxes b WHERE b.container_id IN (SELECT id FROM rieng)))`),
   };
 }
 

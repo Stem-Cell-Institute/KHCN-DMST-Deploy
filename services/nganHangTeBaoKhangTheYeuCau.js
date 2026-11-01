@@ -88,9 +88,18 @@ function nguoiConHoatDong(db, userId) {
 function thietBiGocCuaHop(db, boxId) {
   const box = boxId && db.prepare('SELECT container_id FROM nhm_boxes WHERE id = ?').get(boxId);
   if (!box) return null;
-  let cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id FROM nhm_containers WHERE id = ?').get(box.container_id);
+  let cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by FROM nhm_containers WHERE id = ?').get(box.container_id);
   for (let i = 0; cur && cur.parent_id != null && i < 50; i++) {
-    cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id FROM nhm_containers WHERE id = ?').get(cur.parent_id);
+    cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by FROM nhm_containers WHERE id = ?').get(cur.parent_id);
+  }
+  return cur || null;
+}
+
+/** Thiết bị gốc của một vị trí lưu trữ (đi ngược parent_id); null nếu không có. */
+function gocCuaViTri(db, containerId) {
+  let cur = containerId && db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by FROM nhm_containers WHERE id = ?').get(containerId);
+  for (let i = 0; cur && cur.parent_id != null && i < 50; i++) {
+    cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by FROM nhm_containers WHERE id = ?').get(cur.parent_id);
   }
   return cur || null;
 }
@@ -191,6 +200,6 @@ function nguoiDuyetHienTai(db, yc, tube) {
 }
 
 module.exports = {
-  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, hopTrongCellbank, donViCuaHop, capTen, nhanNguoiDuyet, nguoiDuyetDonVi, nguoiCoVaiTro, quanLyModule,
+  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, gocCuaViTri, hopTrongCellbank, donViCuaHop, capTen, nhanNguoiDuyet, nguoiDuyetDonVi, nguoiCoVaiTro, quanLyModule,
   truongNhomHieuLuc, xacDinhCap, nguoiDuyetHienTai,
 };

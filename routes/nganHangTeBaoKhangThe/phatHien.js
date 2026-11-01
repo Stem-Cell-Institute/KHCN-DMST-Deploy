@@ -91,7 +91,7 @@ module.exports = function createPhatHienRouter(ctx) {
 
   router.get('/findings', (req, res) => {
     const tatCa = req.query.status === 'all' && canManage(req);
-    const rows = db.prepare(`${SELECT_PH} ${tatCa ? '' : "WHERE p.trang_thai = 'cho_chu_mau'"} ORDER BY p.id DESC LIMIT 300`).all();
+    const rows = db.prepare(`${SELECT_PH} WHERE ${ctx.dkKhongAn(req, 'p.box_id')} ${tatCa ? '' : "AND p.trang_thai = 'cho_chu_mau'"} ORDER BY p.id DESC LIMIT 300`).all();
     res.json({ findings: rows.map((p) => dinhDangPh(req, p)) });
   });
 
@@ -257,7 +257,7 @@ module.exports = function createPhatHienRouter(ctx) {
 
   router.get('/incidents', (req, res) => {
     const tatCa = req.query.status === 'all' && canManage(req);
-    const rows = db.prepare(`${SELECT_VV} ${tatCa ? '' : "WHERE v.trang_thai IN ('mo','cho_chu_xac_nhan')"} ORDER BY v.id DESC LIMIT 300`).all();
+    const rows = db.prepare(`${SELECT_VV} WHERE ${ctx.dkKhongAn(req, 't.box_id')} ${tatCa ? '' : "AND v.trang_thai IN ('mo','cho_chu_xac_nhan')"} ORDER BY v.id DESC LIMIT 300`).all();
     res.json({ incidents: rows.map((v) => dinhDangVv(req, v)) });
   });
 
@@ -392,7 +392,7 @@ module.exports = function createPhatHienRouter(ctx) {
         `SELECT v.nguoi_nhan_id AS user_id, COUNT(*) AS so_lan, MAX(v.xu_ly_luc) AS gan_nhat,
                 (SELECT COALESCE(NULLIF(fullname, ''), email) FROM users WHERE id = v.nguoi_nhan_id) AS ten,
                 (SELECT g.ten FROM nhm_ho_so h JOIN nhm_nhom g ON g.id = h.nhom_id WHERE h.user_id = v.nguoi_nhan_id) AS nhom_ten
-         FROM nhm_vu_viec v WHERE v.trang_thai = 'da_xac_nhan_lay' AND v.nguoi_nhan_id IS NOT NULL
+         FROM nhm_vu_viec v WHERE v.trang_thai = 'da_xac_nhan_lay' AND v.nguoi_nhan_id IS NOT NULL AND ${ctx.dkKhongAn(req, '(SELECT box_id FROM nhm_tubes WHERE id = v.tube_id)')}
          GROUP BY v.nguoi_nhan_id ORDER BY so_lan DESC, gan_nhat DESC`
       )
       .all();
@@ -400,10 +400,12 @@ module.exports = function createPhatHienRouter(ctx) {
   });
 
   // ── Kiểm kê hộp: đối chiếu sổ với thực tế ──
-  router.post('/boxes/:id/audit', requireManage, (req, res) => {
+  router.post('/boxes/:id/audit', (req, res) => {
+    if (!canManage(req) && !ctx.laVienTruong(req)) return fail(res, 403, 'Chỉ Admin hoặc Quản lý module mới có quyền thao tác này.');
     const id = toInt(req.params.id);
-    const box = id && db.prepare('SELECT id, code FROM nhm_boxes WHERE id = ? AND deleted_at IS NULL').get(id);
+    const box = id && db.prepare('SELECT id, code, container_id FROM nhm_boxes WHERE id = ? AND deleted_at IS NULL').get(id);
     if (!box) return fail(res, 404, 'Không tìm thấy hộp.');
+    if (!ctx.quyenViTri(req, box.container_id)) return fail(res, 403, 'Chỉ Admin, Quản lý module hoặc chủ thiết bị riêng mới có quyền thao tác này.');
     const body = req.body || {};
     const ids = (a) => (Array.isArray(a) ? a.map(toInt) : null);
     const thay = ids(body.thay);

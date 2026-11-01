@@ -6,8 +6,8 @@
  */
 
 // Vai trò TRONG module (bảng nhm_vai_tro) — chỉ admin cấp / gỡ.
-const VAI_TRO_MODULE = ['quan_ly', 'truong_cellbank'];
-const VAI_TRO_VN = { quan_ly: 'Quản lý module', truong_cellbank: 'Trưởng CIPP (Cellbank)' };
+const VAI_TRO_MODULE = ['quan_ly', 'truong_cellbank', 'vien_truong'];
+const VAI_TRO_VN = { quan_ly: 'Quản lý module', truong_cellbank: 'Trưởng CIPP (Cellbank)', vien_truong: 'Viện trưởng (thiết bị riêng)' };
 
 // Loại chủ mẫu, để lọc và để biết ai duyệt yêu cầu khi người gửi mẫu đã ra trường / nghỉ việc.
 const LOAI_CHU = ['sinh_vien', 'nghien_cuu_vien', 'can_bo'];
@@ -81,7 +81,7 @@ const NHAN_TRUONG = {
   volume_ml: 'Thể tích (mL)', freeze_date: 'Ngày đông lạnh', project: 'Đề tài', notes: 'Ghi chú', code: 'Mã',
   container_id: 'Vị trí lưu trữ', rows: 'Số hàng', cols: 'Số cột', type_id: 'Loại', parent_id: 'Thuộc vị trí',
   ten: 'Tên nhóm', truong_user_id: 'Trưởng nhóm', trang_thai: 'Trạng thái', truong_xac_nhan: 'Trưởng nhóm đã xác nhận',
-  chu_loai: 'Loại chủ mẫu', nhom_id: 'Nhóm nghiên cứu', ghi_chu: 'Ghi chú', quan_ly_boi: 'Do ai quản lý', don_vi_id: 'Đơn vị quản lý', vi_tri: 'Vị trí số',
+  chu_loai: 'Loại chủ mẫu', nhom_id: 'Nhóm nghiên cứu', ghi_chu: 'Ghi chú', quan_ly_boi: 'Do ai quản lý', don_vi_id: 'Đơn vị quản lý', rieng_user_id: 'Thiết bị riêng', vi_tri: 'Vị trí số',
   temperature_c: 'Nhiệt độ (°C)', location_note: 'Vị trí đặt', sort_order: 'Thứ tự', template_id: 'Mẫu hộp',
 };
 

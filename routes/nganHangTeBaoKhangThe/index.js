@@ -29,6 +29,8 @@ function createNganHangMauRouter(deps) {
   router.use(deps.authMiddleware);
   // tài khoản sinh viên: hết hạn / bị thu hồi thì không vào module (Đặt lịch thiết bị vẫn dùng được); còn hạn thì tự có hồ sơ «sinh viên»
   router.use((req, res, next) => ctx.chanSinhVien(req, res, next));
+  // thiết bị riêng của Viện trưởng: người khác (trừ admin) không thấy, gặp 404 như không tồn tại
+  router.use((req, res, next) => ctx.chanDuLieuRieng(req, res, next));
   router.use(createKhoLuuTruRouter(ctx));
   router.use(createSinhVienRouter(ctx));
   router.use(createThanhVienRouter(ctx));

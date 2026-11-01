@@ -31,6 +31,7 @@ thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở n
 |---|---|---|
 | **Admin** | `users.role = 'admin'` | Toàn quyền. Là người **duy nhất** cấp / gỡ vai trò module. |
 | **Quản lý module** (2–3 người) | bảng `nhm_vai_tro` | Thiết bị lưu trữ, hộp, danh mục, nhóm nghiên cứu, hồ sơ thành viên, sửa / xử lý mọi mẫu, xuất CSV, chuyển chủ sở hữu mẫu. Là người xử lý yêu cầu lấy mẫu: giao mẫu, nhận lại, xử lý thay khi người duyệt vắng. |
+| **Viện trưởng** (thiết bị riêng) | bảng `nhm_vai_tro` (`vien_truong`), chỉ admin cấp | Tạo **thiết bị riêng** và toàn quyền với nó (xem «Thiết bị riêng của Viện trưởng»). Không phải quản lý module; việc duyệt yêu cầu ở Cellbank là do được thêm làm người duyệt của đơn vị, tách riêng. |
 | **Trưởng CIPP** (quản lý Cellbank) | bảng `nhm_vai_tro` | Là người duyệt của đơn vị **Cellbank** (duyệt yêu cầu lấy mẫu ở thiết bị Cellbank). Không có quyền quản lý kho. |
 | Người dùng thường | mọi tài khoản còn lại | Tìm mẫu, thêm mẫu vào thiết bị công khai, sửa / di chuyển / lấy ra / rã đông / hủy / xóa **mẫu của mình**. |
 | Sinh viên của Viện (`sinh_vien`) | danh sách chờ do Trung tâm quản lý người học cung cấp | Như người dùng thường, **tới hết hạn dùng** ghi trong danh sách; tài khoản chỉ vào được module này và Đặt lịch thiết bị (xem «Sinh viên của Viện»). |
@@ -65,6 +66,16 @@ Chọn ở ô «Ai quản lý thiết bị này» khi **Thêm / Chỉnh sửa th
 - Đơn vị **chưa có người duyệt**: yêu cầu đi thẳng quản lý module. Chỉ xóa được đơn vị khi không còn thiết bị thuộc nó.
 - Đổi thiết bị từ đơn vị sang Public (hoặc ngược lại) thì các yêu cầu đang chờ được định tuyến lại.
 - Thông báo, lịch sử mẫu và danh sách yêu cầu nêu tên đơn vị (ví dụ «Chờ Cellbank duyệt»); cấp duyệt trong bảng `nhm_yeu_cau.cap` vẫn lưu giá trị cũ `truong_cellbank`.
+
+### Thiết bị riêng của Viện trưởng (Non-public)
+
+Người có vai trò **Viện trưởng** chọn «Riêng tư» ở ô «Ai quản lý thiết bị này» khi thêm thiết bị (`POST /containers` với `rieng: true`; cột `nhm_containers.rieng_user_id`):
+- **Chỉ chủ và admin thấy.** Với mọi người khác (kể cả quản lý module, Trưởng CIPP) thiết bị, Rack, hộp, mẫu bên trong **không có**: không ở sơ đồ kho, tìm kiếm, xuất CSV,
+  danh sách yêu cầu / phát hiện / sự cố, số đếm «Việc cần xử lý», số liệu thẻ trang chủ; truy cập trực tiếp theo id (đường dẫn hoặc `box_id` / `container_id` / `parent_id` trong body) trả **404 giống hệt id không tồn tại**.
+  Cài đặt tập trung ở `boiCanh.js` (`tapAn`, `dkKhongAn`, `chanDuLieuRieng`); mọi truy vấn trả mẫu mới thêm sau này phải dùng `dkKhongAn`. Admin thấy hết (giao diện không nói điều này với người khác).
+- **Chủ toàn quyền** ở thiết bị của mình (thêm / sửa / xóa Rack, hộp, mẫu, kiểm kê), không cần là quản lý module. Không có quyền quản lý nơi khác (danh mục, thiết bị của người khác).
+- **Đổi chế độ bất cứ lúc nào** (`PATCH /containers/:id` với `rieng: false` và/hoặc `don_vi_id`): thành Public hoặc đơn vị (Cellbank…), hoặc đặt lại riêng. Chỉ đặt «riêng» được với thiết bị **do chính Viện trưởng tạo**; Viện trưởng giữ quyền với thiết bị mình tạo cả khi đã chuyển sang Public / đơn vị.
+- Hạn chế đã biết: số mẫu của một **nhóm nghiên cứu** (ở tab Nhóm) vẫn đếm cả mẫu riêng của thành viên nhóm đó. Bảng vai trò cũ được dựng lại một lần khi khởi động để thêm giá trị `vien_truong` (giữ nguyên dữ liệu).
 
 ### Bình nitơ lỏng: Rack rồi hộp theo vị trí số
 
