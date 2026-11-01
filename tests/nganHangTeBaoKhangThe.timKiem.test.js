@@ -31,8 +31,12 @@ const tim = (qs, user = 'alice') => s.api(user, 'GET', '/tubes/search' + qs);
 test('tìm mẫu: cần đăng nhập; theo tên, đề tài; không phân biệt hoa thường', async () => {
   assert.equal((await tim('', null)).status, 401);
   assert.equal((await tim('?q=hek')).json.total, 2);
-  assert.equal((await tim('?q=' + encodeURIComponent('đề tài a'))).json.total, 0); // LIKE của SQLite không bỏ dấu / hoa thường Unicode
-  assert.equal((await tim('?q=' + encodeURIComponent('Đề tài A'))).json.total, 2);
+  // bỏ dấu, không phân biệt hoa thường: ba cách gõ cho cùng một kết quả (mỗi từ khớp ở một trường bất kỳ nên từ «a» khớp rộng)
+  const ba = [];
+  for (const q of ['đề tài a', 'DE TAI A', 'Đề tài A']) ba.push((await tim('?q=' + encodeURIComponent(q))).json.total);
+  assert.equal(new Set(ba).size, 1);
+  assert.ok(ba[0] >= 2);
+  assert.equal((await tim('?q=' + encodeURIComponent('hek de tai a'))).json.total, 2);
 });
 
 test('tìm mẫu: ký tự % và _ được coi là chữ thường, không phải ký tự đại diện', async () => {
@@ -122,4 +126,42 @@ test('thêm hàng loạt: tất cả hoặc không — ô bị chiếm, vượt 
   assert.equal((await s.api('alice', 'POST', '/tubes/bulk', { ...goc, row_no: 4, col_no: 1, count: 2, cell_count: 'abc' })).status, 400);
   assert.equal((await s.api(null, 'POST', '/tubes/bulk', { ...goc, count: 2 })).status, 401);
   assert.equal(dem(), n0, 'không có lỗi nào để lại mẫu dở dang');
+});
+
+test('tìm mẫu theo MỌI trường: loại mẫu, người sở hữu, đường dẫn, hộp, ô, trạng thái, loại chủ, ngày, passage, ghi chú', async () => {
+  const dem = async (q) => (await tim('?q=' + encodeURIComponent(q))).json.total;
+  assert.equal(await dem('khang the'), 1); // loại mẫu «Kháng thể»
+  assert.equal(await dem('bob@sci'), 1); // người sở hữu (email); mẫu MSC của bob đã rã đông nên không tính
+  const tong = (await tim('')).json.total;
+  assert.equal(await dem('tu test'), tong); // đường dẫn tủ
+  assert.equal(await dem('hop test'), tong); // tên hộp
+  assert.equal(await dem('a9'), 1); // ô A9 (mẫu thêm hàng loạt)
+  assert.equal(await dem('can bo'), tong); // loại chủ «Cán bộ» (hồ sơ alice, bob)
+  assert.equal(await dem('dang luu kho'), tong); // trạng thái
+  assert.equal(await dem('dau nhay'), 1); // ghi chú
+  assert.equal(await dem('khong co gi nhu the'), 0);
+});
+
+test('tìm nhiều từ: mẫu phải khớp TẤT CẢ các từ, mỗi từ ở một trường bất kỳ', async () => {
+  const dem = async (q) => (await tim('?q=' + encodeURIComponent(q))).json.total;
+  assert.equal(await dem('hek alice'), 2); // tên + người sở hữu
+  assert.equal(await dem('hek bob'), 0);
+  assert.equal(await dem('hek p13 de tai a'), 1);
+  assert.equal(await dem('   hek    '), 2, 'khoảng trắng thừa không ảnh hưởng');
+});
+
+test('lọc theo loại chủ mẫu và nhóm; kết quả có nhóm, trưởng nhóm, loại chủ', async () => {
+  const nhom = (await s.api('manager', 'POST', '/groups', { ten: 'Nhóm Tìm Kiếm', truong_user_id: 6 })).json.id;
+  const id = (await tim('?q=P13')).json.items[0].id;
+  assert.equal((await s.api('manager', 'PATCH', `/tubes/${id}`, { chu_loai: 'sinh_vien', nhom_id: nhom })).status, 200);
+  assert.equal((await tim('?chu_loai=sinh_vien')).json.total, 1);
+  assert.equal((await tim(`?nhom_id=${nhom}`)).json.items[0].nhom_ten, 'Nhóm Tìm Kiếm');
+  assert.equal((await tim('?chu_loai=bậy')).status, 400);
+  assert.equal((await tim('?nhom_id=abc')).status, 400);
+  const r = (await tim('?q=' + encodeURIComponent('nhom tim kiem sinh vien'))).json;
+  assert.equal(r.total, 1);
+  assert.equal(r.items[0].truong_ten, 'truong@sci.edu.vn');
+  assert.equal((await tim('?q=truong')).json.total, 1, 'tìm theo tên trưởng nhóm');
+  const csv = (await s.api('manager', 'GET', '/tubes/export.csv?chu_loai=sinh_vien')).text;
+  assert.ok(csv.includes('Sinh viên') && csv.includes('Nhóm Tìm Kiếm') && csv.includes('truong@sci.edu.vn'));
 });
