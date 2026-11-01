@@ -326,7 +326,7 @@
    * Chỉ hiện trên màn hình rộng (CSS ẩn ở màn hình hẹp để nhường chỗ cho sơ đồ). ten / nguoiDuyet lấy từ máy chủ.
    */
   function loiNhacDonVi(ten, nguoiDuyet) {
-    return h('p', { class: 'nhm-hint nhm-hint--rong' }, 'Thiết bị do ' + (ten || 'đơn vị quản lý') + ' quản lý: bạn không tự thêm hay lấy mẫu ở đây. Muốn lấy mẫu, bấm vào mẫu rồi gửi yêu cầu; ' + (nguoiDuyet || 'người duyệt của đơn vị') + ' sẽ duyệt và hệ thống gửi email báo kết quả cho bạn.');
+    return h('p', { class: 'nhm-hint nhm-hint--rong' }, (ten || 'Đơn vị quản lý') + ' quản lý: không tự thêm / lấy mẫu. Bấm vào mẫu để gửi yêu cầu; ' + (nguoiDuyet || 'người duyệt của đơn vị') + ' duyệt, kết quả báo qua email.');
   }
 
   function fact(label, value) { return h('div', { class: 'nhm-fact' }, [h('b', {}, label), value == null || value === '' ? '—' : String(value)]); }

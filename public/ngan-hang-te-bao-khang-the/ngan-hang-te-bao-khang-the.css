@@ -473,5 +473,6 @@
 .nhm-ln[open] > summary::after { content: "Thu gọn ▴"; }
 .nhm-ln > summary:hover::after { background: var(--muc); color: #fff; }
 
-/* Dòng giải thích Cellbank / đơn vị quản lý: chỉ màn hình rộng */
+/* Dòng giải thích Cellbank / đơn vị quản lý: chỉ màn hình rộng; nhỏ và sát vì không phải thông tin chính */
+.nhm-hint--rong { margin: 2px 0 8px; padding: 3px 10px; font-size: 0.76rem; line-height: 1.4; color: var(--chu-phu); }
 @media (max-width: 900px) { .nhm-hint--rong { display: none; } }
