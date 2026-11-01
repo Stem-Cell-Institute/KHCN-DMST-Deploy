@@ -461,7 +461,8 @@
         }).join('; ');
       } catch (e) { return 'Đã sửa: ' + x.note; } // bản ghi cũ chỉ lưu tên cột
     }
-    var vt = from || to ? from + ' → ' + to : '';
+    // Chỉ có điểm đi (lấy ra, rã đông, hủy, xóa) hoặc chỉ có điểm đến (nhập kho) thì không in mũi tên thừa
+    var vt = from && to ? from + ' → ' + to : to ? '→ ' + to : from;
     return [vt, x.note && x.action !== 'edit' ? x.note : ''].filter(Boolean).join(' — ');
   }
 
