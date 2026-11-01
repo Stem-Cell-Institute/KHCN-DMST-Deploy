@@ -10,9 +10,11 @@
 
 const fs = require('fs');
 const path = require('path');
-const { HOLDING } = require('./nganHangTeBaoKhangThe');
+const { HOLDING, placeholders } = require('./nganHangTeBaoKhangThe');
 
 const MODULE_LABEL = 'Ngân hàng tế bào & Kháng thể';
+// Nhãn thẻ trang chủ từ các tên cũ của module
+const OLD_LABELS = ['Ngân hàng mẫu', 'Kho mẫu sinh phẩm'];
 const SCHEMA_PATH = path.join(__dirname, '..', 'db', 'ngan_hang_te_bao_khang_the_schema.sql');
 // Địa chỉ rút gọn + các tên cũ (để liên kết đã gửi vẫn dùng được)
 const LEGACY_PATHS = [
@@ -53,8 +55,11 @@ function miniStats(db) {
 function khoiTao(app, db) {
   ensureSchema(db);
   app.get(LEGACY_PATHS, (req, res) => res.redirect(302, PAGE_URL));
-  // Đồng bộ tên hiển thị cho cơ sở dữ liệu đã có dòng homepage_modules từ tên cũ
-  db.prepare("UPDATE homepage_modules SET label = ? WHERE code = 'sample_storage' AND label <> ?").run(MODULE_LABEL, MODULE_LABEL);
+  // Chỉ đổi nhãn khi dòng homepage_modules còn mang TÊN CŨ; nhãn admin đã tự đặt thì giữ nguyên qua các lần khởi động.
+  db.prepare(`UPDATE homepage_modules SET label = ? WHERE code = 'sample_storage' AND label IN (${placeholders(OLD_LABELS.length)})`).run(
+    MODULE_LABEL,
+    ...OLD_LABELS
+  );
 }
 
 module.exports = { MODULE_LABEL, SCHEMA_PATH, LEGACY_PATHS, PAGE_URL, ensureSchema, miniStats, khoiTao };

@@ -30,7 +30,7 @@ function taoBoiCanh(deps) {
     insertUserActivityLog(req, {
       userId: req.user && req.user.id,
       email: req.user && req.user.email,
-      action: 'kmsp_' + action,
+      action: 'nhm_' + action,
       module: 'ngan_hang_te_bao_khang_the',
       path: req.originalUrl,
       detail,

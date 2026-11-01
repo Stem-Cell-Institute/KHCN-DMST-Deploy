@@ -78,7 +78,6 @@ CREATE TABLE IF NOT EXISTS nhm_tubes (
   project TEXT,
   status TEXT NOT NULL DEFAULT 'in_storage'
     CHECK (status IN ('in_storage','checked_out','thawed','discarded')),
-  extra_json TEXT,
   notes TEXT,
   deleted_at TEXT,
   created_by INTEGER,

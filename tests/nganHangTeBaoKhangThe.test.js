@@ -21,6 +21,7 @@ const USERS = {
 let server;
 let base;
 let db;
+const auditLog = []; // các dòng nhật ký hoạt động module đã ghi
 
 test.before(async () => {
   db = new Database(':memory:');
@@ -39,7 +40,7 @@ test.before(async () => {
     req.user = u;
     next();
   };
-  app.use('/api/ngan-hang-te-bao-khang-the', createRouter({ db, authMiddleware: fakeAuth }));
+  app.use('/api/ngan-hang-te-bao-khang-the', createRouter({ db, authMiddleware: fakeAuth, insertUserActivityLog: (req, row) => auditLog.push(row) }));
   await new Promise((r) => {
     server = http.createServer(app).listen(0, '127.0.0.1', r);
   });
@@ -233,5 +234,27 @@ test('mount: tạo bảng, chuyển hướng địa chỉ cũ, đồng bộ nhã
   assert.equal(res.headers.get('location'), '/public/ngan-hang-te-bao-khang-the/index.html');
   assert.equal((await fetch(url + '/api/ngan-hang-te-bao-khang-the/meta')).status, 401);
   srv.close();
+  mdb.close();
+});
+
+test('nhật ký hoạt động: tiền tố nhm_, đúng module, ghi người thao tác', () => {
+  assert.ok(auditLog.length > 0);
+  for (const row of auditLog) {
+    assert.match(row.action, /^nhm_/);
+    assert.equal(row.module, 'ngan_hang_te_bao_khang_the');
+    assert.ok(row.userId);
+  }
+  assert.ok(auditLog.some((r) => r.action === 'nhm_tube_create'));
+  assert.ok(auditLog.some((r) => r.action === 'nhm_container_delete'));
+});
+
+test('mount: nhãn trang chủ do admin tự đặt được giữ nguyên, chỉ đổi khi còn tên cũ', () => {
+  const mdb = new Database(':memory:');
+  mdb.exec("CREATE TABLE homepage_modules (code TEXT PRIMARY KEY, label TEXT); INSERT INTO homepage_modules VALUES ('sample_storage', 'Kho của Viện')");
+  createRouter.mount(express(), { db: mdb, authMiddleware: (req, res) => res.status(401).end() });
+  assert.equal(mdb.prepare("SELECT label FROM homepage_modules WHERE code = 'sample_storage'").get().label, 'Kho của Viện');
+  mdb.prepare("UPDATE homepage_modules SET label = 'Kho mẫu sinh phẩm'").run();
+  createRouter.mount(express(), { db: mdb, authMiddleware: (req, res) => res.status(401).end() });
+  assert.equal(mdb.prepare("SELECT label FROM homepage_modules WHERE code = 'sample_storage'").get().label, 'Ngân hàng tế bào & Kháng thể');
   mdb.close();
 });
