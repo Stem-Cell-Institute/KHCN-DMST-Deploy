@@ -61,7 +61,7 @@ Chọn ở ô «Ai quản lý thiết bị này» khi **Thêm / Chỉnh sửa th
 - Người duyệt phải là tài khoản dùng được module (không bị khóa, không phải tài khoản chỉ Đặt lịch, không phải sinh viên).
 - Đơn vị **chưa có người duyệt**: yêu cầu đi thẳng quản lý module. Chỉ xóa được đơn vị khi không còn thiết bị thuộc nó.
 - Đổi thiết bị từ đơn vị sang Public (hoặc ngược lại) thì các yêu cầu đang chờ được định tuyến lại.
-- Thông báo, lịch sử mẫu và danh sách yêu cầu nêu tên đơn vị («Người duyệt của …»); cấp duyệt trong bảng `nhm_yeu_cau.cap` vẫn lưu giá trị cũ `truong_cellbank`.
+- Thông báo, lịch sử mẫu và danh sách yêu cầu nêu tên đơn vị (ví dụ «Chờ Cellbank duyệt»); cấp duyệt trong bảng `nhm_yeu_cau.cap` vẫn lưu giá trị cũ `truong_cellbank`.
 
 ### Bình nitơ lỏng: Rack rồi hộp theo vị trí số
 

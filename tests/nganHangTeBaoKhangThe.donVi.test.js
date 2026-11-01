@@ -64,7 +64,7 @@ test('thiết bị gắn đơn vị: người duyệt của đơn vị duyệt; 
   s.mails.length = 0;
   const r = await xin('bob', m);
   assert.equal(r.json.cap, 'truong_cellbank');
-  assert.equal(r.json.cap_ten, 'Người duyệt của Phòng Lab Duyệt');
+  assert.equal(r.json.cap_ten, 'Phòng Lab Duyệt');
   await cho();
   assert.deepEqual(den('Yêu cầu lấy mẫu'), ['truong@sci.edu.vn'], 'chỉ người duyệt của đơn vị nhận thư, không phải chủ mẫu hay Trưởng CIPP');
   assert.equal((await s.api('alice', 'POST', `/requests/${r.json.id}/approve`)).status, 403, 'chủ mẫu không duyệt thay đơn vị');

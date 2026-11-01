@@ -112,7 +112,7 @@ function donViCuaHop(db, boxId) {
 function capTen(db, cap, boxId) {
   if (cap !== 'truong_cellbank') return CAP_VN[cap];
   const dv = donViCuaHop(db, boxId);
-  return dv ? `Người duyệt của ${dv.ten}` : CAP_VN.truong_cellbank;
+  return dv ? dv.ten : CAP_VN.truong_cellbank;
 }
 
 /** Người duyệt của một đơn vị còn hoạt động: tài khoản được chỉ định + người giữ vai trò gắn với đơn vị (Cellbank: Trưởng CIPP). */
