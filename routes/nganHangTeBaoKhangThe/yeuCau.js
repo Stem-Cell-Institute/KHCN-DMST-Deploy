@@ -186,7 +186,7 @@ module.exports = function createYeuCauRouter(ctx) {
       Phieu.dungPhieu({
         yc: y, tube: { ...tube, loai_mau: loai && loai.name }, viTri: moTaViTri(tube.box_id, tube.row_no, tube.col_no),
         nguoiGui: nguoiDung(y.nguoi_gui_id), nguoiXuLy: nguoiDung(y.xu_ly_boi), chuMau: nguoiDung(tube.owner_user_id), nhomTen: y.nhom_ten,
-        capTen: YeuCau.capTen(db, y.cap, tube.box_id), xuLyThay: thay, inLuc: Phieu.gioVn(YeuCau.bayGio()),
+        capTen: YeuCau.capTen(db, y.cap, tube.box_id), donViTen: (YeuCau.donViCuaHop(db, tube.box_id) || {}).ten || null, xuLyThay: thay, inLuc: Phieu.gioVn(YeuCau.bayGio()),
       })
     );
   });

@@ -72,6 +72,22 @@ test('từ chối: phiếu ghi đã từ chối + lý do; email gửi người y
   assert.doesNotMatch(p.text, /Người nhận mẫu xuất trình phiếu/, 'không có xác nhận nhận mẫu khi bị từ chối');
 });
 
+test('thiết bị có đơn vị: ô ký giao mẫu ghi «Quản lý <đơn vị> giao mẫu»; thiết bị Public ghi quản lý module', async () => {
+  const cb = await s.api('manager', 'POST', '/containers', { name: 'Bình Cellbank phiếu', type_id: kho.type, quan_ly_boi: 'cellbank' });
+  const hop = (await s.api('manager', 'POST', '/boxes', { container_id: cb.json.id, template_id: kho.tpl99 })).json.ids[0];
+  const m = (await s.api('manager', 'POST', '/tubes', { box_id: hop, row_no: 1, col_no: 1, name: 'MCB', chu_loai: 'can_bo' })).json.id;
+  const r = await xin('bob', m);
+  assert.equal((await s.api('cellbank', 'POST', `/requests/${r.json.id}/approve`)).status, 200);
+  const p = await phieu('bob', r.json.id);
+  assert.match(p.text, /Quản lý Cellbank giao mẫu/);
+  assert.match(p.text, /xuất trình phiếu này cho Quản lý Cellbank/);
+  assert.doesNotMatch(p.text, /Quản lý module giao mẫu/);
+  // thiết bị Public: giữ «Quản lý module»
+  const pub = (await them('alice', 2, 1)).json.id;
+  const r2 = await xin('bob', pub);
+  assert.match((await phieu('bob', r2.json.id)).text, /Quản lý module giao mẫu/);
+});
+
 test('lịch sử xử lý: người duyệt thấy những gì mình đã xử lý, quản lý thấy tất cả, người xin chỉ thấy trong «của tôi»', async () => {
   const lichSu = async (user) => (await s.api(user, 'GET', '/requests?view=done')).json.requests;
   const cuaAlice = await lichSu('alice');

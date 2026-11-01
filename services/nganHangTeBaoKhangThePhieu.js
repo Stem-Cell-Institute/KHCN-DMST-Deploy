@@ -10,7 +10,7 @@ const { esc } = require('./baoCaoPhongThongBao');
 
 const TRANG_THAI = {
   cho_duyet: { nhan: 'ĐANG CHỜ DUYỆT', lop: 'cho', ghi: 'Phiếu này CHƯA có giá trị nhận mẫu: chỉ dùng được khi yêu cầu đã được duyệt.' },
-  da_duyet: { nhan: 'ĐÃ ĐƯỢC DUYỆT', lop: 'duyet', ghi: 'Chờ quản lý module giao mẫu.' },
+  da_duyet: { nhan: 'ĐÃ ĐƯỢC DUYỆT', lop: 'duyet', ghi: 'Chờ quản lý giao mẫu.' },
   da_giao: { nhan: 'ĐÃ ĐƯỢC DUYỆT', lop: 'duyet', ghi: 'Mẫu đã được giao cho người yêu cầu.' },
   da_tra: { nhan: 'ĐÃ ĐƯỢC DUYỆT', lop: 'duyet', ghi: 'Mẫu đã được trả lại kho.' },
   tu_choi: { nhan: 'ĐÃ BỊ TỪ CHỐI', lop: 'tu-choi', ghi: 'Yêu cầu không được chấp thuận; phiếu này không dùng để nhận mẫu.' },
@@ -38,6 +38,7 @@ const dong = (nhan, giaTri) => `<tr><th>${esc(nhan)}</th><td>${giaTri == null ||
  *   nguoiGui, nguoiXuLy, chuMau   {fullname, email}
  *   nhomTen       tên nhóm nghiên cứu của mẫu
  *   capTen        tên cấp / đơn vị duyệt («Cellbank», «Chủ mẫu»...)
+ *   donViTen      tên đơn vị quản lý thiết bị chứa mẫu (null nếu Public): người ký giao mẫu là «Quản lý <đơn vị>»
  *   xuLyThay      true nếu quản lý xử lý thay người duyệt
  *   inLuc         thời điểm in (chuỗi hiển thị)
  */
@@ -46,8 +47,9 @@ function dungPhieu(d) {
   const tt = TRANG_THAI[yc.trang_thai] || TRANG_THAI.cho_duyet;
   const duyet = tt.lop === 'duyet';
   const so = 'YC-' + String(yc.id).padStart(6, '0');
+  const nguoiGiao = d.donViTen ? `Quản lý ${d.donViTen}` : 'Quản lý module';
   const xacNhan = duyet
-    ? `<p class="xn">Xác nhận: yêu cầu lấy mẫu nêu trên đã được <b>${esc(d.capTen)}</b> đồng ý bởi <b>${esc(ten(d.nguoiXuLy))}</b>${d.nguoiXuLy && d.nguoiXuLy.email ? ` (${esc(d.nguoiXuLy.email)})` : ''} lúc <b>${esc(gioVn(yc.xu_ly_luc))}</b>${d.xuLyThay ? ` — quản lý xử lý thay người duyệt${yc.ly_do_xu_ly ? ', lý do: ' + esc(yc.ly_do_xu_ly) : ''}` : yc.ly_do_xu_ly ? `. Ghi chú: ${esc(yc.ly_do_xu_ly)}` : ''}.<br>Người nhận mẫu xuất trình phiếu này cho quản lý module khi nhận mẫu.</p>`
+    ? `<p class="xn">Xác nhận: yêu cầu lấy mẫu nêu trên đã được <b>${esc(d.capTen)}</b> đồng ý bởi <b>${esc(ten(d.nguoiXuLy))}</b>${d.nguoiXuLy && d.nguoiXuLy.email ? ` (${esc(d.nguoiXuLy.email)})` : ''} lúc <b>${esc(gioVn(yc.xu_ly_luc))}</b>${d.xuLyThay ? ` — quản lý xử lý thay người duyệt${yc.ly_do_xu_ly ? ', lý do: ' + esc(yc.ly_do_xu_ly) : ''}` : yc.ly_do_xu_ly ? `. Ghi chú: ${esc(yc.ly_do_xu_ly)}` : ''}.<br>Người nhận mẫu xuất trình phiếu này cho ${esc(nguoiGiao)} khi nhận mẫu.</p>`
     : yc.trang_thai === 'tu_choi'
       ? `<p class="xn">Yêu cầu đã bị từ chối bởi <b>${esc(ten(d.nguoiXuLy))}</b> lúc <b>${esc(gioVn(yc.xu_ly_luc))}</b>. Lý do: ${esc(yc.ly_do_xu_ly || '(không ghi)')}</p>`
       : '';
@@ -95,7 +97,7 @@ function dungPhieu(d) {
   <h2>Kết quả xử lý</h2>
   <table>${dong('Cấp duyệt', d.capTen)}${dong('Người xử lý', yc.trang_thai === 'cho_duyet' ? '(chưa xử lý)' : ten(d.nguoiXuLy))}${dong('Thời điểm xử lý', yc.trang_thai === 'cho_duyet' ? '' : gioVn(yc.xu_ly_luc))}</table>
   ${xacNhan}
-  <div class="ky"><div><b>Người yêu cầu</b><small>(ký, ghi rõ họ tên)</small></div><div><b>Người duyệt</b><small>(ký, ghi rõ họ tên)</small></div><div><b>Quản lý module giao mẫu</b><small>(ký, ghi rõ họ tên)</small></div></div>
+  <div class="ky"><div><b>Người yêu cầu</b><small>(ký, ghi rõ họ tên)</small></div><div><b>Người duyệt</b><small>(ký, ghi rõ họ tên)</small></div><div><b>${esc(nguoiGiao)} giao mẫu</b><small>(ký, ghi rõ họ tên)</small></div></div>
   <div class="chan">In lúc ${esc(d.inLuc)} từ hệ thống STIMS. Phiếu chỉ có giá trị khi số phiếu <b>${esc(so)}</b> và kết quả khớp với hệ thống.</div>
 </div></body></html>`;
 }
