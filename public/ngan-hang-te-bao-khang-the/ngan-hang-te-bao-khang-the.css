@@ -436,6 +436,7 @@
 .ln-o--co { fill: #dfe5ef; stroke: var(--chu-phu); stroke-dasharray: none; }
 .ln-so { font: 600 8px 'Be Vietnam Pro', sans-serif; fill: var(--chu-phu); }
 .ln-so--tren { font-size: 7px; fill: var(--muc); }
+.ln-so--nho { font-size: 5.5px; }
 .ln-ten { font: 700 9px 'Be Vietnam Pro', sans-serif; fill: var(--muc); paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; text-anchor: middle; }
 .ln-nhan { font: 500 8.5px 'Be Vietnam Pro', sans-serif; fill: var(--chu-phu); letter-spacing: 0.04em; }
 .ln-vong { fill: rgba(183, 40, 30, 0.18); stroke: var(--son); stroke-width: 1.4; }

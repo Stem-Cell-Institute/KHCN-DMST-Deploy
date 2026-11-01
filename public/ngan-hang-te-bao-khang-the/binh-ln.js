@@ -50,7 +50,14 @@
 
     // tên hiển thị của Rack: tên đã đặt, chưa đặt thì «Rack N»
     function tenRack(r) { return r.name || 'Rack ' + r.so; }
-    function ngan(t) { return t.length > 20 ? t.slice(0, 19) + '…' : t; }
+    function ngan(t) { return t.length > 14 ? t.slice(0, 13) + '…' : t; }
+    var RONG_CHU = 5.6; // bề rộng ước lượng một ký tự chữ đậm 9px
+    /** Toạ độ giữa của nhãn sao cho cả nhãn nằm trong [tu, den] (chữ dài hơn khoảng đó thì căn giữa khoảng). */
+    function kepNhan(giua, chuoi, tu, den) {
+      var nua = (chuoi.length * RONG_CHU) / 2;
+      if (nua * 2 >= den - tu) return (tu + den) / 2;
+      return Math.max(tu + nua, Math.min(den - nua, giua));
+    }
 
     // toạ độ từng giá trong mặt cắt (giá thứ 1..soGia chia đều theo chiều ngang)
     var gap = 4;
@@ -97,11 +104,13 @@
       svg.appendChild(g);
       theoGia[r.id] = gm;
       // nhãn số giá dưới đáy
-      svg.appendChild(chu(xGia(r.so) + wGia / 2, BODY_BOTTOM + 11, String(r.so), 'ln-so'));
+      if (wGia >= 11 || r.so % 2 === 1) svg.appendChild(chu(xGia(r.so) + wGia / 2, BODY_BOTTOM + 11, String(r.so), 'ln-so'));
     });
 
     // nhìn từ trên: các vị trí giá quanh cổ bình
-    var CX = 250, CY = 62, R = 32, rr = Math.max(5, Math.min(9, 24 / Math.sqrt(soGia) + 2));
+    var CX = 252, CY = 62, R = 34;
+    var cach = soGia > 1 ? 2 * R * Math.sin(Math.PI / soGia) : 99; // khoảng cách giữa hai vị trí kề nhau
+    var rr = Math.max(2.5, Math.min(9, cach / 2 - 0.9));
     svg.appendChild(el('circle', { cx: CX, cy: CY, r: R + 12, class: 'ln-vo ln-tren' }));
     svg.appendChild(el('circle', { cx: CX, cy: CY, r: R + 3, class: 'ln-trong' }));
     var viTriTren = {};
@@ -111,7 +120,7 @@
       viTriTren[k] = { x: px, y: py };
       var co = racks.some(function (r) { return r.so === k; });
       svg.appendChild(el('circle', { cx: px, cy: py, r: rr, class: 'ln-o' + (co ? ' ln-o--co' : '') }));
-      if (soGia <= 12) svg.appendChild(chu(px, py + 2.6, String(k), 'ln-so ln-so--tren'));
+      if (rr >= 5.5) svg.appendChild(chu(px, py + (rr >= 7 ? 2.6 : 2.2), String(k), 'ln-so ln-so--tren' + (rr < 7 ? ' ln-so--nho' : '')));
     }
     svg.appendChild(chu(CX, CY + R + 28, 'Nhìn từ trên', 'ln-nhan'));
     svg.appendChild(chu(110, 326, 'Mặt cắt đứng', 'ln-nhan'));
@@ -184,9 +193,10 @@
       cham.style.display = '';
       var nhan = ngan(tenRack(rack));
       tenCat.textContent = nhan;
-      tenCat.setAttribute('x', Math.max(46, Math.min(174, gm.x + gm.w / 2)).toFixed(1));
+      tenCat.setAttribute('x', kepNhan(gm.x + gm.w / 2, nhan, 30, 190).toFixed(1));
       tenCat.style.display = '';
       tenTren.textContent = nhan;
+      tenTren.setAttribute('x', kepNhan(CX, nhan, 210, 298).toFixed(1));
       tenTren.style.display = '';
       var t = viTriTren[rack.so];
       if (t) { chamTren.setAttribute('transform', 'translate(' + t.x.toFixed(1) + ' ' + t.y.toFixed(1) + ')'); chamTren.style.display = ''; }
