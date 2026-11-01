@@ -120,9 +120,11 @@ module.exports = function createYeuCauRouter(ctx) {
     else if (view === 'all') rows = db.prepare(`${SELECT} ORDER BY y.id DESC LIMIT 500`).all();
     else if (view === 'done') {
       const sau = "y.trang_thai <> 'cho_duyet'";
-      rows = canManage(req)
-        ? db.prepare(`${SELECT} WHERE ${sau} ORDER BY COALESCE(y.xu_ly_luc, y.updated_at) DESC, y.id DESC LIMIT 500`).all()
-        : db.prepare(`${SELECT} WHERE ${sau} AND y.xu_ly_boi = ? ORDER BY COALESCE(y.xu_ly_luc, y.updated_at) DESC, y.id DESC LIMIT 500`).all(req.user.id);
+      rows = db.prepare(`${SELECT} WHERE ${sau} ORDER BY COALESCE(y.xu_ly_luc, y.updated_at) DESC, y.id DESC LIMIT 500`).all();
+      if (!canManage(req)) {
+        // do tôi xử lý, hoặc tôi là người duyệt của phần này (chủ mẫu, trưởng nhóm, người duyệt của đơn vị) dù người khác đã xử lý
+        rows = rows.filter((y) => y.xu_ly_boi === req.user.id || laNguoiDuyet(req, y, { owner_user_id: y.owner_user_id, nhom_id: y.nhom_id, box_id: y.box_id }));
+      }
     }
     else rows = db.prepare(`${SELECT} WHERE ${dongMo} ORDER BY y.id DESC LIMIT 500`).all();
     let items = rows.map((y) => dinhDang(req, y));
@@ -166,9 +168,11 @@ module.exports = function createYeuCauRouter(ctx) {
     const nguoiXuLy = nguoiDung(req.user.id);
     const duongDan = moTaViTri(tube.box_id, tube.row_no, tube.col_no);
     const nguoiGui = nguoiDung(y.nguoi_gui_id);
+    // các người duyệt còn lại của cấp này (vd Trưởng CIPP xử lý thì Viện trưởng nhận kết quả để giám sát)
+    const dongDuyet = YeuCau.nguoiDuyetHienTai(db, y, tube);
     guiNen(ketQua === 'duyet'
-      ? thongBao.yeuCauDaDuyet({ yc: moi, tube, nguoiGui, nguoiXuLy, duongDan, xuLyThay: q.thay, donViTen: (YeuCau.donViCuaHop(db, tube.box_id) || {}).ten || null })
-      : thongBao.yeuCauTuChoi({ yc: moi, tube, nguoiGui, nguoiXuLy, duongDan }));
+      ? thongBao.yeuCauDaDuyet({ yc: moi, tube, nguoiGui, nguoiXuLy, duongDan, dongDuyet, xuLyThay: q.thay, donViTen: (YeuCau.donViCuaHop(db, tube.box_id) || {}).ten || null })
+      : thongBao.yeuCauTuChoi({ yc: moi, tube, nguoiGui, nguoiXuLy, duongDan, dongDuyet }));
     res.json({ ok: true, trang_thai: ketQua === 'duyet' ? 'da_duyet' : 'tu_choi', xu_ly_thay: q.thay });
   }
 

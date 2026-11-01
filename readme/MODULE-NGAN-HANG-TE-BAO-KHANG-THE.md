@@ -59,6 +59,7 @@ Chọn ở ô «Ai quản lý thiết bị này» khi **Thêm / Chỉnh sửa th
 - Có sẵn đơn vị **Cellbank** (không xóa được): người duyệt = những người giữ vai trò **Trưởng CIPP** (+ người được chỉ định thêm).
 - **Chỉ admin** tạo / sửa / xóa đơn vị và gán người duyệt (gán người duyệt là trao quyền quyết định, cùng quy tắc cấp vai trò). Quản lý module xem danh sách để chọn đơn vị cho thiết bị.
 - Người duyệt phải là tài khoản dùng được module (không bị khóa, không phải tài khoản chỉ Đặt lịch, không phải sinh viên).
+- **Nhiều người duyệt** (vd Cellbank: Viện trưởng + Trưởng CIPP): tất cả cùng nhận thư và thấy yêu cầu; **ai xử lý trước thì yêu cầu đóng** (người kia bấm sau nhận 409). Người còn lại nhận thư kết quả và thấy yêu cầu trong «Lịch sử xử lý», không phải làm gì.
 - Đơn vị **chưa có người duyệt**: yêu cầu đi thẳng quản lý module. Chỉ xóa được đơn vị khi không còn thiết bị thuộc nó.
 - Đổi thiết bị từ đơn vị sang Public (hoặc ngược lại) thì các yêu cầu đang chờ được định tuyến lại.
 - Thông báo, lịch sử mẫu và danh sách yêu cầu nêu tên đơn vị (ví dụ «Chờ Cellbank duyệt»); cấp duyệt trong bảng `nhm_yeu_cau.cap` vẫn lưu giá trị cũ `truong_cellbank`.
