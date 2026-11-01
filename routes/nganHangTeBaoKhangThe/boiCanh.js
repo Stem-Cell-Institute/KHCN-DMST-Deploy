@@ -65,9 +65,14 @@ function taoBoiCanh(deps) {
       .get(...boxIds).c;
   }
 
+  /** Mã tự sinh kế tiếp; bỏ qua mã đã bị người dùng đặt tay (tránh 409 khó hiểu và rollback cả lô). */
   function nextCode(table, prefix) {
-    const n = db.prepare(`SELECT COALESCE(MAX(id), 0) + 1 AS n FROM ${table}`).get().n;
-    return prefix + String(n).padStart(4, '0');
+    let n = db.prepare(`SELECT COALESCE(MAX(id), 0) + 1 AS n FROM ${table}`).get().n;
+    for (;;) {
+      const code = prefix + String(n).padStart(4, '0');
+      if (!db.prepare(`SELECT 1 FROM ${table} WHERE code = ? AND deleted_at IS NULL`).get(code)) return code;
+      n++;
+    }
   }
 
   function logMove(tubeId, action, from, to, userId, note) {

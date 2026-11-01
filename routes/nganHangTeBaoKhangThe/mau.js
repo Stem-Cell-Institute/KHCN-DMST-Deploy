@@ -8,24 +8,36 @@
  */
 
 const express = require('express');
-const { HOLDING, toInt, toStr, toNum, isUniqueError } = require('../../services/nganHangTeBaoKhangThe');
+const { HOLDING, toInt, toStr, parseSo, parseNgay, isUniqueError } = require('../../services/nganHangTeBaoKhangThe');
 
 module.exports = function createMauRouter(ctx) {
   const { db, canEditTube, audit, fail, logMove } = ctx;
   const router = express.Router();
 
+  /** Trả [giá trị, lỗi]; lỗi là câu báo 400 hoặc null. */
   function readTubeBody(body) {
     const out = {};
+    let error = null;
+    const so = (key, label) => {
+      if (!(key in body)) return;
+      const r = parseSo(body[key], { min: 0, max: 1e15, label });
+      if (r.error) error = error || r.error;
+      else out[key] = r.value;
+    };
     if ('name' in body) out.name = toStr(body.name, 200);
     if ('barcode' in body) out.barcode = toStr(body.barcode, 100);
     if ('sample_type_id' in body) out.sample_type_id = body.sample_type_id == null || body.sample_type_id === '' ? null : toInt(body.sample_type_id);
     if ('passage' in body) out.passage = toStr(body.passage, 50);
-    if ('cell_count' in body) out.cell_count = toNum(body.cell_count);
-    if ('volume_ml' in body) out.volume_ml = toNum(body.volume_ml);
-    if ('freeze_date' in body) out.freeze_date = toStr(body.freeze_date, 10);
+    so('cell_count', 'Số tế bào');
+    so('volume_ml', 'Thể tích');
+    if ('freeze_date' in body) {
+      const r = parseNgay(body.freeze_date, 'Ngày đông lạnh');
+      if (r.error) error = error || r.error;
+      else out.freeze_date = r.value;
+    }
     if ('project' in body) out.project = toStr(body.project, 200);
     if ('notes' in body) out.notes = toStr(body.notes, 2000);
-    return out;
+    return [out, error];
   }
 
   /** Kiểm tra hộp tồn tại, vị trí trong lưới và còn trống. Trả về lỗi hoặc null. */
@@ -50,7 +62,8 @@ module.exports = function createMauRouter(ctx) {
     const boxId = toInt(body.box_id);
     const row = toInt(body.row_no);
     const col = toInt(body.col_no);
-    const t = readTubeBody(body);
+    const [t, loi] = readTubeBody(body);
+    if (loi) return fail(res, 400, loi);
     if (!t.name) return fail(res, 400, 'Thiếu tên mẫu.');
     if (t.sample_type_id != null && !db.prepare('SELECT 1 FROM nhm_sample_types WHERE id = ?').get(t.sample_type_id)) {
       return fail(res, 400, 'Loại mẫu không hợp lệ.');
@@ -90,7 +103,8 @@ module.exports = function createMauRouter(ctx) {
     const cur = loadTube(id);
     if (!cur) return fail(res, 404, 'Không tìm thấy mẫu.');
     if (!canEditTube(req, cur)) return fail(res, 403, 'Chỉ người sở hữu hoặc quản lý mới được sửa mẫu này.');
-    const t = readTubeBody(req.body || {});
+    const [t, loi] = readTubeBody(req.body || {});
+    if (loi) return fail(res, 400, loi);
     if ('name' in t && !t.name) return fail(res, 400, 'Tên mẫu không được để trống.');
     if (t.sample_type_id != null && !db.prepare('SELECT 1 FROM nhm_sample_types WHERE id = ?').get(t.sample_type_id)) {
       return fail(res, 400, 'Loại mẫu không hợp lệ.');

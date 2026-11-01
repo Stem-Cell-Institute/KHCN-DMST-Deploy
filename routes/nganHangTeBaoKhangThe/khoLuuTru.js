@@ -6,7 +6,7 @@
  */
 
 const express = require('express');
-const { HOLDING, toInt, toStr, toNum, placeholders, isUniqueError } = require('../../services/nganHangTeBaoKhangThe');
+const { HOLDING, toInt, toStr, parseSo, placeholders, isUniqueError } = require('../../services/nganHangTeBaoKhangThe');
 
 module.exports = function createKhoLuuTruRouter(ctx) {
   const { db, canManage, canEditTube, requireManage, audit, fail, subtreeIds, activeTubeCountInBoxes, nextCode } = ctx;
@@ -45,21 +45,31 @@ module.exports = function createKhoLuuTruRouter(ctx) {
 
   // ---------- Vị trí lưu trữ ----------
 
+  /** Trả [giá trị, lỗi]; lỗi là câu báo 400 hoặc null. */
   function readContainerBody(body, partial) {
     const out = {};
+    let error = null;
     if (!partial || 'name' in body) out.name = toStr(body.name, 200);
     if (!partial || 'type_id' in body) out.type_id = toInt(body.type_id);
     if ('parent_id' in body) out.parent_id = body.parent_id == null || body.parent_id === '' ? null : toInt(body.parent_id);
     if ('code' in body) out.code = toStr(body.code, 60);
-    if ('temperature_c' in body) out.temperature_c = toNum(body.temperature_c);
+    if ('temperature_c' in body) {
+      const r = parseSo(body.temperature_c, { min: -273, max: 100, label: 'Nhiệt độ' });
+      if (r.error) error = r.error;
+      else out.temperature_c = r.value;
+    }
     if ('location_note' in body) out.location_note = toStr(body.location_note, 300);
     if ('notes' in body) out.notes = toStr(body.notes, 2000);
-    if ('sort_order' in body) out.sort_order = toInt(body.sort_order) || 0;
-    return out;
+    if ('sort_order' in body) {
+      out.sort_order = body.sort_order == null || body.sort_order === '' ? 0 : toInt(body.sort_order);
+      if (out.sort_order == null) error = 'Thứ tự sắp xếp phải là số nguyên.';
+    }
+    return [out, error];
   }
 
   router.post('/containers', requireManage, (req, res) => {
-    const b = readContainerBody(req.body || {}, false);
+    const [b, loi] = readContainerBody(req.body || {}, false);
+    if (loi) return fail(res, 400, loi);
     if (!b.name) return fail(res, 400, 'Thiếu tên vị trí lưu trữ.');
     if (b.type_id == null || !db.prepare('SELECT 1 FROM nhm_container_types WHERE id = ?').get(b.type_id)) {
       return fail(res, 400, 'Loại vị trí lưu trữ không hợp lệ.');
@@ -87,7 +97,8 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     const id = toInt(req.params.id);
     const cur = id && db.prepare('SELECT * FROM nhm_containers WHERE id = ? AND deleted_at IS NULL').get(id);
     if (!cur) return fail(res, 404, 'Không tìm thấy vị trí lưu trữ.');
-    const b = readContainerBody(req.body || {}, true);
+    const [b, loi] = readContainerBody(req.body || {}, true);
+    if (loi) return fail(res, 400, loi);
     if ('name' in b && !b.name) return fail(res, 400, 'Tên vị trí lưu trữ không được để trống.');
     if ('type_id' in b && (b.type_id == null || !db.prepare('SELECT 1 FROM nhm_container_types WHERE id = ?').get(b.type_id))) {
       return fail(res, 400, 'Loại vị trí lưu trữ không hợp lệ.');
@@ -238,6 +249,11 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       if (outside > 0) return fail(res, 409, `Không thể thu nhỏ hộp: ${outside} mẫu nằm ngoài kích thước mới.`);
       upd.rows = rows;
       upd.cols = cols;
+      // Kích thước không còn khớp mẫu hộp đã chọn thì bỏ liên kết mẫu, để template_id không nói sai.
+      if (cur.template_id != null) {
+        const tpl = db.prepare('SELECT rows, cols FROM nhm_box_templates WHERE id = ?').get(cur.template_id);
+        if (!tpl || tpl.rows !== rows || tpl.cols !== cols) upd.template_id = null;
+      }
     }
     const cols = Object.keys(upd);
     if (!cols.length) return fail(res, 400, 'Không có dữ liệu cần cập nhật.');
