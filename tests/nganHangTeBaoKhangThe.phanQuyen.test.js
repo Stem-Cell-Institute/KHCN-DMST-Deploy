@@ -61,6 +61,7 @@ const ROUTES = [
   ['GET', '/roles', 'manage'],
   ['POST', '/roles', 'admin'],
   ['DELETE', '/roles/:id', 'admin'],
+  ['GET', '/requests/:id/print', 'auth'],
   ['GET', '/units', 'manage'],
   ['POST', '/units', 'admin'],
   ['PATCH', '/units/:id', 'admin'],

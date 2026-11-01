@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — yêu cầu lấy mẫu của người khác. 9 endpoint.
+ * Ngân hàng tế bào & Kháng thể — yêu cầu lấy mẫu của người khác. 10 endpoint (kể cả phiếu in).
  * Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js).
  *
  *   gửi → [chủ mẫu | trưởng nhóm | Trưởng CIPP | quản lý] duyệt / từ chối → quản lý giao → quản lý nhận lại
@@ -13,6 +13,7 @@
 
 const express = require('express');
 const { toInt, toStr } = require('../../services/nganHangTeBaoKhangThe');
+const Phieu = require('../../services/nganHangTeBaoKhangThePhieu');
 
 const CHU_KY_QUET_MS = 30 * 60 * 1000;
 
@@ -35,6 +36,11 @@ module.exports = function createYeuCauRouter(ctx) {
     return YeuCau.nguoiDuyetHienTai(db, yc, tube).some((u) => u.id === req.user.id);
   }
 
+  /** Xem / in phiếu: người gửi, người đã xử lý, người duyệt ở cấp hiện tại, quản lý module và admin. */
+  function duocXemPhieu(req, yc, tube) {
+    return yc.nguoi_gui_id === req.user.id || yc.xu_ly_boi === req.user.id || canManage(req) || laNguoiDuyet(req, yc, tube);
+  }
+
   /** {coTheXuLy, thay} cho một yêu cầu đang chờ duyệt. */
   function quyenXuLy(req, yc, tube) {
     if (yc.nguoi_gui_id === req.user.id) return { coTheXuLy: false, thay: false };
@@ -55,6 +61,7 @@ module.exports = function createYeuCauRouter(ctx) {
       leo_thang_luc: y.leo_thang_luc, xu_ly_ten: y.xu_ly_ten, xu_ly_luc: y.xu_ly_luc, xu_ly_thay: !!y.xu_ly_thay, ly_do_xu_ly: y.ly_do_xu_ly,
       created_at: y.created_at,
       co_the_xu_ly: q.coTheXuLy, can_ly_do: q.coTheXuLy && q.thay, // xử lý thay: phải có lý do
+      co_the_in: duocXemPhieu(req, y, tube),
       co_the_huy: y.nguoi_gui_id === req.user.id && (y.trang_thai === 'cho_duyet' || y.trang_thai === 'da_duyet'),
       co_the_giao: canManage(req) && y.trang_thai === 'da_duyet',
       co_the_nhan_lai: canManage(req) && y.trang_thai === 'da_giao',
@@ -102,14 +109,21 @@ module.exports = function createYeuCauRouter(ctx) {
    * view=mine   yêu cầu tôi gửi
    * view=inbox  yêu cầu tôi cần xử lý (người duyệt cấp hiện tại; quản lý thấy cả yêu cầu đã duyệt chờ giao / đã giao chờ nhận lại)
    * view=all    mọi yêu cầu (chỉ quản lý)
+   * view=done   lịch sử đã xử lý (đã duyệt, từ chối, đã giao, đã trả, đã hủy): do tôi xử lý; quản lý module / admin thấy tất cả
    */
   router.get('/requests', (req, res) => {
-    const view = req.query.view === 'inbox' || req.query.view === 'all' ? req.query.view : 'mine';
+    const view = ['inbox', 'all', 'done'].includes(req.query.view) ? req.query.view : 'mine';
     if (view === 'all' && !canManage(req)) return fail(res, 403, 'Chỉ Admin hoặc Quản lý module mới xem được mọi yêu cầu.');
     const dongMo = "y.trang_thai IN ('cho_duyet','da_duyet','da_giao')";
     let rows;
     if (view === 'mine') rows = db.prepare(`${SELECT} WHERE y.nguoi_gui_id = ? ORDER BY y.id DESC LIMIT 200`).all(req.user.id);
     else if (view === 'all') rows = db.prepare(`${SELECT} ORDER BY y.id DESC LIMIT 500`).all();
+    else if (view === 'done') {
+      const sau = "y.trang_thai <> 'cho_duyet'";
+      rows = canManage(req)
+        ? db.prepare(`${SELECT} WHERE ${sau} ORDER BY COALESCE(y.xu_ly_luc, y.updated_at) DESC, y.id DESC LIMIT 500`).all()
+        : db.prepare(`${SELECT} WHERE ${sau} AND y.xu_ly_boi = ? ORDER BY COALESCE(y.xu_ly_luc, y.updated_at) DESC, y.id DESC LIMIT 500`).all(req.user.id);
+    }
     else rows = db.prepare(`${SELECT} WHERE ${dongMo} ORDER BY y.id DESC LIMIT 500`).all();
     let items = rows.map((y) => dinhDang(req, y));
     if (view === 'inbox') items = items.filter((x) => x.co_the_xu_ly || x.co_the_giao || x.co_the_nhan_lai);
@@ -157,6 +171,25 @@ module.exports = function createYeuCauRouter(ctx) {
       : thongBao.yeuCauTuChoi({ yc: moi, tube, nguoiGui, nguoiXuLy, duongDan }));
     res.json({ ok: true, trang_thai: ketQua === 'duyet' ? 'da_duyet' : 'tu_choi', xu_ly_thay: q.thay });
   }
+
+  // Phiếu in được (HTML A4): nội dung yêu cầu + kết quả duyệt, để người xin in / lưu PDF.
+  router.get('/requests/:id/print', (req, res) => {
+    const y = layYeuCau(req, res);
+    if (!y) return;
+    const tube = taiMau(y.tube_id);
+    if (!duocXemPhieu(req, y, tube)) return fail(res, 403, 'Bạn không có quyền xem phiếu của yêu cầu này.');
+    const loai = tube.sample_type_id ? db.prepare('SELECT name FROM nhm_sample_types WHERE id = ?').get(tube.sample_type_id) : null;
+    const thay = !!y.xu_ly_thay;
+    audit(req, 'request_print', `#${y.id} mẫu id=${y.tube_id}`);
+    res.setHeader('Cache-Control', 'no-store');
+    res.type('html').send(
+      Phieu.dungPhieu({
+        yc: y, tube: { ...tube, loai_mau: loai && loai.name }, viTri: moTaViTri(tube.box_id, tube.row_no, tube.col_no),
+        nguoiGui: nguoiDung(y.nguoi_gui_id), nguoiXuLy: nguoiDung(y.xu_ly_boi), chuMau: nguoiDung(tube.owner_user_id), nhomTen: y.nhom_ten,
+        capTen: YeuCau.capTen(db, y.cap, tube.box_id), xuLyThay: thay, inLuc: Phieu.gioVn(YeuCau.bayGio()),
+      })
+    );
+  });
 
   router.post('/requests/:id/approve', (req, res) => xuLy(req, res, 'duyet'));
   router.post('/requests/:id/reject', (req, res) => xuLy(req, res, 'tu_choi'));

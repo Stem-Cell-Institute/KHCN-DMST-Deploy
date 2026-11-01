@@ -32,6 +32,7 @@ function dungThu(doan, lienKet) {
 function taoThongBao({ db, mailSend, baseUrl }) {
   const goc = String(baseUrl || '').replace(/\/+$/, '');
   const lienKet = (hash) => (goc ? `${goc}${TRANG}${hash || ''}` : '');
+  const linkPhieu = (id) => (goc ? [{ nhan: 'Phiếu yêu cầu (in được, cần đăng nhập)', text: `${goc}/api/ngan-hang-te-bao-khang-the/requests/${id}/print` }] : []);
 
   /** Gộp nhiều danh sách người nhận: bỏ trùng, bỏ người thực hiện, bỏ địa chỉ hỏng. */
   function gop(boQuaUserId, ...dsList) {
@@ -83,7 +84,8 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       const thu = dungThu(
         [{ text: `Yêu cầu lấy mẫu của ${ten(nguoiGui)} đã được duyệt${xuLyThay ? ' (quản lý xử lý thay: ' + (yc.ly_do_xu_ly || '') + ')' : ''}.` }]
           .concat(thongTinMau(tube, duongDan))
-          .concat([{ nhan: 'Người duyệt', text: ten(nguoiXuLy) }, { text: 'Quản lý module sẽ liên hệ giao mẫu cho bạn.' }]),
+          .concat([{ nhan: 'Người duyệt', text: ten(nguoiXuLy) }, { text: 'Quản lý module sẽ liên hệ giao mẫu cho bạn.' }])
+          .concat(linkPhieu(yc.id)),
         lienKet('#cong-viec')
       );
       return guiDen(gop(nguoiXuLy && nguoiXuLy.id, [nguoiGui], quanLyModule(db)), `[Ngân hàng mẫu] Đã duyệt yêu cầu lấy mẫu: ${tube.name}`, thu);
@@ -94,10 +96,12 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       const thu = dungThu(
         [{ text: `Yêu cầu lấy mẫu của bạn đã bị từ chối.` }]
           .concat(thongTinMau(tube, duongDan))
-          .concat([{ nhan: 'Người xử lý', text: ten(nguoiXuLy) }, { nhan: 'Lý do', text: yc.ly_do_xu_ly || '(không ghi)' }]),
+          .concat([{ nhan: 'Người xử lý', text: ten(nguoiXuLy) }, { nhan: 'Lý do', text: yc.ly_do_xu_ly || '(không ghi)' }])
+          .concat(linkPhieu(yc.id)),
         lienKet('#cong-viec')
       );
-      return guiDen(gop(nguoiXuLy && nguoiXuLy.id, [nguoiGui]), `[Ngân hàng mẫu] Yêu cầu lấy mẫu bị từ chối: ${tube.name}`, thu);
+      // người yêu cầu và quản lý module cùng được báo (người vừa từ chối không nhận lại)
+      return guiDen(gop(nguoiXuLy && nguoiXuLy.id, [nguoiGui], quanLyModule(db)), `[Ngân hàng mẫu] Yêu cầu lấy mẫu bị từ chối: ${tube.name}`, thu);
     },
 
     /** Quá hạn phản hồi → chuyển quản lý module. */

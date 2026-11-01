@@ -118,7 +118,7 @@ test('từ chối: phải ghi lý do, thư tới người yêu cầu', async () 
   assert.equal((await s.api('alice', 'POST', `/requests/${r.json.id}/reject`, {})).status, 400);
   assert.equal((await s.api('alice', 'POST', `/requests/${r.json.id}/reject`, { ly_do: 'Mẫu cuối cùng, chưa dùng được' })).status, 200);
   await cho();
-  assert.deepEqual(den('bị từ chối'), ['bob@sci.edu.vn']);
+  assert.deepEqual(den('bị từ chối'), ['bob@sci.edu.vn', 'manager@sci.edu.vn'], 'người yêu cầu và quản lý module cùng được báo');
   assert.match(s.mails[0].text, /Mẫu cuối cùng/);
   // từ chối xong thì xin lại được
   assert.equal((await xin('bob', m)).status, 201);

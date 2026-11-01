@@ -1,7 +1,7 @@
 # Module Ngân hàng tế bào & Kháng thể
 
 Trang: `public/ngan-hang-te-bao-khang-the/index.html` (địa chỉ ngắn `/ngan-hang-te-bao-khang-the`) ·
-API: `/api/ngan-hang-te-bao-khang-the/*` (84 route)
+API: `/api/ngan-hang-te-bao-khang-the/*` (85 route)
 
 Mã nguồn: `routes/nganHangTeBaoKhangThe/` (`index.js`, `boiCanh.js`, `khoLuuTru.js`, `danhMuc.js`, `thanhVien.js`, `sinhVien.js`,
 `timKiem.js`, `yeuCau.js`, `phatHien.js`, `mau.js`), `services/nganHangTeBaoKhangThe.js` (hàm thuần), `services/nganHangTeBaoKhangTheKhoiTao.js` (tạo bảng,
@@ -39,7 +39,7 @@ thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở n
 - Vai trò module **không** đụng `users.role` dùng chung toàn hệ thống. **`users.role` = `manager` hay `phong_khcn` không còn tự có
   quyền quản lý** ở module này: phải được admin gán vai trò «Quản lý module».
 - Mọi người dùng đọc được toàn bộ kho (kể cả tên người sở hữu): kho là tài nguyên dùng chung của Viện.
-- Bảng phân quyền đầy đủ của 84 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
+- Bảng phân quyền đầy đủ của 85 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
   với danh sách route thật: thêm/bớt route mà quên cập nhật bảng thì test đỏ.
 
 ### Thiết bị Public và thiết bị có đơn vị quản lý
@@ -242,13 +242,19 @@ Sinh viên **không bao giờ** là người duyệt: người sắp ra trườn
 - Sau khi **duyệt**, quản lý bấm **«Giao mẫu»** (mẫu chuyển «đã lấy ra») rồi **«Nhận lại mẫu»** khi trả. Mẫu được trả / rã đông / hủy
   / xóa thì yêu cầu liên quan tự đóng.
 - **Email** (gửi nền, SMTP hỏng không làm hỏng thao tác chính): yêu cầu mới → người duyệt; đã duyệt → người xin **và** quản lý module;
-  từ chối / giao / nhận lại → người xin; quá hạn → quản lý. Liên kết trong thư mở thẳng bảng «Việc cần xử lý» (cần đăng nhập — không có
+  **từ chối → người xin và quản lý module** (người vừa xử lý không nhận lại thư); giao / nhận lại → người xin; quá hạn → quản lý. Thư duyệt / từ chối có liên kết tới phiếu in. Liên kết trong thư mở thẳng bảng «Việc cần xử lý» (cần đăng nhập — không có
   liên kết duyệt không cần đăng nhập, vì trình quét thư có thể tự mở liên kết).
+- **Lịch sử xử lý** (tab «Lịch sử xử lý» ở «Việc cần xử lý», `GET /requests?view=done`): mọi yêu cầu đã duyệt / từ chối / giao / trả / hủy được lưu vĩnh viễn
+  (bảng `nhm_yeu_cau` không xóa). Người duyệt thấy những yêu cầu **mình đã xử lý**; quản lý module và admin thấy tất cả; người xin xem ở «Yêu cầu của tôi».
+- **Phiếu yêu cầu in được** (`GET /requests/:id/print`, nút «In phiếu» trên mỗi yêu cầu; `services/nganHangTeBaoKhangThePhieu.js`): trang A4 gồm số phiếu `YC-000123`,
+  người yêu cầu, mẫu (vị trí, chủ mẫu, nhóm), mục đích, kết quả. Yêu cầu **đã duyệt** có khung «ĐÃ ĐƯỢC DUYỆT» và đoạn **xác nhận** (đơn vị / người duyệt, giờ duyệt,
+  «xử lý thay» nếu có) kèm ba ô ký; **bị từ chối / đã hủy** ghi rõ không dùng để nhận mẫu; **đang chờ** ghi chưa có giá trị nhận mẫu. Người xin bấm «In phiếu / lưu PDF».
+  Chỉ người gửi, người đã xử lý, người duyệt ở cấp hiện tại, quản lý module và admin xem được (người khác 403); mỗi lần in ghi nhật ký `request_print`; dữ liệu nhập được escape.
 - Mọi bước ghi vào lịch sử của mẫu: `yc_gui`, `yc_duyet`, `yc_tu_choi`, `yc_huy`, `yc_leo_thang`, `yc_dinh_tuyen_lai`, `giao`, `tra`.
 
 ## Mẫu có thật trong ô nhưng chưa khai báo (thiết bị công khai)
 
-1. Quản lý bấm vào ô trống → **«Ô này có mẫu nhưng chưa khai báo»**, ghi mô tả (chữ trên ống, màu nắp…) và người / nhóm nghi là chủ.
+1. Quản lý bấm vào ô trống → **«Ô này có mẫu nhưng chưa khai báo»**, ghi mô tả (chữ trên ống, màu nắp…) và — nếu đoán được — người / nhóm **có thể** là chủ (chỉ là gợi ý để gửi thư nhắc, không phải kết luận).
    Ô bị **giữ chỗ**: không ai thêm hay di chuyển mẫu khác vào. Thiết bị có đơn vị quản lý (Cellbank…) không dùng chức năng này.
 2. **Việc đầu tiên là nhắc chủ mẫu** (`POST /findings/:id/remind`): email người nghi + trưởng nhóm của họ, hoặc trưởng nhóm + mọi thành
    viên đang hoạt động của nhóm nghi; không biết gì thì chỉ hiện trên bảng «Mẫu chưa khai báo» (ai đăng nhập cũng thấy). Nhắc lại được.

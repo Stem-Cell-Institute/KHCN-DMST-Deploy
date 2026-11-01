@@ -70,9 +70,9 @@ module.exports = function createPhatHienRouter(ctx) {
       return fail(res, 409, 'Ô này đã có mẫu trong sổ.');
     }
     const nghiUser = body.nghi_user_id == null || body.nghi_user_id === '' ? null : toInt(body.nghi_user_id);
-    if (nghiUser != null && !nguoiDung(nghiUser)) return fail(res, 400, 'Người nghi là chủ mẫu không tồn tại.');
+    if (nghiUser != null && !nguoiDung(nghiUser)) return fail(res, 400, 'Người được gợi ý là chủ mẫu không tồn tại.');
     const nghiNhom = body.nghi_nhom_id == null || body.nghi_nhom_id === '' ? null : toInt(body.nghi_nhom_id);
-    if (nghiNhom != null && !db.prepare('SELECT 1 FROM nhm_nhom WHERE id = ?').get(nghiNhom)) return fail(res, 400, 'Nhóm nghi là chủ mẫu không tồn tại.');
+    if (nghiNhom != null && !db.prepare('SELECT 1 FROM nhm_nhom WHERE id = ?').get(nghiNhom)) return fail(res, 400, 'Nhóm được gợi ý là chủ mẫu không tồn tại.');
     try {
       const id = db.transaction(() => {
         const info = db
