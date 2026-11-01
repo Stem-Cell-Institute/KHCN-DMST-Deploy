@@ -321,15 +321,6 @@
   }
 
   // ---------- khu vực chi tiết ----------
-  /** Thông tin phụ của thiết bị trên MỘT dòng nhỏ (sơ đồ mới là phần chính); mục trống thì không hiện. */
-  function thongTinGon(c, cb) {
-    var muc = [['Quản lý', cb ? (c.don_vi_ten || 'Đơn vị quản lý') + ' (gửi yêu cầu để lấy mẫu)' : 'Public']];
-    if (c.temperature_c != null && c.temperature_c !== '') muc.push(['Nhiệt độ', c.temperature_c + '°C']);
-    if (c.location_note) muc.push(['Vị trí đặt', c.location_note]);
-    if (c.notes) muc.push(['Ghi chú', c.notes]);
-    return h('p', { class: 'nhm-meta' }, muc.map(function (m) { return h('span', {}, [h('b', {}, m[0] + ': '), m[1]]); }));
-  }
-
   function fact(label, value) { return h('div', { class: 'nhm-fact' }, [h('b', {}, label), value == null || value === '' ? '—' : String(value)]); }
 
   // ---------- bình nitơ lỏng: giá (rack) rồi hộp theo vị trí số, kèm mô hình xuyên thấu ----------
@@ -385,7 +376,7 @@
     root.classList.add('nhm-detail--ln');
     // Màn hình hẹp: khung đặt SAU phần thông tin vị trí (tiêu đề, cây vị trí, dòng nhắc) và trước lưới hộp, để thông tin không bị đứt quãng.
     // Màn hình rộng: CSS đưa khung sang cột phải nên vị trí trong DOM không ảnh hưởng.
-    var cuoiThongTin = root.querySelectorAll('.nhm-title, .nhm-meta, .nhm-hint');
+    var cuoiThongTin = root.querySelectorAll('.nhm-title, .nhm-hint');
     var moc = cuoiThongTin.length ? cuoiThongTin[cuoiThongTin.length - 1] : null;
     if (moc && moc.parentNode === root) root.insertBefore(det, moc.nextSibling);
     else root.appendChild(det);
@@ -412,7 +403,6 @@
     var cb = c.quan_ly_boi === 'cellbank';
     put(box,
       h('div', { class: 'nhm-title' }, [h('h2', {}, c.name), h('span', { class: 'nhm-muted' }, c.type_name + ' · ' + c.code)]),
-      thongTinGon(c, cb),
       actions,
       subs.length ? h('div', { class: 'nhm-inside' }, [h('h3', {}, 'Bên trong'), h('ul', {}, subs.map(function (x) {
         return h('li', {}, h('button', { type: 'button', class: 'nhm-sub', onclick: function () { state.expanded[c.id] = true; state.expanded[x.id] = true; select('container', x.id); } },

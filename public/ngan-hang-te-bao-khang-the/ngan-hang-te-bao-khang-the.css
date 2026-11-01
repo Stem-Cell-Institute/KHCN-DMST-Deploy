@@ -472,7 +472,3 @@
 .nhm-ln > summary::after { content: "Mở sơ đồ ▾"; }
 .nhm-ln[open] > summary::after { content: "Thu gọn ▴"; }
 .nhm-ln > summary:hover::after { background: var(--muc); color: #fff; }
-
-/* Thông tin phụ của thiết bị: một dòng nhỏ, nhường chỗ cho sơ đồ */
-.nhm-meta { display: flex; flex-wrap: wrap; gap: 2px 18px; margin: 4px 0 12px; font-size: 0.8rem; line-height: 1.5; color: var(--chu-phu); }
-.nhm-meta b { font-weight: 600; }
