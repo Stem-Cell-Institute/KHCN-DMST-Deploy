@@ -51,7 +51,7 @@ test('mẫu của cán bộ ở thiết bị công khai: CHỦ MẪU duyệt, th
   assert.equal(r.json.cap, 'chu_mau');
   await cho();
   assert.deepEqual(den('Yêu cầu lấy mẫu'), ['alice@sci.edu.vn']);
-  assert.ok(s.mails[0].html.includes('https://eoffice.test/public/ngan-hang-te-bao-khang-the/index.html#cong-viec'));
+  assert.ok(s.mails[0].html.includes('https://eoffice.test/public/ngan-hang-te-bao-khang-the/index.html?nh=te_bao#cong-viec'));
   assert.deepEqual(await hanhDong(m), ['yc_gui', 'store']);
   s.mauAlice = m;
   s.yc = r.json.id;

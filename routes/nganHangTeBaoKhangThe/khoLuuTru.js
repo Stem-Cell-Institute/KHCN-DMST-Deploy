@@ -7,7 +7,7 @@
 
 const express = require('express');
 const {
-  HOLDING, LOAI_CHU_VN, toInt, toStr, parseSo, placeholders, isUniqueError, layThayDoi, moTaThayDoi,
+  HOLDING, NGAN_HANG, LOAI_CHU_VN, toInt, toStr, parseSo, placeholders, isUniqueError, layThayDoi, moTaThayDoi,
 } = require('../../services/nganHangTeBaoKhangThe');
 
 module.exports = function createKhoLuuTruRouter(ctx) {
@@ -25,7 +25,9 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       loaiChu: LOAI_CHU_VN,
       containerTypes: db.prepare('SELECT * FROM nhm_container_types ORDER BY sort_order, name').all(),
       boxTemplates: db.prepare('SELECT * FROM nhm_box_templates ORDER BY rows, cols, name').all(),
-      donVi: db.prepare("SELECT id, ten FROM nhm_don_vi ORDER BY (ma = 'cellbank') DESC, ten").all(), // đơn vị quản lý thiết bị (chỉ tên)
+      nganHang: req.nganHang,
+      nganHangTen: NGAN_HANG[req.nganHang],
+      donVi: db.prepare("SELECT id, ten FROM nhm_don_vi WHERE ngan_hang = ? ORDER BY (ma IN ('cellbank','ab-bank')) DESC, ten").all(req.nganHang), // đơn vị quản lý thiết bị của ngân hàng này (chỉ tên)
       sampleTypes: db.prepare('SELECT * FROM nhm_sample_types ORDER BY name').all(),
     });
   });
@@ -158,6 +160,12 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       b.don_vi_id = null;
       b.rieng_user_id = req.user.id;
     }
+    // thiết bị mới thuộc ngân hàng đang dùng; vị trí con theo thiết bị gốc
+    b.ngan_hang = cha != null ? (ctx.YeuCau.gocCuaViTri(db, cha) || {}).ngan_hang || req.nganHang : req.nganHang;
+    if (b.don_vi_id != null) {
+      const dv = db.prepare('SELECT ngan_hang FROM nhm_don_vi WHERE id = ?').get(b.don_vi_id);
+      if (!dv || dv.ngan_hang !== b.ngan_hang) return fail(res, 400, 'Đơn vị quản lý không thuộc ngân hàng này.');
+    }
     if (!b.name) return fail(res, 400, 'Thiếu tên vị trí lưu trữ.');
     if (b.type_id == null || !db.prepare('SELECT 1 FROM nhm_container_types WHERE id = ?').get(b.type_id)) {
       return fail(res, 400, 'Loại vị trí lưu trữ không hợp lệ.');
@@ -171,10 +179,10 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       const code = b.code || nextCode('nhm_containers', 'VC-');
       const info = db
         .prepare(
-          `INSERT INTO nhm_containers (parent_id, type_id, code, name, temperature_c, location_note, sort_order, notes, quan_ly_boi, don_vi_id, vi_tri, rieng_user_id, created_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO nhm_containers (parent_id, type_id, code, name, temperature_c, location_note, sort_order, notes, quan_ly_boi, don_vi_id, vi_tri, rieng_user_id, ngan_hang, created_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(b.parent_id ?? null, b.type_id, code, b.name, b.temperature_c ?? null, b.location_note ?? null, b.sort_order || 0, b.notes ?? null, b.quan_ly_boi || 'cong_khai', b.don_vi_id ?? null, b.vi_tri ?? null, b.rieng_user_id ?? null, req.user.id);
+        .run(b.parent_id ?? null, b.type_id, code, b.name, b.temperature_c ?? null, b.location_note ?? null, b.sort_order || 0, b.notes ?? null, b.quan_ly_boi || 'cong_khai', b.don_vi_id ?? null, b.vi_tri ?? null, b.rieng_user_id ?? null, b.ngan_hang, req.user.id);
       audit(req, 'container_create', `id=${info.lastInsertRowid} ${b.name}`);
       res.status(201).json({ id: Number(info.lastInsertRowid), code });
     } catch (e) {
@@ -192,6 +200,11 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     const body = req.body || {};
     const [b, loi] = readContainerBody(body, true);
     if (loi) return fail(res, 400, loi);
+    if (b.don_vi_id != null) {
+      const dv = db.prepare('SELECT ngan_hang FROM nhm_don_vi WHERE id = ?').get(b.don_vi_id);
+      const nhThietBi = (ctx.YeuCau.gocCuaViTri(db, id) || {}).ngan_hang;
+      if (!dv || dv.ngan_hang !== nhThietBi) return fail(res, 400, 'Đơn vị quản lý không thuộc ngân hàng này.');
+    }
     // chuyển Public / đơn vị ⇄ riêng: chỉ ở thiết bị gốc; đặt thành riêng chỉ Viện trưởng và chỉ với thiết bị do chính mình tạo / đang là của mình
     if ('rieng' in body) {
       if (cur.parent_id != null) return fail(res, 400, 'Chỉ thiết bị gốc mới là thiết bị riêng.');

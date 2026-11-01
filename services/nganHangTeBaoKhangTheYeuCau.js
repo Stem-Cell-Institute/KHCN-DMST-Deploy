@@ -88,18 +88,18 @@ function nguoiConHoatDong(db, userId) {
 function thietBiGocCuaHop(db, boxId) {
   const box = boxId && db.prepare('SELECT container_id FROM nhm_boxes WHERE id = ?').get(boxId);
   if (!box) return null;
-  let cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by FROM nhm_containers WHERE id = ?').get(box.container_id);
+  let cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by, ngan_hang FROM nhm_containers WHERE id = ?').get(box.container_id);
   for (let i = 0; cur && cur.parent_id != null && i < 50; i++) {
-    cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by FROM nhm_containers WHERE id = ?').get(cur.parent_id);
+    cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by, ngan_hang FROM nhm_containers WHERE id = ?').get(cur.parent_id);
   }
   return cur || null;
 }
 
 /** Thiết bị gốc của một vị trí lưu trữ (đi ngược parent_id); null nếu không có. */
 function gocCuaViTri(db, containerId) {
-  let cur = containerId && db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by FROM nhm_containers WHERE id = ?').get(containerId);
+  let cur = containerId && db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by, ngan_hang FROM nhm_containers WHERE id = ?').get(containerId);
   for (let i = 0; cur && cur.parent_id != null && i < 50; i++) {
-    cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by FROM nhm_containers WHERE id = ?').get(cur.parent_id);
+    cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id, rieng_user_id, created_by, ngan_hang FROM nhm_containers WHERE id = ?').get(cur.parent_id);
   }
   return cur || null;
 }
@@ -141,6 +141,12 @@ function nguoiDuyetDonVi(db, donVi) {
   return [...ids].map((id) => nguoiConHoatDong(db, id)).filter(Boolean);
 }
 
+/** Ngân hàng ('te_bao' | 'khang_the') của hộp: theo thiết bị gốc; hộp không rõ thì mặc định tế bào. */
+function nganHangCuaHop(db, boxId) {
+  const g = boxId ? thietBiGocCuaHop(db, boxId) : null;
+  return (g && g.ngan_hang) || 'te_bao';
+}
+
 /** Người giữ một vai trò module và còn hoạt động. */
 function nguoiCoVaiTro(db, vaiTro) {
   return db
@@ -151,8 +157,13 @@ function nguoiCoVaiTro(db, vaiTro) {
 }
 
 /** Quản lý module nhận thông báo; chưa gán ai thì rơi về các admin để thông báo không biến mất. */
-function quanLyModule(db) {
-  const ds = nguoiCoVaiTro(db, 'quan_ly');
+function quanLyModule(db, nganHang = 'te_bao') {
+  // quản lý của ĐÚNG ngân hàng (vai trò không ghi phạm vi = cả hai ngân hàng)
+  const ds = db
+    .prepare("SELECT DISTINCT user_id FROM nhm_vai_tro WHERE vai_tro = 'quan_ly' AND (ngan_hang IS NULL OR ngan_hang = ?)")
+    .all(nganHang)
+    .map((r) => nguoiConHoatDong(db, r.user_id))
+    .filter(Boolean);
   if (ds.length) return ds;
   return db
     .prepare("SELECT id FROM users WHERE LOWER(COALESCE(role, '')) = 'admin'")
@@ -179,13 +190,13 @@ function xacDinhCap(db, tube, nguoiGuiId) {
     // dữ liệu cũ (kiểu Cellbank nhưng chưa gắn đơn vị) vẫn đi qua Trưởng CIPP
     const ds = khacNguoiGui(donVi ? nguoiDuyetDonVi(db, donVi) : nguoiCoVaiTro(db, 'truong_cellbank'));
     if (ds.length) return { cap: 'truong_cellbank', nguoiDuyet: ds };
-    return { cap: 'quan_ly', nguoiDuyet: khacNguoiGui(quanLyModule(db)) };
+    return { cap: 'quan_ly', nguoiDuyet: khacNguoiGui(quanLyModule(db, nganHangCuaHop(db, tube.box_id))) };
   }
   const chu = nguoiConHoatDong(db, tube.owner_user_id);
   if (tube.chu_loai !== 'sinh_vien' && chu && chu.id !== nguoiGuiId) return { cap: 'chu_mau', nguoiDuyet: [chu] };
   const truong = truongNhomHieuLuc(db, tube.nhom_id);
   if (truong && truong.id !== nguoiGuiId) return { cap: 'truong_nhom', nguoiDuyet: [truong] };
-  return { cap: 'quan_ly', nguoiDuyet: khacNguoiGui(quanLyModule(db)) };
+  return { cap: 'quan_ly', nguoiDuyet: khacNguoiGui(quanLyModule(db, nganHangCuaHop(db, tube.box_id))) };
 }
 
 /** Những người ĐƯỢC CHỈ ĐỊNH duyệt ở cấp hiện tại của một yêu cầu (không tính quản lý / admin xử lý thay). */
@@ -196,10 +207,10 @@ function nguoiDuyetHienTai(db, yc, tube) {
     const donVi = tube.box_id ? donViCuaHop(db, tube.box_id) : null;
     return donVi ? nguoiDuyetDonVi(db, donVi) : nguoiCoVaiTro(db, 'truong_cellbank');
   }
-  return quanLyModule(db);
+  return quanLyModule(db, nganHangCuaHop(db, tube.box_id));
 }
 
 module.exports = {
-  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, gocCuaViTri, hopTrongCellbank, donViCuaHop, capTen, nhanNguoiDuyet, nguoiDuyetDonVi, nguoiCoVaiTro, quanLyModule,
+  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, nganHangCuaHop, gocCuaViTri, hopTrongCellbank, donViCuaHop, capTen, nhanNguoiDuyet, nguoiDuyetDonVi, nguoiCoVaiTro, quanLyModule,
   truongNhomHieuLuc, xacDinhCap, nguoiDuyetHienTai,
 };

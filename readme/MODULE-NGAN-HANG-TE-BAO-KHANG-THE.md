@@ -1,7 +1,7 @@
 # Module Ngân hàng tế bào & Kháng thể
 
 Trang: `public/ngan-hang-te-bao-khang-the/index.html` (địa chỉ ngắn `/ngan-hang-te-bao-khang-the`) ·
-API: `/api/ngan-hang-te-bao-khang-the/*` (85 route)
+API: `/api/ngan-hang-te-bao-khang-the/*` (86 route)
 
 Mã nguồn: `routes/nganHangTeBaoKhangThe/` (`index.js`, `boiCanh.js`, `khoLuuTru.js`, `danhMuc.js`, `thanhVien.js`, `sinhVien.js`,
 `timKiem.js`, `yeuCau.js`, `phatHien.js`, `mau.js`), `services/nganHangTeBaoKhangThe.js` (hàm thuần), `services/nganHangTeBaoKhangTheKhoiTao.js` (tạo bảng,
@@ -22,6 +22,19 @@ Vị trí lưu trữ (tủ -80°C, bình nitơ... → ngăn → giá, độ sâu
 
 Tên bảng giữ tiền tố `nhm_` (từ tên cũ «Ngân hàng mẫu») để không mất dữ liệu đã nhập.
 
+## Hai ngân hàng: tế bào và kháng thể
+
+Một module, hai ngân hàng. **Dùng chung:** tài khoản, nhóm nghiên cứu, hồ sơ thành viên, danh sách sinh viên, cấu hình các hạn. **Tách riêng:** thiết bị / hộp / mẫu, yêu cầu, người quản lý, đơn vị quản lý.
+- **Màn hình chọn:** vào module (địa chỉ không có `?nh=`) hiện hai nút «Ngân hàng tế bào» / «Ngân hàng kháng thể», mỗi nút ghi số thiết bị, mẫu, việc cần xử lý của người đăng nhập và «Bạn quản lý» nếu có. `GET /banks`.
+  Đầu thanh bên luôn ghi ngân hàng đang dùng và có «Đổi ngân hàng». Địa chỉ `index.html?nh=te_bao|khang_the` mở thẳng ngân hàng đó (liên kết trong thư dùng dạng này).
+- **Cách tách:** thiết bị gốc mang cột `nhm_containers.ngan_hang` (`te_bao` | `khang_the`), vị trí con / hộp / mẫu theo gốc; dữ liệu có sẵn thuộc ngân hàng tế bào. Giao diện gửi header `X-Ngan-Hang` (hoặc `?nh=`), không gửi thì mặc định tế bào
+  (`datNganHang` trong `boiCanh.js`). Dữ liệu của ngân hàng KHÔNG chọn bị ẩn bằng cùng cơ chế với thiết bị riêng (`tapAn`): không ở cây, tìm kiếm, xuất, yêu cầu, số đếm; truy cập theo id (kể cả id trong body: di chuyển, thêm mẫu chéo) là 404.
+  **Admin cũng chỉ thấy ngân hàng đang chọn.** Số liệu thẻ trang chủ cộng cả hai.
+- **Người quản lý theo ngân hàng:** `nhm_vai_tro.ngan_hang` (`te_bao` | `khang_the` | NULL = cả hai; chỉ vai trò Quản lý có phạm vi). Quản lý kháng thể không thấy và không quản lý được ngân hàng tế bào và ngược lại; quản lý đã có từ trước (không ghi phạm vi) giữ cả hai. Admin cấp ở tab Vai trò (ô «Phạm vi ngân hàng»).
+  Thư báo cho quản lý (yêu cầu quá hạn, đã duyệt, đã khai báo, nghi mất…) gửi đúng quản lý của ngân hàng chứa mẫu; tiêu đề thư ghi tên ngân hàng; phiếu in ghi tên ngân hàng.
+- **Đơn vị quản lý theo ngân hàng:** `nhm_don_vi.ngan_hang`. Ngân hàng tế bào có **Cellbank**, ngân hàng kháng thể có **Ab-bank** (cả hai có sẵn, không xóa được); thiết bị chỉ gắn được đơn vị cùng ngân hàng. Người duyệt Ab-bank do admin chỉ định; chưa có thì yêu cầu về quản lý kháng thể.
+- Bảng vai trò được dựng lại một lần khi khởi động để thêm cột phạm vi (giữ nguyên dữ liệu, id và quyền hiện có).
+
 ## Ai làm được gì
 
 Mọi tài khoản đăng nhập (nghiên cứu viên, cán bộ, sinh viên) đều dùng được module: xem sơ đồ, **tìm mẫu**, thêm mẫu vào
@@ -40,7 +53,7 @@ thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở n
 - Vai trò module **không** đụng `users.role` dùng chung toàn hệ thống. **`users.role` = `manager` hay `phong_khcn` không còn tự có
   quyền quản lý** ở module này: phải được admin gán vai trò «Quản lý module».
 - Mọi người dùng đọc được toàn bộ kho (kể cả tên người sở hữu): kho là tài nguyên dùng chung của Viện.
-- Bảng phân quyền đầy đủ của 85 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
+- Bảng phân quyền đầy đủ của 86 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
   với danh sách route thật: thêm/bớt route mà quên cập nhật bảng thì test đỏ.
 
 ### Thiết bị Public và thiết bị có đơn vị quản lý

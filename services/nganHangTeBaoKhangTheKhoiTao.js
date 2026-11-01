@@ -35,6 +35,8 @@ const COT_THEM_SAU = [
   ['nhm_containers', 'quan_ly_boi', "TEXT NOT NULL DEFAULT 'cong_khai' CHECK (quan_ly_boi IN ('cong_khai','cellbank'))"],
   ['nhm_containers', 'don_vi_id', 'INTEGER REFERENCES nhm_don_vi(id)'],
   ['nhm_containers', 'rieng_user_id', 'INTEGER'],
+  ['nhm_containers', 'ngan_hang', "TEXT NOT NULL DEFAULT 'te_bao' CHECK (ngan_hang IN ('te_bao','khang_the'))"],
+  ['nhm_don_vi', 'ngan_hang', "TEXT NOT NULL DEFAULT 'te_bao' CHECK (ngan_hang IN ('te_bao','khang_the'))"],
   ['nhm_containers', 'vi_tri', 'INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50)'],
   ['nhm_boxes', 'vi_tri', 'INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50)'],
   ['nhm_ho_so', 'chuc_danh', 'TEXT'],
@@ -54,24 +56,26 @@ function themCotNeuThieu(db) {
 }
 
 /**
- * Bảng vai trò tạo từ bản trước có ràng buộc CHECK chưa cho 'vien_truong'; SQLite không sửa được CHECK nên dựng lại bảng
- * (sao chép nguyên dữ liệu, giữ id) khi phát hiện ràng buộc cũ. Chạy một lần, idempotent.
+ * Bảng vai trò từ các bản trước thiếu cột ngan_hang (phạm vi ngân hàng) và/hoặc giá trị 'vien_truong' trong CHECK, và có UNIQUE (user_id, vai_tro);
+ * SQLite không sửa được các ràng buộc này nên dựng lại bảng (sao chép nguyên dữ liệu, giữ id). Chạy một lần, idempotent.
  */
 function nangCapVaiTro(db) {
   const r = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'nhm_vai_tro'").get();
-  if (!r || String(r.sql).includes('vien_truong')) return;
+  if (!r || String(r.sql).includes('ngan_hang')) return;
   db.transaction(() => {
     db.exec(`CREATE TABLE nhm_vai_tro_moi (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
       vai_tro TEXT NOT NULL CHECK (vai_tro IN ('quan_ly','truong_cellbank','vien_truong')),
+      ngan_hang TEXT CHECK (ngan_hang IS NULL OR ngan_hang IN ('te_bao','khang_the')),
       granted_by INTEGER,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE (user_id, vai_tro)
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`);
-    db.exec('INSERT INTO nhm_vai_tro_moi (id, user_id, vai_tro, granted_by, created_at) SELECT id, user_id, vai_tro, granted_by, created_at FROM nhm_vai_tro');
+    // vai trò cũ không có phạm vi → NULL = cả hai ngân hàng (người quản lý hiện có giữ nguyên quyền)
+    db.exec('INSERT INTO nhm_vai_tro_moi (id, user_id, vai_tro, ngan_hang, granted_by, created_at) SELECT id, user_id, vai_tro, NULL, granted_by, created_at FROM nhm_vai_tro');
     db.exec('DROP TABLE nhm_vai_tro');
     db.exec('ALTER TABLE nhm_vai_tro_moi RENAME TO nhm_vai_tro');
+    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_vai_tro ON nhm_vai_tro (user_id, vai_tro, IFNULL(ngan_hang, ''))");
   })();
 }
 

@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS nhm_containers (
   don_vi_id INTEGER REFERENCES nhm_don_vi(id),
   -- Thiết bị RIÊNG: chỉ người này (và admin) thấy; chỉ có nghĩa ở thiết bị gốc. NULL = không riêng (Public hoặc có đơn vị quản lý).
   rieng_user_id INTEGER,
+  -- Ngân hàng của thiết bị: 'te_bao' (ngân hàng tế bào) | 'khang_the' (ngân hàng kháng thể). Chỉ có nghĩa ở thiết bị GỐC; vị trí con theo gốc.
+  ngan_hang TEXT NOT NULL DEFAULT 'te_bao' CHECK (ngan_hang IN ('te_bao','khang_the')),
   -- Vị trí SỐ của giá (rack) trong bình nitơ lỏng (1–50); NULL = không đánh số
   vi_tri INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50),
   deleted_at TEXT,
@@ -80,10 +82,12 @@ CREATE TABLE IF NOT EXISTS nhm_vai_tro (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
   vai_tro TEXT NOT NULL CHECK (vai_tro IN ('quan_ly','truong_cellbank','vien_truong')),
+  -- Phạm vi ngân hàng của vai trò quan_ly: 'te_bao' | 'khang_the'; NULL = cả hai ngân hàng (các vai trò khác luôn NULL)
+  ngan_hang TEXT CHECK (ngan_hang IS NULL OR ngan_hang IN ('te_bao','khang_the')),
   granted_by INTEGER,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE (user_id, vai_tro)
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_vai_tro ON nhm_vai_tro (user_id, vai_tro, IFNULL(ngan_hang, ''));
 
 -- Nhóm nghiên cứu. truong_user_id là TÀI KHOẢN (để gửi email duyệt yêu cầu), không phải tên gõ tay.
 --   cho_xac_nhan  do người dùng tự đề xuất khi thêm mẫu, quản lý chưa kiểm
@@ -347,6 +351,7 @@ CREATE TABLE IF NOT EXISTS nhm_don_vi (
   ten TEXT NOT NULL,
   mo_ta TEXT,
   vai_tro_duyet TEXT CHECK (vai_tro_duyet IS NULL OR vai_tro_duyet IN ('truong_cellbank')),
+  ngan_hang TEXT NOT NULL DEFAULT 'te_bao' CHECK (ngan_hang IN ('te_bao','khang_the')),
   created_by INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -363,6 +368,9 @@ CREATE TABLE IF NOT EXISTS nhm_don_vi_duyet (
 
 INSERT OR IGNORE INTO nhm_don_vi (ma, ten, mo_ta, vai_tro_duyet)
   VALUES ('cellbank', 'Cellbank', 'Thiết bị do Cellbank (CIPP) quản lý; Trưởng CIPP duyệt yêu cầu lấy mẫu.', 'truong_cellbank');
+-- Ab-bank: đơn vị quản lý của ngân hàng kháng thể (người duyệt do admin chỉ định; chưa có thì yêu cầu về quản lý ngân hàng kháng thể)
+INSERT OR IGNORE INTO nhm_don_vi (ma, ten, mo_ta, ngan_hang)
+  VALUES ('ab-bank', 'Ab-bank', 'Thiết bị do Ab-bank (ngân hàng kháng thể) quản lý; người duyệt do admin chỉ định.', 'khang_the');
 -- thiết bị Cellbank tạo từ bản trước chưa có đơn vị: gắn vào đơn vị Cellbank
 UPDATE nhm_containers SET don_vi_id = (SELECT id FROM nhm_don_vi WHERE ma = 'cellbank')
   WHERE quan_ly_boi = 'cellbank' AND don_vi_id IS NULL AND parent_id IS NULL;

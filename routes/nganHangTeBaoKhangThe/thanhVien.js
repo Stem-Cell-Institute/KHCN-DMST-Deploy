@@ -17,7 +17,7 @@
 
 const express = require('express');
 const {
-  HOLDING, VAI_TRO_MODULE, LOAI_CHU, LOAI_CHU_VN, chuanHoaTen, toInt, toStr, isUniqueError, layThayDoi, moTaThayDoi,
+  HOLDING, NGAN_HANG, VAI_TRO_MODULE, LOAI_CHU, LOAI_CHU_VN, chuanHoaTen, toInt, toStr, isUniqueError, layThayDoi, moTaThayDoi,
 } = require('../../services/nganHangTeBaoKhangThe');
 
 module.exports = function createThanhVienRouter(ctx) {
@@ -43,6 +43,28 @@ module.exports = function createThanhVienRouter(ctx) {
                               (SELECT COUNT(*) FROM nhm_tubes t WHERE t.nhom_id = g.id AND t.deleted_at IS NULL AND t.status IN ${HOLDING}) AS so_mau
                        FROM nhm_nhom g`;
 
+  // ---------- Chọn ngân hàng: số liệu và việc cần xử lý của MỖI ngân hàng đối với người đang gọi ----------
+
+  router.get('/banks', (req, res) => {
+    const laQuanTri = laAdmin(req) ? 1 : 0;
+    const ds = Object.keys(NGAN_HANG).map((ma) => {
+      const r2 = { user: req.user, nganHang: ma }; // yêu cầu giả lập trong ngân hàng ma để dùng lại đúng các hàm đếm
+      const goc =
+        'WITH RECURSIVE t(id) AS (SELECT id FROM nhm_containers WHERE parent_id IS NULL AND deleted_at IS NULL AND ngan_hang = ? AND (rieng_user_id IS NULL OR rieng_user_id = ? OR ? = 1) ' +
+        'UNION SELECT c.id FROM nhm_containers c JOIN t ON c.parent_id = t.id WHERE c.deleted_at IS NULL)';
+      const tham = [ma, req.user.id, laQuanTri];
+      const thietBi = db.prepare(goc + ' SELECT COUNT(*) AS c FROM nhm_containers WHERE parent_id IS NULL AND id IN (SELECT id FROM t)').get(...tham).c;
+      const mau = db
+        .prepare(goc + ` SELECT COUNT(*) AS c FROM nhm_tubes x WHERE x.deleted_at IS NULL AND x.status IN ${HOLDING} AND x.box_id IN (SELECT id FROM nhm_boxes WHERE container_id IN (SELECT id FROM t))`)
+        .get(...tham).c;
+      const viec = (ctx.demYeuCau ? ctx.demYeuCau(r2).inbox : 0)
+        + db.prepare(`SELECT COUNT(*) AS c FROM nhm_phat_hien WHERE trang_thai = 'cho_chu_mau' AND ${ctx.dkKhongAn(r2, 'box_id')}`).get().c
+        + db.prepare(`SELECT COUNT(*) AS c FROM nhm_vu_viec v WHERE v.trang_thai IN ('mo','cho_chu_xac_nhan') AND ${ctx.dkKhongAn(r2, '(SELECT box_id FROM nhm_tubes WHERE id = v.tube_id)')}`).get().c;
+      return { ma, ten: NGAN_HANG[ma], thiet_bi: thietBi, mau, viec, la_quan_ly: canManage(r2) };
+    });
+    res.json({ ngan_hang: ds, hien_tai: req.nganHang });
+  });
+
   // ---------- Tôi là ai ----------
 
   router.get('/me', (req, res) => {
@@ -59,6 +81,8 @@ module.exports = function createThanhVienRouter(ctx) {
       email: req.user.email,
       laAdmin: laAdmin(req),
       canManage: canManage(req),
+      nganHang: req.nganHang,
+      nganHangTen: NGAN_HANG[req.nganHang],
       laTruongCellbank: laTruongCellbank(req),
       sinhVien: ctx.thongTinSinhVien ? ctx.thongTinSinhVien(req) : null,
       vaiTro: [...vaiTroModule(req)],
@@ -76,10 +100,11 @@ module.exports = function createThanhVienRouter(ctx) {
     res.json({
       roles: db
         .prepare(
-          `SELECT r.id, r.user_id, r.vai_tro, r.created_at, u.fullname, u.email
-           FROM nhm_vai_tro r LEFT JOIN users u ON u.id = r.user_id ORDER BY r.vai_tro, u.fullname`
+          `SELECT r.id, r.user_id, r.vai_tro, r.ngan_hang, r.created_at, u.fullname, u.email
+           FROM nhm_vai_tro r LEFT JOIN users u ON u.id = r.user_id
+           WHERE ? = 1 OR r.ngan_hang IS NULL OR r.ngan_hang = ? ORDER BY r.vai_tro, u.fullname`
         )
-        .all(),
+        .all(laAdmin(req) ? 1 : 0, req.nganHang), // quản lý chỉ thấy vai trò của ngân hàng mình; admin thấy tất cả
     });
   });
 
@@ -87,10 +112,15 @@ module.exports = function createThanhVienRouter(ctx) {
     const userId = toInt((req.body || {}).user_id);
     const vaiTro = (req.body || {}).vai_tro;
     if (!VAI_TRO_MODULE.includes(vaiTro)) return fail(res, 400, 'Vai trò không hợp lệ.');
+    // phạm vi ngân hàng chỉ có ở Quản lý: 'te_bao' | 'khang_the'; bỏ trống = cả hai ngân hàng
+    const nhGoc = (req.body || {}).ngan_hang;
+    const nganHang = nhGoc == null || nhGoc === '' || nhGoc === 'ca_hai' ? null : nhGoc;
+    if (nganHang !== null && !NGAN_HANG[nganHang]) return fail(res, 400, 'Ngân hàng không hợp lệ.');
+    if (nganHang !== null && vaiTro !== 'quan_ly') return fail(res, 400, 'Chỉ vai trò Quản lý module có phạm vi theo ngân hàng.');
     if (!nguoiHopLe(userId)) return fail(res, 400, 'Người dùng không tồn tại hoặc không dùng được module.');
     try {
-      const info = db.prepare('INSERT INTO nhm_vai_tro (user_id, vai_tro, granted_by) VALUES (?, ?, ?)').run(userId, vaiTro, req.user.id);
-      audit(req, 'role_grant', `${vaiTro} cho ${tenNguoi(userId)} (id=${userId})`);
+      const info = db.prepare('INSERT INTO nhm_vai_tro (user_id, vai_tro, ngan_hang, granted_by) VALUES (?, ?, ?, ?)').run(userId, vaiTro, nganHang, req.user.id);
+      audit(req, 'role_grant', `${vaiTro}${nganHang ? ' (' + NGAN_HANG[nganHang] + ')' : ''} cho ${tenNguoi(userId)} (id=${userId})`);
       res.status(201).json({ id: Number(info.lastInsertRowid) });
     } catch (e) {
       if (isUniqueError(e)) return fail(res, 409, 'Người này đã có vai trò đó.');

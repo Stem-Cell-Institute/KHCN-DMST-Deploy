@@ -6,6 +6,9 @@
  */
 
 // Vai trò TRONG module (bảng nhm_vai_tro) — chỉ admin cấp / gỡ.
+/** Hai ngân hàng của module: dùng chung tài khoản, nhóm, sinh viên, cấu hình hạn; tách thiết bị, mẫu, người quản lý, đơn vị. */
+const NGAN_HANG = { te_bao: 'Ngân hàng tế bào', khang_the: 'Ngân hàng kháng thể' };
+const NGAN_HANG_MAC_DINH = 'te_bao';
 const VAI_TRO_MODULE = ['quan_ly', 'truong_cellbank', 'vien_truong'];
 const VAI_TRO_VN = { quan_ly: 'Quản lý module', truong_cellbank: 'Trưởng CIPP (Cellbank)', vien_truong: 'Viện trưởng (thiết bị riêng)' };
 
@@ -115,6 +118,6 @@ function thayDoiJson(thayDoi) {
 }
 
 module.exports = {
-  VAI_TRO_MODULE, VAI_TRO_VN, LOAI_CHU, LOAI_CHU_VN, chuanHoaTen, HOLDING, toInt, toStr, parseSo, parseNgay, placeholders, isUniqueError,
+  NGAN_HANG, NGAN_HANG_MAC_DINH, VAI_TRO_MODULE, VAI_TRO_VN, LOAI_CHU, LOAI_CHU_VN, chuanHoaTen, HOLDING, toInt, toStr, parseSo, parseNgay, placeholders, isUniqueError,
   TRANG_THAI_VN, NHAN_TRUONG, layThayDoi, moTaThayDoi, thayDoiJson,
 };

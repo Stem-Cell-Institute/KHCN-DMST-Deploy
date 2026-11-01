@@ -16,7 +16,7 @@ module.exports = function createDonViRouter(ctx) {
   const { db, requireManage, requireAdmin, audit, fail, YeuCau } = ctx;
   const router = express.Router();
 
-  const MA_CELLBANK = 'cellbank';
+  const MA_MAC_DINH = ['cellbank', 'ab-bank']; // đơn vị có sẵn của mỗi ngân hàng: không xóa được
 
   /** Tài khoản chọn làm người duyệt: có thật, không bị khóa, không phải tài khoản chỉ dùng Đặt lịch thiết bị. */
   function nguoiHopLe(id) {
@@ -44,7 +44,7 @@ module.exports = function createDonViRouter(ctx) {
           .map((r) => ({ user_id: r.user_id, ten: r.fullname || r.email || '(không rõ)', email: r.email }))
       : [];
     return {
-      id: dv.id, ma: dv.ma, ten: dv.ten, mo_ta: dv.mo_ta, mac_dinh: dv.ma === MA_CELLBANK,
+      id: dv.id, ma: dv.ma, ten: dv.ten, mo_ta: dv.mo_ta, mac_dinh: MA_MAC_DINH.includes(dv.ma),
       vai_tro_duyet: dv.vai_tro_duyet, nguoi_duyet: duyet, nguoi_theo_vai_tro: theoVaiTro,
       so_thiet_bi: db.prepare('SELECT COUNT(*) AS c FROM nhm_containers WHERE don_vi_id = ? AND deleted_at IS NULL').get(dv.id).c,
     };
@@ -64,7 +64,7 @@ module.exports = function createDonViRouter(ctx) {
   }
 
   router.get('/units', requireManage, (req, res) => {
-    res.json({ units: db.prepare('SELECT * FROM nhm_don_vi ORDER BY (ma = ?) DESC, ten').all(MA_CELLBANK).map(dinhDang) });
+    res.json({ units: db.prepare("SELECT * FROM nhm_don_vi WHERE ngan_hang = ? ORDER BY (ma IN ('cellbank','ab-bank')) DESC, ten").all(req.nganHang).map(dinhDang) });
   });
 
   router.post('/units', requireAdmin, (req, res) => {
@@ -76,8 +76,8 @@ module.exports = function createDonViRouter(ctx) {
     try {
       const id = db.transaction(() => {
         const info = db
-          .prepare('INSERT INTO nhm_don_vi (ma, ten, mo_ta, created_by) VALUES (?, ?, ?, ?)')
-          .run('dv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ten, toStr(body.mo_ta, 500), req.user.id);
+          .prepare('INSERT INTO nhm_don_vi (ma, ten, mo_ta, ngan_hang, created_by) VALUES (?, ?, ?, ?, ?)')
+          .run('dv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), ten, toStr(body.mo_ta, 500), req.nganHang, req.user.id);
         const dvId = Number(info.lastInsertRowid);
         for (const uid of ids || []) db.prepare('INSERT INTO nhm_don_vi_duyet (don_vi_id, user_id, granted_by) VALUES (?, ?, ?)').run(dvId, uid, req.user.id);
         return dvId;
@@ -92,7 +92,7 @@ module.exports = function createDonViRouter(ctx) {
 
   router.patch('/units/:id', requireAdmin, (req, res) => {
     const id = toInt(req.params.id);
-    const cur = id && db.prepare('SELECT * FROM nhm_don_vi WHERE id = ?').get(id);
+    const cur = id && db.prepare('SELECT * FROM nhm_don_vi WHERE id = ? AND ngan_hang = ?').get(id, req.nganHang);
     if (!cur) return fail(res, 404, 'Không tìm thấy đơn vị.');
     const body = req.body || {};
     const [ids, loi] = docNguoiDuyet(body);
@@ -118,9 +118,9 @@ module.exports = function createDonViRouter(ctx) {
 
   router.delete('/units/:id', requireAdmin, (req, res) => {
     const id = toInt(req.params.id);
-    const cur = id && db.prepare('SELECT * FROM nhm_don_vi WHERE id = ?').get(id);
+    const cur = id && db.prepare('SELECT * FROM nhm_don_vi WHERE id = ? AND ngan_hang = ?').get(id, req.nganHang);
     if (!cur) return fail(res, 404, 'Không tìm thấy đơn vị.');
-    if (cur.ma === MA_CELLBANK) return fail(res, 400, 'Không xóa được đơn vị Cellbank (đơn vị có sẵn của module).');
+    if (MA_MAC_DINH.includes(cur.ma)) return fail(res, 400, 'Không xóa được đơn vị có sẵn của ngân hàng (Cellbank, Ab-bank).');
     const dung = db.prepare('SELECT COUNT(*) AS c FROM nhm_containers WHERE don_vi_id = ? AND deleted_at IS NULL').get(id).c;
     if (dung > 0) return fail(res, 409, `Không xóa được: còn ${dung} thiết bị thuộc đơn vị này. Hãy chuyển các thiết bị sang đơn vị khác hoặc Public trước.`);
     db.transaction(() => {

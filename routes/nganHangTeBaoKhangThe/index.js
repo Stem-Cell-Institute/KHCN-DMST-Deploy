@@ -27,6 +27,8 @@ function createNganHangMauRouter(deps) {
   const ctx = taoBoiCanh(deps);
   const router = express.Router();
   router.use(deps.authMiddleware);
+  // ngân hàng đang dùng (tế bào / kháng thể): đặt trước mọi kiểm tra quyền vì quyền quản lý tính theo ngân hàng
+  router.use((req, res, next) => ctx.datNganHang(req, res, next));
   // tài khoản sinh viên: hết hạn / bị thu hồi thì không vào module (Đặt lịch thiết bị vẫn dùng được); còn hạn thì tự có hồ sơ «sinh viên»
   router.use((req, res, next) => ctx.chanSinhVien(req, res, next));
   // thiết bị riêng của Viện trưởng: người khác (trừ admin) không thấy, gặp 404 như không tồn tại

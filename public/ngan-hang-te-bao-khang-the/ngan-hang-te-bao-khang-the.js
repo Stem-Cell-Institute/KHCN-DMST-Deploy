@@ -3,6 +3,9 @@
   'use strict';
 
   var API = '/api/ngan-hang-te-bao-khang-the';
+  // Ngân hàng đang dùng: lấy từ ?nh= trên địa chỉ ('te_bao' | 'khang_the'). Không có thì hiện màn hình chọn ngân hàng.
+  var NH_VN = { te_bao: 'Ngân hàng tế bào', khang_the: 'Ngân hàng kháng thể' };
+  var nganHang = (function () { var v = new URLSearchParams(location.search).get('nh'); return NH_VN[v] ? v : null; })();
   var state = { meta: null, me: null, groups: [], tree: null, sel: null, expanded: {}, box: null, search: null, cv: null, audit: null };
   var $ = function (id) { return document.getElementById(id); };
 
@@ -40,7 +43,7 @@
     return fetch(API + url, {
       method: method,
       credentials: 'same-origin',
-      headers: body ? { 'Content-Type': 'application/json' } : {},
+      headers: Object.assign(body ? { 'Content-Type': 'application/json' } : {}, nganHang ? { 'X-Ngan-Hang': nganHang } : {}),
       body: body ? JSON.stringify(body) : undefined,
     }).then(function (res) {
       if (res.status === 401) {
@@ -967,7 +970,7 @@
       h('label', { class: 'nhm-check' }, [mine, 'Chỉ mẫu của tôi']),
       h('label', { class: 'nhm-check' }, [all, 'Gồm mẫu đã rã đông / hủy']),
       h('button', { type: 'submit', class: 'nhm-btn nhm-btn--primary' }, 'Tìm'),
-      state.meta.canManage ? h('button', { type: 'button', class: 'nhm-btn', onclick: function () { window.location.href = API + '/tubes/export.csv?' + timKiemQuery(p, false); } }, 'Xuất CSV') : null,
+      state.meta.canManage ? h('button', { type: 'button', class: 'nhm-btn', onclick: function () { window.location.href = API + '/tubes/export.csv?nh=' + nganHang + '&' + timKiemQuery(p, false); } }, 'Xuất CSV') : null,
     ]);
 
     var body;
@@ -1156,9 +1159,14 @@
       var err = h('div', { class: 'nhm-err' });
       var nguoi = chonNguoi({ label: 'Người được cấp vai trò' });
       var sel = h('select', { 'aria-label': 'Vai trò' }, Object.keys(VAI_TRO_VN).map(function (k) { return h('option', { value: k }, VAI_TRO_VN[k]); }));
+      // phạm vi ngân hàng chỉ có ở Quản lý module
+      var phamVi = h('select', { 'aria-label': 'Phạm vi ngân hàng' }, [h('option', { value: '' }, 'Cả hai ngân hàng'), h('option', { value: 'te_bao' }, NH_VN.te_bao), h('option', { value: 'khang_the' }, NH_VN.khang_the)]);
+      var capNhatPhamVi = function () { phamVi.classList.toggle('nhm-hide', sel.value !== 'quan_ly'); };
+      sel.addEventListener('change', capNhatPhamVi);
+      capNhatPhamVi();
       var rows = r.roles.map(function (x) {
         return h('div', { class: 'nhm-card' }, [
-          h('div', { class: 'nhm-card-top' }, [h('strong', {}, x.fullname || x.email || ('#' + x.user_id)), h('span', { class: 'nhm-chip' }, VAI_TRO_VN[x.vai_tro] || x.vai_tro)]),
+          h('div', { class: 'nhm-card-top' }, [h('strong', {}, x.fullname || x.email || ('#' + x.user_id)), h('span', { class: 'nhm-chip' }, (VAI_TRO_VN[x.vai_tro] || x.vai_tro) + (x.vai_tro === 'quan_ly' ? ' · ' + (x.ngan_hang ? NH_VN[x.ngan_hang] : 'cả hai ngân hàng') : ''))]),
           h('div', { class: 'nhm-small nhm-muted' }, x.email || ''),
           h('div', { class: 'nhm-card-act' }, [nutNho('Gỡ vai trò', 'danger', function () {
             if (!window.confirm('Gỡ vai trò «' + (VAI_TRO_VN[x.vai_tro] || x.vai_tro) + '» của ' + (x.fullname || x.email) + '?')) return;
@@ -1170,10 +1178,10 @@
         h('strong', {}, 'Vai trò trong module (' + r.roles.length + ')'),
         h('p', { class: 'nhm-muted nhm-small' }, 'Chỉ Admin cấp và gỡ vai trò. Quản lý module (2–3 người) quản lý thiết bị, hộp, danh mục, nhóm và mọi mẫu; Trưởng CIPP là người duyệt của đơn vị Cellbank (người duyệt của các đơn vị khác gán ở thẻ Đơn vị quản lý).'),
         r.roles.length ? h('div', { class: 'nhm-cards' }, rows) : h('p', { class: 'nhm-muted' }, 'Chưa gán vai trò nào.'),
-        h('div', { class: 'nhm-addrole' }, [nguoi.node, sel, nutNho('Cấp vai trò', '', function () {
+        h('div', { class: 'nhm-addrole' }, [nguoi.node, sel, phamVi, nutNho('Cấp vai trò', '', function () {
           var u = nguoi.get();
           if (!u) { err.textContent = 'Chọn người dùng.'; return; }
-          api('POST', '/roles', { user_id: u.id, vai_tro: sel.value }).then(function () { say('Đã cấp vai trò.', 'ok'); reopen(); }).catch(function (e) { err.textContent = e.message; });
+          api('POST', '/roles', { user_id: u.id, vai_tro: sel.value, ngan_hang: sel.value === 'quan_ly' ? phamVi.value : '' }).then(function () { say('Đã cấp vai trò.', 'ok'); reopen(); }).catch(function (e) { err.textContent = e.message; });
         })]),
         err]));
     }).catch(loiTrongSlot(body));
@@ -1541,7 +1549,7 @@
     if (y.co_the_huy) nut.push(nutNho('Hủy yêu cầu', 'danger', function () { hoiRoiLam('Hủy yêu cầu này?', function () { return api('POST', '/requests/' + y.id + '/cancel'); }); }));
     nut.push(nutNho('Xem mẫu', '', function () { moMauTheoId(y.tube_id); }));
     // phiếu in được (kèm kết quả duyệt) cho người gửi, người đã xử lý, người duyệt và quản lý
-    if (y.co_the_in) nut.push(nutNho('In phiếu', '', function () { window.open(API + '/requests/' + y.id + '/print', '_blank', 'noopener'); }));
+    if (y.co_the_in) nut.push(nutNho('In phiếu', '', function () { window.open(API + '/requests/' + y.id + '/print?nh=' + nganHang, '_blank', 'noopener'); }));
     return h('div', { class: 'nhm-card' }, [
       h('div', { class: 'nhm-card-top' }, [h('strong', {}, y.mau_ten), h('span', { class: 'nhm-chip' + ({ da_duyet: ' nhm-chip--ok', da_giao: ' nhm-chip--ok', da_tra: ' nhm-chip--ok', tu_choi: ' nhm-chip--no', da_huy: ' nhm-chip--no' }[y.trang_thai] || '') }, trangThai)]),
       h('div', { class: 'nhm-small' }, y.nguoi_gui_ten + ' xin lấy · ' + y.vi_tri),
@@ -1796,7 +1804,29 @@
   }
 
   // ---------- khởi động ----------
+  /** Màn hình chọn ngân hàng: hai nút lớn, mỗi nút ghi số thiết bị, mẫu và việc cần xử lý của người đang đăng nhập. */
+  function moManHinhChon() {
+    document.querySelector('.nhm-shell').classList.add('nhm-hide');
+    $('nhm-chon-nh').classList.remove('nhm-hide');
+    api('GET', '/banks').then(function (r) {
+      put.apply(null, [$('nhm-chon-ds')].concat(r.ngan_hang.map(function (b) {
+        return h('a', { class: 'nhm-chon-the', href: '?nh=' + b.ma }, [
+          h('span', { class: 'nhm-chon-ten' }, b.ten),
+          h('span', { class: 'nhm-chon-phu' }, b.thiet_bi + ' thiết bị · ' + b.mau + ' mẫu'),
+          h('span', { class: 'nhm-chon-nhan' }, [
+            b.viec ? h('span', { class: 'nhm-count nhm-count--canh' }, b.viec + ' việc cần xử lý') : null,
+            b.la_quan_ly ? h('span', { class: 'nhm-chip' }, 'Bạn quản lý') : null,
+          ]),
+        ]);
+      })));
+    }).catch(function (e) { put($('nhm-chon-ds'), h('p', { class: 'nhm-err' }, e.message)); });
+  }
+
   function init() {
+    if (!nganHang) { moManHinhChon(); return; }
+    $('nhm-nh-ten').textContent = NH_VN[nganHang];
+    $('nhm-nh-doi').href = location.pathname; // về màn hình chọn
+    document.title = NH_VN[nganHang] + ' — STIMS';
     api('GET', '/meta').then(function (meta) {
       state.meta = meta;
       $('nhm-search-form').addEventListener('submit', function (ev) {

@@ -5,7 +5,7 @@
  * hoạt động, ghi lịch sử mẫu, sinh mã. Mỗi router con nhận cùng một đối tượng này.
  */
 
-const { HOLDING, placeholders } = require('../../services/nganHangTeBaoKhangThe');
+const { HOLDING, placeholders, NGAN_HANG, NGAN_HANG_MAC_DINH } = require('../../services/nganHangTeBaoKhangThe');
 const YeuCau = require('../../services/nganHangTeBaoKhangTheYeuCau');
 const { taoThongBao } = require('../../services/nganHangTeBaoKhangTheThongBao');
 
@@ -24,11 +24,25 @@ function taoBoiCanh(deps) {
     return String((req.user && req.user.role) || '').toLowerCase() === 'admin';
   }
 
-  /** Tập vai trò module của người đang gọi; đọc DB một lần cho mỗi request. */
+  /**
+   * Ngân hàng đang dùng cho yêu cầu này: header X-Ngan-Hang hoặc ?nh= ('te_bao' | 'khang_the'); không gửi thì mặc định ngân hàng tế bào.
+   * Mọi dữ liệu của ngân hàng còn lại bị ẩn (xem tapAn) và vai trò quản lý chỉ tính trong ngân hàng này.
+   */
+  function datNganHang(req, res, next) {
+    const v = String(req.headers['x-ngan-hang'] || (req.query && req.query.nh) || '').trim();
+    if (v && !NGAN_HANG[v]) return fail(res, 400, 'Ngân hàng không hợp lệ (te_bao hoặc khang_the).');
+    req.nganHang = v || NGAN_HANG_MAC_DINH;
+    next();
+  }
+
+  /** Tập vai trò module của người đang gọi TRONG ngân hàng hiện tại (vai trò không ghi phạm vi = cả hai); đọc DB một lần cho mỗi request. */
   function vaiTroModule(req) {
     if (!req._nhmVaiTro) {
+      const nh = req.nganHang || NGAN_HANG_MAC_DINH;
       req._nhmVaiTro = new Set(
-        req.user ? db.prepare('SELECT vai_tro FROM nhm_vai_tro WHERE user_id = ?').all(req.user.id).map((r) => r.vai_tro) : []
+        req.user
+          ? db.prepare('SELECT vai_tro, ngan_hang FROM nhm_vai_tro WHERE user_id = ?').all(req.user.id).filter((r) => r.ngan_hang == null || r.ngan_hang === nh).map((r) => r.vai_tro)
+          : []
       );
     }
     return req._nhmVaiTro;
@@ -94,15 +108,20 @@ function taoBoiCanh(deps) {
     return !!g && (g.rieng_user_id === req.user.id || (g.created_by === req.user.id && laVienTruong(req)));
   }
 
-  /** Vị trí và hộp BỊ ẨN với người này (thiết bị riêng của người khác); admin thấy hết. Tính một lần cho mỗi yêu cầu. */
+  /**
+   * Vị trí và hộp BỊ ẨN với người này: (1) mọi thiết bị của ngân hàng KHÔNG đang dùng, kể cả với admin; (2) thiết bị riêng của người khác
+   * (admin thấy). Tính một lần cho mỗi yêu cầu.
+   */
   function tapAn(req) {
     if (req._nhmAn) return req._nhmAn;
     const an = { containers: new Set(), boxes: new Set() };
-    if (!laAdmin(req)) {
-      const goc = 'WITH RECURSIVE t(id) AS (SELECT id FROM nhm_containers WHERE parent_id IS NULL AND rieng_user_id IS NOT NULL AND rieng_user_id <> ? UNION SELECT c.id FROM nhm_containers c JOIN t ON c.parent_id = t.id)';
-      for (const r of db.prepare(goc + ' SELECT id FROM t').all(req.user.id)) an.containers.add(r.id);
-      for (const r of db.prepare(goc + ' SELECT id FROM nhm_boxes WHERE container_id IN (SELECT id FROM t)').all(req.user.id)) an.boxes.add(r.id);
-    }
+    const nh = req.nganHang || NGAN_HANG_MAC_DINH;
+    const goc =
+      'WITH RECURSIVE t(id) AS (SELECT id FROM nhm_containers WHERE parent_id IS NULL AND (ngan_hang <> ? OR (? = 0 AND rieng_user_id IS NOT NULL AND rieng_user_id <> ?)) ' +
+      'UNION SELECT c.id FROM nhm_containers c JOIN t ON c.parent_id = t.id)';
+    const tham = [nh, laAdmin(req) ? 1 : 0, req.user.id];
+    for (const r of db.prepare(goc + ' SELECT id FROM t').all(...tham)) an.containers.add(r.id);
+    for (const r of db.prepare(goc + ' SELECT id FROM nhm_boxes WHERE container_id IN (SELECT id FROM t)').all(...tham)) an.boxes.add(r.id);
     req._nhmAn = an;
     return an;
   }
@@ -115,7 +134,6 @@ function taoBoiCanh(deps) {
 
   /** Chặn truy cập trực tiếp theo id (đường dẫn và các id trong body) tới dữ liệu bị ẩn: trả 404 giống như không có. */
   function chanDuLieuRieng(req, res, next) {
-    if (laAdmin(req)) return next();
     const an = tapAn(req);
     if (!an.containers.size) return next();
     const khongThay = () => fail(res, 404, 'Không tìm thấy.');
@@ -260,7 +278,7 @@ function taoBoiCanh(deps) {
     for (const id of tubeIds) logMove(id, action, null, null, userId, note);
   }
 
-  return { db, laAdmin, vaiTroModule, laTruongCellbank, requireAdmin, hopTrongCellbank, quanLyDonVi, biChanDonVi, laVienTruong, chuRiengCuaViTri, chuRiengCuaHop, quyenViTri, tapAn, dkKhongAn, chanDuLieuRieng, logNhieuMau, thongBao, guiNen, moTaViTri, nguoiDung, nhanNguoi, YeuCau, canManage, requireManage, canEditTube, audit, fail, subtreeIds, duongDan, taoTraDuongDan, activeTubeCountInBoxes, nextCode, logMove };
+  return { db, laAdmin, vaiTroModule, laTruongCellbank, requireAdmin, hopTrongCellbank, quanLyDonVi, biChanDonVi, datNganHang, laVienTruong, chuRiengCuaViTri, chuRiengCuaHop, quyenViTri, tapAn, dkKhongAn, chanDuLieuRieng, logNhieuMau, thongBao, guiNen, moTaViTri, nguoiDung, nhanNguoi, YeuCau, canManage, requireManage, canEditTube, audit, fail, subtreeIds, duongDan, taoTraDuongDan, activeTubeCountInBoxes, nextCode, logMove };
 }
 
 module.exports = taoBoiCanh;

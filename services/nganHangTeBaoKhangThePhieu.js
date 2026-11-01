@@ -86,7 +86,7 @@ function dungPhieu(d) {
 </style></head><body>
 <div class="nut"><button type="button" onclick="window.print()">In phiếu / lưu PDF</button></div>
 <div class="trang">
-  <div class="dau"><div><b>Viện Tế bào gốc</b><small>Trường ĐH Khoa học Tự nhiên, ĐHQG TP.HCM</small></div><div style="text-align:right"><b>Ngân hàng tế bào &amp; Kháng thể</b><small>Hệ thống STIMS</small></div></div>
+  <div class="dau"><div><b>Viện Tế bào gốc</b><small>Trường ĐH Khoa học Tự nhiên, ĐHQG TP.HCM</small></div><div style="text-align:right"><b>${esc(d.nganHangTen || 'Ngân hàng tế bào & Kháng thể')}</b><small>Hệ thống STIMS</small></div></div>
   <h1>PHIẾU YÊU CẦU LẤY MẪU</h1>
   <p class="so">Số phiếu: <b>${esc(so)}</b> · gửi lúc ${esc(gioVn(yc.created_at))}</p>
   <div class="ketqua ${tt.lop}">${esc(tt.nhan)}<small>${esc(tt.ghi)}</small></div>

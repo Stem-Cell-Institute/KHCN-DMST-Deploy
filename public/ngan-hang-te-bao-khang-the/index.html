@@ -30,8 +30,15 @@
     </div>
   </header>
 
+  <!-- Màn hình chọn ngân hàng: hiện khi vào module chưa chọn (địa chỉ không có ?nh=) -->
+  <section id="nhm-chon-nh" class="nhm-chon nhm-hide" aria-labelledby="nhm-chon-tieude">
+    <h2 id="nhm-chon-tieude">Chọn ngân hàng</h2>
+    <div id="nhm-chon-ds" class="nhm-chon-ds"><div class="nhm-loading">Đang tải…</div></div>
+  </section>
+
   <div class="nhm-shell">
     <aside class="nhm-rail">
+      <div class="nhm-nh-bar"><strong id="nhm-nh-ten"></strong><a id="nhm-nh-doi" class="nhm-link" href="?">Đổi ngân hàng</a></div>
       <form id="nhm-search-form" class="nhm-search" role="search">
         <input id="nhm-search-q" type="search" placeholder="Tìm mẫu theo mọi thông tin…" aria-label="Tìm mẫu" />
         <button type="submit" class="nhm-btn nhm-btn--primary">Tìm</button>

@@ -519,3 +519,23 @@
   .nhm-treeul ul > li:last-child::before { height: 22px; }
   .nhm-treeul ul > li::after { top: 22px; }
 }
+
+/* ── Chọn ngân hàng ─────────────────────────────────────────────────────── */
+.nhm-chon { max-width: 920px; margin: 0 auto; padding: 36px 24px 48px; }
+.nhm-chon h2 { margin: 0 0 18px; font-size: 1.5rem; letter-spacing: -0.01em; }
+.nhm-chon-ds { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.nhm-chon-the {
+  display: flex; flex-direction: column; gap: 8px; min-height: 150px; padding: 22px 22px 18px; color: var(--muc); text-decoration: none;
+  background: var(--giay-trang); border: 1px solid var(--muc); border-radius: 3px; transition: background-color 160ms ease, color 160ms ease;
+}
+.nhm-chon-the:hover, .nhm-chon-the:focus-visible { background: var(--muc); color: #fff; outline: none; }
+.nhm-chon-the:focus-visible { box-shadow: 0 0 0 3px rgba(22, 35, 61, 0.35); }
+.nhm-chon-ten { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
+.nhm-chon-phu { font-size: 0.9rem; opacity: 0.8; font-variant-numeric: tabular-nums; }
+.nhm-chon-nhan { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.nhm-chon-the:hover .nhm-chip, .nhm-chon-the:focus-visible .nhm-chip { color: #fff; border-color: rgba(255, 255, 255, 0.7); }
+@media (max-width: 700px) { .nhm-chon { padding: 24px 16px 32px; } .nhm-chon-ds { grid-template-columns: 1fr; } .nhm-chon-the { min-height: 120px; } }
+
+/* thanh ngân hàng đang dùng ở đầu thanh bên */
+.nhm-nh-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--ke); font-size: 0.92rem; }
+.nhm-nh-bar .nhm-link { font-size: 0.78rem; font-weight: 600; color: var(--muc); }

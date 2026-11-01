@@ -59,10 +59,10 @@ async function dungServer() {
   });
   const base = `http://127.0.0.1:${server.address().port}/api/ngan-hang-te-bao-khang-the`;
 
-  async function api(user, method, url, body) {
+  async function api(user, method, url, body, nganHang) {
     const res = await fetch(base + url, {
       method,
-      headers: { 'content-type': 'application/json', ...(user ? { 'x-test-user': user } : {}) },
+      headers: { 'content-type': 'application/json', ...(user ? { 'x-test-user': user } : {}), ...(nganHang ? { 'x-ngan-hang': nganHang } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = Buffer.from(await res.arrayBuffer()).toString('utf8'); // giữ nguyên BOM nếu có
