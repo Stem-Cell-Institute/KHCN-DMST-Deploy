@@ -360,10 +360,10 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     const path = duongDan(box.container_id);
     const tubes = db
       .prepare(
-        `SELECT t.id, t.row_no, t.col_no, t.name, t.passage, t.cell_count, t.volume_ml, t.freeze_date,
+        `SELECT t.id, t.row_no, t.col_no, t.name, t.passage, t.cell_count, t.volume_ml, t.the_tich_ul, t.con_lai_ul, t.chu_don_vi, t.freeze_date,
                 t.project, t.status, t.notes, t.owner_user_id, t.box_id, t.sample_type_id, s.name AS sample_type_name,
                 t.chu_loai, t.nhom_id, (SELECT ten FROM nhm_nhom WHERE id = t.nhom_id) AS nhom_ten,
-                (SELECT fullname FROM users WHERE id = t.owner_user_id) AS owner_name
+                CASE WHEN t.chu_don_vi = 1 THEN COALESCE((SELECT ten FROM nhm_don_vi WHERE ma = 'antibodybank'), 'AntibodyBank') ELSE (SELECT COALESCE(NULLIF(fullname, ''), email) FROM users WHERE id = t.owner_user_id) END AS owner_name
          FROM nhm_tubes t LEFT JOIN nhm_sample_types s ON s.id = t.sample_type_id
          WHERE t.box_id = ? AND t.deleted_at IS NULL AND t.status IN ${HOLDING}`
       )

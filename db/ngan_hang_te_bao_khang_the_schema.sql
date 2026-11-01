@@ -133,6 +133,11 @@ CREATE TABLE IF NOT EXISTS nhm_tubes (
   passage TEXT,
   cell_count REAL,
   volume_ml REAL,
+  -- Ống KHÁNG THỂ: thể tích ban đầu và còn lại, tính bằng microlit (µL). NULL = chưa ghi. Mọi thay đổi ghi vào sổ nhm_the_tich.
+  the_tich_ul REAL,
+  con_lai_ul REAL,
+  -- Ống KHÁNG THỂ: 1 = chủ mẫu là đơn vị (AntibodyBank; mặc định; owner_user_id / chu_loai / nhom_id để trống), 0 = của cá nhân (vd mua bằng kinh phí cá nhân, xung công quỹ)
+  chu_don_vi INTEGER NOT NULL DEFAULT 0,
   freeze_date TEXT,
   owner_user_id INTEGER,
   project TEXT,
@@ -226,6 +231,9 @@ CREATE TABLE IF NOT EXISTS nhm_yeu_cau (
   xu_ly_luc TEXT,
   xu_ly_thay INTEGER NOT NULL DEFAULT 0,
   ly_do_xu_ly TEXT,
+  -- ngân hàng kháng thể: số µL người xin cần và số µL quản lý đã giao (NULL ở ngân hàng tế bào)
+  so_ul_yeu_cau REAL,
+  so_ul_giao REAL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -381,3 +389,29 @@ UPDATE nhm_containers SET don_vi_id = (SELECT id FROM nhm_don_vi WHERE ma = 'ant
 UPDATE nhm_containers SET don_vi_id = (SELECT id FROM nhm_don_vi WHERE ma = 'cellbank')
   WHERE quan_ly_boi = 'cellbank' AND don_vi_id IS NULL AND parent_id IS NULL;
 CREATE INDEX IF NOT EXISTS ix_nhm_containers_don_vi ON nhm_containers(don_vi_id);
+
+-- ═══ Sổ thể tích của ống kháng thể (µL): chỉ thêm, không sửa / xóa ═══════════════════════════════════════════
+--   hanh_dong  ban_dau    ghi thể tích ban đầu (so_ul = +V)
+--              dung       một lần dùng (so_ul âm); nguoi_dung = người dùng kháng thể; yeu_cau_id nếu đi qua yêu cầu
+--              dieu_chinh đo lại / sửa số còn lại (so_ul = chênh lệch, ghi_chu = lý do)
+--              het        ống hết và được bỏ khỏi kho (so_ul = phần còn lại bị xóa sổ, 0 nếu đã dùng hết; con_lai_ul = 0)
+-- Mỗi dòng cũng có một dòng tương ứng trong lịch sử mẫu (nhm_movements) để đọc theo trình tự thời gian.
+CREATE TABLE IF NOT EXISTS nhm_the_tich (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tube_id INTEGER NOT NULL REFERENCES nhm_tubes(id),
+  hanh_dong TEXT NOT NULL CHECK (hanh_dong IN ('ban_dau','dung','dieu_chinh','het')),
+  so_ul REAL NOT NULL,
+  con_lai_ul REAL NOT NULL,
+  nguoi_dung_id INTEGER,
+  nguoi_dung_label TEXT,
+  yeu_cau_id INTEGER,
+  ghi_chu TEXT,
+  user_id INTEGER,
+  user_label TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_nhm_the_tich_tube ON nhm_the_tich(tube_id);
+CREATE TRIGGER IF NOT EXISTS trg_nhm_the_tich_khong_sua BEFORE UPDATE ON nhm_the_tich
+BEGIN SELECT RAISE(ABORT, 'Sổ thể tích chỉ được thêm, không được sửa'); END;
+CREATE TRIGGER IF NOT EXISTS trg_nhm_the_tich_khong_xoa BEFORE DELETE ON nhm_the_tich
+BEGIN SELECT RAISE(ABORT, 'Sổ thể tích chỉ được thêm, không được xóa'); END;

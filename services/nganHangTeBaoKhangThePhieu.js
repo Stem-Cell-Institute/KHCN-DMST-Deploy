@@ -2,7 +2,7 @@
 
 /**
  * Ngân hàng Tế bào & Kháng thể — phiếu yêu cầu lấy mẫu, in được (A4), kèm xác nhận kết quả duyệt.
- * Trả về một trang HTML tự đủ (CSS nằm trong trang, không phụ thuộc tệp ngoài) để người xin mở rồi bấm In / lưu PDF.
+ * Trả về một trang HTML tự đủ (CSS nằm trong trang, không phụ thuộc tệp ngoài) để người yêu cầu mở rồi bấm In / lưu PDF.
  * Mọi dữ liệu người dùng gõ đều được escape. Hàm thuần: không đọc DB, không biết req/res.
  */
 
@@ -93,7 +93,7 @@ function dungPhieu(d) {
   <h2>Người yêu cầu</h2>
   <table>${dong('Họ tên', ten(d.nguoiGui))}${dong('Email', d.nguoiGui && d.nguoiGui.email)}${dong('Mục đích / lý do', yc.ly_do)}</table>
   <h2>Mẫu được yêu cầu</h2>
-  <table>${dong('Tên mẫu', tube.name)}${dong('Loại mẫu', tube.loai_mau)}${dong('Vị trí lưu trữ', d.viTri)}${dong('Chủ mẫu', ten(d.chuMau))}${dong('Nhóm nghiên cứu', d.nhomTen)}${dong('Passage / số tế bào / thể tích', [tube.passage, tube.cell_count, tube.volume_ml != null ? tube.volume_ml + ' mL' : ''].filter((x) => x != null && x !== '').join(' · '))}${dong('Ngày đông lạnh · đề tài', [tube.freeze_date, tube.project].filter(Boolean).join(' · '))}</table>
+  <table>${dong('Tên mẫu', tube.name)}${dong('Loại mẫu', tube.loai_mau)}${dong('Vị trí lưu trữ', d.viTri)}${dong('Chủ mẫu', ten(d.chuMau))}${dong('Nhóm nghiên cứu', d.nhomTen)}${dong('Passage / số tế bào / thể tích', [tube.passage, tube.cell_count, tube.volume_ml != null ? tube.volume_ml + ' mL' : ''].filter((x) => x != null && x !== '').join(' · '))}${dong('Ngày đông lạnh · đề tài', [tube.freeze_date, tube.project].filter(Boolean).join(' · '))}${yc.so_ul_yeu_cau != null ? dong('Thể tích yêu cầu / đã giao', yc.so_ul_yeu_cau + ' µL' + (yc.so_ul_giao != null ? ' / ' + yc.so_ul_giao + ' µL' : ' / (chưa giao)')) : ''}</table>
   <h2>Kết quả xử lý</h2>
   <table>${dong('Cấp duyệt', d.capTen)}${dong('Người xử lý', yc.trang_thai === 'cho_duyet' ? '(chưa xử lý)' : ten(d.nguoiXuLy))}${dong('Thời điểm xử lý', yc.trang_thai === 'cho_duyet' ? '' : gioVn(yc.xu_ly_luc))}</table>
   ${xacNhan}

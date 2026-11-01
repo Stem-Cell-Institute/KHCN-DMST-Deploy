@@ -62,9 +62,10 @@ function taoThongBao({ db, mailSend, baseUrl }) {
   }
 
   const ten = (u) => (u ? u.fullname || u.email : '(không rõ)');
-  const thongTinMau = (t, duongDan) => [
+  const thongTinMau = (t, duongDan, yc) => [
     { nhan: 'Mẫu', text: t.name },
     duongDan ? { nhan: 'Vị trí', text: duongDan } : null,
+    yc && yc.so_ul_yeu_cau != null ? { nhan: 'Thể tích yêu cầu', text: yc.so_ul_yeu_cau + ' µL' } : null,
   ].filter(Boolean);
 
   return {
@@ -75,9 +76,9 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     /** Có yêu cầu mới → người duyệt ở cấp hiện tại (ngân hàng kháng thể: thêm thư «để theo dõi» cho các quản lý). */
     async yeuCauMoi({ yc, tube, nguoiGui, duongDan, nguoiDuyet }) {
       const khangThe = hopKhangThe(db, tube.box_id);
-      const thongTin = thongTinMau(tube, duongDan).concat(yc.ly_do ? [{ nhan: 'Lý do', text: yc.ly_do }] : []);
+      const thongTin = thongTinMau(tube, duongDan, yc).concat(yc.ly_do ? [{ nhan: 'Lý do', text: yc.ly_do }] : []);
       const thu = dungThu(
-        [{ text: `${ten(nguoiGui)} xin lấy một mẫu cần bạn duyệt (cấp duyệt: ${yc.cap_ten || CAP_VN[yc.cap]}).` }]
+        [{ text: `${ten(nguoiGui)} yêu cầu lấy một mẫu cần bạn duyệt (cấp duyệt: ${yc.cap_ten || CAP_VN[yc.cap]}).` }]
           .concat(thongTin)
           .concat([{ text: khangThe ? 'Vui lòng duyệt hoặc từ chối trong hệ thống. Sau khi duyệt, quản lý ngân hàng kháng thể sẽ giao mẫu theo quyết định của bạn.' : `Vui lòng duyệt hoặc từ chối trong vòng ${layHan(db).PHAN_HOI_NGAY} ngày; quá hạn yêu cầu sẽ chuyển cho quản lý module.` }]),
         lienKet('#cong-viec', tube.box_id)
@@ -98,10 +99,10 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     async yeuCauDaDuyet({ yc, tube, nguoiGui, nguoiXuLy, duongDan, xuLyThay, donViTen, dongDuyet }) {
       if (hopKhangThe(db, tube.box_id)) {
         const chung = [{ text: `Yêu cầu lấy mẫu của ${ten(nguoiGui)} đã được Viện trưởng duyệt${xuLyThay ? ' (admin xử lý thay: ' + (yc.ly_do_xu_ly || '') + ')' : ''}.` }]
-          .concat(thongTinMau(tube, duongDan))
+          .concat(thongTinMau(tube, duongDan, yc))
           .concat([{ nhan: 'Người duyệt', text: ten(nguoiXuLy) }].concat(yc.ly_do_xu_ly ? [{ nhan: 'Ghi chú của người duyệt', text: yc.ly_do_xu_ly }] : []));
         const toiNguoiXin = dungThu(chung.concat([{ text: `Quản lý ${donViTen || 'ngân hàng kháng thể'} sẽ liên hệ giao mẫu cho bạn.` }]).concat(linkPhieu(yc.id, tube.box_id)), lienKet('#cong-viec', tube.box_id));
-        const toiQuanLy = dungThu(chung.concat([{ nhan: 'Người nhận mẫu', text: ten(nguoiGui) }, { text: 'Việc của quản lý: giao mẫu cho người xin theo đúng quyết định của Viện trưởng, rồi ghi nhận trong hệ thống («Giao mẫu»).' }]).concat(linkPhieu(yc.id, tube.box_id)), lienKet('#cong-viec', tube.box_id));
+        const toiQuanLy = dungThu(chung.concat([{ nhan: 'Người nhận mẫu', text: ten(nguoiGui) }, { text: 'Việc của quản lý: giao mẫu cho người yêu cầu theo đúng quyết định của Viện trưởng, rồi ghi nhận trong hệ thống («Giao mẫu»).' }]).concat(linkPhieu(yc.id, tube.box_id)), lienKet('#cong-viec', tube.box_id));
         const quanLy = ql(tube.box_id);
         const ids = new Set(quanLy.map((u) => u.id));
         const a = await guiDen(gop(nguoiXuLy && nguoiXuLy.id, [nguoiGui], (dongDuyet || []).filter((u) => !ids.has(u.id))), `${tt(tube.box_id)} Đã duyệt yêu cầu lấy mẫu: ${tube.name}`, toiNguoiXin);
@@ -143,14 +144,28 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       return guiDen(gop(null, ql(tube.box_id)), `${tt(tube.box_id)} Yêu cầu quá hạn cần quản lý xử lý: ${tube.name}`, thu);
     },
 
-    /** Đã giao / đã trả mẫu → người yêu cầu. */
-    yeuCauGiaoTra({ tube, nguoiGui, nguoiXuLy, duongDan, hanhDong }) {
+    /** Đã giao / đã trả mẫu → người yêu cầu. Ngân hàng kháng thể: kèm số µL giao và số còn lại. */
+    yeuCauGiaoTra({ tube, nguoiGui, nguoiXuLy, duongDan, hanhDong, soUl, conLai, het }) {
       const thu = dungThu(
-        [{ text: hanhDong === 'giao' ? 'Mẫu bạn xin đã được giao cho bạn.' : 'Mẫu bạn mượn đã được ghi nhận trả lại kho.' }]
-          .concat(thongTinMau(tube, duongDan)).concat([{ nhan: 'Người thực hiện', text: ten(nguoiXuLy) }]),
+        [{ text: hanhDong === 'giao' ? 'Mẫu bạn yêu cầu đã được giao cho bạn.' : 'Mẫu bạn mượn đã được ghi nhận trả lại kho.' }]
+          .concat(thongTinMau(tube, duongDan))
+          .concat(soUl != null ? [{ nhan: 'Thể tích giao', text: soUl + ' µL' }] : [])
+          .concat(hanhDong === 'tra' && het ? [{ text: 'Ống đã hết nên được bỏ khỏi kho.' }] : [])
+          .concat([{ nhan: 'Người thực hiện', text: ten(nguoiXuLy) }]),
         lienKet('#cong-viec', tube.box_id)
       );
       return guiDen(gop(nguoiXuLy && nguoiXuLy.id, [nguoiGui]), `${tt(tube.box_id)} ${hanhDong === 'giao' ? 'Đã giao' : 'Đã nhận lại'} mẫu: ${tube.name}`, thu);
+    },
+
+    /** Ống kháng thể vừa chuyển sang «sắp hết» hoặc «hết» → quản lý ngân hàng kháng thể (để chuẩn bị mua / pha thêm). */
+    theTichCanhBao({ tube, conLai, theTich, trangThai, duongDan }) {
+      const het = trangThai === 'het';
+      const thu = dungThu(
+        [{ text: het ? 'Ống kháng thể dưới đây đã HẾT và được bỏ khỏi kho.' : `Ống kháng thể dưới đây SẮP HẾT (còn ${conLai} / ${theTich} µL).` }]
+          .concat(thongTinMau(tube, duongDan)),
+        lienKet('#cong-viec', tube.box_id)
+      );
+      return guiDen(gop(null, ql(tube.box_id)), `${tt(tube.box_id)} ${het ? 'Đã hết' : 'Sắp hết'}: ${tube.name}`, thu);
     },
 
     /** Quản lý nhắc chủ mẫu khai báo mẫu có trong ô nhưng chưa có thông tin. */

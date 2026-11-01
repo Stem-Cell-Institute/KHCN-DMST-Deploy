@@ -39,11 +39,26 @@ Một module, hai ngân hàng. **Dùng chung:** tài khoản, nhóm nghiên cứ
 - **Không có Public và không có thiết bị riêng.** Mọi thiết bị gốc thuộc AntibodyBank: tạo mới không chọn đơn vị vẫn gắn AntibodyBank, `PATCH` bỏ đơn vị hoặc đặt riêng là 400, form thiết bị ẩn ô «Ai quản lý thiết bị này» (`/meta.khongPublic`). Thiết bị kháng thể còn Public hoặc riêng từ bản trước được đưa về AntibodyBank khi khởi động. Vì vậy người dùng thường **không tự thêm hay lấy mẫu**, chỉ gửi yêu cầu (người duyệt đơn vị và quản lý vẫn thao tác bình thường).
 - **Người duyệt = Viện trưởng** (vai trò `vien_truong`, admin cấp ở tab Vai trò), **không gán tay**: tab Đơn vị quản lý không có ô thêm người duyệt, `POST /units` và `PATCH nguoi_duyet` ở ngân hàng này là 400. Có thể có nhiều Viện trưởng; ai duyệt trước thì yêu cầu đóng.
 - **Quản lý ngân hàng kháng thể** (vai trò Quản lý, phạm vi «Ngân hàng kháng thể»; thêm hai người trở lên được): **được báo và theo dõi**, không duyệt (403). Yêu cầu đang chờ hiện ở «Việc cần xử lý» trong khung riêng «Đang chờ Viện trưởng duyệt — bạn theo dõi» (`theo_doi: true`, không tính vào số việc cần xử lý). Sau khi duyệt, yêu cầu chuyển lên «Cần tôi xử lý» để **quản lý giao mẫu** (`/deliver`) theo quyết định rồi **nhận lại** (`/return`). Viện trưởng không giao mẫu.
-- **Luồng thư:** gửi yêu cầu → thư cho Viện trưởng (duyệt) và thư riêng «chờ Viện trưởng duyệt» cho các quản lý (theo dõi); duyệt → thư cho người xin («quản lý sẽ giao mẫu») và thư riêng «đã duyệt — cần giao mẫu» cho quản lý; từ chối → người xin và quản lý; giao / nhận lại → người xin. Tiêu đề thư ghi «[Ngân hàng kháng thể]».
+- **Thể tích (µL) của ống kháng thể:** xem mục «Thể tích (µL) của ống kháng thể» bên dưới.
+- **Luồng thư:** gửi yêu cầu → thư cho Viện trưởng (duyệt) và thư riêng «chờ Viện trưởng duyệt» cho các quản lý (theo dõi); duyệt → thư cho người yêu cầu («quản lý sẽ giao mẫu») và thư riêng «đã duyệt — cần giao mẫu» cho quản lý; từ chối → người yêu cầu và quản lý; giao / nhận lại → người yêu cầu. Tiêu đề thư ghi «[Ngân hàng kháng thể]».
 - **Không chuyển cấp khi quá hạn:** quản lý không duyệt được nên bộ quét quá hạn bỏ qua yêu cầu kháng thể; Viện trưởng vẫn là người duyệt.
 - **Không có người duyệt dự phòng:** quản lý và admin đều KHÔNG duyệt thay Viện trưởng. Chưa có Viện trưởng nào khác người gửi (chưa cấp vai trò, hoặc chính Viện trưởng muốn lấy mẫu) thì **không gửi được yêu cầu** (409; Viện trưởng lấy mẫu trực tiếp). Yêu cầu đã gửi mà Viện trưởng bị gỡ vai trò thì nằm chờ đến khi có Viện trưởng; người gửi hủy được.
 - **Lịch sử của mẫu** (`nhm_movements`, mở ở hộp thoại mẫu → Lịch sử) ghi đủ quá trình, mỗi dòng có người thao tác và giờ: gửi yêu cầu (người duyệt và quản lý theo dõi), duyệt hoặc từ chối (người duyệt, ghi chú, người được báo), hủy, giao (kèm người đã duyệt), nhận lại.
 - Bảng vai trò được dựng lại một lần khi khởi động để thêm cột phạm vi (giữ nguyên dữ liệu, id và quyền hiện có).
+
+## Thể tích (µL) của ống kháng thể
+
+Chỉ ở ngân hàng kháng thể. Quản lý ngân hàng kháng thể (và admin) ghi; ai thấy mẫu đều xem được số liệu và sổ. Code: `services/nganHangTeBaoKhangTheTheTich.js`, `routes/nganHangTeBaoKhangThe/theTich.js` (6 endpoint), giao / nhận lại trong `yeuCau.js`.
+
+- **Dữ liệu:** `nhm_tubes.the_tich_ul` (ban đầu) và `con_lai_ul` (còn lại), NULL = chưa ghi. **Sổ thể tích** `nhm_the_tich` ghi MỖI thay đổi (chỉ thêm, trigger chặn sửa / xóa): `ban_dau`, `dung` (số âm, kèm người dùng kháng thể và yêu cầu), `dieu_chinh` (đo lại, kèm lý do), `het`. Mỗi dòng cũng có một dòng trong lịch sử mẫu (`kt_ban_dau`, `kt_dung`, `kt_dieu_chinh`, `kt_het`) nên đọc theo trình tự cùng các bước gửi / duyệt / giao / nhận lại.
+- **Thêm ống kháng thể bắt buộc ghi thể tích ban đầu** (`the_tich_ul` ở `POST /tubes`, `/tubes/bulk`; mỗi ống cùng lô có thể tích đó). Ống cũ chưa ghi: quản lý bấm «Ghi thể tích ban đầu» một lần. Form kháng thể bỏ các ô Passage, số tế bào, thể tích mL.
+- **Số µL theo yêu cầu:** người yêu cầu ghi **số µL cần** (bắt buộc, không quá số còn lại nếu đã biết). Khi **giao**, quản lý ghi **số µL giao** (mặc định đúng số đã yêu cầu, không vượt số còn lại): trừ vào số còn lại, sổ ghi «dùng» kèm người nhận và số yêu cầu. Khi **nhận lại**, quản lý có thể nhập số còn lại đo được; khác số hệ thống tính thì ghi một dòng «đo lại» (lý do tự điền).
+- **Ghi ngoài yêu cầu:** «Ghi lần dùng» (số µL, người dùng, ghi chú), «Đo lại» (bắt buộc lý do), «Đánh dấu hết» (bắt buộc lý do; không làm được khi ống đang có yêu cầu chưa xong).
+- **Trạng thái:** Còn, **Sắp hết** (còn ≤ 20% thể tích ban đầu), **Hết**, Chưa ghi. Vào «sắp hết» hoặc «hết» thì **gửi thư cho quản lý ngân hàng kháng thể**. Tab «Ống sắp hết» ở «Việc cần xử lý» liệt kê các ống sắp hết và số ống chưa ghi thể tích.
+- **Khi ống HẾT** (giao hết số µL còn lại rồi nhận lại, dùng hết, đo lại về 0, hoặc đánh dấu hết): ống **bỏ khỏi kho** (trạng thái «đã hủy», nhả ô để đặt ống mới), sổ ghi dòng `het` kèm lý do (phần còn lại, nếu có, bị xóa sổ), lịch sử mẫu ghi «Ống hết». Ống và toàn bộ lịch sử vẫn tìm được ở «Tìm mẫu → mọi trạng thái»; không yêu cầu lấy được nữa. Nếu hết ngay lúc giao thì ống còn «đã lấy ra» cho tới khi quản lý nhận lại.
+- Phiếu in và thư ghi số µL yêu cầu / giao.
+- **Bỏ các trường của mẫu tế bào:** ống kháng thể không có Passage, số tế bào, thể tích (mL), ngày đông lạnh và nút «Rã đông» (form thêm / sửa và hộp thoại mẫu ẩn chúng).
+- **Chủ mẫu mặc định là AntibodyBank** (`nhm_tubes.chu_don_vi = 1`; không có loại chủ, nhóm, người sở hữu): ống kháng thể thường đắt nên do đơn vị mua và giữ. Chọn **«Cá nhân»** (mua bằng kinh phí cá nhân, xung công quỹ) thì khai loại chủ, nhóm và người sở hữu như ngân hàng tế bào (quản lý chọn được người sở hữu khác bằng `owner_user_id`). Quản lý đổi qua lại bằng `PATCH /tubes/:id { chu_don_vi }` (đổi sang đơn vị thì xóa chủ cá nhân; mọi đổi đều ghi lịch sử); «Chuyển chủ» sang một người thì thành của cá nhân đó. Ống kháng thể có sẵn từ bản trước được đánh dấu thuộc AntibodyBank một lần khi thêm cột.
 
 ## Ai làm được gì
 
@@ -258,12 +273,12 @@ lần xem danh sách có một dòng nhật ký. Email phải khớp đúng emai
 
 ## Yêu cầu lấy mẫu
 
-Người dùng bấm **«Xin lấy mẫu này»** ở một mẫu không phải của mình (cần ghi lý do). Mỗi mẫu chỉ có **một** yêu cầu đang xử lý;
-mẫu đang nghi mất hoặc không còn lưu kho thì không xin được.
+Người dùng bấm **«Yêu cầu lấy mẫu này»** ở một mẫu không phải của mình (cần ghi lý do). Mỗi mẫu chỉ có **một** yêu cầu đang xử lý;
+mẫu đang nghi mất hoặc không còn lưu kho thì không yêu cầu được.
 
 **Ai duyệt** (`services/nganHangTeBaoKhangTheYeuCau.js`, cột `nhm_yeu_cau.cap`):
 
-| Mẫu | Người duyệt | Nếu không có / chính là người xin |
+| Mẫu | Người duyệt | Nếu không có / chính là người yêu cầu |
 |---|---|---|
 | Ở thiết bị **có đơn vị quản lý** (Cellbank hoặc đơn vị khác) | người duyệt của đơn vị | quản lý module |
 | Ở thiết bị **ngân hàng kháng thể** (AntibodyBank) | **Viện trưởng** (chỉ Viện trưởng) | không gửi được yêu cầu; quản lý chỉ theo dõi và giao mẫu |
@@ -280,14 +295,14 @@ Sinh viên **không bao giờ** là người duyệt: người sắp ra trườn
   hiển thị thành vai trò hay nút riêng. Không ai duyệt được yêu cầu của chính mình, kể cả admin.
 - Sau khi **duyệt**, quản lý bấm **«Giao mẫu»** (mẫu chuyển «đã lấy ra») rồi **«Nhận lại mẫu»** khi trả. Mẫu được trả / rã đông / hủy
   / xóa thì yêu cầu liên quan tự đóng.
-- **Email** (gửi nền, SMTP hỏng không làm hỏng thao tác chính): yêu cầu mới → người duyệt; đã duyệt → người xin **và** quản lý module;
-  **từ chối → người xin và quản lý module** (người vừa xử lý không nhận lại thư); giao / nhận lại → người xin; quá hạn → quản lý. Thư duyệt / từ chối có liên kết tới phiếu in. Liên kết trong thư mở thẳng bảng «Việc cần xử lý» (cần đăng nhập — không có
+- **Email** (gửi nền, SMTP hỏng không làm hỏng thao tác chính): yêu cầu mới → người duyệt; đã duyệt → người yêu cầu **và** quản lý module;
+  **từ chối → người yêu cầu và quản lý module** (người vừa xử lý không nhận lại thư); giao / nhận lại → người yêu cầu; quá hạn → quản lý. Thư duyệt / từ chối có liên kết tới phiếu in. Liên kết trong thư mở thẳng bảng «Việc cần xử lý» (cần đăng nhập — không có
   liên kết duyệt không cần đăng nhập, vì trình quét thư có thể tự mở liên kết).
 - **Lịch sử xử lý** (tab «Lịch sử xử lý» ở «Việc cần xử lý», `GET /requests?view=done`): mọi yêu cầu đã duyệt / từ chối / giao / trả / hủy được lưu vĩnh viễn
-  (bảng `nhm_yeu_cau` không xóa). Người duyệt thấy những yêu cầu **mình đã xử lý**; quản lý module và admin thấy tất cả; người xin xem ở «Yêu cầu của tôi».
+  (bảng `nhm_yeu_cau` không xóa). Người duyệt thấy những yêu cầu **mình đã xử lý**; quản lý module và admin thấy tất cả; người yêu cầu xem ở «Yêu cầu của tôi».
 - **Phiếu yêu cầu in được** (`GET /requests/:id/print`, nút «In phiếu» trên mỗi yêu cầu; `services/nganHangTeBaoKhangThePhieu.js`): trang A4 gồm số phiếu `YC-000123`,
   người yêu cầu, mẫu (vị trí, chủ mẫu, nhóm), mục đích, kết quả. Yêu cầu **đã duyệt** có khung «ĐÃ ĐƯỢC DUYỆT» và đoạn **xác nhận** (đơn vị / người duyệt, giờ duyệt,
-  «xử lý thay» nếu có) kèm ba ô ký; **bị từ chối / đã hủy** ghi rõ không dùng để nhận mẫu; **đang chờ** ghi chưa có giá trị nhận mẫu. Người xin bấm «In phiếu / lưu PDF».
+  «xử lý thay» nếu có) kèm ba ô ký; **bị từ chối / đã hủy** ghi rõ không dùng để nhận mẫu; **đang chờ** ghi chưa có giá trị nhận mẫu. Người yêu cầu bấm «In phiếu / lưu PDF».
   Chỉ người gửi, người đã xử lý, người duyệt ở cấp hiện tại, quản lý module và admin xem được (người khác 403); mỗi lần in ghi nhật ký `request_print`; dữ liệu nhập được escape.
 - Mọi bước ghi vào lịch sử của mẫu: `yc_gui`, `yc_duyet`, `yc_tu_choi`, `yc_huy`, `yc_leo_thang`, `yc_dinh_tuyen_lai`, `giao`, `tra`.
 
@@ -310,7 +325,7 @@ Phần mềm không ngăn được hành vi ngoài đời; nó giúp **phát hi�
 - **Phát hiện:** chủ mẫu / trưởng nhóm / quản lý bấm «Báo không còn ở vị trí», hoặc quản lý **kiểm kê hộp** (bấm những mẫu không thấy; mẫu
   còn lại được ghi mốc `thay_luc` = «lần cuối thấy», lịch sử ghi `kiem_ke_thay` / `kiem_ke_khong_thay`).
 - Mẫu nghi mất mở một **vụ việc** (`nhm_vu_viec`): chủ mẫu, trưởng nhóm và quản lý nhận thư; mọi người thấy ở bảng «Mẫu nghi mất»;
-  mẫu vẫn giữ ô, không xin lấy được.
+  mẫu vẫn giữ ô, không yêu cầu lấy được.
 - Người đã lấy bấm **«Tôi đã lấy mẫu này»** → chủ mẫu (hoặc trưởng nhóm / quản lý) **xác nhận** (mẫu chuyển «đã lấy ra», tính một lần lấy
   không xin phép cho người đó — quản lý xem ở thẻ «Lấy không xin phép») hoặc **từ chối** (vụ việc mở lại). Người nhận không tự xác nhận.
 - Tìm thấy mẫu thì đóng vụ việc. Hết **hạn chờ người nhận** (mặc định 14 ngày, chỉnh được) không ai nhận, quản lý **chốt thất lạc** (mẫu thành «đã hủy», đóng

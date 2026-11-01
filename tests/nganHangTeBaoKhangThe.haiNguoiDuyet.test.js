@@ -49,7 +49,7 @@ test('Trưởng CIPP duyệt: yêu cầu đóng, Viện trưởng nhận kết q
   s.mails.length = 0;
   assert.equal((await s.api('cellbank', 'POST', `/requests/${r.json.id}/approve`)).status, 200);
   await cho();
-  assert.deepEqual(den('Đã duyệt yêu cầu'), ['bob@sci.edu.vn', 'manager@sci.edu.vn', 'truong@sci.edu.vn'], 'người xin, quản lý module và Viện trưởng (giám sát); người vừa duyệt không nhận lại');
+  assert.deepEqual(den('Đã duyệt yêu cầu'), ['bob@sci.edu.vn', 'manager@sci.edu.vn', 'truong@sci.edu.vn'], 'người yêu cầu, quản lý module và Viện trưởng (giám sát); người vừa duyệt không nhận lại');
   const vt = await s.api('truong', 'GET', '/requests?view=inbox');
   assert.ok(!vt.json.requests.some((y) => y.id === r.json.id), 'Viện trưởng không còn việc phải xử lý');
   assert.equal((await s.api('truong', 'POST', `/requests/${r.json.id}/approve`)).status, 409, 'đã có người xử lý');

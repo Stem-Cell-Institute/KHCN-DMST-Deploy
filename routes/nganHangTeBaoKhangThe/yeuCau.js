@@ -8,6 +8,8 @@
  *
  * Đường duyệt và quy tắc chuyển lên quản lý: services/nganHangTeBaoKhangTheYeuCau.js.
  * Quản lý module và admin luôn xử lý được; nếu không phải người duyệt ở cấp hiện tại thì là «xử lý thay» và BẮT BUỘC có lý do.
+ * Ngân hàng kháng thể tính theo µL: người yêu cầu ghi số µL cần (so_ul_yeu_cau), quản lý ghi số µL giao (so_ul_giao, trừ vào số còn lại của ống),
+ * khi nhận lại có thể đo lại số còn lại; ống hết thì bỏ khỏi kho (xem theTich.js, services/nganHangTeBaoKhangTheTheTich.js).
  * NGOẠI LỆ ngân hàng kháng thể: chỉ Viện trưởng duyệt (không ai xử lý thay, admin cũng không); quản lý ngân hàng kháng thể
  * chỉ THEO DÕI yêu cầu đang chờ (co_the_xu_ly = false, theo_doi = true) và giao / nhận lại mẫu sau khi duyệt.
  * Không ai duyệt được yêu cầu của chính mình. Mọi bước ghi vào lịch sử của mẫu; email chạy nền, không làm hỏng thao tác chính.
@@ -16,6 +18,7 @@
 const express = require('express');
 const { toInt, toStr, NGAN_HANG } = require('../../services/nganHangTeBaoKhangThe');
 const Phieu = require('../../services/nganHangTeBaoKhangThePhieu');
+const TT = require('../../services/nganHangTeBaoKhangTheTheTich');
 
 const CHU_KY_QUET_MS = 30 * 60 * 1000;
 
@@ -24,10 +27,10 @@ module.exports = function createYeuCauRouter(ctx) {
   const router = express.Router();
   const ten = (u) => (u ? u.fullname || u.email : '(không rõ)');
 
-  const SELECT = `SELECT y.*, t.name AS mau_ten, t.box_id, t.row_no, t.col_no, t.status AS mau_status, t.owner_user_id, t.chu_loai, t.nhom_id,
+  const SELECT = `SELECT y.*, t.name AS mau_ten, t.the_tich_ul, t.con_lai_ul, t.chu_don_vi, t.box_id, t.row_no, t.col_no, t.status AS mau_status, t.owner_user_id, t.chu_loai, t.nhom_id,
                          (SELECT ten FROM nhm_nhom WHERE id = t.nhom_id) AS nhom_ten,
                          (SELECT COALESCE(NULLIF(fullname, ''), email) FROM users WHERE id = y.nguoi_gui_id) AS nguoi_gui_ten,
-                         (SELECT COALESCE(NULLIF(fullname, ''), email) FROM users WHERE id = t.owner_user_id) AS chu_ten,
+                         CASE WHEN t.chu_don_vi = 1 THEN COALESCE((SELECT ten FROM nhm_don_vi WHERE ma = 'antibodybank'), 'AntibodyBank') ELSE (SELECT COALESCE(NULLIF(fullname, ''), email) FROM users WHERE id = t.owner_user_id) END AS chu_ten,
                          (SELECT COALESCE(NULLIF(fullname, ''), email) FROM users WHERE id = y.xu_ly_boi) AS xu_ly_ten
                   FROM nhm_yeu_cau y JOIN nhm_tubes t ON t.id = y.tube_id`;
 
@@ -70,6 +73,7 @@ module.exports = function createYeuCauRouter(ctx) {
       created_at: y.created_at,
       co_the_xu_ly: q.coTheXuLy, can_ly_do: q.coTheXuLy && q.thay, // xử lý thay: phải có lý do
       theo_doi: theoDoi,
+      khang_the: laKhangThe(y.box_id), so_ul_yeu_cau: y.so_ul_yeu_cau, so_ul_giao: y.so_ul_giao, con_lai_ul: y.con_lai_ul, the_tich_ul: y.the_tich_ul,
       co_the_in: duocXemPhieu(req, y, tube),
       co_the_huy: y.nguoi_gui_id === req.user.id && (y.trang_thai === 'cho_duyet' || y.trang_thai === 'da_duyet'),
       co_the_giao: canManage(req) && y.trang_thai === 'da_duyet',
@@ -87,15 +91,15 @@ module.exports = function createYeuCauRouter(ctx) {
     if (hs && hs.trang_thai === 'da_roi_di') return fail(res, 403, 'Hồ sơ của bạn được đánh dấu đã rời đi. Liên hệ quản lý module.');
     // mẫu ở thiết bị công khai là của mình thì tự «Lấy ra» (kèm thông tin thao tác); ở Cellbank thì chủ mẫu cũng phải gửi yêu cầu
     if (tube.owner_user_id === req.user.id && !(tube.box_id && hopTrongCellbank(tube.box_id))) return fail(res, 400, 'Đây là mẫu của bạn: dùng «Lấy ra» thay vì gửi yêu cầu.');
-    if (tube.status !== 'in_storage') return fail(res, 409, 'Chỉ xin được mẫu đang lưu kho.');
+    if (tube.status !== 'in_storage') return fail(res, 409, 'Chỉ yêu cầu được mẫu đang lưu kho.');
     if (db.prepare("SELECT 1 FROM nhm_vu_viec WHERE tube_id = ? AND trang_thai IN ('mo','cho_chu_xac_nhan')").get(id)) {
-      return fail(res, 409, 'Mẫu này đang bị báo nghi mất, chưa xin lấy được.');
+      return fail(res, 409, 'Mẫu này đang bị báo nghi mất, chưa yêu cầu lấy được.');
     }
     if (db.prepare("SELECT 1 FROM nhm_yeu_cau WHERE tube_id = ? AND trang_thai IN ('cho_duyet','da_duyet','da_giao')").get(id)) {
       return fail(res, 409, 'Mẫu này đang có một yêu cầu khác chưa xong.');
     }
     const lyDo = toStr((req.body || {}).ly_do, 500);
-    if (!lyDo) return fail(res, 400, 'Hãy ghi lý do / mục đích xin mẫu.');
+    if (!lyDo) return fail(res, 400, 'Hãy ghi lý do / mục đích yêu cầu mẫu.');
     const { cap, nguoiDuyet } = YeuCau.xacDinhCap(db, tube, req.user.id);
     const capTen = YeuCau.capTen(db, cap, tube.box_id);
     const khangThe = !!tube.box_id && laKhangThe(tube.box_id);
@@ -103,19 +107,27 @@ module.exports = function createYeuCauRouter(ctx) {
       const laVt = YeuCau.nguoiCoVaiTro(db, 'vien_truong').some((u) => u.id === req.user.id);
       return fail(res, 409, laVt ? 'Bạn là Viện trưởng và chưa có Viện trưởng nào khác để duyệt: hãy lấy mẫu trực tiếp thay vì gửi yêu cầu.' : 'Chưa có Viện trưởng để duyệt yêu cầu ở ngân hàng kháng thể. Hãy liên hệ quản lý ngân hàng kháng thể.');
     }
+    // ngân hàng kháng thể: tính theo µL — người yêu cầu ghi số µL cần
+    let soUlXin = null;
+    if (khangThe) {
+      const [x, loiUl] = TT.docUl((req.body || {}).so_ul, 'Số µL cần dùng');
+      if (loiUl) return fail(res, 400, loiUl);
+      if (tube.con_lai_ul != null && x > tube.con_lai_ul) return fail(res, 409, `Ống chỉ còn ${tube.con_lai_ul} µL, không yêu cầu được ${x} µL.`);
+      soUlXin = x;
+    }
     // ngân hàng kháng thể: quản lý được báo để theo dõi (không duyệt)
     const theoDoi = khangThe ? YeuCau.quanLyModule(db, 'khang_the').filter((u) => u.id !== req.user.id && !nguoiDuyet.some((d) => d.id === u.id)) : [];
     const han = YeuCau.sauNgay(YeuCau.layHan(db).PHAN_HOI_NGAY);
     const yeuCauId = db.transaction(() => {
       const info = db
-        .prepare('INSERT INTO nhm_yeu_cau (tube_id, nguoi_gui_id, ly_do, cap, han_phan_hoi) VALUES (?, ?, ?, ?, ?)')
-        .run(id, req.user.id, lyDo, cap, han);
+        .prepare('INSERT INTO nhm_yeu_cau (tube_id, nguoi_gui_id, ly_do, cap, han_phan_hoi, so_ul_yeu_cau) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(id, req.user.id, lyDo, cap, han, soUlXin);
       logMove(id, 'yc_gui', null, null, req.user.id,
-        `Yêu cầu #${info.lastInsertRowid} gửi ${capTen} duyệt${nguoiDuyet.length ? ' (' + dsTen(nguoiDuyet) + ')' : ''}${theoDoi.length ? '; quản lý theo dõi: ' + dsTen(theoDoi) : ''} — Lý do: ${lyDo}`);
+        `Yêu cầu #${info.lastInsertRowid}${soUlXin != null ? ` yêu cầu ${soUlXin} µL` : ''} gửi ${capTen} duyệt${nguoiDuyet.length ? ' (' + dsTen(nguoiDuyet) + ')' : ''}${theoDoi.length ? '; quản lý theo dõi: ' + dsTen(theoDoi) : ''} — Lý do: ${lyDo}`);
       return Number(info.lastInsertRowid);
     })();
     audit(req, 'request_create', `#${yeuCauId} mẫu id=${id} ${tube.name} → cấp ${cap}`);
-    const yc = { id: yeuCauId, cap, cap_ten: capTen, ly_do: lyDo };
+    const yc = { id: yeuCauId, cap, cap_ten: capTen, ly_do: lyDo, so_ul_yeu_cau: soUlXin };
     guiNen(thongBao.yeuCauMoi({ yc, tube, nguoiGui: nguoiDung(req.user.id), duongDan: moTaViTri(tube.box_id, tube.row_no, tube.col_no), nguoiDuyet }));
     res.status(201).json({ id: yeuCauId, cap, cap_ten: capTen, han_phan_hoi: han });
   });
@@ -181,7 +193,7 @@ module.exports = function createYeuCauRouter(ctx) {
       db.prepare(
         `UPDATE nhm_yeu_cau SET trang_thai = ?, xu_ly_boi = ?, xu_ly_luc = datetime('now'), xu_ly_thay = ?, ly_do_xu_ly = ?, updated_at = datetime('now') WHERE id = ?`
       ).run(ketQua === 'duyet' ? 'da_duyet' : 'tu_choi', req.user.id, q.thay ? 1 : 0, lyDo, y.id);
-      const baoQuanLy = laKhangThe(tube.box_id) ? '; báo người xin và quản lý: ' + dsTen(YeuCau.quanLyModule(db, 'khang_the')) : '; báo người xin';
+      const baoQuanLy = laKhangThe(tube.box_id) ? '; báo người yêu cầu và quản lý: ' + dsTen(YeuCau.quanLyModule(db, 'khang_the')) : '; báo người yêu cầu';
       logMove(y.tube_id, ketQua === 'duyet' ? 'yc_duyet' : 'yc_tu_choi', null, null, req.user.id,
         `${ketQua === 'duyet' ? 'Duyệt' : 'Từ chối'} yêu cầu #${y.id} của ${y.nguoi_gui_ten}${q.thay ? ` — xử lý thay ${YeuCau.capTen(db, y.cap, tube.box_id)}` : ''}${lyDo ? ': ' + lyDo : ''}${baoQuanLy}`);
     })();
@@ -198,7 +210,7 @@ module.exports = function createYeuCauRouter(ctx) {
     res.json({ ok: true, trang_thai: ketQua === 'duyet' ? 'da_duyet' : 'tu_choi', xu_ly_thay: q.thay });
   }
 
-  // Phiếu in được (HTML A4): nội dung yêu cầu + kết quả duyệt, để người xin in / lưu PDF.
+  // Phiếu in được (HTML A4): nội dung yêu cầu + kết quả duyệt, để người yêu cầu in / lưu PDF.
   router.get('/requests/:id/print', (req, res) => {
     const y = layYeuCau(req, res);
     if (!y) return;
@@ -211,7 +223,7 @@ module.exports = function createYeuCauRouter(ctx) {
     res.type('html').send(
       Phieu.dungPhieu({
         yc: y, tube: { ...tube, loai_mau: loai && loai.name }, viTri: moTaViTri(tube.box_id, tube.row_no, tube.col_no),
-        nguoiGui: nguoiDung(y.nguoi_gui_id), nguoiXuLy: nguoiDung(y.xu_ly_boi), chuMau: nguoiDung(tube.owner_user_id), nhomTen: y.nhom_ten,
+        nguoiGui: nguoiDung(y.nguoi_gui_id), nguoiXuLy: nguoiDung(y.xu_ly_boi), chuMau: tube.chu_don_vi ? { fullname: (YeuCau.donViCuaHop(db, tube.box_id) || {}).ten || 'AntibodyBank' } : nguoiDung(tube.owner_user_id), nhomTen: y.nhom_ten,
         capTen: YeuCau.capTen(db, y.cap, tube.box_id), donViTen: (YeuCau.donViCuaHop(db, tube.box_id) || {}).ten || null, xuLyThay: thay, nganHangTen: NGAN_HANG[YeuCau.nganHangCuaHop(db, tube.box_id)], inLuc: Phieu.gioVn(YeuCau.bayGio()),
       })
     );
@@ -233,7 +245,7 @@ module.exports = function createYeuCauRouter(ctx) {
     res.json({ ok: true });
   });
 
-  // Quản lý giao mẫu cho người xin (mẫu chuyển «đã lấy ra»), rồi nhận lại
+  // Quản lý giao mẫu cho người yêu cầu (mẫu chuyển «đã lấy ra»), rồi nhận lại
   router.post('/requests/:id/deliver', (req, res) => {
     if (!canManage(req)) return fail(res, 403, 'Chỉ Admin hoặc Quản lý module mới giao mẫu.');
     const y = layYeuCau(req, res);
@@ -241,14 +253,28 @@ module.exports = function createYeuCauRouter(ctx) {
     if (y.trang_thai !== 'da_duyet') return fail(res, 409, 'Chỉ giao được mẫu của yêu cầu đã duyệt.');
     const tube = taiMau(y.tube_id);
     if (tube.status !== 'in_storage') return fail(res, 409, 'Mẫu không còn ở trạng thái đang lưu kho.');
+    // ngân hàng kháng thể: giao bao nhiêu µL (mặc định đúng số đã yêu cầu), trừ vào số còn lại của ống
+    const khangThe = laKhangThe(tube.box_id);
+    let ul = null;
+    if (khangThe) {
+      if (tube.con_lai_ul == null) return fail(res, 409, 'Ống chưa ghi thể tích: hãy ghi thể tích ban đầu (µL) của ống trước khi giao.');
+      const [x, loiUl] = TT.docUl((req.body || {}).so_ul != null && (req.body || {}).so_ul !== '' ? req.body.so_ul : y.so_ul_yeu_cau, 'Số µL giao');
+      if (loiUl) return fail(res, 400, loiUl);
+      if (x > tube.con_lai_ul) return fail(res, 409, `Ống chỉ còn ${tube.con_lai_ul} µL, không giao được ${x} µL.`);
+      ul = x;
+    }
+    let conLai = null;
     db.transaction(() => {
       db.prepare("UPDATE nhm_tubes SET status = 'checked_out', updated_at = datetime('now') WHERE id = ?").run(y.tube_id);
-      db.prepare("UPDATE nhm_yeu_cau SET trang_thai = 'da_giao', updated_at = datetime('now') WHERE id = ?").run(y.id);
-      logMove(y.tube_id, 'giao', tube.box_id ? tube : null, null, req.user.id, `Giao cho ${y.nguoi_gui_ten} (yêu cầu #${y.id}${y.xu_ly_ten ? ', ' + y.xu_ly_ten + ' đã duyệt' : ''})`);
+      db.prepare("UPDATE nhm_yeu_cau SET trang_thai = 'da_giao', so_ul_giao = ?, updated_at = datetime('now') WHERE id = ?").run(ul, y.id);
+      if (ul != null) conLai = ctx.theTich.dung(tube, ul, { nguoiDungId: y.nguoi_gui_id, yeuCauId: y.id, userId: req.user.id });
+      logMove(y.tube_id, 'giao', tube.box_id ? tube : null, null, req.user.id,
+        `Giao cho ${y.nguoi_gui_ten} (yêu cầu #${y.id}${y.xu_ly_ten ? ', ' + y.xu_ly_ten + ' đã duyệt' : ''})${ul != null ? ` — ${ul} µL, còn ${conLai}/${tube.the_tich_ul} µL${conLai <= 0 ? ' (hết: ống bỏ khỏi kho khi nhận lại)' : ''}` : ''}`);
     })();
-    audit(req, 'request_deliver', `#${y.id} mẫu id=${y.tube_id} → ${y.nguoi_gui_ten}`);
-    guiNen(thongBao.yeuCauGiaoTra({ tube, nguoiGui: nguoiDung(y.nguoi_gui_id), nguoiXuLy: nguoiDung(req.user.id), duongDan: moTaViTri(tube.box_id, tube.row_no, tube.col_no), hanhDong: 'giao' }));
-    res.json({ ok: true });
+    audit(req, 'request_deliver', `#${y.id} mẫu id=${y.tube_id} → ${y.nguoi_gui_ten}${ul != null ? ` ${ul} µL` : ''}`);
+    guiNen(thongBao.yeuCauGiaoTra({ tube, nguoiGui: nguoiDung(y.nguoi_gui_id), nguoiXuLy: nguoiDung(req.user.id), duongDan: moTaViTri(tube.box_id, tube.row_no, tube.col_no), hanhDong: 'giao', soUl: ul, conLai }));
+    if (ul != null) ctx.theTich.canhBao(tube.id, tube, { ...tube, con_lai_ul: conLai });
+    res.json({ ok: true, con_lai_ul: conLai });
   });
 
   router.post('/requests/:id/return', (req, res) => {
@@ -257,14 +283,32 @@ module.exports = function createYeuCauRouter(ctx) {
     if (!y) return;
     if (y.trang_thai !== 'da_giao') return fail(res, 409, 'Chỉ nhận lại được mẫu đang giao.');
     const tube = taiMau(y.tube_id);
+    // ngân hàng kháng thể: có thể đo lại số còn lại khi nhận ống về; còn 0 thì ống hết và bỏ khỏi kho
+    let moi = null;
+    const bd = req.body || {};
+    if (laKhangThe(tube.box_id) && tube.con_lai_ul != null && bd.con_lai_ul != null && bd.con_lai_ul !== '') {
+      const n = Number(String(bd.con_lai_ul).trim().replace(',', '.'));
+      if (!Number.isFinite(n) || n < 0) return fail(res, 400, 'Số còn lại phải là số không âm (µL).');
+      moi = TT.lamTron(n);
+      if (moi > tube.the_tich_ul) return fail(res, 400, `Số còn lại không được lớn hơn thể tích ban đầu (${tube.the_tich_ul} µL).`);
+    }
+    let ong = tube;
+    let het = false;
     db.transaction(() => {
+      if (moi != null && moi !== tube.con_lai_ul) {
+        ctx.theTich.dieuChinh(tube, moi, `Đo lại khi nhận lại (yêu cầu #${y.id})`, req.user.id);
+        ong = { ...tube, con_lai_ul: moi };
+      }
+      het = laKhangThe(tube.box_id) && ong.con_lai_ul != null && ong.con_lai_ul <= 0;
       db.prepare("UPDATE nhm_tubes SET status = 'in_storage', updated_at = datetime('now') WHERE id = ?").run(y.tube_id);
       db.prepare("UPDATE nhm_yeu_cau SET trang_thai = 'da_tra', updated_at = datetime('now') WHERE id = ?").run(y.id);
-      logMove(y.tube_id, 'tra', null, tube.box_id ? tube : null, req.user.id, `Nhận lại từ ${y.nguoi_gui_ten} (yêu cầu #${y.id})`);
+      logMove(y.tube_id, 'tra', null, tube.box_id ? tube : null, req.user.id, `Nhận lại từ ${y.nguoi_gui_ten} (yêu cầu #${y.id})${ong.con_lai_ul != null ? `; còn ${ong.con_lai_ul}/${tube.the_tich_ul} µL` : ''}`);
+      if (het) ctx.theTich.danhDauHet({ ...ong, status: 'in_storage' }, `dùng hết (yêu cầu #${y.id})`, req.user.id);
     })();
-    audit(req, 'request_return', `#${y.id} mẫu id=${y.tube_id}`);
-    guiNen(thongBao.yeuCauGiaoTra({ tube, nguoiGui: nguoiDung(y.nguoi_gui_id), nguoiXuLy: nguoiDung(req.user.id), duongDan: moTaViTri(tube.box_id, tube.row_no, tube.col_no), hanhDong: 'tra' }));
-    res.json({ ok: true });
+    audit(req, 'request_return', `#${y.id} mẫu id=${y.tube_id}${het ? ' (ống hết)' : ''}`);
+    guiNen(thongBao.yeuCauGiaoTra({ tube, nguoiGui: nguoiDung(y.nguoi_gui_id), nguoiXuLy: nguoiDung(req.user.id), duongDan: moTaViTri(tube.box_id, tube.row_no, tube.col_no), hanhDong: 'tra', het, conLai: ong.con_lai_ul }));
+    if (ong !== tube) ctx.theTich.canhBao(tube.id, tube, ong);
+    res.json({ ok: true, het, con_lai_ul: ong.con_lai_ul });
   });
 
   // ---------- tự chuyển cấp khi quá hạn, và định tuyến lại khi người duyệt rời đi ----------

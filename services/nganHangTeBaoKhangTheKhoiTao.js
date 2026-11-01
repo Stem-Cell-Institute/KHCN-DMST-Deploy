@@ -44,6 +44,11 @@ const COT_THEM_SAU = [
   ['nhm_tubes', 'nhom_id', 'INTEGER REFERENCES nhm_nhom(id)'],
   ['nhm_movements', 'user_label', 'TEXT'],
   ['nhm_tubes', 'thay_luc', 'TEXT'],
+  ['nhm_tubes', 'the_tich_ul', 'REAL'],
+  ['nhm_tubes', 'con_lai_ul', 'REAL'],
+  ['nhm_tubes', 'chu_don_vi', 'INTEGER NOT NULL DEFAULT 0'],
+  ['nhm_yeu_cau', 'so_ul_yeu_cau', 'REAL'],
+  ['nhm_yeu_cau', 'so_ul_giao', 'REAL'],
 ];
 
 function themCotNeuThieu(db) {
@@ -51,7 +56,14 @@ function themCotNeuThieu(db) {
     const coBang = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(bang);
     if (!coBang) continue; // DB mới: CREATE TABLE trong file schema đã có đủ cột
     const dacCot = db.prepare(`PRAGMA table_info(${bang})`).all().some((c) => c.name === cot);
-    if (!dacCot) db.exec(`ALTER TABLE ${bang} ADD COLUMN ${cot} ${ddl}`);
+    if (!dacCot) {
+      db.exec(`ALTER TABLE ${bang} ADD COLUMN ${cot} ${ddl}`);
+      // vừa thêm cột «chủ mẫu là đơn vị»: ống kháng thể đã có thuộc AntibodyBank (chỉ chạy một lần, lúc thêm cột)
+      if (bang === 'nhm_tubes' && cot === 'chu_don_vi') {
+        db.exec(`WITH RECURSIVE g(id, goc) AS (SELECT id, id FROM nhm_containers WHERE parent_id IS NULL UNION ALL SELECT c.id, g.goc FROM nhm_containers c JOIN g ON c.parent_id = g.id)
+          UPDATE nhm_tubes SET chu_don_vi = 1 WHERE box_id IN (SELECT b.id FROM nhm_boxes b JOIN g ON g.id = b.container_id JOIN nhm_containers r ON r.id = g.goc WHERE r.ngan_hang = 'khang_the')`);
+      }
+    }
   }
 }
 

@@ -88,7 +88,7 @@ test('thiết bị có đơn vị: ô ký giao mẫu ghi «Quản lý <đơn v�
   assert.match((await phieu('bob', r2.json.id)).text, /Quản lý module giao mẫu/);
 });
 
-test('lịch sử xử lý: người duyệt thấy những gì mình đã xử lý, quản lý thấy tất cả, người xin chỉ thấy trong «của tôi»', async () => {
+test('lịch sử xử lý: người duyệt thấy những gì mình đã xử lý, quản lý thấy tất cả, người yêu cầu chỉ thấy trong «của tôi»', async () => {
   const lichSu = async (user) => (await s.api(user, 'GET', '/requests?view=done')).json.requests;
   const cuaAlice = await lichSu('alice');
   assert.ok(cuaAlice.length >= 2, 'alice đã duyệt một và từ chối một');
@@ -97,7 +97,7 @@ test('lịch sử xử lý: người duyệt thấy những gì mình đã xử 
   assert.ok(cuaAlice.every((y) => y.co_the_in === true));
   assert.equal((await lichSu('bob')).length, 0, 'bob chỉ gửi yêu cầu, chưa xử lý yêu cầu nào');
   const mine = (await s.api('bob', 'GET', '/requests?view=mine')).json.requests;
-  assert.ok(mine.length >= 3 && mine.every((y) => y.co_the_in === true), 'người xin in được phiếu của mình');
+  assert.ok(mine.length >= 3 && mine.every((y) => y.co_the_in === true), 'người yêu cầu in được phiếu của mình');
   const tatCa = await lichSu('manager');
   assert.ok(tatCa.length >= cuaAlice.length);
   assert.equal((await s.api(null, 'GET', '/requests?view=done')).status, 401);

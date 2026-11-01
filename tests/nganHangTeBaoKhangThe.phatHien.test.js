@@ -197,7 +197,7 @@ test('báo mất: chủ mẫu, trưởng nhóm hoặc quản lý; mẫu phải �
   assert.equal((await s.api('alice', 'POST', `/tubes/${co}/report-missing`, {})).status, 409, 'mẫu đã lấy ra rồi');
 });
 
-test('mẫu đang nghi mất không xin lấy được', async () => {
+test('mẫu đang nghi mất không yêu cầu lấy được', async () => {
   const r = await s.api('bob', 'POST', `/tubes/${s.mauMat}/requests`, { ly_do: 'Cần dùng' });
   assert.equal(r.status, 409);
   assert.match(r.json.message, /nghi mất/);

@@ -28,7 +28,7 @@ test.before(async () => {
 });
 test.after(() => s.dong());
 
-test('gửi yêu cầu: cần lý do, không xin mẫu của mình, chỉ xin mẫu đang lưu kho, mỗi mẫu một yêu cầu đang xử lý', async () => {
+test('gửi yêu cầu: cần lý do, không yêu cầu mẫu của mình, chỉ yêu cầu mẫu đang lưu kho, mỗi mẫu một yêu cầu đang xử lý', async () => {
   const m = (await them('alice', kho.box, 1, 1)).json.id;
   assert.equal((await s.api('bob', 'POST', `/tubes/${m}/requests`, {})).status, 400);
   assert.equal((await xin('alice', m)).status, 400, 'mẫu của chính mình');
@@ -148,7 +148,7 @@ test('quản lý không duyệt được yêu cầu của chính mình', async (
   assert.equal((await s.api('admin', 'POST', `/requests/${r.json.id}/approve`, { ly_do: 'Admin duyệt cho quản lý' })).status, 200);
 });
 
-test('giao mẫu rồi nhận lại: chỉ quản lý; mẫu chuyển «đã lấy ra», lịch sử ghi giao / trả; thư cho người xin', async () => {
+test('giao mẫu rồi nhận lại: chỉ quản lý; mẫu chuyển «đã lấy ra», lịch sử ghi giao / trả; thư cho người yêu cầu', async () => {
   const m = s.mauAlice; // yêu cầu s.yc đã duyệt ở trên
   assert.equal((await s.api('bob', 'POST', `/requests/${s.yc}/deliver`)).status, 403);
   assert.equal((await s.api('alice', 'POST', `/requests/${s.yc}/deliver`)).status, 403);

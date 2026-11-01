@@ -84,7 +84,7 @@ test('truy cập trực tiếp theo id: 404 như không tồn tại; không ghi 
     assert.equal((await s.api(u, 'GET', `/tubes/${mau}/history`)).status, 404, `${u} đọc lịch sử`);
     assert.equal((await s.api(u, 'PATCH', `/containers/${thietBi}`, { name: 'x' })).status, 404, `${u} sửa thiết bị`);
     assert.equal((await s.api(u, 'DELETE', `/boxes/${hop}`)).status, 404, `${u} xóa hộp`);
-    assert.equal((await s.api(u, 'POST', `/tubes/${mau}/requests`, { ly_do: 'xin thử' })).status, 404, `${u} xin lấy mẫu`);
+    assert.equal((await s.api(u, 'POST', `/tubes/${mau}/requests`, { ly_do: 'xin thử' })).status, 404, `${u} yêu cầu lấy mẫu`);
     assert.equal((await s.api(u, 'POST', '/tubes', { box_id: hop, row_no: 2, col_no: 2, name: 'chen vào', chu_loai: 'can_bo' })).status, 404, `${u} thêm mẫu vào hộp`);
     assert.equal((await s.api(u, 'POST', '/boxes', { container_id: rack, template_id: kho.tpl99 })).status, 404, `${u} thêm hộp vào Rack`);
     assert.equal((await s.api(u, 'POST', '/containers', { name: 'chen', type_id: gia, parent_id: thietBi })).status, 404, `${u} thêm Rack vào thiết bị`);

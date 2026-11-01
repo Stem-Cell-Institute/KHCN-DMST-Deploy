@@ -42,8 +42,8 @@ test('thiết bị tạo ở ngân hàng kháng thể: tế bào không thấy; 
   assert.equal(hop.status, 201);
   hopKt = hop.json.ids[0];
   // thiết bị kháng thể thuộc AntibodyBank (không có Public): người thường không tự thêm mẫu, quản lý thêm
-  assert.equal((await s.api('alice', 'POST', '/tubes', { box_id: hopKt, row_no: 1, col_no: 1, name: 'Kháng thể anti-CD34', chu_loai: 'can_bo' }, KT)).status, 403);
-  const m = await s.api('manager', 'POST', '/tubes', { box_id: hopKt, row_no: 1, col_no: 1, name: 'Kháng thể anti-CD34', chu_loai: 'can_bo' }, KT);
+  assert.equal((await s.api('alice', 'POST', '/tubes', { box_id: hopKt, row_no: 1, col_no: 1, name: 'Kháng thể anti-CD34', chu_loai: 'can_bo', the_tich_ul: 200 }, KT)).status, 403);
+  const m = await s.api('manager', 'POST', '/tubes', { box_id: hopKt, row_no: 1, col_no: 1, name: 'Kháng thể anti-CD34', chu_loai: 'can_bo', the_tich_ul: 200 }, KT);
   assert.equal(m.status, 201);
   mauKt = m.json.id;
 
@@ -120,7 +120,7 @@ test('yêu cầu ở ngân hàng kháng thể: chỉ Viện trưởng duyệt, q
   const doi = () => new Promise((r) => setTimeout(r, 60));
   const toi = (email) => s.mails.filter((m) => m.to === email);
   // chưa có Viện trưởng: không gửi được yêu cầu (không chuyển cho quản lý hay admin)
-  const r0 = await s.api('bob', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Chưa có Viện trưởng' }, KT);
+  const r0 = await s.api('bob', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Chưa có Viện trưởng', so_ul: 20 }, KT);
   assert.equal(r0.status, 409);
   assert.match(r0.json.message, /Chưa có Viện trưởng/);
 
@@ -128,7 +128,7 @@ test('yêu cầu ở ngân hàng kháng thể: chỉ Viện trưởng duyệt, q
   assert.equal((await s.api('admin', 'POST', '/roles', { user_id: 6, vai_tro: 'vien_truong' })).status, 201);
   assert.equal((await s.api('truong', 'POST', '/containers', { name: 'Tủ riêng KT', type_id: kho.type, rieng: true }, KT)).status, 400, 'Viện trưởng cũng không tạo thiết bị riêng ở ngân hàng kháng thể');
   s.mails.length = 0;
-  const r1 = await s.api('bob', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Cần dùng' }, KT);
+  const r1 = await s.api('bob', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Cần dùng', so_ul: 20 }, KT);
   assert.equal(r1.status, 201);
   assert.equal(r1.json.cap, 'truong_cellbank');
   assert.equal(r1.json.cap_ten, 'Viện trưởng');
@@ -146,7 +146,7 @@ test('yêu cầu ở ngân hàng kháng thể: chỉ Viện trưởng duyệt, q
   assert.equal(hop.co_the_xu_ly, false);
   assert.equal(hop.co_the_giao, false);
   assert.equal((await s.api('manager', 'POST', `/requests/${r1.json.id}/approve`, {}, KT)).status, 403);
-  assert.equal((await s.api('manager', 'POST', `/requests/${r1.json.id}/reject`, { ly_do: 'không' }, KT)).status, 403);
+  assert.equal((await s.api('manager', 'POST', `/requests/${r1.json.id}/reject`, { ly_do: 'không', so_ul: 20 }, KT)).status, 403);
   assert.equal((await s.api('manager', 'POST', `/requests/${r1.json.id}/deliver`, null, KT)).status, 409, 'chưa duyệt thì chưa giao');
   const choTruong = (await s.api('truong', 'GET', '/requests?view=inbox', null, KT)).json.requests.find((y) => y.id === r1.json.id);
   assert.equal(choTruong.co_the_xu_ly, true);
@@ -156,7 +156,7 @@ test('yêu cầu ở ngân hàng kháng thể: chỉ Viện trưởng duyệt, q
   assert.deepEqual(await s.router.quetQuaHan(Date.now() + 10 * 86400000), { leoThang: 0 });
   assert.equal((await s.api('truong', 'GET', '/requests?view=inbox', null, KT)).json.requests.find((y) => y.id === r1.json.id).cap, 'truong_cellbank');
 
-  // Viện trưởng duyệt → thư cho người xin và quản lý (quản lý nhận thư riêng «cần giao mẫu»)
+  // Viện trưởng duyệt → thư cho người yêu cầu và quản lý (quản lý nhận thư riêng «cần giao mẫu»)
   s.mails.length = 0;
   assert.equal((await s.api('truong', 'POST', `/requests/${r1.json.id}/approve`, {}, KT)).status, 200);
   await doi();
@@ -175,22 +175,22 @@ test('yêu cầu ở ngân hàng kháng thể: chỉ Viện trưởng duyệt, q
   assert.equal((await s.api('manager', 'POST', `/requests/${r1.json.id}/deliver`, null, KT)).status, 200);
   assert.equal((await s.api('manager', 'POST', `/requests/${r1.json.id}/return`, null, KT)).status, 200);
 
-  // Viện trưởng từ chối: người xin và quản lý được báo
-  const r2 = await s.api('bob', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Lần hai' }, KT);
+  // Viện trưởng từ chối: người yêu cầu và quản lý được báo
+  const r2 = await s.api('bob', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Lần hai', so_ul: 20 }, KT);
   await doi();
   s.mails.length = 0;
-  assert.equal((await s.api('truong', 'POST', `/requests/${r2.json.id}/reject`, { ly_do: 'Chưa cần' }, KT)).status, 200);
+  assert.equal((await s.api('truong', 'POST', `/requests/${r2.json.id}/reject`, { ly_do: 'Chưa cần', so_ul: 20 }, KT)).status, 200);
   await doi();
   assert.equal(toi('bob@sci.edu.vn').length, 1);
   assert.equal(toi('manager@sci.edu.vn').length, 1);
 
   // admin cũng không duyệt thay Viện trưởng
-  const r4 = await s.api('bob', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Admin thử duyệt' }, KT);
+  const r4 = await s.api('bob', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Admin thử duyệt', so_ul: 20 }, KT);
   assert.equal((await s.api('admin', 'POST', `/requests/${r4.json.id}/approve`, {}, KT)).status, 403);
   assert.equal((await s.api('bob', 'POST', `/requests/${r4.json.id}/cancel`, null, KT)).status, 200);
 
   // Viện trưởng không có Viện trưởng nào khác duyệt thì không gửi yêu cầu cho chính mình (lấy mẫu trực tiếp)
-  const r3 = await s.api('truong', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Viện trưởng tự xin' }, KT);
+  const r3 = await s.api('truong', 'POST', `/tubes/${mauKt}/requests`, { ly_do: 'Viện trưởng tự xin', so_ul: 20 }, KT);
   assert.equal(r3.status, 409);
   assert.match(r3.json.message, /lấy mẫu trực tiếp/);
 
@@ -204,7 +204,7 @@ test('yêu cầu ở ngân hàng kháng thể: chỉ Viện trưởng duyệt, q
   assert.match(gui.note, /Lý do: Cần dùng/);
   const duyet = ls.find((x) => x.action === 'yc_duyet');
   assert.equal(duyet.user_id, 6);
-  assert.match(duyet.note, /Duyệt yêu cầu #\d+ của bob@sci\.edu\.vn.*báo người xin và quản lý: .*manager@sci\.edu\.vn/);
+  assert.match(duyet.note, /Duyệt yêu cầu #\d+ của bob@sci\.edu\.vn.*báo người yêu cầu và quản lý: .*manager@sci\.edu\.vn/);
   assert.match(ls.find((x) => x.action === 'giao').note, /Giao cho bob@sci\.edu\.vn \(yêu cầu #\d+, truong@sci\.edu\.vn đã duyệt\)/);
   assert.equal(ls.find((x) => x.action === 'giao').user_id, 2, 'quản lý thực thi');
   assert.match(ls.find((x) => x.action === 'yc_tu_choi').note, /Từ chối yêu cầu .*Chưa cần/);

@@ -2,12 +2,16 @@
 
 /**
  * Ngân hàng Tế bào & Kháng thể — mẫu lưu trữ (ống đông lạnh, kháng thể, sinh phẩm...): thêm, sửa, di chuyển,
- * xóa, lịch sử. 5 endpoint. Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js).
+ * xóa, lịch sử. 5 endpoint. Ống kháng thể phải ghi thể tích ban đầu (µL) khi thêm; sổ thể tích: theTich.js. Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js).
+ *
+ * Ống KHÁNG THỂ: chủ mẫu mặc định là đơn vị (AntibodyBank, chu_don_vi = 1; không loại chủ / nhóm / người sở hữu); chỉ khi mua bằng kinh phí
+ * cá nhân mới ghi cá nhân (chu_don_vi = 0, kèm loại chủ, nhóm và người sở hữu như ngân hàng tế bào). Quản lý chuyển qua lại bằng PATCH chu_don_vi.
  *
  * Phân quyền (chủ ý): mọi người đã đăng nhập được THÊM mẫu; sửa / di chuyển / xóa chỉ chủ sở hữu hoặc quản lý.
  */
 
 const express = require('express');
+const TT = require('../../services/nganHangTeBaoKhangTheTheTich');
 const {
   HOLDING, LOAI_CHU, LOAI_CHU_VN, toInt, toStr, parseSo, parseNgay, isUniqueError, layThayDoi, moTaThayDoi, thayDoiJson,
 } = require('../../services/nganHangTeBaoKhangThe');
@@ -112,20 +116,47 @@ module.exports = function createMauRouter(ctx) {
     return false;
   }
 
-  /** Thêm một mẫu vào ô và ghi dòng «Nhập kho» vào lịch sử. Gọi trong transaction. */
-  function insertTube(t, chu, boxId, row, col, userId) {
+  /**
+   * Chủ mẫu của ống kháng thể: mặc định là đơn vị. `chu_don_vi: false` → của cá nhân: loại chủ + nhóm như ngân hàng tế bào, người sở hữu là
+   * người thêm (quản lý chọn người khác bằng owner_user_id, vd cá nhân đã mua giúp rồi bàn giao).
+   */
+  function xacDinhChuKhangThe(req, body) {
+    if (body.chu_don_vi !== false) return { donVi: true, chu_loai: null, nhom_id: null };
+    const chu = xacDinhChuMau(req, body);
+    if (chu.loi) return chu;
+    let ownerId = null;
+    if (body.owner_user_id != null && body.owner_user_id !== '') {
+      if (!canManage(req)) return { status: 403, loi: 'Chỉ quản lý mới chọn người sở hữu khác.' };
+      const u = toInt(body.owner_user_id) && db.prepare('SELECT id FROM users WHERE id = ? AND COALESCE(is_banned, 0) = 0').get(toInt(body.owner_user_id));
+      if (!u) return { status: 400, loi: 'Người sở hữu không tồn tại.' };
+      ownerId = u.id;
+    }
+    return { ...chu, ownerId };
+  }
+  const xacDinhChu = (req, body, boxId) => (ctx.YeuCau.nganHangCuaHop(db, boxId) === 'khang_the' ? xacDinhChuKhangThe(req, body) : xacDinhChuMau(req, body));
+
+  /** Ống kháng thể (hộp thuộc ngân hàng kháng thể) phải có thể tích ban đầu (µL). Trả [µL hoặc null, lỗi]. */
+  function docTheTichBanDau(body, boxId) {
+    if (ctx.YeuCau.nganHangCuaHop(db, boxId) !== 'khang_the') return [null, null];
+    const [ul, loi] = TT.docUl(body.the_tich_ul, 'Thể tích ban đầu (µL)');
+    return [ul, loi ? 'Ống kháng thể phải ghi thể tích ban đầu. ' + loi : null];
+  }
+
+  /** Thêm một mẫu vào ô và ghi dòng «Nhập kho» vào lịch sử. Gọi trong transaction. `ul`: thể tích ban đầu của ống kháng thể. */
+  function insertTube(t, chu, boxId, row, col, userId, ul) {
     const info = db
       .prepare(
         `INSERT INTO nhm_tubes (box_id, row_no, col_no, sample_type_id, name, passage, cell_count, volume_ml,
-                                freeze_date, owner_user_id, project, notes, created_by, chu_loai, nhom_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                                freeze_date, owner_user_id, project, notes, created_by, chu_loai, nhom_id, chu_don_vi)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         boxId, row, col, t.sample_type_id ?? null, t.name, t.passage ?? null, t.cell_count ?? null,
-        t.volume_ml ?? null, t.freeze_date ?? null, userId, t.project ?? null, t.notes ?? null, userId, chu.chu_loai, chu.nhom_id
+        t.volume_ml ?? null, t.freeze_date ?? null, chu.donVi ? null : chu.ownerId || userId, t.project ?? null, t.notes ?? null, userId, chu.chu_loai, chu.nhom_id, chu.donVi ? 1 : 0
       );
     const tubeId = Number(info.lastInsertRowid);
     logMove(tubeId, 'store', null, { box_id: boxId, row_no: row, col_no: col }, userId, null);
+    if (ul != null) ctx.theTich.datBanDau(tubeId, ul, userId);
     // sinh viên mới kích hoạt chưa có nhóm: nhóm chọn ở mẫu đầu tiên trở thành nhóm trong hồ sơ
     if (chu.chu_loai === 'sinh_vien' && chu.nhom_id) {
       db.prepare("UPDATE nhm_ho_so SET nhom_id = ?, updated_at = datetime('now') WHERE user_id = ? AND loai = 'sinh_vien' AND nhom_id IS NULL").run(chu.nhom_id, userId);
@@ -150,9 +181,11 @@ module.exports = function createMauRouter(ctx) {
     }
     const first = checkPosition(boxId, row, col);
     if (first) return fail(res, first.status, first.message);
-    const chu = xacDinhChuMau(req, body);
+    const chu = xacDinhChu(req, body, boxId);
     if (chu.loi) return fail(res, chu.status, chu.loi);
     if (biChanDonVi(req, boxId)) return fail(res, 403, loiThem(boxId));
+    const [ul, loiUl] = docTheTichBanDau(body, boxId);
+    if (loiUl) return fail(res, 400, loiUl);
     const hop = db.prepare('SELECT rows, cols FROM nhm_boxes WHERE id = ?').get(boxId);
     const oCan = [];
     for (let i = 0, r = row, c = col; i < count; i++) {
@@ -165,7 +198,7 @@ module.exports = function createMauRouter(ctx) {
     }
     try {
       const ids = db.transaction(() =>
-        oCan.map(([r, c]) => insertTube(t, chu, boxId, r, c, req.user.id))
+        oCan.map(([r, c]) => insertTube(t, chu, boxId, r, c, req.user.id, ul))
       )();
       audit(req, 'tube_bulk_create', `box=${boxId} ${ids.length} mẫu "${t.name}" từ r${row}c${col}`);
       res.status(201).json({ ids });
@@ -188,11 +221,13 @@ module.exports = function createMauRouter(ctx) {
     }
     const bad = checkPosition(boxId, row, col);
     if (bad) return fail(res, bad.status, bad.message);
-    const chu = xacDinhChuMau(req, body);
+    const chu = xacDinhChu(req, body, boxId);
     if (chu.loi) return fail(res, chu.status, chu.loi);
     if (biChanDonVi(req, boxId)) return fail(res, 403, loiThem(boxId));
+    const [ul, loiUl] = docTheTichBanDau(body, boxId);
+    if (loiUl) return fail(res, 400, loiUl);
     try {
-      const id = db.transaction(() => insertTube(t, chu, boxId, row, col, req.user.id))();
+      const id = db.transaction(() => insertTube(t, chu, boxId, row, col, req.user.id, ul))();
       audit(req, 'tube_create', `id=${id} box=${boxId} r${row}c${col}`);
       res.status(201).json({ id });
     } catch (e) {
@@ -214,7 +249,7 @@ module.exports = function createMauRouter(ctx) {
     const [t, loi] = readTubeBody(body);
     if (loi) return fail(res, 400, loi);
     // Loại chủ và nhóm quyết định ai duyệt yêu cầu về mẫu: chỉ quản lý đổi được
-    if ('chu_loai' in body || 'nhom_id' in body) {
+    if ('chu_loai' in body || 'nhom_id' in body || 'chu_don_vi' in body) {
       if (!canManage(req)) return fail(res, 403, 'Chỉ quản lý module mới đổi được loại chủ mẫu và nhóm nghiên cứu.');
       if ('chu_loai' in body) {
         if (body.chu_loai !== null && !LOAI_CHU.includes(body.chu_loai)) return fail(res, 400, 'Loại chủ mẫu không hợp lệ.');
@@ -227,6 +262,12 @@ module.exports = function createMauRouter(ctx) {
         }
         t.nhom_id = n;
       }
+    }
+    if ('chu_don_vi' in body) {
+      if (ctx.YeuCau.nganHangCuaHop(db, cur.box_id) !== 'khang_the') return fail(res, 400, 'Chủ mẫu là đơn vị chỉ dùng cho ống ở ngân hàng kháng thể.');
+      if (body.chu_don_vi === true) { t.chu_don_vi = 1; t.chu_loai = null; t.nhom_id = null; t.owner_user_id = null; }
+      else if (body.chu_don_vi === false) { t.chu_don_vi = 0; if (cur.owner_user_id == null) t.owner_user_id = req.user.id; }
+      else return fail(res, 400, 'Chủ mẫu là đơn vị phải là true hoặc false.');
     }
     if ('name' in t && !t.name) return fail(res, 400, 'Tên mẫu không được để trống.');
     if (t.sample_type_id != null && !db.prepare('SELECT 1 FROM nhm_sample_types WHERE id = ?').get(t.sample_type_id)) {
@@ -246,6 +287,8 @@ module.exports = function createMauRouter(ctx) {
       hienThi.nhom_id = hienThi.nhom_id.map((v) => (v == null ? null : (db.prepare('SELECT ten FROM nhm_nhom WHERE id = ?').get(v) || {}).ten || v));
     }
     if (hienThi.chu_loai) hienThi.chu_loai = hienThi.chu_loai.map((v) => (v == null ? null : LOAI_CHU_VN[v] || v));
+    if (hienThi.chu_don_vi) hienThi.chu_don_vi = hienThi.chu_don_vi.map((v) => (v ? 'AntibodyBank' : 'cá nhân'));
+    if (hienThi.owner_user_id) hienThi.owner_user_id = hienThi.owner_user_id.map((v) => (v == null ? '(đơn vị)' : ((db.prepare('SELECT COALESCE(NULLIF(fullname, \'\'), email) AS n FROM users WHERE id = ?').get(v) || {}).n || v)));
     db.transaction(() => {
       db.prepare(`UPDATE nhm_tubes SET ${cols.map((c) => c + ' = ?').join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(
         ...cols.map((c) => t[c]),
@@ -315,7 +358,7 @@ module.exports = function createMauRouter(ctx) {
       if (!note || note.length < 3) return fail(res, 400, 'Phải ghi thông tin thao tác: ' + rule.nhan + '.');
       db.transaction(() => {
         db.prepare("UPDATE nhm_tubes SET status = ?, updated_at = datetime('now') WHERE id = ?").run(rule.den, id);
-        // mẫu đang giao cho người xin mà được trả / dùng hết / hủy thì yêu cầu kết thúc; yêu cầu chờ duyệt thì đóng lại
+        // mẫu đang giao cho người yêu cầu mà được trả / dùng hết / hủy thì yêu cầu kết thúc; yêu cầu chờ duyệt thì đóng lại
         db.prepare("UPDATE nhm_yeu_cau SET trang_thai = 'da_tra', updated_at = datetime('now') WHERE tube_id = ? AND trang_thai = 'da_giao'").run(id);
         if (rule.den === 'thawed' || rule.den === 'discarded') {
           db.prepare("UPDATE nhm_yeu_cau SET trang_thai = 'da_huy', ly_do_xu_ly = 'Mẫu đã rã đông / hủy', updated_at = datetime('now') WHERE tube_id = ? AND trang_thai IN ('cho_duyet','da_duyet')").run(id);
@@ -346,7 +389,7 @@ module.exports = function createMauRouter(ctx) {
     const cu = cur.owner_user_id && db.prepare('SELECT fullname, email FROM users WHERE id = ?').get(cur.owner_user_id);
     const ten = (u) => (u ? u.fullname || u.email : '(không rõ)');
     db.transaction(() => {
-      db.prepare("UPDATE nhm_tubes SET owner_user_id = ?, updated_at = datetime('now') WHERE id = ?").run(nguoi.id, id);
+      db.prepare("UPDATE nhm_tubes SET owner_user_id = ?, chu_don_vi = 0, updated_at = datetime('now') WHERE id = ?").run(nguoi.id, id);
       logMove(id, 'transfer', null, null, req.user.id, `${ten(cu)} → ${ten(nguoi)}`);
     })();
     audit(req, 'tube_transfer', `id=${id} ${ten(cu)} → ${ten(nguoi)}`);
