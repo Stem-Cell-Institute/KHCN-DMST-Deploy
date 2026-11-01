@@ -34,14 +34,15 @@
     <details class="nhm-rail" open>
       <summary>Sơ đồ kho lưu trữ</summary>
       <form id="nhm-search-form" class="nhm-search" role="search">
-        <input id="nhm-search-q" type="search" placeholder="Tìm mẫu: tên, đề tài…" aria-label="Tìm mẫu" />
+        <input id="nhm-search-q" type="search" placeholder="Tìm mẫu theo mọi thông tin…" aria-label="Tìm mẫu" />
         <button type="submit" class="nhm-btn nhm-btn--primary">Tìm</button>
       </form>
       <button type="button" class="nhm-rail-add nhm-hide" id="nhm-add-root">+ Thêm thiết bị lưu trữ</button>
-      <button type="button" class="nhm-rail-add nhm-hide" id="nhm-manage-catalog">Quản lý danh mục</button>
+      <button type="button" class="nhm-rail-add nhm-hide" id="nhm-manage-catalog">Quản trị module</button>
       <div id="nhm-tree" class="nhm-tree" aria-label="Sơ đồ kho lưu trữ"><div class="nhm-loading">Đang tải…</div></div>
     </details>
     <main class="nhm-main">
+      <div id="nhm-banner"></div>
       <div id="nhm-msg" class="nhm-msg" role="status" aria-live="polite"></div>
       <section class="nhm-detail" id="nhm-detail" aria-live="polite">
         <p class="nhm-muted">Chọn một thiết bị, vị trí lưu trữ hoặc hộp ở bên trái.</p>

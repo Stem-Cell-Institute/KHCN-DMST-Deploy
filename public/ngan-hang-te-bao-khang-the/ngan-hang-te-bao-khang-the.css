@@ -222,3 +222,81 @@
   .nhm-main { padding: 18px 20px 56px; }
   .nhm-auth { margin-left: 0; width: 100%; }
 }
+
+/* ══ Đợt phân quyền & nhóm ═══════════════════════════════════════════════════ */
+
+.nhm-small { font-size: 0.8rem; }
+
+/* ── Cây thư mục: đường nối dọc, biểu tượng theo loại, thẻ Cellbank / Công khai ── */
+.nhm-tree-tools { display: flex; gap: 16px; margin: 0 0 8px; font-size: 0.8rem; }
+.nhm-tree ul, .nhm-treeul { list-style: none; margin: 0; padding: 0; }
+.nhm-tree ul ul { margin-left: 15px; padding-left: 8px; border-left: 1px solid var(--ke-dam); }
+.nhm-node { min-height: 40px; gap: 4px; padding: 4px 8px 4px 4px; }
+.nhm-node__caret { width: 20px; text-align: center; font-size: 0.95rem; }
+.nhm-node__icon { flex: none; display: inline-flex; color: var(--chu-mo); }
+.nhm-node--on .nhm-node__icon { color: var(--muc); }
+.nhm-node--box .nhm-node__label::before { content: none; }
+.nhm-node--container .nhm-node__label { font-weight: 600; }
+.nhm-node--box .nhm-node__label { font-weight: 400; }
+.nhm-tag {
+  flex: none; padding: 1px 6px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--chu-phu); border: 1px solid var(--ke-dam); border-radius: 2px;
+}
+.nhm-tag--cb { color: var(--muc); border-color: var(--muc); }
+
+/* ── Bên trong một vị trí lưu trữ ── */
+.nhm-inside { margin: 14px 0; }
+.nhm-inside h3 { margin: 0 0 6px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--chu-phu); }
+.nhm-inside ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ke); }
+.nhm-sub {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 4px; text-align: left;
+  font: inherit; color: var(--muc); background: none; border: 0; border-bottom: 1px solid var(--ke); cursor: pointer;
+}
+.nhm-sub:hover { background: #f1f2f6; }
+.nhm-sub__name { flex: 1; font-weight: 600; }
+
+/* ── Ô chọn người, ô chủ mẫu ── */
+.nhm-field { margin: 12px 0 4px; }
+.nhm-field > .nhm-lbl { display: block; margin: 0 0 4px; }
+.nhm-picker { display: flex; flex-direction: column; gap: 6px; }
+.nhm-chip-slot:empty { display: none; }
+.nhm-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; font-size: 0.8rem; font-weight: 600; color: var(--muc);
+  background: #eef0f5; border: 1px solid var(--ke-dam); border-radius: 2px;
+}
+.nhm-chip button { padding: 0 2px; font: inherit; font-size: 1rem; line-height: 1; color: var(--chu-phu); background: none; border: 0; cursor: pointer; }
+.nhm-chip--warn { color: var(--son-dam); border-color: var(--son); background: none; }
+.nhm-chip--tt.nhm-chip--giai_the { color: var(--chu-phu); background: none; }
+.nhm-pick-list ul { list-style: none; margin: 0; padding: 0; border: 1px solid var(--ke-dam); max-height: 200px; overflow: auto; }
+.nhm-pick { display: block; width: 100%; min-height: 40px; padding: 6px 10px; text-align: left; font: inherit; font-size: 0.88rem; color: var(--muc); background: var(--giay-trang); border: 0; border-bottom: 1px solid var(--ke); cursor: pointer; }
+.nhm-pick:hover { background: #eef0f5; }
+.nhm-newgroup { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding: 10px 12px; border-left: 2px solid var(--muc); background: #f6f7fa; }
+.nhm-newgroup p { margin: 0; }
+.nhm-fixed { padding: 10px 12px; font-size: 0.9rem; background: #f6f7fa; border-left: 2px solid var(--muc); }
+.nhm-field select + select, .nhm-field select + .nhm-newgroup { margin-top: 8px; }
+
+/* ── Hộp thoại quản trị: thẻ tab, thẻ thông tin ── */
+.nhm-dialog:has(.nhm-tabs) { width: min(780px, 96vw); }
+.nhm-tabs { display: flex; gap: 2px; margin: 0 0 14px; overflow-x: auto; border-bottom: 1px solid var(--ke-dam); }
+.nhm-tab { flex: none; min-height: 42px; padding: 0 14px; font: inherit; font-size: 0.86rem; font-weight: 600; color: var(--chu-phu); background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer; }
+.nhm-tab--on { color: var(--muc); border-bottom-color: var(--son); }
+.nhm-cards { display: grid; gap: 10px; margin-top: 10px; }
+.nhm-card { padding: 12px 14px; border: 1px solid var(--ke); border-left: 2px solid var(--muc); }
+.nhm-card--roi { border-left-color: var(--ke-dam); opacity: 0.8; }
+.nhm-card-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.nhm-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.nhm-card-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.nhm-addrole { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--ke); }
+.nhm-addrole select { padding: 9px 10px; font: inherit; border: 1px solid var(--ke-dam); border-radius: 2px; }
+
+/* ── Thông báo: bạn được ghi là trưởng nhóm ── */
+.nhm-notice { margin: 0 0 14px; border: 1px solid var(--son); border-left-width: 3px; background: #fdf4f3; }
+.nhm-notice-row { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; font-size: 0.9rem; }
+.nhm-notice-row + .nhm-notice-row { border-top: 1px solid var(--ke); }
+.nhm-notice-act { display: flex; flex-wrap: wrap; gap: 8px; }
+.nhm-btn--primary.nhm-btn--sm { color: #fff; }
+
+@media (max-width: 600px) {
+  .nhm-node { min-height: 44px; }
+  .nhm-card-act .nhm-btn, .nhm-notice-act .nhm-btn { flex: 1 1 auto; }
+}
