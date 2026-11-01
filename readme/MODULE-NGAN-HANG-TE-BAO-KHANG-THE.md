@@ -1,11 +1,11 @@
 # Module Ngân hàng tế bào & Kháng thể
 
 Trang: `public/ngan-hang-te-bao-khang-the/index.html` (địa chỉ ngắn `/ngan-hang-te-bao-khang-the`) ·
-API: `/api/ngan-hang-te-bao-khang-the/*` (46 route)
+API: `/api/ngan-hang-te-bao-khang-the/*` (70 route)
 
 Mã nguồn: `routes/nganHangTeBaoKhangThe/` (`index.js`, `boiCanh.js`, `khoLuuTru.js`, `danhMuc.js`, `thanhVien.js`,
-`timKiem.js`, `mau.js`), `services/nganHangTeBaoKhangThe.js` (hàm thuần), `services/nganHangTeBaoKhangTheKhoiTao.js` (tạo bảng,
-chuyển hướng, số liệu trang chủ), `db/ngan_hang_te_bao_khang_the_schema.sql`, `public/ngan-hang-te-bao-khang-the/*`.
+`timKiem.js`, `yeuCau.js`, `phatHien.js`, `mau.js`), `services/nganHangTeBaoKhangThe.js` (hàm thuần), `services/nganHangTeBaoKhangTheKhoiTao.js` (tạo bảng,
+chuyển hướng, số liệu trang chủ), `services/nganHangTeBaoKhangTheYeuCau.js` (đường duyệt, các hạn), `services/nganHangTeBaoKhangTheThongBao.js` (email), `db/ngan_hang_te_bao_khang_the_schema.sql`, `public/ngan-hang-te-bao-khang-the/*`.
 Test: `tests/nganHangTeBaoKhangThe*.test.js` + `tests/helpers/nganHangServer.js`.
 
 ## Để làm gì
@@ -30,15 +30,15 @@ thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở n
 | Vai trò | Lấy từ đâu | Làm được gì |
 |---|---|---|
 | **Admin** | `users.role = 'admin'` | Toàn quyền. Là người **duy nhất** cấp / gỡ vai trò module. |
-| **Quản lý module** (2–3 người) | bảng `nhm_vai_tro` | Thiết bị lưu trữ, hộp, danh mục, nhóm nghiên cứu, hồ sơ thành viên, sửa / xử lý mọi mẫu, xuất CSV, chuyển chủ sở hữu mẫu. Là người xử lý yêu cầu lấy mẫu (đợt sau). |
-| **Trưởng CIPP** (quản lý Cellbank) | bảng `nhm_vai_tro` | Duyệt yêu cầu lấy mẫu ở thiết bị **Cellbank** (đợt sau). Không có quyền quản lý kho. |
+| **Quản lý module** (2–3 người) | bảng `nhm_vai_tro` | Thiết bị lưu trữ, hộp, danh mục, nhóm nghiên cứu, hồ sơ thành viên, sửa / xử lý mọi mẫu, xuất CSV, chuyển chủ sở hữu mẫu. Là người xử lý yêu cầu lấy mẫu: giao mẫu, nhận lại, xử lý thay khi người duyệt vắng. |
+| **Trưởng CIPP** (quản lý Cellbank) | bảng `nhm_vai_tro` | Duyệt yêu cầu lấy mẫu ở thiết bị **Cellbank**. Không có quyền quản lý kho. |
 | Người dùng thường | mọi tài khoản còn lại | Tìm mẫu, thêm mẫu vào thiết bị công khai, sửa / di chuyển / lấy ra / rã đông / hủy / xóa **mẫu của mình**. |
 | Tài khoản `crd_user` | — | Bị chặn khỏi cả module (`authMiddleware`). |
 
 - Vai trò module **không** đụng `users.role` dùng chung toàn hệ thống. **`users.role` = `manager` hay `phong_khcn` không còn tự có
   quyền quản lý** ở module này: phải được admin gán vai trò «Quản lý module».
 - Mọi người dùng đọc được toàn bộ kho (kể cả tên người sở hữu): kho là tài nguyên dùng chung của Viện.
-- Bảng phân quyền đầy đủ của 46 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
+- Bảng phân quyền đầy đủ của 70 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
   với danh sách route thật: thêm/bớt route mà quên cập nhật bảng thì test đỏ.
 
 ### Hai loại thiết bị lưu trữ
@@ -50,7 +50,7 @@ Mỗi **thiết bị gốc** (tủ, bình nitơ) mang một kiểu quản lý (`
 | Thêm mẫu vào ô trống | ai cũng được | **chỉ quản lý module** |
 | Sửa thông tin mô tả mẫu | chủ mẫu / quản lý | chủ mẫu / quản lý |
 | Di chuyển, lấy ra, rã đông, hủy, xóa mẫu | chủ mẫu / quản lý | **chỉ quản lý module** |
-| Lấy mẫu của người khác | gửi yêu cầu, **chủ mẫu** duyệt (đợt sau) | gửi yêu cầu, **Trưởng CIPP** duyệt (đợt sau) |
+| Lấy mẫu của người khác | gửi yêu cầu, **chủ mẫu** duyệt | gửi yêu cầu, **Trưởng CIPP** duyệt |
 
 ### Loại chủ mẫu và nhóm nghiên cứu
 
@@ -69,7 +69,7 @@ mẫu đã tạo (chúng quyết định đường duyệt).
   - tên nhóm so khớp **bỏ dấu, không phân biệt hoa thường**; trùng thì dùng lại nhóm cũ;
   - nhóm mới ở trạng thái **chờ xác nhận**, quản lý kiểm rồi xác nhận, **gộp** được hai nhóm trùng;
   - người được ghi là trưởng nhóm nhận thông báo trong module và phải bấm **«Đúng, tôi là trưởng nhóm»** hoặc **«Không phải»**;
-    chưa xác nhận thì coi như chưa có trưởng nhóm (yêu cầu về mẫu của nhóm đó sẽ đi thẳng tới quản lý module);
+    chưa xác nhận thì coi như chưa có trưởng nhóm (yêu cầu về mẫu của nhóm đó sẽ đi thẳng tới quản lý module — xem «Yêu cầu lấy mẫu»);
   - sinh viên không thể tự ghi mình là trưởng nhóm; sinh viên chỉ thêm mẫu vào nhóm **đã có trưởng nhóm**.
   - Mọi thay đổi nhóm (đổi tên, đổi trưởng nhóm, giải thể, gộp, trưởng nhóm xác nhận / từ chối) ghi vào lịch sử **từng mẫu** của
     nhóm.
@@ -151,21 +151,72 @@ Thẻ module (`homepage_modules.code = 'sample_storage'`) hiện **bật sẵn**
 trong `server.js`). Tắt chỉ làm mờ thẻ trên trang chủ — **không** chặn trang hay API, giống mọi module khác. Muốn ra
 mắt từ từ: đổi mặc định thành `0` rồi để admin bật khi sẵn sàng.
 
-## Chưa làm (đã thống nhất thiết kế, làm ở đợt sau)
+## Yêu cầu lấy mẫu
 
-1. **Yêu cầu lấy mẫu** (gửi → duyệt → giao → trả) kèm email thông báo cho người yêu cầu và quản lý module:
-   - thiết bị Cellbank: Trưởng CIPP duyệt; thiết bị công khai: chủ mẫu duyệt;
-   - nếu chủ mẫu (hoặc sinh viên) đã rời đi: **trưởng nhóm duyệt trước**, nhóm không còn trưởng nhóm / trưởng nhóm chưa xác nhận /
-     quá hạn phản hồi thì **chuyển quản lý module**; quản lý luôn có nút «Xử lý thay» kèm lý do bắt buộc, ghi vào lịch sử;
-   - admin có thể xử lý mọi yêu cầu (quyền cuối cùng khi không ai xử lý), không hiển thị thành vai trò hay nút riêng;
-   - mọi bước ghi vào lịch sử mẫu.
-2. **Mẫu có thật trong ô nhưng chưa khai báo** (ở thiết bị công khai): quản lý đánh dấu ô «phát hiện mẫu chưa khai báo» (mô tả,
-   người / nhóm nghi là chủ), hệ thống **nhắc chủ mẫu trước** (email, bảng «mẫu chưa khai báo»), chủ mẫu nhận và điền thông tin
-   ngay tại ô; quản lý chỉ được **bỏ mẫu** sau khi đã nhắc và hết thời hạn chờ (đề xuất 7 ngày); admin bỏ sớm hơn thì ghi rõ.
-3. **Mẫu bị lấy mà không xin phép** (thiết bị công khai): chủ mẫu bấm «mẫu của tôi không còn ở đây» hoặc quản lý **kiểm kê hộp**
-   (đối chiếu sổ với thực tế, lưu mốc «lần cuối thấy mẫu»); mẫu nghi mất mở vụ việc, người dùng khác có thể nhận «tôi đã lấy»
-   (chủ mẫu xác nhận thành yêu cầu bổ sung), hết hạn không ai nhận thì quản lý chốt «thất lạc»; quản lý xem số lần vi phạm theo người.
-4. **Rà toàn bộ giao diện cho điện thoại** (thiết bị cầm tay, duyệt yêu cầu một chạm từ email).
+Người dùng bấm **«Xin lấy mẫu này»** ở một mẫu không phải của mình (cần ghi lý do). Mỗi mẫu chỉ có **một** yêu cầu đang xử lý;
+mẫu đang nghi mất hoặc không còn lưu kho thì không xin được.
+
+**Ai duyệt** (`services/nganHangTeBaoKhangTheYeuCau.js`, cột `nhm_yeu_cau.cap`):
+
+| Mẫu | Người duyệt | Nếu không có / chính là người xin |
+|---|---|---|
+| Ở thiết bị **Cellbank** | Trưởng CIPP | quản lý module |
+| Công khai, chủ mẫu là cán bộ / nghiên cứu viên **còn hoạt động** | chủ mẫu | trưởng nhóm → quản lý |
+| Công khai, mẫu của **sinh viên** (kể cả đang học), hoặc chủ mẫu đã rời đi | **trưởng nhóm** (đã tự xác nhận, nhóm chưa giải thể) | quản lý |
+
+Sinh viên **không bao giờ** là người duyệt: người sắp ra trường không thể duyệt, nên người ở lại duyệt ngay từ đầu.
+
+- **Quá 3 ngày** (`HAN.PHAN_HOI_NGAY`) người duyệt cấp dưới chưa phản hồi thì yêu cầu **tự chuyển quản lý module** (bộ hẹn giờ 30 phút
+  trong tiến trình; câu UPDATE có điều kiện nên chạy chồng không chuyển hai lần; thư báo quản lý; lịch sử ghi không có người thao tác).
+- Chủ mẫu / trưởng nhóm vừa **rời đi**, nhóm đổi trưởng nhóm hay trưởng nhóm từ chối: các yêu cầu đang chờ được **định tuyến lại ngay**.
+- **Quản lý module và admin luôn xử lý được.** Nếu họ không phải người duyệt của cấp hiện tại thì là **«xử lý thay»**: bắt buộc ghi lý do
+  (≥ 5 ký tự), ghi rõ vào lịch sử và nhật ký. Admin là quyền cuối cùng khi không ai xử lý (kể cả ở cấp Trưởng CIPP) nhưng **không**
+  hiển thị thành vai trò hay nút riêng. Không ai duyệt được yêu cầu của chính mình, kể cả admin.
+- Sau khi **duyệt**, quản lý bấm **«Giao mẫu»** (mẫu chuyển «đã lấy ra») rồi **«Nhận lại mẫu»** khi trả. Mẫu được trả / rã đông / hủy
+  / xóa thì yêu cầu liên quan tự đóng.
+- **Email** (gửi nền, SMTP hỏng không làm hỏng thao tác chính): yêu cầu mới → người duyệt; đã duyệt → người xin **và** quản lý module;
+  từ chối / giao / nhận lại → người xin; quá hạn → quản lý. Liên kết trong thư mở thẳng bảng «Công việc» (cần đăng nhập — không có
+  liên kết duyệt không cần đăng nhập, vì trình quét thư có thể tự mở liên kết).
+- Mọi bước ghi vào lịch sử của mẫu: `yc_gui`, `yc_duyet`, `yc_tu_choi`, `yc_huy`, `yc_leo_thang`, `yc_dinh_tuyen_lai`, `giao`, `tra`.
+
+## Mẫu có thật trong ô nhưng chưa khai báo (thiết bị công khai)
+
+1. Quản lý bấm vào ô trống → **«Ô này có mẫu nhưng chưa khai báo»**, ghi mô tả (chữ trên ống, màu nắp…) và người / nhóm nghi là chủ.
+   Ô bị **giữ chỗ**: không ai thêm hay di chuyển mẫu khác vào. Thiết bị Cellbank không dùng chức năng này.
+2. **Việc đầu tiên là nhắc chủ mẫu** (`POST /findings/:id/remind`): email người nghi + trưởng nhóm của họ, hoặc trưởng nhóm + mọi thành
+   viên đang hoạt động của nhóm nghi; không biết gì thì chỉ hiện trên bảng «Mẫu chưa khai báo» (ai đăng nhập cũng thấy). Nhắc lại được.
+3. Chủ mẫu bấm **«Đây là mẫu của tôi»**, điền thông tin ngay tại ô: ô thành mẫu bình thường, chủ mẫu là người nhận, lịch sử mẫu ghi
+   `khai_bao_bo_sung`, quản lý nhận thư.
+4. Quản lý chỉ được **«Bỏ mẫu»** khi **đã nhắc** và qua **7 ngày** (`HAN.CHO_BO_NGAY`) kể từ lần nhắc đầu, kèm lý do bắt buộc. Admin bỏ sớm
+   hơn được, ghi `da_bo_som`.
+5. Mỗi mục có lịch sử riêng (`nhm_phat_hien_ls`, chặn sửa / xóa bằng trigger) vì mẫu chưa có bản ghi để gắn lịch sử.
+
+## Mẫu bị lấy không xin phép (thiết bị công khai)
+
+Phần mềm không ngăn được hành vi ngoài đời; nó giúp **phát hiện**, **cho đường nhận lỗi** và **ghi trách nhiệm**:
+
+- **Phát hiện:** chủ mẫu / trưởng nhóm / quản lý bấm «Báo không còn ở vị trí», hoặc quản lý **kiểm kê hộp** (bấm những mẫu không thấy; mẫu
+  còn lại được ghi mốc `thay_luc` = «lần cuối thấy», lịch sử ghi `kiem_ke_thay` / `kiem_ke_khong_thay`).
+- Mẫu nghi mất mở một **vụ việc** (`nhm_vu_viec`): chủ mẫu, trưởng nhóm và quản lý nhận thư; mọi người thấy ở bảng «Mẫu nghi mất»;
+  mẫu vẫn giữ ô, không xin lấy được.
+- Người đã lấy bấm **«Tôi đã lấy mẫu này»** → chủ mẫu (hoặc trưởng nhóm / quản lý) **xác nhận** (mẫu chuyển «đã lấy ra», tính một lần lấy
+  không xin phép cho người đó — quản lý xem ở thẻ «Lấy không xin phép») hoặc **từ chối** (vụ việc mở lại). Người nhận không tự xác nhận.
+- Tìm thấy mẫu thì đóng vụ việc. Hết **14 ngày** (`HAN.CHO_NHAN_NGAY`) không ai nhận, quản lý **chốt thất lạc** (mẫu thành «đã hủy», đóng
+  yêu cầu liên quan); admin chốt sớm được, ghi rõ.
+- Mức xử lý người lấy không xin phép là chính sách của Viện — hệ thống chỉ giữ bằng chứng (số lần theo người, có nhóm).
+
+## Điện thoại
+
+Giao diện dùng được trên điện thoại: ô tìm và nút «Công việc» luôn hiện; sơ đồ kho gập lại sau khi chọn (thanh tóm tắt hiện đường
+dẫn); hộp thoại phủ cả màn hình, nút thao tác dính đáy; bảng thành thẻ có nhãn cột; vùng bấm ≥ 44px; ô nhập ≥ 16px để iOS không tự
+phóng to; lưới hộp cuộn ngang. Máy cảm ứng không có kéo-thả: di chuyển mẫu đi qua hộp thoại chọn ô.
+
+## Chưa làm
+
+- Chỉnh các hạn (`HAN`) từ giao diện quản trị: hiện là hằng số trong `services/nganHangTeBaoKhangTheYeuCau.js`.
+- Nút «Tôi sắp mở tủ X» (ghi dấu ai vào tủ lúc nào, để thu hẹp danh sách người liên quan khi có vụ việc): đã cân nhắc, **chưa bật**
+  vì thêm một thao tác cho mọi người dùng.
+- Liên kết duyệt một chạm trong email không cần đăng nhập (xem lý do ở mục «Yêu cầu lấy mẫu»).
 
 ## Chạy thử cục bộ
 
