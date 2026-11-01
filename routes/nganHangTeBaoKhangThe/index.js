@@ -20,6 +20,7 @@ const createPhatHienRouter = require('./phatHien');
 const createSinhVienRouter = require('./sinhVien');
 const createTimKiemRouter = require('./timKiem');
 const createDanhMucRouter = require('./danhMuc');
+const createDonViRouter = require('./donVi');
 const khoiTao = require('../../services/nganHangTeBaoKhangTheKhoiTao');
 
 function createNganHangMauRouter(deps) {
@@ -32,6 +33,7 @@ function createNganHangMauRouter(deps) {
   router.use(createSinhVienRouter(ctx));
   router.use(createThanhVienRouter(ctx));
   router.use(createDanhMucRouter(ctx));
+  router.use(createDonViRouter(ctx));
   router.use(createTimKiemRouter(ctx));
   router.use(createYeuCauRouter(ctx));
   router.use(createPhatHienRouter(ctx));

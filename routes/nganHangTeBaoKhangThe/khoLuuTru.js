@@ -24,6 +24,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       loaiChu: LOAI_CHU_VN,
       containerTypes: db.prepare('SELECT * FROM nhm_container_types ORDER BY sort_order, name').all(),
       boxTemplates: db.prepare('SELECT * FROM nhm_box_templates ORDER BY rows, cols, name').all(),
+      donVi: db.prepare("SELECT id, ten FROM nhm_don_vi ORDER BY (ma = 'cellbank') DESC, ten").all(), // đơn vị quản lý thiết bị (chỉ tên)
       sampleTypes: db.prepare('SELECT * FROM nhm_sample_types ORDER BY name').all(),
     });
   });
@@ -31,7 +32,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
   router.get('/tree', (req, res) => {
     const containers = db
       .prepare(
-        `SELECT c.id, c.parent_id, c.type_id, c.code, c.name, c.temperature_c, c.location_note, c.sort_order, c.notes, c.quan_ly_boi,
+        `SELECT c.id, c.parent_id, c.type_id, c.code, c.name, c.temperature_c, c.location_note, c.sort_order, c.notes, c.quan_ly_boi, c.don_vi_id, c.vi_tri,
                 t.name AS type_name
          FROM nhm_containers c JOIN nhm_container_types t ON t.id = c.type_id
          WHERE c.deleted_at IS NULL ORDER BY c.sort_order, c.name`
@@ -39,19 +40,25 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       .all();
     const boxes = db
       .prepare(
-        `SELECT b.id, b.container_id, b.template_id, b.rows, b.cols, b.code, b.name, b.notes,
+        `SELECT b.id, b.container_id, b.template_id, b.rows, b.cols, b.code, b.name, b.notes, b.vi_tri,
                 (SELECT COUNT(*) FROM nhm_tubes x
                   WHERE x.box_id = b.id AND x.deleted_at IS NULL AND x.status IN ${HOLDING}) AS tube_count
          FROM nhm_boxes b WHERE b.deleted_at IS NULL ORDER BY b.code`
       )
       .all();
-    // vị trí con thừa hưởng quan_ly_boi của thiết bị gốc
+    // vị trí con thừa hưởng quan_ly_boi và đơn vị quản lý của thiết bị gốc
+    const tenDonVi = new Map(db.prepare('SELECT id, ten FROM nhm_don_vi').all().map((r) => [r.id, r.ten]));
     const byId = new Map(containers.map((c) => [c.id, c]));
     const goc = (c) => {
       for (let i = 0; c.parent_id != null && byId.has(c.parent_id) && i < 50; i++) c = byId.get(c.parent_id);
       return c;
     };
-    for (const c of containers) c.quan_ly_boi = goc(c).quan_ly_boi;
+    for (const c of containers) {
+      const g = goc(c);
+      c.quan_ly_boi = g.quan_ly_boi;
+      c.don_vi_id = g.don_vi_id || null;
+      c.don_vi_ten = g.don_vi_id ? tenDonVi.get(g.don_vi_id) || null : null;
+    }
     res.json({ containers, boxes });
   });
 
@@ -72,9 +79,31 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     }
     if ('location_note' in body) out.location_note = toStr(body.location_note, 300);
     if ('notes' in body) out.notes = toStr(body.notes, 2000);
+    if ('vi_tri' in body) {
+      out.vi_tri = body.vi_tri == null || body.vi_tri === '' ? null : toInt(body.vi_tri);
+      if (out.vi_tri != null && (out.vi_tri < 1 || out.vi_tri > 50)) error = 'Vị trí số phải từ 1 đến 50.';
+    }
     if ('quan_ly_boi' in body) {
       if (!['cong_khai', 'cellbank'].includes(body.quan_ly_boi)) error = 'Kiểu quản lý thiết bị không hợp lệ (công khai hoặc Cellbank).';
       else out.quan_ly_boi = body.quan_ly_boi;
+    }
+    // Đơn vị quản lý: chọn đơn vị thì thiết bị thành «có đơn vị» (quan_ly_boi = 'cellbank', tên cũ), bỏ chọn thì Public.
+    if ('don_vi_id' in body) {
+      if (body.don_vi_id == null || body.don_vi_id === '') {
+        out.don_vi_id = null;
+        out.quan_ly_boi = 'cong_khai';
+      } else {
+        const dv = toInt(body.don_vi_id);
+        if (!dv || !db.prepare('SELECT 1 FROM nhm_don_vi WHERE id = ?').get(dv)) error = 'Đơn vị quản lý không tồn tại.';
+        else {
+          out.don_vi_id = dv;
+          out.quan_ly_boi = 'cellbank';
+        }
+      }
+    } else if ('quan_ly_boi' in out) {
+      // cách gọi cũ (chỉ gửi quan_ly_boi): 'cellbank' → đơn vị Cellbank
+      const cb = out.quan_ly_boi === 'cellbank' ? db.prepare("SELECT id FROM nhm_don_vi WHERE ma = 'cellbank'").get() : null;
+      out.don_vi_id = cb ? cb.id : null;
     }
     if ('sort_order' in body) {
       out.sort_order = body.sort_order == null || body.sort_order === '' ? 0 : toInt(body.sort_order);
@@ -82,6 +111,12 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     }
     return [out, error];
   }
+
+  /** Vị trí số đã có giá / hộp khác trong cùng vị trí cha chưa? (bỏ qua chính `boQua`) */
+  const trungViTriGia = (chaId, viTri, boQua) =>
+    viTri != null && !!db.prepare('SELECT 1 FROM nhm_containers WHERE parent_id IS ? AND vi_tri = ? AND id <> ? AND deleted_at IS NULL').get(chaId, viTri, boQua || 0);
+  const trungViTriHop = (containerId, viTri, boQua) =>
+    viTri != null && !!db.prepare('SELECT 1 FROM nhm_boxes WHERE container_id = ? AND vi_tri = ? AND id <> ? AND deleted_at IS NULL').get(containerId, viTri, boQua || 0);
 
   router.post('/containers', requireManage, (req, res) => {
     const [b, loi] = readContainerBody(req.body || {}, false);
@@ -94,14 +129,15 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       return fail(res, 400, 'Vị trí lưu trữ cha không tồn tại.');
     }
     if (b.parent_id != null && 'quan_ly_boi' in b) return fail(res, 400, 'Chỉ thiết bị gốc mới chọn được kiểu quản lý; vị trí con thừa hưởng từ thiết bị gốc.');
+    if (trungViTriGia(b.parent_id ?? null, b.vi_tri ?? null)) return fail(res, 409, `Vị trí số ${b.vi_tri} đã có giá khác trong vị trí này.`);
     try {
       const code = b.code || nextCode('nhm_containers', 'VC-');
       const info = db
         .prepare(
-          `INSERT INTO nhm_containers (parent_id, type_id, code, name, temperature_c, location_note, sort_order, notes, quan_ly_boi, created_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO nhm_containers (parent_id, type_id, code, name, temperature_c, location_note, sort_order, notes, quan_ly_boi, don_vi_id, vi_tri, created_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(b.parent_id ?? null, b.type_id, code, b.name, b.temperature_c ?? null, b.location_note ?? null, b.sort_order || 0, b.notes ?? null, b.quan_ly_boi || 'cong_khai', req.user.id);
+        .run(b.parent_id ?? null, b.type_id, code, b.name, b.temperature_c ?? null, b.location_note ?? null, b.sort_order || 0, b.notes ?? null, b.quan_ly_boi || 'cong_khai', b.don_vi_id ?? null, b.vi_tri ?? null, req.user.id);
       audit(req, 'container_create', `id=${info.lastInsertRowid} ${b.name}`);
       res.status(201).json({ id: Number(info.lastInsertRowid), code });
     } catch (e) {
@@ -130,6 +166,9 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     const chaMoi = 'parent_id' in b ? b.parent_id : cur.parent_id;
     if ('quan_ly_boi' in b && chaMoi != null) return fail(res, 400, 'Chỉ thiết bị gốc mới chọn được kiểu quản lý; vị trí con thừa hưởng từ thiết bị gốc.');
     if (!Object.keys(b).length) return fail(res, 400, 'Không có dữ liệu cần cập nhật.');
+    if (('vi_tri' in b || 'parent_id' in b) && trungViTriGia(chaMoi, 'vi_tri' in b ? b.vi_tri : cur.vi_tri, id)) {
+      return fail(res, 409, `Vị trí số ${'vi_tri' in b ? b.vi_tri : cur.vi_tri} đã có giá khác trong vị trí này.`);
+    }
     const thayDoi = layThayDoi(cur, b);
     const cols = Object.keys(thayDoi);
     if (!cols.length) return res.json({ ok: true, changed: 0 });
@@ -138,7 +177,14 @@ module.exports = function createKhoLuuTruRouter(ctx) {
         ...cols.map((c) => b[c]),
         id
       );
-      audit(req, 'container_update', `id=${id} ${cur.name}: ${moTaThayDoi(thayDoi)}`);
+      // người đang chờ duyệt ở thiết bị này có thể phải đổi cấp (Public ⇄ có đơn vị)
+      if ((thayDoi.don_vi_id || thayDoi.quan_ly_boi) && ctx.dinhTuyenLai) ctx.dinhTuyenLai();
+      const hienThi = { ...thayDoi };
+      if (hienThi.don_vi_id) {
+        const ten = (v) => (v ? (db.prepare('SELECT ten FROM nhm_don_vi WHERE id = ?').get(v) || {}).ten || v : 'Public');
+        hienThi.don_vi_id = hienThi.don_vi_id.map(ten);
+      }
+      audit(req, 'container_update', `id=${id} ${cur.name}: ${moTaThayDoi(hienThi)}`);
       res.json({ ok: true, changed: cols.length });
     } catch (e) {
       if (isUniqueError(e)) return fail(res, 409, 'Mã vị trí lưu trữ đã tồn tại.');
@@ -191,6 +237,11 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     }
     const count = body.count == null ? 1 : toInt(body.count);
     if (!count || count < 1 || count > 50) return fail(res, 400, 'Số lượng hộp phải từ 1 đến 50.');
+    // khai vị trí số trong giá (bình nitơ): mỗi lần một hộp, không trùng vị trí đã có
+    const viTri = body.vi_tri == null || body.vi_tri === '' ? null : toInt(body.vi_tri);
+    if (body.vi_tri != null && body.vi_tri !== '' && (viTri == null || viTri < 1 || viTri > 50)) return fail(res, 400, 'Vị trí hộp trong giá phải là số từ 1 đến 50.');
+    if (viTri != null && count > 1) return fail(res, 400, 'Khai vị trí số thì thêm từng hộp một.');
+    if (trungViTriHop(containerId, viTri)) return fail(res, 409, `Vị trí số ${viTri} trong giá này đã có hộp.`);
     const baseName = toStr(body.name, 150);
     const customCode = toStr(body.code, 60);
     if (customCode && count > 1) return fail(res, 400, 'Không đặt mã tùy chỉnh khi tạo nhiều hộp cùng lúc.');
@@ -202,10 +253,10 @@ module.exports = function createKhoLuuTruRouter(ctx) {
           const name = baseName ? (count > 1 ? `${baseName} ${i + 1}` : baseName) : null;
           const info = db
             .prepare(
-              `INSERT INTO nhm_boxes (container_id, template_id, rows, cols, code, name, notes, created_by)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+              `INSERT INTO nhm_boxes (container_id, template_id, rows, cols, code, name, notes, vi_tri, created_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
             )
-            .run(containerId, templateId, rows, cols, code, name, toStr(body.notes, 2000), req.user.id);
+            .run(containerId, templateId, rows, cols, code, name, toStr(body.notes, 2000), viTri, req.user.id);
           ids.push(Number(info.lastInsertRowid));
         }
         return ids;
@@ -245,6 +296,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       tubes: tubes.map((t) => ({ ...t, can_edit: canEditTube(req, t), nghi_mat: nghiMat.has(t.id), vu_viec_id: nghiMat.get(t.id) || null })),
       phat_hien: phatHien,
       quan_ly_boi: (ctx.YeuCau.thietBiGocCuaHop(db, id) || {}).quan_ly_boi || 'cong_khai',
+      don_vi_ten: (ctx.YeuCau.donViCuaHop(db, id) || {}).ten || null,
     });
   });
 
@@ -259,6 +311,10 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     if ('code' in body) {
       upd.code = toStr(body.code, 60);
       if (!upd.code) return fail(res, 400, 'Mã hộp không được để trống.');
+    }
+    if ('vi_tri' in body) {
+      upd.vi_tri = body.vi_tri == null || body.vi_tri === '' ? null : toInt(body.vi_tri);
+      if (upd.vi_tri != null && (upd.vi_tri < 1 || upd.vi_tri > 50)) return fail(res, 400, 'Vị trí hộp trong giá phải là số từ 1 đến 50.');
     }
     if ('container_id' in body) {
       const cid = toInt(body.container_id);
@@ -287,6 +343,9 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       }
     }
     if (!Object.keys(upd).length) return fail(res, 400, 'Không có dữ liệu cần cập nhật.');
+    const cidMoi = 'container_id' in upd ? upd.container_id : cur.container_id;
+    const viTriMoi = 'vi_tri' in upd ? upd.vi_tri : cur.vi_tri;
+    if (('vi_tri' in upd || 'container_id' in upd) && trungViTriHop(cidMoi, viTriMoi, id)) return fail(res, 409, `Vị trí số ${viTriMoi} trong giá này đã có hộp.`);
     const thayDoi = layThayDoi(cur, upd);
     const cols = Object.keys(thayDoi);
     if (!cols.length) return res.json({ ok: true, changed: 0 });

@@ -1,7 +1,7 @@
 # Module Ngân hàng tế bào & Kháng thể
 
 Trang: `public/ngan-hang-te-bao-khang-the/index.html` (địa chỉ ngắn `/ngan-hang-te-bao-khang-the`) ·
-API: `/api/ngan-hang-te-bao-khang-the/*` (80 route)
+API: `/api/ngan-hang-te-bao-khang-the/*` (84 route)
 
 Mã nguồn: `routes/nganHangTeBaoKhangThe/` (`index.js`, `boiCanh.js`, `khoLuuTru.js`, `danhMuc.js`, `thanhVien.js`, `sinhVien.js`,
 `timKiem.js`, `yeuCau.js`, `phatHien.js`, `mau.js`), `services/nganHangTeBaoKhangThe.js` (hàm thuần), `services/nganHangTeBaoKhangTheKhoiTao.js` (tạo bảng,
@@ -31,7 +31,7 @@ thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở n
 |---|---|---|
 | **Admin** | `users.role = 'admin'` | Toàn quyền. Là người **duy nhất** cấp / gỡ vai trò module. |
 | **Quản lý module** (2–3 người) | bảng `nhm_vai_tro` | Thiết bị lưu trữ, hộp, danh mục, nhóm nghiên cứu, hồ sơ thành viên, sửa / xử lý mọi mẫu, xuất CSV, chuyển chủ sở hữu mẫu. Là người xử lý yêu cầu lấy mẫu: giao mẫu, nhận lại, xử lý thay khi người duyệt vắng. |
-| **Trưởng CIPP** (quản lý Cellbank) | bảng `nhm_vai_tro` | Duyệt yêu cầu lấy mẫu ở thiết bị **Cellbank**. Không có quyền quản lý kho. |
+| **Trưởng CIPP** (quản lý Cellbank) | bảng `nhm_vai_tro` | Là người duyệt của đơn vị **Cellbank** (duyệt yêu cầu lấy mẫu ở thiết bị Cellbank). Không có quyền quản lý kho. |
 | Người dùng thường | mọi tài khoản còn lại | Tìm mẫu, thêm mẫu vào thiết bị công khai, sửa / di chuyển / lấy ra / rã đông / hủy / xóa **mẫu của mình**. |
 | Sinh viên của Viện (`sinh_vien`) | danh sách chờ do Trung tâm quản lý người học cung cấp | Như người dùng thường, **tới hết hạn dùng** ghi trong danh sách; tài khoản chỉ vào được module này và Đặt lịch thiết bị (xem «Sinh viên của Viện»). |
 | Tài khoản `crd_user` | — | Bị chặn khỏi cả module (`authMiddleware`). |
@@ -39,19 +39,40 @@ thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở n
 - Vai trò module **không** đụng `users.role` dùng chung toàn hệ thống. **`users.role` = `manager` hay `phong_khcn` không còn tự có
   quyền quản lý** ở module này: phải được admin gán vai trò «Quản lý module».
 - Mọi người dùng đọc được toàn bộ kho (kể cả tên người sở hữu): kho là tài nguyên dùng chung của Viện.
-- Bảng phân quyền đầy đủ của 80 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
+- Bảng phân quyền đầy đủ của 84 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
   với danh sách route thật: thêm/bớt route mà quên cập nhật bảng thì test đỏ.
 
-### Hai loại thiết bị lưu trữ
+### Thiết bị Public và thiết bị có đơn vị quản lý
 
-Mỗi **thiết bị gốc** (tủ, bình nitơ) mang một kiểu quản lý (`nhm_containers.quan_ly_boi`); ngăn, giá bên trong thừa hưởng:
+Mỗi **thiết bị gốc** (tủ, bình nitơ) hoặc là **Public**, hoặc gắn với một **đơn vị quản lý** (`nhm_containers.don_vi_id`); ngăn, giá bên trong thừa hưởng.
+Chọn ở ô «Ai quản lý thiết bị này» khi **Thêm / Chỉnh sửa thiết bị** (quản lý module và admin). Cột cũ `quan_ly_boi` được giữ cho khớp:
+`cong_khai` = Public, `cellbank` = có đơn vị (tên cũ từ lúc chỉ có Cellbank); hai cột luôn đi đôi, API vẫn nhận `quan_ly_boi` kiểu cũ (`cellbank` → đơn vị Cellbank).
 
-| | Công khai (`cong_khai`, mặc định) | Cellbank (`cellbank`) |
+| | Public | Có đơn vị quản lý (Cellbank hoặc đơn vị khác) |
 |---|---|---|
 | Thêm mẫu vào ô trống | ai cũng được | **chỉ quản lý module** |
 | Sửa thông tin mô tả mẫu | chủ mẫu / quản lý | chủ mẫu / quản lý |
 | Di chuyển, lấy ra, rã đông, hủy, xóa mẫu | chủ mẫu / quản lý | **chỉ quản lý module** |
-| Lấy mẫu của người khác | gửi yêu cầu, **chủ mẫu** duyệt | gửi yêu cầu, **Trưởng CIPP** duyệt |
+| Lấy mẫu của người khác | gửi yêu cầu, **chủ mẫu** duyệt | gửi yêu cầu, **người duyệt của đơn vị** duyệt |
+
+**Đơn vị quản lý** (bảng `nhm_don_vi`, `nhm_don_vi_duyet`; `routes/nganHangTeBaoKhangThe/donVi.js`, tab **Quản lý module → Đơn vị quản lý**):
+- Có sẵn đơn vị **Cellbank** (không xóa được): người duyệt = những người giữ vai trò **Trưởng CIPP** (+ người được chỉ định thêm).
+- **Chỉ admin** tạo / sửa / xóa đơn vị và gán người duyệt (gán người duyệt là trao quyền quyết định, cùng quy tắc cấp vai trò). Quản lý module xem danh sách để chọn đơn vị cho thiết bị.
+- Người duyệt phải là tài khoản dùng được module (không bị khóa, không phải tài khoản chỉ Đặt lịch, không phải sinh viên).
+- Đơn vị **chưa có người duyệt**: yêu cầu đi thẳng quản lý module. Chỉ xóa được đơn vị khi không còn thiết bị thuộc nó.
+- Đổi thiết bị từ đơn vị sang Public (hoặc ngược lại) thì các yêu cầu đang chờ được định tuyến lại.
+- Thông báo, lịch sử mẫu và danh sách yêu cầu nêu tên đơn vị («Người duyệt của …»); cấp duyệt trong bảng `nhm_yeu_cau.cap` vẫn lưu giá trị cũ `truong_cellbank`.
+
+### Bình nitơ lỏng: giá (rack) rồi hộp theo vị trí số
+
+Bình nitơ có nhiều giá, mỗi giá có nhiều hộp. Với thiết bị gốc có loại **Bình nitơ lỏng** (nhận biết theo tên loại, không phân biệt dấu): thêm **giá (rack)** trước và khai
+**vị trí giá trong bình** (`nhm_containers.vi_tri`, 1–50); trong giá thêm **hộp** và khai **vị trí hộp trong giá** (`nhm_boxes.vi_tri`, 1–50, tính từ đáy lên) —
+thay cho ô «Số lượng hộp», mỗi lần một hộp. Số không được trùng trong cùng bình (giá) / cùng giá (hộp), API trả 409. Cây kho và danh sách sắp theo vị trí số.
+Tủ và thiết bị khác giữ cách cũ (thêm nhiều hộp một lần, không đánh số).
+
+**Mô hình bình xuyên thấu** (`public/ngan-hang-te-bao-khang-the/binh-ln.js`): khi xem bình, giá hoặc hộp nằm trong bình nitơ, cột bên phải (điện thoại: khung gập ở đầu trang)
+hiện mặt cắt đứng (giá đứng cạnh nhau, hộp xếp từ đáy lên) và hình nhìn từ trên xuống (các vị trí giá quanh cổ bình, đánh số). **Chấm đỏ** đánh dấu mục đang chọn:
+chọn giá → chấm ở giá; chọn hộp → ở ô hộp; rê chuột / chạm một ô ống trên lưới hộp → ngay vị trí ô đó; hình nhìn từ trên chấm đúng vị trí giá. Bấm vào giá / hộp trên mô hình để mở mục đó. Không in ra giấy.
 
 ### Loại chủ mẫu và nhóm nghiên cứu
 
@@ -165,7 +186,7 @@ mắt từ từ: đổi mặc định thành `0` rồi để admin bật khi s�
 Cán bộ có email `@sci.edu.vn` đăng ký tài khoản bình thường (có xác minh hộp thư). Sinh viên **không** có email đó, và đăng ký ở module Đặt lịch
 thiết bị **không xác minh hộp thư** (ai gõ email của người khác cũng đăng ký được) nên không thể dùng nó để biết ai là sinh viên của Viện. Cách làm:
 
-1. **Danh sách chờ:** Trung tâm quản lý người học gửi email các đợt sinh viên mới; quản lý module vào **Quản trị module → Sinh viên → Nhập danh sách**:
+1. **Danh sách chờ:** Trung tâm quản lý người học gửi email các đợt sinh viên mới; quản lý module vào **Quản lý module → Sinh viên → Nhập danh sách**:
    - **Tệp Excel (.xlsx) hoặc CSV** — bấm «Tải mẫu Excel» (`GET /students/template.xlsx`: sheet «Danh sách» + sheet «Hướng dẫn»), điền rồi chọn tệp
      (`POST /students/import-file`, trường `tep`, tối đa 2 MB, không nhận .xls cũ). Cột được nhận theo **tên tiêu đề** (không cần đúng thứ tự, thừa cột thì bỏ qua;
      tên cột có `Họ đệm` + `Tên` thì ghép lại); dòng tiêu đề có thể không nằm ở dòng 1 (tìm trong 10 dòng đầu). Hạn là ngày Excel hoặc chữ `dd/mm/yyyy`.
@@ -206,7 +227,7 @@ mẫu đang nghi mất hoặc không còn lưu kho thì không xin được.
 
 | Mẫu | Người duyệt | Nếu không có / chính là người xin |
 |---|---|---|
-| Ở thiết bị **Cellbank** | Trưởng CIPP | quản lý module |
+| Ở thiết bị **có đơn vị quản lý** (Cellbank hoặc đơn vị khác) | người duyệt của đơn vị | quản lý module |
 | Công khai, chủ mẫu là cán bộ / nghiên cứu viên **còn hoạt động** | chủ mẫu | trưởng nhóm → quản lý |
 | Công khai, mẫu của **sinh viên** (kể cả đang học), hoặc chủ mẫu đã rời đi | **trưởng nhóm** (đã tự xác nhận, nhóm chưa giải thể) | quản lý |
 
@@ -221,14 +242,14 @@ Sinh viên **không bao giờ** là người duyệt: người sắp ra trườn
 - Sau khi **duyệt**, quản lý bấm **«Giao mẫu»** (mẫu chuyển «đã lấy ra») rồi **«Nhận lại mẫu»** khi trả. Mẫu được trả / rã đông / hủy
   / xóa thì yêu cầu liên quan tự đóng.
 - **Email** (gửi nền, SMTP hỏng không làm hỏng thao tác chính): yêu cầu mới → người duyệt; đã duyệt → người xin **và** quản lý module;
-  từ chối / giao / nhận lại → người xin; quá hạn → quản lý. Liên kết trong thư mở thẳng bảng «Công việc» (cần đăng nhập — không có
+  từ chối / giao / nhận lại → người xin; quá hạn → quản lý. Liên kết trong thư mở thẳng bảng «Việc cần xử lý» (cần đăng nhập — không có
   liên kết duyệt không cần đăng nhập, vì trình quét thư có thể tự mở liên kết).
 - Mọi bước ghi vào lịch sử của mẫu: `yc_gui`, `yc_duyet`, `yc_tu_choi`, `yc_huy`, `yc_leo_thang`, `yc_dinh_tuyen_lai`, `giao`, `tra`.
 
 ## Mẫu có thật trong ô nhưng chưa khai báo (thiết bị công khai)
 
 1. Quản lý bấm vào ô trống → **«Ô này có mẫu nhưng chưa khai báo»**, ghi mô tả (chữ trên ống, màu nắp…) và người / nhóm nghi là chủ.
-   Ô bị **giữ chỗ**: không ai thêm hay di chuyển mẫu khác vào. Thiết bị Cellbank không dùng chức năng này.
+   Ô bị **giữ chỗ**: không ai thêm hay di chuyển mẫu khác vào. Thiết bị có đơn vị quản lý (Cellbank…) không dùng chức năng này.
 2. **Việc đầu tiên là nhắc chủ mẫu** (`POST /findings/:id/remind`): email người nghi + trưởng nhóm của họ, hoặc trưởng nhóm + mọi thành
    viên đang hoạt động của nhóm nghi; không biết gì thì chỉ hiện trên bảng «Mẫu chưa khai báo» (ai đăng nhập cũng thấy). Nhắc lại được.
 3. Chủ mẫu bấm **«Đây là mẫu của tôi»**, điền thông tin ngay tại ô: ô thành mẫu bình thường, chủ mẫu là người nhận, lịch sử mẫu ghi
@@ -253,7 +274,7 @@ Phần mềm không ngăn được hành vi ngoài đời; nó giúp **phát hi�
 
 ## Cấu hình các hạn
 
-Ba hạn chờ chỉnh được ở **Quản trị module → Cấu hình hạn** (admin và quản lý module; `GET/PUT /settings`, lưu ở bảng `nhm_cau_hinh`,
+Ba hạn chờ chỉnh được ở **Quản lý module → Cấu hình hạn** (admin và quản lý module; `GET/PUT /settings`, lưu ở bảng `nhm_cau_hinh`,
 đọc qua `layHan(db)`):
 
 | Hạn | Mặc định | Khoảng |
@@ -268,7 +289,7 @@ khoảng trong CSDL bị bỏ qua, dùng mặc định. Email và thông báo l�
 
 ## Điện thoại
 
-Giao diện dùng được trên điện thoại: ô tìm và nút «Công việc» luôn hiện; sơ đồ kho gập lại sau khi chọn (thanh tóm tắt hiện đường
+Giao diện dùng được trên điện thoại: ô tìm và nút «Việc cần xử lý» luôn hiện; sơ đồ kho gập lại sau khi chọn (thanh tóm tắt hiện đường
 dẫn); hộp thoại phủ cả màn hình, nút thao tác dính đáy; bảng thành thẻ có nhãn cột; vùng bấm ≥ 44px; ô nhập ≥ 16px để iOS không tự
 phóng to; lưới hộp cuộn ngang. Máy cảm ứng không có kéo-thả: di chuyển mẫu đi qua hộp thoại chọn ô.
 

@@ -51,7 +51,7 @@ module.exports = function createYeuCauRouter(ctx) {
     return {
       id: y.id, tube_id: y.tube_id, mau_ten: y.mau_ten, mau_status: y.mau_status, vi_tri: moTaViTri(y.box_id, y.row_no, y.col_no),
       nguoi_gui_id: y.nguoi_gui_id, nguoi_gui_ten: y.nguoi_gui_ten, chu_ten: y.chu_ten, nhom_ten: y.nhom_ten, chu_loai: y.chu_loai,
-      ly_do: y.ly_do, cap: y.cap, cap_ten: YeuCau.CAP_VN[y.cap], trang_thai: y.trang_thai, han_phan_hoi: y.han_phan_hoi,
+      ly_do: y.ly_do, cap: y.cap, cap_ten: YeuCau.capTen(db, y.cap, y.box_id), trang_thai: y.trang_thai, han_phan_hoi: y.han_phan_hoi,
       leo_thang_luc: y.leo_thang_luc, xu_ly_ten: y.xu_ly_ten, xu_ly_luc: y.xu_ly_luc, xu_ly_thay: !!y.xu_ly_thay, ly_do_xu_ly: y.ly_do_xu_ly,
       created_at: y.created_at,
       co_the_xu_ly: q.coTheXuLy, can_ly_do: q.coTheXuLy && q.thay, // xử lý thay: phải có lý do
@@ -81,18 +81,19 @@ module.exports = function createYeuCauRouter(ctx) {
     const lyDo = toStr((req.body || {}).ly_do, 500);
     if (!lyDo) return fail(res, 400, 'Hãy ghi lý do / mục đích xin mẫu.');
     const { cap, nguoiDuyet } = YeuCau.xacDinhCap(db, tube, req.user.id);
+    const capTen = YeuCau.capTen(db, cap, tube.box_id);
     const han = YeuCau.sauNgay(YeuCau.layHan(db).PHAN_HOI_NGAY);
     const yeuCauId = db.transaction(() => {
       const info = db
         .prepare('INSERT INTO nhm_yeu_cau (tube_id, nguoi_gui_id, ly_do, cap, han_phan_hoi) VALUES (?, ?, ?, ?, ?)')
         .run(id, req.user.id, lyDo, cap, han);
-      logMove(id, 'yc_gui', null, null, req.user.id, `Yêu cầu #${info.lastInsertRowid} (${YeuCau.CAP_VN[cap]} duyệt): ${lyDo}`);
+      logMove(id, 'yc_gui', null, null, req.user.id, `Yêu cầu #${info.lastInsertRowid} (${capTen} duyệt): ${lyDo}`);
       return Number(info.lastInsertRowid);
     })();
     audit(req, 'request_create', `#${yeuCauId} mẫu id=${id} ${tube.name} → cấp ${cap}`);
-    const yc = { id: yeuCauId, cap, ly_do: lyDo };
+    const yc = { id: yeuCauId, cap, cap_ten: capTen, ly_do: lyDo };
     guiNen(thongBao.yeuCauMoi({ yc, tube, nguoiGui: nguoiDung(req.user.id), duongDan: moTaViTri(tube.box_id, tube.row_no, tube.col_no), nguoiDuyet }));
-    res.status(201).json({ id: yeuCauId, cap, cap_ten: YeuCau.CAP_VN[cap], han_phan_hoi: han });
+    res.status(201).json({ id: yeuCauId, cap, cap_ten: capTen, han_phan_hoi: han });
   });
 
   // ---------- danh sách ----------
@@ -144,7 +145,7 @@ module.exports = function createYeuCauRouter(ctx) {
         `UPDATE nhm_yeu_cau SET trang_thai = ?, xu_ly_boi = ?, xu_ly_luc = datetime('now'), xu_ly_thay = ?, ly_do_xu_ly = ?, updated_at = datetime('now') WHERE id = ?`
       ).run(ketQua === 'duyet' ? 'da_duyet' : 'tu_choi', req.user.id, q.thay ? 1 : 0, lyDo, y.id);
       logMove(y.tube_id, ketQua === 'duyet' ? 'yc_duyet' : 'yc_tu_choi', null, null, req.user.id,
-        `Yêu cầu #${y.id} của ${y.nguoi_gui_ten}${q.thay ? ` — xử lý thay ${YeuCau.CAP_VN[y.cap]}` : ''}${lyDo ? ': ' + lyDo : ''}`);
+        `Yêu cầu #${y.id} của ${y.nguoi_gui_ten}${q.thay ? ` — xử lý thay ${YeuCau.capTen(db, y.cap, tube.box_id)}` : ''}${lyDo ? ': ' + lyDo : ''}`);
     })();
     audit(req, ketQua === 'duyet' ? 'request_approve' : 'request_reject', `#${y.id} mẫu id=${y.tube_id}${q.thay ? ' (xử lý thay)' : ''}${lyDo ? ' — ' + lyDo : ''}`);
     const moi = { ...y, ly_do_xu_ly: lyDo };
@@ -220,13 +221,13 @@ module.exports = function createYeuCauRouter(ctx) {
           .prepare("UPDATE nhm_yeu_cau SET cap = 'quan_ly', leo_thang_luc = datetime('now'), updated_at = datetime('now') WHERE id = ? AND trang_thai = 'cho_duyet' AND cap = ?")
           .run(y.id, y.cap);
         if (!r.changes) return false;
-        logMove(y.tube_id, 'yc_leo_thang', null, null, null, `Yêu cầu #${y.id}: ${YeuCau.CAP_VN[y.cap]} quá hạn phản hồi ${YeuCau.layHan(db).PHAN_HOI_NGAY} ngày, chuyển quản lý module`);
+        logMove(y.tube_id, 'yc_leo_thang', null, null, null, `Yêu cầu #${y.id}: ${YeuCau.capTen(db, y.cap, y.box_id)} quá hạn phản hồi ${YeuCau.layHan(db).PHAN_HOI_NGAY} ngày, chuyển quản lý module`);
         return true;
       })();
       if (!ok) continue;
       leoThang++;
       const tube = taiMau(y.tube_id);
-      guiNen(thongBao.yeuCauLeoThang({ yc: { ...y, cap: 'quan_ly' }, tube, nguoiGui: nguoiDung(y.nguoi_gui_id), duongDan: moTaViTri(tube.box_id, tube.row_no, tube.col_no), capCu: y.cap }));
+      guiNen(thongBao.yeuCauLeoThang({ yc: { ...y, cap: 'quan_ly' }, tube, nguoiGui: nguoiDung(y.nguoi_gui_id), duongDan: moTaViTri(tube.box_id, tube.row_no, tube.col_no), capCu: y.cap, capCuTen: YeuCau.capTen(db, y.cap, y.box_id) }));
     }
     return { leoThang };
   }
@@ -241,10 +242,10 @@ module.exports = function createYeuCauRouter(ctx) {
       if (moi.cap === y.cap) continue;
       db.transaction(() => {
         db.prepare("UPDATE nhm_yeu_cau SET cap = ?, han_phan_hoi = ?, updated_at = datetime('now') WHERE id = ? AND trang_thai = 'cho_duyet'").run(moi.cap, YeuCau.sauNgay(YeuCau.layHan(db).PHAN_HOI_NGAY), y.id);
-        logMove(y.tube_id, 'yc_dinh_tuyen_lai', null, null, null, `Yêu cầu #${y.id}: ${YeuCau.CAP_VN[y.cap]} → ${YeuCau.CAP_VN[moi.cap]} (người duyệt thay đổi)`);
+        logMove(y.tube_id, 'yc_dinh_tuyen_lai', null, null, null, `Yêu cầu #${y.id}: ${YeuCau.capTen(db, y.cap, tube.box_id)} → ${YeuCau.capTen(db, moi.cap, tube.box_id)} (người duyệt thay đổi)`);
       })();
       doi++;
-      guiNen(thongBao.yeuCauMoi({ yc: { ...y, cap: moi.cap }, tube, nguoiGui: nguoiDung(y.nguoi_gui_id), duongDan: moTaViTri(tube.box_id, tube.row_no, tube.col_no), nguoiDuyet: moi.nguoiDuyet }));
+      guiNen(thongBao.yeuCauMoi({ yc: { ...y, cap: moi.cap, cap_ten: YeuCau.capTen(db, moi.cap, tube.box_id) }, tube, nguoiGui: nguoiDung(y.nguoi_gui_id), duongDan: moTaViTri(tube.box_id, tube.row_no, tube.col_no), nguoiDuyet: moi.nguoiDuyet }));
     }
     return doi;
   }

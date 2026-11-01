@@ -23,8 +23,12 @@ CREATE TABLE IF NOT EXISTS nhm_containers (
   sort_order INTEGER NOT NULL DEFAULT 0,
   notes TEXT,
   -- Chỉ có nghĩa ở thiết bị GỐC (parent_id NULL); vị trí con thừa hưởng từ gốc.
-  -- 'cellbank': Cellbank quản lý, người dùng gửi yêu cầu lấy mẫu. 'cong_khai': ai cũng thêm mẫu vào ô trống.
+  -- quan_ly_boi (tên cũ, giữ để không phải dựng lại bảng): 'cong_khai' = Public (ai cũng thêm mẫu vào ô trống);
+  -- 'cellbank' = có ĐƠN VỊ QUẢN LÝ (don_vi_id): người dùng gửi yêu cầu, người duyệt của đơn vị quyết định. Hai cột luôn đi đôi.
   quan_ly_boi TEXT NOT NULL DEFAULT 'cong_khai' CHECK (quan_ly_boi IN ('cong_khai','cellbank')),
+  don_vi_id INTEGER REFERENCES nhm_don_vi(id),
+  -- Vị trí SỐ của giá (rack) trong bình nitơ lỏng (1–50); NULL = không đánh số
+  vi_tri INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50),
   deleted_at TEXT,
   created_by INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -51,6 +55,8 @@ CREATE TABLE IF NOT EXISTS nhm_boxes (
   code TEXT NOT NULL,
   name TEXT,
   notes TEXT,
+  -- Vị trí SỐ của hộp trong giá (rack) của bình nitơ lỏng (1–50), tính từ đáy lên; NULL = không đánh số
+  vi_tri INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50),
   deleted_at TEXT,
   created_by INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -322,3 +328,33 @@ INSERT OR IGNORE INTO nhm_sample_types (name)
   WHERE NOT EXISTS (SELECT 1 FROM nhm_meta WHERE key = 'seed_v1');
 
 INSERT OR IGNORE INTO nhm_meta (key, value) VALUES ('seed_v1', datetime('now'));
+
+-- Đơn vị quản lý thiết bị: thiết bị gắn với đơn vị thì mọi yêu cầu lấy mẫu phải được người duyệt của đơn vị đồng ý.
+-- Thiết bị không gắn đơn vị là Public. Người duyệt = các tài khoản trong nhm_don_vi_duyet, cộng (nếu có) những người giữ
+-- vai trò vai_tro_duyet (đơn vị Cellbank: Trưởng CIPP). Chỉ admin tạo / sửa đơn vị và người duyệt.
+CREATE TABLE IF NOT EXISTS nhm_don_vi (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ma TEXT NOT NULL UNIQUE,
+  ten TEXT NOT NULL,
+  mo_ta TEXT,
+  vai_tro_duyet TEXT CHECK (vai_tro_duyet IS NULL OR vai_tro_duyet IN ('truong_cellbank')),
+  created_by INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_don_vi_ten ON nhm_don_vi(LOWER(ten));
+
+CREATE TABLE IF NOT EXISTS nhm_don_vi_duyet (
+  don_vi_id INTEGER NOT NULL REFERENCES nhm_don_vi(id),
+  user_id INTEGER NOT NULL,
+  granted_by INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (don_vi_id, user_id)
+);
+
+INSERT OR IGNORE INTO nhm_don_vi (ma, ten, mo_ta, vai_tro_duyet)
+  VALUES ('cellbank', 'Cellbank', 'Thiết bị do Cellbank (CIPP) quản lý; Trưởng CIPP duyệt yêu cầu lấy mẫu.', 'truong_cellbank');
+-- thiết bị Cellbank tạo từ bản trước chưa có đơn vị: gắn vào đơn vị Cellbank
+UPDATE nhm_containers SET don_vi_id = (SELECT id FROM nhm_don_vi WHERE ma = 'cellbank')
+  WHERE quan_ly_boi = 'cellbank' AND don_vi_id IS NULL AND parent_id IS NULL;
+CREATE INDEX IF NOT EXISTS ix_nhm_containers_don_vi ON nhm_containers(don_vi_id);

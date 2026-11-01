@@ -65,7 +65,7 @@ module.exports = function createPhatHienRouter(ctx) {
     const box = boxId && db.prepare('SELECT id, rows, cols FROM nhm_boxes WHERE id = ? AND deleted_at IS NULL').get(boxId);
     if (!box) return fail(res, 400, 'Hộp không tồn tại.');
     if (!row || !col || row < 1 || row > box.rows || col < 1 || col > box.cols) return fail(res, 400, 'Vị trí nằm ngoài lưới của hộp.');
-    if (ctx.hopTrongCellbank(boxId)) return fail(res, 400, 'Thiết bị Cellbank do Cellbank quản lý chặt, không dùng chức năng này.');
+    if (ctx.hopTrongCellbank(boxId)) return fail(res, 400, 'Thiết bị này có đơn vị quản lý (mẫu chỉ ra vào qua yêu cầu được duyệt), không dùng chức năng này.');
     if (db.prepare(`SELECT 1 FROM nhm_tubes WHERE box_id = ? AND row_no = ? AND col_no = ? AND deleted_at IS NULL AND status IN ${HOLDING}`).get(boxId, row, col)) {
       return fail(res, 409, 'Ô này đã có mẫu trong sổ.');
     }

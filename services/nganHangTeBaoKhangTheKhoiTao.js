@@ -33,6 +33,9 @@ const PAGE_URL = '/public/ngan-hang-te-bao-khang-the/index.html';
 // TRƯỚC khi chạy file schema (file schema có chỉ mục dùng các cột này).
 const COT_THEM_SAU = [
   ['nhm_containers', 'quan_ly_boi', "TEXT NOT NULL DEFAULT 'cong_khai' CHECK (quan_ly_boi IN ('cong_khai','cellbank'))"],
+  ['nhm_containers', 'don_vi_id', 'INTEGER REFERENCES nhm_don_vi(id)'],
+  ['nhm_containers', 'vi_tri', 'INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50)'],
+  ['nhm_boxes', 'vi_tri', 'INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50)'],
   ['nhm_tubes', 'chu_loai', "TEXT CHECK (chu_loai IS NULL OR chu_loai IN ('sinh_vien','nghien_cuu_vien','can_bo'))"],
   ['nhm_tubes', 'nhom_id', 'INTEGER REFERENCES nhm_nhom(id)'],
   ['nhm_movements', 'user_label', 'TEXT'],

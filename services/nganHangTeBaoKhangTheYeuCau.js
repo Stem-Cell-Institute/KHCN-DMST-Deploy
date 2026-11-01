@@ -5,8 +5,9 @@
  * Hàm thuần theo `db`, không biết `req`/`res` (router và bộ quét quá hạn dùng chung).
  *
  * Đường duyệt:
- *   Thiết bị Cellbank        → Trưởng CIPP;            không có (hoặc chính người gửi) → quản lý module
- *   Thiết bị công khai:
+ *   Thiết bị có ĐƠN VỊ QUẢN LÝ (Cellbank hoặc đơn vị khác do admin tạo) → người duyệt của đơn vị;
+ *                             không có (hoặc chính người gửi) → quản lý module
+ *   Thiết bị Public (không có đơn vị):
  *     mẫu của cán bộ / nghiên cứu viên còn hoạt động → chủ mẫu
  *     mẫu của SINH VIÊN (kể cả đang học) hoặc chủ mẫu đã rời đi → trưởng nhóm đã xác nhận
  *     không có trưởng nhóm, trưởng nhóm chưa xác nhận / đã rời đi, nhóm giải thể → quản lý module
@@ -14,7 +15,7 @@
  * Sinh viên KHÔNG BAO GIỜ là người duyệt: người ra trường không thể duyệt, nên người còn ở lại duyệt thay ngay từ đầu.
  */
 
-// Các hạn (ngày). Giá trị MẶC ĐỊNH; quản lý chỉnh được (bảng nhm_cau_hinh, Quản trị module → Cấu hình hạn). Luôn đọc qua layHan(db).
+// Các hạn (ngày). Giá trị MẶC ĐỊNH; quản lý chỉnh được (bảng nhm_cau_hinh, Quản lý module → Cấu hình hạn). Luôn đọc qua layHan(db).
 const HAN_MAC_DINH = {
   PHAN_HOI_NGAY: 3, // người duyệt cấp dưới không phản hồi → chuyển quản lý
   CHO_BO_NGAY: 7, // mẫu chưa khai báo: từ lần nhắc đầu tiên đến khi quản lý được bỏ mẫu
@@ -60,7 +61,7 @@ function luuHan(db, giaTri, userId) {
 const CAP_VN = {
   chu_mau: 'Chủ mẫu',
   truong_nhom: 'Trưởng nhóm',
-  truong_cellbank: 'Trưởng CIPP (Cellbank)',
+  truong_cellbank: 'Đơn vị quản lý thiết bị', // tên cũ của cấp này; đơn vị cụ thể xem capTen()
   quan_ly: 'Quản lý module',
 };
 
@@ -87,16 +88,39 @@ function nguoiConHoatDong(db, userId) {
 function thietBiGocCuaHop(db, boxId) {
   const box = boxId && db.prepare('SELECT container_id FROM nhm_boxes WHERE id = ?').get(boxId);
   if (!box) return null;
-  let cur = db.prepare('SELECT id, parent_id, quan_ly_boi FROM nhm_containers WHERE id = ?').get(box.container_id);
+  let cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id FROM nhm_containers WHERE id = ?').get(box.container_id);
   for (let i = 0; cur && cur.parent_id != null && i < 50; i++) {
-    cur = db.prepare('SELECT id, parent_id, quan_ly_boi FROM nhm_containers WHERE id = ?').get(cur.parent_id);
+    cur = db.prepare('SELECT id, parent_id, quan_ly_boi, don_vi_id FROM nhm_containers WHERE id = ?').get(cur.parent_id);
   }
   return cur || null;
 }
 
+/** Hộp nằm trong thiết bị CÓ ĐƠN VỊ QUẢN LÝ (không còn là Public)? Tên hàm giữ từ bản chỉ có Cellbank. */
 function hopTrongCellbank(db, boxId) {
   const goc = thietBiGocCuaHop(db, boxId);
   return !!goc && goc.quan_ly_boi === 'cellbank';
+}
+
+/** Đơn vị quản lý của thiết bị chứa hộp; null nếu Public (hoặc dữ liệu cũ chưa gắn đơn vị). */
+function donViCuaHop(db, boxId) {
+  const goc = thietBiGocCuaHop(db, boxId);
+  if (!goc || !goc.don_vi_id) return null;
+  return db.prepare('SELECT * FROM nhm_don_vi WHERE id = ?').get(goc.don_vi_id) || null;
+}
+
+/** Tên cấp duyệt để hiện cho người dùng: cấp «đơn vị» thì nêu tên đơn vị của thiết bị. */
+function capTen(db, cap, boxId) {
+  if (cap !== 'truong_cellbank') return CAP_VN[cap];
+  const dv = donViCuaHop(db, boxId);
+  return dv ? `Người duyệt của ${dv.ten}` : CAP_VN.truong_cellbank;
+}
+
+/** Người duyệt của một đơn vị còn hoạt động: tài khoản được chỉ định + người giữ vai trò gắn với đơn vị (Cellbank: Trưởng CIPP). */
+function nguoiDuyetDonVi(db, donVi) {
+  if (!donVi) return [];
+  const ids = new Set(db.prepare('SELECT user_id FROM nhm_don_vi_duyet WHERE don_vi_id = ?').all(donVi.id).map((r) => r.user_id));
+  if (donVi.vai_tro_duyet) for (const r of db.prepare('SELECT user_id FROM nhm_vai_tro WHERE vai_tro = ?').all(donVi.vai_tro_duyet)) ids.add(r.user_id);
+  return [...ids].map((id) => nguoiConHoatDong(db, id)).filter(Boolean);
 }
 
 /** Người giữ một vai trò module và còn hoạt động. */
@@ -133,7 +157,9 @@ function truongNhomHieuLuc(db, nhomId) {
 function xacDinhCap(db, tube, nguoiGuiId) {
   const khacNguoiGui = (ds) => ds.filter((u) => u.id !== nguoiGuiId);
   if (tube.box_id && hopTrongCellbank(db, tube.box_id)) {
-    const ds = khacNguoiGui(nguoiCoVaiTro(db, 'truong_cellbank'));
+    const donVi = donViCuaHop(db, tube.box_id);
+    // dữ liệu cũ (kiểu Cellbank nhưng chưa gắn đơn vị) vẫn đi qua Trưởng CIPP
+    const ds = khacNguoiGui(donVi ? nguoiDuyetDonVi(db, donVi) : nguoiCoVaiTro(db, 'truong_cellbank'));
     if (ds.length) return { cap: 'truong_cellbank', nguoiDuyet: ds };
     return { cap: 'quan_ly', nguoiDuyet: khacNguoiGui(quanLyModule(db)) };
   }
@@ -148,11 +174,14 @@ function xacDinhCap(db, tube, nguoiGuiId) {
 function nguoiDuyetHienTai(db, yc, tube) {
   if (yc.cap === 'chu_mau') return [nguoiConHoatDong(db, tube.owner_user_id)].filter(Boolean);
   if (yc.cap === 'truong_nhom') return [truongNhomHieuLuc(db, tube.nhom_id)].filter(Boolean);
-  if (yc.cap === 'truong_cellbank') return nguoiCoVaiTro(db, 'truong_cellbank');
+  if (yc.cap === 'truong_cellbank') {
+    const donVi = tube.box_id ? donViCuaHop(db, tube.box_id) : null;
+    return donVi ? nguoiDuyetDonVi(db, donVi) : nguoiCoVaiTro(db, 'truong_cellbank');
+  }
   return quanLyModule(db);
 }
 
 module.exports = {
-  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, hopTrongCellbank, nguoiCoVaiTro, quanLyModule,
+  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, hopTrongCellbank, donViCuaHop, capTen, nguoiDuyetDonVi, nguoiCoVaiTro, quanLyModule,
   truongNhomHieuLuc, xacDinhCap, nguoiDuyetHienTai,
 };

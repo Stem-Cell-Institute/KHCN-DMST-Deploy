@@ -101,11 +101,12 @@ module.exports = function createMauRouter(ctx) {
     return { chu_loai: loai, nhom_id: nhomId };
   }
 
-  const LOI_CELLBANK_THEM = 'Thiết bị này do Cellbank quản lý: chỉ quản lý module mới thêm hoặc di chuyển mẫu vào. Hãy dùng chức năng yêu cầu.';
-  const LOI_CELLBANK_MAU = 'Mẫu nằm trong thiết bị do Cellbank quản lý: chỉ quản lý module mới thao tác được. Hãy dùng chức năng yêu cầu.';
+  // thiết bị có đơn vị quản lý (Cellbank hoặc đơn vị khác): người dùng thường không tự thêm / lấy mẫu, phải gửi yêu cầu
+  const tenDonVi = (boxId) => (ctx.donViCuaHop && (ctx.donViCuaHop(boxId) || {}).ten) || 'đơn vị quản lý';
+  const loiThem = (boxId) => `Thiết bị này do ${tenDonVi(boxId)} quản lý: chỉ quản lý module mới thêm hoặc di chuyển mẫu vào. Hãy dùng chức năng yêu cầu.`;
   function chanCellbank(req, res, tube) {
     if (tube.box_id && hopTrongCellbank(tube.box_id) && !canManage(req)) {
-      fail(res, 403, LOI_CELLBANK_MAU);
+      fail(res, 403, `Mẫu nằm trong thiết bị do ${tenDonVi(tube.box_id)} quản lý: chỉ quản lý module mới thao tác được. Hãy dùng chức năng yêu cầu.`);
       return true;
     }
     return false;
@@ -151,7 +152,7 @@ module.exports = function createMauRouter(ctx) {
     if (first) return fail(res, first.status, first.message);
     const chu = xacDinhChuMau(req, body);
     if (chu.loi) return fail(res, chu.status, chu.loi);
-    if (hopTrongCellbank(boxId) && !canManage(req)) return fail(res, 403, LOI_CELLBANK_THEM);
+    if (hopTrongCellbank(boxId) && !canManage(req)) return fail(res, 403, loiThem(boxId));
     const hop = db.prepare('SELECT rows, cols FROM nhm_boxes WHERE id = ?').get(boxId);
     const oCan = [];
     for (let i = 0, r = row, c = col; i < count; i++) {
@@ -189,7 +190,7 @@ module.exports = function createMauRouter(ctx) {
     if (bad) return fail(res, bad.status, bad.message);
     const chu = xacDinhChuMau(req, body);
     if (chu.loi) return fail(res, chu.status, chu.loi);
-    if (hopTrongCellbank(boxId) && !canManage(req)) return fail(res, 403, LOI_CELLBANK_THEM);
+    if (hopTrongCellbank(boxId) && !canManage(req)) return fail(res, 403, loiThem(boxId));
     try {
       const id = db.transaction(() => insertTube(t, chu, boxId, row, col, req.user.id))();
       audit(req, 'tube_create', `id=${id} box=${boxId} r${row}c${col}`);
@@ -270,7 +271,7 @@ module.exports = function createMauRouter(ctx) {
     if (boxId === cur.box_id && row === cur.row_no && col === cur.col_no) return fail(res, 400, 'Mẫu đang ở đúng vị trí này.');
     const bad = checkPosition(boxId, row, col, id);
     if (bad) return fail(res, bad.status, bad.message);
-    if (hopTrongCellbank(boxId) && !canManage(req)) return fail(res, 403, LOI_CELLBANK_THEM);
+    if (hopTrongCellbank(boxId) && !canManage(req)) return fail(res, 403, loiThem(boxId));
     try {
       db.transaction(() => {
         db.prepare("UPDATE nhm_tubes SET box_id = ?, row_no = ?, col_no = ?, updated_at = datetime('now') WHERE id = ?").run(boxId, row, col, id);

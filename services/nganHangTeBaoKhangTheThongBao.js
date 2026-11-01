@@ -69,7 +69,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     /** Có yêu cầu mới → người duyệt ở cấp hiện tại. */
     yeuCauMoi({ yc, tube, nguoiGui, duongDan, nguoiDuyet }) {
       const thu = dungThu(
-        [{ text: `${ten(nguoiGui)} xin lấy một mẫu cần bạn duyệt (cấp duyệt: ${CAP_VN[yc.cap]}).` }]
+        [{ text: `${ten(nguoiGui)} xin lấy một mẫu cần bạn duyệt (cấp duyệt: ${yc.cap_ten || CAP_VN[yc.cap]}).` }]
           .concat(thongTinMau(tube, duongDan))
           .concat(yc.ly_do ? [{ nhan: 'Lý do', text: yc.ly_do }] : [])
           .concat([{ text: `Vui lòng duyệt hoặc từ chối trong vòng ${layHan(db).PHAN_HOI_NGAY} ngày; quá hạn yêu cầu sẽ chuyển cho quản lý module.` }]),
@@ -101,9 +101,9 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     },
 
     /** Quá hạn phản hồi → chuyển quản lý module. */
-    yeuCauLeoThang({ yc, tube, nguoiGui, duongDan, capCu }) {
+    yeuCauLeoThang({ yc, tube, nguoiGui, duongDan, capCu, capCuTen }) {
       const thu = dungThu(
-        [{ text: `Yêu cầu lấy mẫu của ${ten(nguoiGui)} chưa được ${CAP_VN[capCu] || 'người duyệt'} xử lý quá hạn nên chuyển cho quản lý module. Bạn có thể duyệt hoặc từ chối.` }]
+        [{ text: `Yêu cầu lấy mẫu của ${ten(nguoiGui)} chưa được ${capCuTen || CAP_VN[capCu] || 'người duyệt'} xử lý quá hạn nên chuyển cho quản lý module. Bạn có thể duyệt hoặc từ chối.` }]
           .concat(thongTinMau(tube, duongDan))
           .concat(yc.ly_do ? [{ nhan: 'Lý do', text: yc.ly_do }] : []),
         lienKet('#cong-viec')
