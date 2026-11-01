@@ -167,6 +167,11 @@
 .nhm-hist { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
 .nhm-hist th { text-align: left; padding: 6px 8px 6px 0; font-weight: 600; color: var(--chu-phu); border-bottom: 1px solid var(--muc); }
 .nhm-hist td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--ke); }
+.nhm-btn--sm { min-height: 30px; padding: 0 10px; font-size: 0.78rem; }
+.nhm-dm { margin-bottom: 18px; }
+.nhm-dm-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.nhm-hist-act { text-align: right; white-space: nowrap; }
+.nhm-hist-act .nhm-btn + .nhm-btn { margin-left: 6px; }
 
 /* ── Màn hình hẹp: sơ đồ nằm trên, thu gọn được ───────────────────────────── */
 

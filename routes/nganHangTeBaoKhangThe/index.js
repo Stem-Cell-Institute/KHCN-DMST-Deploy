@@ -14,6 +14,7 @@ const express = require('express');
 const taoBoiCanh = require('./boiCanh');
 const createKhoLuuTruRouter = require('./khoLuuTru');
 const createMauRouter = require('./mau');
+const createDanhMucRouter = require('./danhMuc');
 const khoiTao = require('../../services/nganHangTeBaoKhangTheKhoiTao');
 
 function createNganHangMauRouter(deps) {
@@ -21,6 +22,7 @@ function createNganHangMauRouter(deps) {
   const router = express.Router();
   router.use(deps.authMiddleware);
   router.use(createKhoLuuTruRouter(ctx));
+  router.use(createDanhMucRouter(ctx));
   router.use(createMauRouter(ctx));
   return router;
 }

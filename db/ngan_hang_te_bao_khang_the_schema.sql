@@ -108,27 +108,38 @@ CREATE INDEX IF NOT EXISTS ix_nhm_movements_tube ON nhm_movements(tube_id);
 UPDATE nhm_container_types SET name = 'Hộp'
   WHERE name = 'Canister' AND NOT EXISTS (SELECT 1 FROM nhm_container_types WHERE name = 'Hộp');
 
--- Dữ liệu mặc định (quản lý có thể thêm/sửa sau)
-INSERT OR IGNORE INTO nhm_container_types (name, default_temp_c, sort_order) VALUES
-  ('Tủ -80°C', -80, 1),
-  ('Tủ -20°C', -20, 2),
-  ('Tủ lạnh 4°C', 4, 3),
-  ('Bình nitơ lỏng', -196, 4),
-  ('Ngăn', NULL, 5),
-  ('Giá (rack)', NULL, 6),
-  ('Ngăn kéo', NULL, 7),
-  ('Hộp', NULL, 8);
+-- Dữ liệu mặc định: chỉ nạp MỘT LẦN (đánh dấu trong nhm_meta). Quản lý thêm / sửa / xóa danh mục sau đó
+-- (xem routes/nganHangTeBaoKhangThe/danhMuc.js); xóa một mục mặc định thì lần khởi động sau không nạp lại.
+CREATE TABLE IF NOT EXISTS nhm_meta (key TEXT PRIMARY KEY, value TEXT);
 
-INSERT OR IGNORE INTO nhm_box_templates (name, rows, cols) VALUES
-  ('Hộp 9x9', 9, 9),
-  ('Hộp 10x10', 10, 10),
-  ('Hộp 5x5', 5, 5);
+INSERT OR IGNORE INTO nhm_container_types (name, default_temp_c, sort_order)
+  SELECT column1, column2, column3 FROM (VALUES
+    ('Tủ -80°C', -80, 1),
+    ('Tủ -20°C', -20, 2),
+    ('Tủ lạnh 4°C', 4, 3),
+    ('Bình nitơ lỏng', -196, 4),
+    ('Ngăn', NULL, 5),
+    ('Giá (rack)', NULL, 6),
+    ('Ngăn kéo', NULL, 7),
+    ('Hộp', NULL, 8))
+  WHERE NOT EXISTS (SELECT 1 FROM nhm_meta WHERE key = 'seed_v1');
 
-INSERT OR IGNORE INTO nhm_sample_types (name) VALUES
-  ('Dòng tế bào'),
-  ('Tế bào gốc'),
-  ('Huyết thanh'),
-  ('DNA/RNA'),
-  ('Kháng thể'),
-  ('Hóa chất / sinh phẩm'),
-  ('Khác');
+INSERT OR IGNORE INTO nhm_box_templates (name, rows, cols)
+  SELECT column1, column2, column3 FROM (VALUES
+    ('Hộp 9x9', 9, 9),
+    ('Hộp 10x10', 10, 10),
+    ('Hộp 5x5', 5, 5))
+  WHERE NOT EXISTS (SELECT 1 FROM nhm_meta WHERE key = 'seed_v1');
+
+INSERT OR IGNORE INTO nhm_sample_types (name)
+  SELECT column1 FROM (VALUES
+    ('Dòng tế bào'),
+    ('Tế bào gốc'),
+    ('Huyết thanh'),
+    ('DNA/RNA'),
+    ('Kháng thể'),
+    ('Hóa chất / sinh phẩm'),
+    ('Khác'))
+  WHERE NOT EXISTS (SELECT 1 FROM nhm_meta WHERE key = 'seed_v1');
+
+INSERT OR IGNORE INTO nhm_meta (key, value) VALUES ('seed_v1', datetime('now'));

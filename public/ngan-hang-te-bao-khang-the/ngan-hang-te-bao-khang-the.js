@@ -508,6 +508,61 @@
     });
   }
 
+  // ---------- quản lý danh mục (chỉ quản lý) ----------
+  var DANH_MUC = [
+    { path: 'container-types', title: 'Loại vị trí lưu trữ', key: 'containerTypes',
+      fields: [{ name: 'name', label: 'Tên', required: true }, { name: 'default_temp_c', label: 'Nhiệt độ mặc định (°C)', type: 'number' }, { name: 'sort_order', label: 'Thứ tự sắp xếp', type: 'number' }],
+      show: function (x) { return x.default_temp_c != null ? x.default_temp_c + ' °C' : ''; } },
+    { path: 'box-templates', title: 'Mẫu hộp', key: 'boxTemplates',
+      fields: [{ name: 'name', label: 'Tên', required: true }, { name: 'rows', label: 'Số hàng (1–26)', type: 'number', required: true }, { name: 'cols', label: 'Số cột (1–30)', type: 'number', required: true }],
+      show: function (x) { return x.rows + '×' + x.cols; } },
+    { path: 'sample-types', title: 'Loại mẫu', key: 'sampleTypes', fields: [{ name: 'name', label: 'Tên', required: true }], show: function () { return ''; } },
+  ];
+
+  function danhMucDialog() {
+    api('GET', '/meta').then(function (meta) {
+      state.meta = meta;
+      var err = h('div', { class: 'nhm-err' });
+      var reopen = function () { setTimeout(danhMucDialog, 0); };
+      var sections = DANH_MUC.map(function (dm) {
+        var rows = meta[dm.key].map(function (x) {
+          return h('tr', {}, [
+            h('td', {}, x.name), h('td', {}, dm.show(x)),
+            h('td', { class: 'nhm-hist-act' }, [
+              h('button', { type: 'button', class: 'nhm-btn nhm-btn--sm', onclick: function () { danhMucForm(dm, x, reopen); } }, 'Sửa'),
+              h('button', { type: 'button', class: 'nhm-btn nhm-btn--sm nhm-btn--danger', onclick: function () {
+                if (!window.confirm('Xóa "' + x.name + '"?')) return;
+                api('DELETE', '/' + dm.path + '/' + x.id).then(function () { say('Đã xóa.', 'ok'); return reload(true); }).then(danhMucDialog)
+                  .catch(function (e) { err.textContent = e.message; });
+              } }, 'Xóa'),
+            ]),
+          ]);
+        });
+        return h('section', { class: 'nhm-dm' }, [
+          h('div', { class: 'nhm-dm-head' }, [
+            h('strong', {}, dm.title),
+            h('button', { type: 'button', class: 'nhm-btn nhm-btn--sm', onclick: function () { danhMucForm(dm, null, reopen); } }, '+ Thêm'),
+          ]),
+          h('table', { class: 'nhm-hist' }, rows),
+        ]);
+      });
+      openInfo('Quản lý danh mục', h('div', {}, sections.concat([err])), []);
+    }).catch(function (e) { say(e.message, 'err'); });
+  }
+
+  function danhMucForm(dm, x, reopen) {
+    openForm({
+      title: (x ? 'Sửa: ' : 'Thêm: ') + dm.title.toLowerCase(),
+      fields: dm.fields.map(function (f) { return Object.assign({}, f, { value: x ? x[f.name] : undefined }); }),
+      onSubmit: function (v) {
+        var body = {};
+        dm.fields.forEach(function (f) { body[f.name] = v[f.name]; });
+        return (x ? api('PATCH', '/' + dm.path + '/' + x.id, body) : api('POST', '/' + dm.path, body))
+          .then(function () { say('Đã lưu danh mục.', 'ok'); reopen(); });
+      },
+    });
+  }
+
   // ---------- măng-sét: lời chào, về trang chủ, đăng xuất ----------
   function logout() {
     fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }).catch(function () {}).then(function () {
@@ -539,7 +594,13 @@
     api('GET', '/meta').then(function (meta) {
       state.meta = meta;
       var addRoot = $('nhm-add-root');
-      if (meta.canManage) { addRoot.classList.remove('nhm-hide'); addRoot.addEventListener('click', function () { containerForm(null, null); }); }
+      if (meta.canManage) {
+        addRoot.classList.remove('nhm-hide');
+        addRoot.addEventListener('click', function () { containerForm(null, null); });
+        var qlDm = $('nhm-manage-catalog');
+        qlDm.classList.remove('nhm-hide');
+        qlDm.addEventListener('click', danhMucDialog);
+      }
       return api('GET', '/tree');
     }).then(function (tree) {
       state.tree = tree;
