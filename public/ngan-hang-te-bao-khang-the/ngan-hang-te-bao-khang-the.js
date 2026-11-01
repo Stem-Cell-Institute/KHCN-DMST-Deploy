@@ -405,7 +405,12 @@
     var det = h('details', { class: 'nhm-ln' }, [h('summary', {}, [h('span', { class: 'nhm-ln__tit' }, 'Sơ đồ bình ' + tank.name), tom]), m.node]);
     det.open = !window.matchMedia('(max-width: 900px)').matches; // máy tính: mở sẵn; điện thoại: gập lại
     root.classList.add('nhm-detail--ln');
-    root.appendChild(det);
+    // Màn hình hẹp: khung đặt SAU phần thông tin vị trí (tiêu đề, cây vị trí, dòng nhắc) và trước lưới hộp, để thông tin không bị đứt quãng.
+    // Màn hình rộng: CSS đưa khung sang cột phải nên vị trí trong DOM không ảnh hưởng.
+    var cuoiThongTin = root.querySelectorAll('.nhm-title, .nhm-ct, .nhm-meta, .nhm-hint');
+    var moc = cuoiThongTin.length ? cuoiThongTin[cuoiThongTin.length - 1] : null;
+    if (moc && moc.parentNode === root) root.insertBefore(det, moc.nextSibling);
+    else root.appendChild(det);
   }
 
   function renderDetail() {

@@ -473,7 +473,7 @@
 @media (max-width: 900px) {
   .ln-svg { max-height: 250px; }
   .nhm-detail--ln { display: flex; flex-direction: column; }
-  .nhm-detail--ln > .nhm-ln { order: -1; margin-bottom: 14px; }
+  .nhm-detail--ln > .nhm-ln { margin: 4px 0 14px; }
 }
 @media print { .nhm-ln { display: none; } }
 
