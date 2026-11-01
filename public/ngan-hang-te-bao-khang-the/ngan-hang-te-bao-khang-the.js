@@ -1489,7 +1489,7 @@
     // phiếu in được (kèm kết quả duyệt) cho người gửi, người đã xử lý, người duyệt và quản lý
     if (y.co_the_in) nut.push(nutNho('In phiếu', '', function () { window.open(API + '/requests/' + y.id + '/print', '_blank', 'noopener'); }));
     return h('div', { class: 'nhm-card' }, [
-      h('div', { class: 'nhm-card-top' }, [h('strong', {}, y.mau_ten), h('span', { class: 'nhm-chip' }, trangThai)]),
+      h('div', { class: 'nhm-card-top' }, [h('strong', {}, y.mau_ten), h('span', { class: 'nhm-chip' + ({ da_duyet: ' nhm-chip--ok', da_giao: ' nhm-chip--ok', da_tra: ' nhm-chip--ok', tu_choi: ' nhm-chip--no', da_huy: ' nhm-chip--no' }[y.trang_thai] || '') }, trangThai)]),
       h('div', { class: 'nhm-small' }, y.nguoi_gui_ten + ' xin lấy · ' + y.vi_tri),
       y.ly_do ? h('div', { class: 'nhm-small' }, 'Lý do: ' + y.ly_do) : null,
       h('div', { class: 'nhm-small nhm-muted' }, 'Chủ mẫu: ' + (y.chu_ten || '—') + (y.nhom_ten ? ' · nhóm ' + y.nhom_ten : '') + (y.trang_thai === 'cho_duyet' ? ' · hạn phản hồi ' + gioDia(y.han_phan_hoi) : '')),
@@ -1644,16 +1644,20 @@
   function taiCv() {
     var c = state.cv; if (!c) return Promise.resolve();
     var url = { inbox: '/requests?view=inbox', mine: '/requests?view=mine', done: '/requests?view=done', all: '/requests?view=all', phathien: '/findings', nghimat: '/incidents', vipham: '/violations' }[c.tab];
-    return api('GET', url).then(function (r) {
+    // tab «Cần tôi xử lý» kèm lịch sử đã xử lý ở phía dưới (hai lần gọi độc lập; lịch sử lỗi thì chỉ không hiện)
+    var ls = c.tab === 'inbox' ? api('GET', '/requests?view=done').then(function (x) { return x.requests || []; }, function () { return []; }) : Promise.resolve(null);
+    return Promise.all([api('GET', url), ls]).then(function (kq) {
+      var r = kq[0];
       if (state.cv !== c) return;
       c.data = r.requests || r.findings || r.incidents || r.violations || [];
+      c.lichSu = kq[1];
       renderDetail();
     }).catch(function (e) { say(e.message, 'err'); });
   }
 
   function renderCongViec(root) {
     var c = state.cv, me = state.me || { yeuCau: { inbox: 0, mine: 0 }, phatHienMo: 0, vuViecMo: 0 };
-    var tabs = [['inbox', 'Cần tôi xử lý', me.yeuCau.inbox], ['mine', 'Yêu cầu của tôi', me.yeuCau.mine], ['done', 'Lịch sử xử lý', 0], ['phathien', 'Mẫu chưa khai báo', me.phatHienMo], ['nghimat', 'Mẫu nghi mất', me.vuViecMo]];
+    var tabs = [['inbox', 'Cần tôi xử lý', me.yeuCau.inbox], ['mine', 'Yêu cầu của tôi', me.yeuCau.mine], ['phathien', 'Mẫu chưa khai báo', me.phatHienMo], ['nghimat', 'Mẫu nghi mất', me.vuViecMo]];
     if (state.meta.canManage) tabs.push(['all', 'Tất cả yêu cầu', 0], ['vipham', 'Lấy không xin phép', 0]);
     var bar = h('div', { class: 'nhm-tabs', role: 'tablist' }, tabs.map(function (t) {
       return h('button', { type: 'button', role: 'tab', class: 'nhm-tab' + (t[0] === c.tab ? ' nhm-tab--on' : ''), 'aria-selected': String(t[0] === c.tab), onclick: function () { moCongViec(t[0]); } },
@@ -1668,7 +1672,21 @@
       })) : h('p', { class: 'nhm-muted' }, 'Chưa có trường hợp lấy mẫu không xin phép nào được chủ mẫu xác nhận.');
     } else if (!c.data.length) noiDung = h('p', { class: 'nhm-muted' }, { inbox: 'Không có yêu cầu nào đang chờ bạn xử lý.', mine: 'Bạn chưa gửi yêu cầu nào.', done: 'Chưa có yêu cầu nào đã được xử lý. Yêu cầu đã duyệt hoặc từ chối sẽ được lưu ở đây (quản lý module thấy tất cả).', phathien: 'Không có mẫu nào đang chờ chủ mẫu khai báo.', nghimat: 'Không có mẫu nào đang bị báo nghi mất.', all: 'Chưa có yêu cầu nào.' }[c.tab]);
     else noiDung = h('div', { class: 'nhm-cards' }, c.data.map(c.tab === 'phathien' ? theMauChuaKhaiBao : c.tab === 'nghimat' ? theNghiMat : theYeuCau));
-    put(root, h('div', { class: 'nhm-title' }, [h('h2', {}, 'Việc cần xử lý')]), bar, noiDung);
+    put(root, h('div', { class: 'nhm-title' }, [h('h2', {}, 'Việc cần xử lý')]), bar, noiDung, c.tab === 'inbox' && c.data ? lichSuXuLy(c) : null);
+  }
+
+  /** Lịch sử yêu cầu đã xử lý, hiện dưới danh sách «Cần tôi xử lý»: 10 mục gần nhất, bấm để xem hết. Không có gì thì không hiện. */
+  function lichSuXuLy(c) {
+    var ds = c.lichSu || [];
+    if (!ds.length) return null;
+    var hetHet = !!c.lichSuHet;
+    var danhSach = (hetHet ? ds : ds.slice(0, 10)).map(theYeuCau);
+    return h('section', { class: 'nhm-ls', 'aria-label': 'Lịch sử xử lý' }, [
+      h('h3', {}, 'Lịch sử xử lý (' + ds.length + ')'),
+      h('p', { class: 'nhm-muted nhm-small' }, 'Yêu cầu đã duyệt hoặc từ chối được lưu lại ở đây.'),
+      h('div', { class: 'nhm-cards' }, danhSach),
+      ds.length > 10 ? h('p', {}, nutNho(hetHet ? 'Thu gọn' : 'Xem tất cả ' + ds.length + ' mục', '', function () { c.lichSuHet = !hetHet; renderDetail(); })) : null,
+    ]);
   }
 
   // ---------- măng-sét: lời chào, về trang chủ, đăng xuất ----------
