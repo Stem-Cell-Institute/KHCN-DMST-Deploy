@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — phiếu yêu cầu lấy mẫu, in được (A4), kèm xác nhận kết quả duyệt.
+ * Ngân hàng Tế bào & Kháng thể — phiếu yêu cầu lấy mẫu, in được (A4), kèm xác nhận kết quả duyệt.
  * Trả về một trang HTML tự đủ (CSS nằm trong trang, không phụ thuộc tệp ngoài) để người xin mở rồi bấm In / lưu PDF.
  * Mọi dữ liệu người dùng gõ đều được escape. Hàm thuần: không đọc DB, không biết req/res.
  */
@@ -86,7 +86,7 @@ function dungPhieu(d) {
 </style></head><body>
 <div class="nut"><button type="button" onclick="window.print()">In phiếu / lưu PDF</button></div>
 <div class="trang">
-  <div class="dau"><div><b>Viện Tế bào gốc</b><small>Trường ĐH Khoa học Tự nhiên, ĐHQG TP.HCM</small></div><div style="text-align:right"><b>${esc(d.nganHangTen || 'Ngân hàng tế bào & Kháng thể')}</b><small>Hệ thống STIMS</small></div></div>
+  <div class="dau"><div><b>Viện Tế bào gốc</b><small>Trường ĐH Khoa học Tự nhiên, ĐHQG TP.HCM</small></div><div style="text-align:right"><b>${esc(d.nganHangTen || 'Ngân hàng Tế bào & Kháng thể')}</b><small>Hệ thống STIMS</small></div></div>
   <h1>PHIẾU YÊU CẦU LẤY MẪU</h1>
   <p class="so">Số phiếu: <b>${esc(so)}</b> · gửi lúc ${esc(gioVn(yc.created_at))}</p>
   <div class="ketqua ${tt.lop}">${esc(tt.nhan)}<small>${esc(tt.ghi)}</small></div>

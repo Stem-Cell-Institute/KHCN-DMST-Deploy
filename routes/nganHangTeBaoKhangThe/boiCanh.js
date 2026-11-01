@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — bối cảnh dùng chung cho các router con: phân quyền, ghi nhật ký
+ * Ngân hàng Tế bào & Kháng thể — bối cảnh dùng chung cho các router con: phân quyền, ghi nhật ký
  * hoạt động, ghi lịch sử mẫu, sinh mã. Mỗi router con nhận cùng một đối tượng này.
  */
 

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — bảng phân quyền của TOÀN BỘ route, chạy trên server thật (hộp cát).
+ * Ngân hàng Tế bào & Kháng thể — bảng phân quyền của TOÀN BỘ route, chạy trên server thật (hộp cát).
  *
  * Giống tests/crd.test.js: bảng ROUTES dưới đây phải khớp đúng danh sách route đã đăng ký (route-inventory),
  * nên thêm / bớt route mà quên cập nhật bảng và quên nghĩ tới quyền là test báo ngay. Sửa bảng CÓ CHỦ ĐÍCH.

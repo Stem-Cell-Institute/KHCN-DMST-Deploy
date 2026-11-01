@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — danh mục, cây kho, vị trí lưu trữ (tủ/ngăn/giá) và hộp. 9 endpoint.
+ * Ngân hàng Tế bào & Kháng thể — danh mục, cây kho, vị trí lưu trữ (tủ/ngăn/giá) và hộp. 9 endpoint.
  * Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js).
  */
 

@@ -1,4 +1,4 @@
--- Module Ngân hàng tế bào & Kháng thể: tủ/bình → ngăn → giá → hộp → mẫu (ống đông lạnh, kháng thể, sinh phẩm...).
+-- Module Ngân hàng Tế bào & Kháng thể: tủ/bình → ngăn → giá → hộp → mẫu (ống đông lạnh, kháng thể, sinh phẩm...).
 -- Tiền tố bảng nhm_ giữ nguyên từ tên cũ «Ngân hàng mẫu» để không mất dữ liệu đã nhập.
 -- Chạy idempotent qua db.exec trong server (CREATE IF NOT EXISTS + INSERT OR IGNORE).
 -- Không khóa ngoại tới users: id người dùng chỉ lưu dạng số để module tách biệt.

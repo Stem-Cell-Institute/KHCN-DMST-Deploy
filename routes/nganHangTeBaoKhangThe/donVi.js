@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — đơn vị quản lý thiết bị (Cellbank, hoặc đơn vị khác). 4 endpoint.
+ * Ngân hàng Tế bào & Kháng thể — đơn vị quản lý thiết bị (Cellbank, hoặc đơn vị khác). 4 endpoint.
  * Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js).
  *
  * Thiết bị gắn với một đơn vị thì mọi yêu cầu lấy mẫu phải được NGƯỜI DUYỆT CỦA ĐƠN VỊ đồng ý; thiết bị không gắn đơn vị là Public.

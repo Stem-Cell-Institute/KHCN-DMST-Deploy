@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — khởi tạo lúc server khởi động: tạo bảng nhm_*, chuyển hướng địa chỉ cũ,
+ * Ngân hàng Tế bào & Kháng thể — khởi tạo lúc server khởi động: tạo bảng nhm_*, chuyển hướng địa chỉ cũ,
  * đồng bộ nhãn thẻ trang chủ, và số liệu thẻ trang chủ.
  *
  * Tách khỏi routes/nganHangTeBaoKhangThe.js để router chỉ lo HTTP. server.js chỉ gọi
@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const { HOLDING, placeholders } = require('./nganHangTeBaoKhangThe');
 
-const MODULE_LABEL = 'Ngân hàng tế bào & Kháng thể';
+const MODULE_LABEL = 'Ngân hàng Tế bào & Kháng thể';
 // Nhãn thẻ trang chủ từ các tên cũ của module
 const OLD_LABELS = ['Ngân hàng mẫu', 'Kho mẫu sinh phẩm'];
 const SCHEMA_PATH = path.join(__dirname, '..', 'db', 'ngan_hang_te_bao_khang_the_schema.sql');

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — hàm thuần dùng chung cho các router trong routes/nganHangTeBaoKhangThe/.
+ * Ngân hàng Tế bào & Kháng thể — hàm thuần dùng chung cho các router trong routes/nganHangTeBaoKhangThe/.
  * Không biết `req`/`res`.
  */
 

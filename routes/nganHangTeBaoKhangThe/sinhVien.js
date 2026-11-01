@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — danh sách sinh viên của Viện (Trung tâm quản lý người học cung cấp). 4 endpoint + cổng chặn.
+ * Ngân hàng Tế bào & Kháng thể — danh sách sinh viên của Viện (Trung tâm quản lý người học cung cấp). 4 endpoint + cổng chặn.
  * Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js). Chỉ Admin / quản lý module.
  *
  * Quy trình và lý do thiết kế: services/nganHangTeBaoKhangTheSinhVien.js. Tóm tắt:
@@ -17,7 +17,7 @@ const { HOLDING, toInt, toStr, chuanHoaTen } = require('../../services/nganHangT
 const SV = require('../../services/nganHangTeBaoKhangTheSinhVien');
 
 const LOI_HET_HAN =
-  'Quyền vào Ngân hàng tế bào & Kháng thể của tài khoản sinh viên đã hết hạn hoặc đã bị thu hồi. Liên hệ quản lý module để gia hạn (Đặt lịch thiết bị vẫn dùng được).';
+  'Quyền vào Ngân hàng Tế bào & Kháng thể của tài khoản sinh viên đã hết hạn hoặc đã bị thu hồi. Liên hệ quản lý module để gia hạn (Đặt lịch thiết bị vẫn dùng được).';
 
 module.exports = function createSinhVienRouter(ctx) {
   const { db, requireManage, audit, fail, logNhieuMau } = ctx;

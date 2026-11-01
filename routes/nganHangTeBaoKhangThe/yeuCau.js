@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — yêu cầu lấy mẫu của người khác. 10 endpoint (kể cả phiếu in).
+ * Ngân hàng Tế bào & Kháng thể — yêu cầu lấy mẫu của người khác. 10 endpoint (kể cả phiếu in).
  * Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js).
  *
  *   gửi → [chủ mẫu | trưởng nhóm | Trưởng CIPP | quản lý] duyệt / từ chối → quản lý giao → quản lý nhận lại
  *
  * Đường duyệt và quy tắc chuyển lên quản lý: services/nganHangTeBaoKhangTheYeuCau.js.
  * Quản lý module và admin luôn xử lý được; nếu không phải người duyệt ở cấp hiện tại thì là «xử lý thay» và BẮT BUỘC có lý do.
- * NGOẠI LỆ ngân hàng kháng thể: chỉ Viện trưởng duyệt (admin xử lý thay khi chưa có Viện trưởng); quản lý ngân hàng kháng thể
+ * NGOẠI LỆ ngân hàng kháng thể: chỉ Viện trưởng duyệt (không ai xử lý thay, admin cũng không); quản lý ngân hàng kháng thể
  * chỉ THEO DÕI yêu cầu đang chờ (co_the_xu_ly = false, theo_doi = true) và giao / nhận lại mẫu sau khi duyệt.
  * Không ai duyệt được yêu cầu của chính mình. Mọi bước ghi vào lịch sử của mẫu; email chạy nền, không làm hỏng thao tác chính.
  */
@@ -51,8 +51,8 @@ module.exports = function createYeuCauRouter(ctx) {
     if (yc.nguoi_gui_id === req.user.id) return { coTheXuLy: false, thay: false };
     const dungCap = laNguoiDuyet(req, yc, tube);
     if (dungCap) return { coTheXuLy: true, thay: false };
-    // ngân hàng kháng thể: quản lý không duyệt được, chỉ admin xử lý thay
-    if (laKhangThe(tube.box_id) ? ctx.laAdmin(req) : canManage(req)) return { coTheXuLy: true, thay: yc.cap !== 'quan_ly' };
+    // ngân hàng kháng thể: không ai duyệt thay Viện trưởng (quản lý, admin đều không)
+    if (!laKhangThe(tube.box_id) && canManage(req)) return { coTheXuLy: true, thay: yc.cap !== 'quan_ly' };
     return { coTheXuLy: false, thay: false };
   }
 
@@ -98,12 +98,20 @@ module.exports = function createYeuCauRouter(ctx) {
     if (!lyDo) return fail(res, 400, 'Hãy ghi lý do / mục đích xin mẫu.');
     const { cap, nguoiDuyet } = YeuCau.xacDinhCap(db, tube, req.user.id);
     const capTen = YeuCau.capTen(db, cap, tube.box_id);
+    const khangThe = !!tube.box_id && laKhangThe(tube.box_id);
+    if (khangThe && !nguoiDuyet.length) {
+      const laVt = YeuCau.nguoiCoVaiTro(db, 'vien_truong').some((u) => u.id === req.user.id);
+      return fail(res, 409, laVt ? 'Bạn là Viện trưởng và chưa có Viện trưởng nào khác để duyệt: hãy lấy mẫu trực tiếp thay vì gửi yêu cầu.' : 'Chưa có Viện trưởng để duyệt yêu cầu ở ngân hàng kháng thể. Hãy liên hệ quản lý ngân hàng kháng thể.');
+    }
+    // ngân hàng kháng thể: quản lý được báo để theo dõi (không duyệt)
+    const theoDoi = khangThe ? YeuCau.quanLyModule(db, 'khang_the').filter((u) => u.id !== req.user.id && !nguoiDuyet.some((d) => d.id === u.id)) : [];
     const han = YeuCau.sauNgay(YeuCau.layHan(db).PHAN_HOI_NGAY);
     const yeuCauId = db.transaction(() => {
       const info = db
         .prepare('INSERT INTO nhm_yeu_cau (tube_id, nguoi_gui_id, ly_do, cap, han_phan_hoi) VALUES (?, ?, ?, ?, ?)')
         .run(id, req.user.id, lyDo, cap, han);
-      logMove(id, 'yc_gui', null, null, req.user.id, `Yêu cầu #${info.lastInsertRowid} (${capTen} duyệt): ${lyDo}`);
+      logMove(id, 'yc_gui', null, null, req.user.id,
+        `Yêu cầu #${info.lastInsertRowid} gửi ${capTen} duyệt${nguoiDuyet.length ? ' (' + dsTen(nguoiDuyet) + ')' : ''}${theoDoi.length ? '; quản lý theo dõi: ' + dsTen(theoDoi) : ''} — Lý do: ${lyDo}`);
       return Number(info.lastInsertRowid);
     })();
     audit(req, 'request_create', `#${yeuCauId} mẫu id=${id} ${tube.name} → cấp ${cap}`);
@@ -156,6 +164,8 @@ module.exports = function createYeuCauRouter(ctx) {
   }
 
   /** Dùng chung cho duyệt / từ chối. */
+  const dsTen = (ds) => ds.map((u) => ten(u)).join(', ');
+
   function xuLy(req, res, ketQua) {
     const y = layYeuCau(req, res);
     if (!y) return;
@@ -171,8 +181,9 @@ module.exports = function createYeuCauRouter(ctx) {
       db.prepare(
         `UPDATE nhm_yeu_cau SET trang_thai = ?, xu_ly_boi = ?, xu_ly_luc = datetime('now'), xu_ly_thay = ?, ly_do_xu_ly = ?, updated_at = datetime('now') WHERE id = ?`
       ).run(ketQua === 'duyet' ? 'da_duyet' : 'tu_choi', req.user.id, q.thay ? 1 : 0, lyDo, y.id);
+      const baoQuanLy = laKhangThe(tube.box_id) ? '; báo người xin và quản lý: ' + dsTen(YeuCau.quanLyModule(db, 'khang_the')) : '; báo người xin';
       logMove(y.tube_id, ketQua === 'duyet' ? 'yc_duyet' : 'yc_tu_choi', null, null, req.user.id,
-        `Yêu cầu #${y.id} của ${y.nguoi_gui_ten}${q.thay ? ` — xử lý thay ${YeuCau.capTen(db, y.cap, tube.box_id)}` : ''}${lyDo ? ': ' + lyDo : ''}`);
+        `${ketQua === 'duyet' ? 'Duyệt' : 'Từ chối'} yêu cầu #${y.id} của ${y.nguoi_gui_ten}${q.thay ? ` — xử lý thay ${YeuCau.capTen(db, y.cap, tube.box_id)}` : ''}${lyDo ? ': ' + lyDo : ''}${baoQuanLy}`);
     })();
     audit(req, ketQua === 'duyet' ? 'request_approve' : 'request_reject', `#${y.id} mẫu id=${y.tube_id}${q.thay ? ' (xử lý thay)' : ''}${lyDo ? ' — ' + lyDo : ''}`);
     const moi = { ...y, ly_do_xu_ly: lyDo };
@@ -233,7 +244,7 @@ module.exports = function createYeuCauRouter(ctx) {
     db.transaction(() => {
       db.prepare("UPDATE nhm_tubes SET status = 'checked_out', updated_at = datetime('now') WHERE id = ?").run(y.tube_id);
       db.prepare("UPDATE nhm_yeu_cau SET trang_thai = 'da_giao', updated_at = datetime('now') WHERE id = ?").run(y.id);
-      logMove(y.tube_id, 'giao', tube.box_id ? tube : null, null, req.user.id, `Giao cho ${y.nguoi_gui_ten} (yêu cầu #${y.id})`);
+      logMove(y.tube_id, 'giao', tube.box_id ? tube : null, null, req.user.id, `Giao cho ${y.nguoi_gui_ten} (yêu cầu #${y.id}${y.xu_ly_ten ? ', ' + y.xu_ly_ten + ' đã duyệt' : ''})`);
     })();
     audit(req, 'request_deliver', `#${y.id} mẫu id=${y.tube_id} → ${y.nguoi_gui_ten}`);
     guiNen(thongBao.yeuCauGiaoTra({ tube, nguoiGui: nguoiDung(y.nguoi_gui_id), nguoiXuLy: nguoiDung(req.user.id), duongDan: moTaViTri(tube.box_id, tube.row_no, tube.col_no), hanhDong: 'giao' }));

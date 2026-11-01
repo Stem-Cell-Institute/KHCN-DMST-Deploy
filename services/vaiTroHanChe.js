@@ -5,7 +5,7 @@
  * authMiddleware (chặn API) và cổng .html (chuyển trang) trong server.js.
  *
  *   crd_user   khách / sinh viên tự đăng ký ở module Đặt lịch thiết bị: chỉ Đặt lịch
- *   sinh_vien  sinh viên của Viện có tên trong danh sách chờ (xác minh hộp thư): Đặt lịch + Ngân hàng tế bào & Kháng thể
+ *   sinh_vien  sinh viên của Viện có tên trong danh sách chờ (xác minh hộp thư): Đặt lịch + Ngân hàng Tế bào & Kháng thể
  *
  * Giữ NGUYÊN hành vi cũ của crd_user (có test canh trong tests/crd.test.js).
  */
@@ -28,7 +28,7 @@ const VAI_TRO = {
     htmlTrungGian: (p) => p === '/index.html' || p.includes('/public/equipment/public.html') || p.includes('/public/ngan-hang-te-bao-khang-the/'),
     trangMacDinh: '/public/ngan-hang-te-bao-khang-the/index.html',
     thongBao:
-      'Tài khoản sinh viên chỉ dùng cho module Đặt lịch thiết bị CRD và Ngân hàng tế bào & Kháng thể. Các module khác dành cho cán bộ có email @sci.edu.vn.',
+      'Tài khoản sinh viên chỉ dùng cho module Đặt lịch thiết bị CRD và Ngân hàng Tế bào & Kháng thể. Các module khác dành cho cán bộ có email @sci.edu.vn.',
   },
 };
 

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Email thông báo của module Ngân hàng tế bào & Kháng thể.
+ * Email thông báo của module Ngân hàng Tế bào & Kháng thể.
  *
  * Nguyên tắc (giống services/baoCaoPhongThongBao.js):
  *   - Email KHÔNG BAO GIỜ làm hỏng thao tác chính: mọi lỗi (SMTP chưa cấu hình, mạng, địa chỉ hỏng) chỉ ghi log,

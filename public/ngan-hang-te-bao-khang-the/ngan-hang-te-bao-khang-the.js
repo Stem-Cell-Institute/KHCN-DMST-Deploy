@@ -1,4 +1,4 @@
-/* Module Ngân hàng tế bào & Kháng thể — sơ đồ kho, lưới hộp, mẫu. Mọi dữ liệu người dùng đi qua textContent (không innerHTML). */
+/* Module Ngân hàng Tế bào & Kháng thể — sơ đồ kho, lưới hộp, mẫu. Mọi dữ liệu người dùng đi qua textContent (không innerHTML). */
 (function () {
   'use strict';
 
@@ -1459,7 +1459,7 @@
     var ds = (state.me && state.me.nhomChoXacNhan) || [];
     var sv = state.me && state.me.sinhVien;
     var conNgay = sv ? Math.ceil((new Date(sv.het_han + 'T23:59:59+07:00').getTime() - Date.now()) / 86400000) : null;
-    var thongBaoHan = sv && conNgay <= 30 ? h('div', { class: 'nhm-hint', role: 'status' }, 'Quyền vào Ngân hàng tế bào & Kháng thể của tài khoản sinh viên đến hết ngày ' + sv.het_han.split('-').reverse().join('/') + ' (còn ' + Math.max(conNgay, 0) + ' ngày). Cần gia hạn thì liên hệ quản lý module.') : null;
+    var thongBaoHan = sv && conNgay <= 30 ? h('div', { class: 'nhm-hint', role: 'status' }, 'Quyền vào Ngân hàng Tế bào & Kháng thể của tài khoản sinh viên đến hết ngày ' + sv.het_han.split('-').reverse().join('/') + ' (còn ' + Math.max(conNgay, 0) + ' ngày). Cần gia hạn thì liên hệ quản lý module.') : null;
     put(slot, thongBaoHan, ds.length ? h('div', { class: 'nhm-notice', role: 'alert' }, ds.map(function (g) {
       var xong = function () { return api('GET', '/me').then(function (m) { state.me = m; capNhatLoiChao(); return taiNhom(); }).then(renderBanner); };
       return h('div', { class: 'nhm-notice-row' }, [

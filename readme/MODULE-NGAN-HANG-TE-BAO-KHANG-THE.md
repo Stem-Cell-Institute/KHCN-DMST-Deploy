@@ -1,4 +1,4 @@
-# Module Ngân hàng tế bào & Kháng thể
+# Module Ngân hàng Tế bào & Kháng thể
 
 Trang: `public/ngan-hang-te-bao-khang-the/index.html` (địa chỉ ngắn `/ngan-hang-te-bao-khang-the`) ·
 API: `/api/ngan-hang-te-bao-khang-the/*` (86 route)
@@ -41,7 +41,8 @@ Một module, hai ngân hàng. **Dùng chung:** tài khoản, nhóm nghiên cứ
 - **Quản lý ngân hàng kháng thể** (vai trò Quản lý, phạm vi «Ngân hàng kháng thể»; thêm hai người trở lên được): **được báo và theo dõi**, không duyệt (403). Yêu cầu đang chờ hiện ở «Việc cần xử lý» trong khung riêng «Đang chờ Viện trưởng duyệt — bạn theo dõi» (`theo_doi: true`, không tính vào số việc cần xử lý). Sau khi duyệt, yêu cầu chuyển lên «Cần tôi xử lý» để **quản lý giao mẫu** (`/deliver`) theo quyết định rồi **nhận lại** (`/return`). Viện trưởng không giao mẫu.
 - **Luồng thư:** gửi yêu cầu → thư cho Viện trưởng (duyệt) và thư riêng «chờ Viện trưởng duyệt» cho các quản lý (theo dõi); duyệt → thư cho người xin («quản lý sẽ giao mẫu») và thư riêng «đã duyệt — cần giao mẫu» cho quản lý; từ chối → người xin và quản lý; giao / nhận lại → người xin. Tiêu đề thư ghi «[Ngân hàng kháng thể]».
 - **Không chuyển cấp khi quá hạn:** quản lý không duyệt được nên bộ quét quá hạn bỏ qua yêu cầu kháng thể; Viện trưởng vẫn là người duyệt.
-- **Dự phòng:** chưa có Viện trưởng nào khác người gửi (chưa cấp vai trò, hoặc chính Viện trưởng xin mẫu) thì yêu cầu về **admin** (cấp hiển thị «Admin»; `cap = quan_ly`), không về quản lý.
+- **Không có người duyệt dự phòng:** quản lý và admin đều KHÔNG duyệt thay Viện trưởng. Chưa có Viện trưởng nào khác người gửi (chưa cấp vai trò, hoặc chính Viện trưởng muốn lấy mẫu) thì **không gửi được yêu cầu** (409; Viện trưởng lấy mẫu trực tiếp). Yêu cầu đã gửi mà Viện trưởng bị gỡ vai trò thì nằm chờ đến khi có Viện trưởng; người gửi hủy được.
+- **Lịch sử của mẫu** (`nhm_movements`, mở ở hộp thoại mẫu → Lịch sử) ghi đủ quá trình, mỗi dòng có người thao tác và giờ: gửi yêu cầu (người duyệt và quản lý theo dõi), duyệt hoặc từ chối (người duyệt, ghi chú, người được báo), hủy, giao (kèm người đã duyệt), nhận lại.
 - Bảng vai trò được dựng lại một lần khi khởi động để thêm cột phạm vi (giữ nguyên dữ liệu, id và quyền hiện có).
 
 ## Ai làm được gì
@@ -265,7 +266,7 @@ mẫu đang nghi mất hoặc không còn lưu kho thì không xin được.
 | Mẫu | Người duyệt | Nếu không có / chính là người xin |
 |---|---|---|
 | Ở thiết bị **có đơn vị quản lý** (Cellbank hoặc đơn vị khác) | người duyệt của đơn vị | quản lý module |
-| Ở thiết bị **ngân hàng kháng thể** (AntibodyBank) | **Viện trưởng** (chỉ Viện trưởng) | admin; quản lý chỉ theo dõi và giao mẫu |
+| Ở thiết bị **ngân hàng kháng thể** (AntibodyBank) | **Viện trưởng** (chỉ Viện trưởng) | không gửi được yêu cầu; quản lý chỉ theo dõi và giao mẫu |
 | Công khai, chủ mẫu là cán bộ / nghiên cứu viên **còn hoạt động** | chủ mẫu | trưởng nhóm → quản lý |
 | Công khai, mẫu của **sinh viên** (kể cả đang học), hoặc chủ mẫu đã rời đi | **trưởng nhóm** (đã tự xác nhận, nhóm chưa giải thể) | quản lý |
 

@@ -1,6 +1,6 @@
 'use strict';
 
-// Test độc lập cho module Ngân hàng tế bào & Kháng thể: DB trong bộ nhớ + đăng nhập giả, không cần data/sci-ace.db.
+// Test độc lập cho module Ngân hàng Tế bào & Kháng thể: DB trong bộ nhớ + đăng nhập giả, không cần data/sci-ace.db.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -224,7 +224,7 @@ test('mount: tạo bảng, chuyển hướng địa chỉ cũ, đồng bộ nhã
   mdb.exec("CREATE TABLE homepage_modules (code TEXT PRIMARY KEY, label TEXT); INSERT INTO homepage_modules VALUES ('sample_storage', 'Ngân hàng mẫu')");
   const app = express();
   createRouter.mount(app, { db: mdb, authMiddleware: (req, res) => res.status(401).end() });
-  assert.equal(mdb.prepare("SELECT label FROM homepage_modules WHERE code = 'sample_storage'").get().label, 'Ngân hàng tế bào & Kháng thể');
+  assert.equal(mdb.prepare("SELECT label FROM homepage_modules WHERE code = 'sample_storage'").get().label, 'Ngân hàng Tế bào & Kháng thể');
   assert.ok(mdb.prepare("SELECT 1 FROM sqlite_master WHERE name = 'nhm_tubes'").get());
   const srv = await new Promise((r) => {
     const s = http.createServer(app).listen(0, '127.0.0.1', () => r(s));
@@ -256,6 +256,6 @@ test('mount: nhãn trang chủ do admin tự đặt được giữ nguyên, ch�
   assert.equal(mdb.prepare("SELECT label FROM homepage_modules WHERE code = 'sample_storage'").get().label, 'Kho của Viện');
   mdb.prepare("UPDATE homepage_modules SET label = 'Kho mẫu sinh phẩm'").run();
   createRouter.mount(express(), { db: mdb, authMiddleware: (req, res) => res.status(401).end() });
-  assert.equal(mdb.prepare("SELECT label FROM homepage_modules WHERE code = 'sample_storage'").get().label, 'Ngân hàng tế bào & Kháng thể');
+  assert.equal(mdb.prepare("SELECT label FROM homepage_modules WHERE code = 'sample_storage'").get().label, 'Ngân hàng Tế bào & Kháng thể');
   mdb.close();
 });

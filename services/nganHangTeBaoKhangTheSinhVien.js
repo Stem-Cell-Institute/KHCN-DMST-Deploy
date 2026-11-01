@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — danh sách sinh viên của Viện do Trung tâm quản lý người học cung cấp (bảng nhm_sinh_vien).
+ * Ngân hàng Tế bào & Kháng thể — danh sách sinh viên của Viện do Trung tâm quản lý người học cung cấp (bảng nhm_sinh_vien).
  *
  * Mục đích: người ngoài Viện không thể giả làm sinh viên để vào module. Sinh viên không có email @sci.edu.vn nên:
  *   1. Quản lý module nhập danh sách (email, họ tên, hạn dùng) theo từng đợt — dán, hoặc nạp file Excel / CSV.

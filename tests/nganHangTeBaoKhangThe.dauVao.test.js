@@ -1,6 +1,6 @@
 'use strict';
 
-// Kiểm tra đầu vào của module Ngân hàng tế bào & Kháng thể: số, ngày, nhiệt độ, mã tự sinh, mẫu hộp.
+// Kiểm tra đầu vào của module Ngân hàng Tế bào & Kháng thể: số, ngày, nhiệt độ, mã tự sinh, mẫu hộp.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');

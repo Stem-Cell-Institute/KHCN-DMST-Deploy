@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — hai tình huống ở thiết bị CÔNG KHAI mà phần mềm không ngăn được ngoài đời thật:
+ * Ngân hàng Tế bào & Kháng thể — hai tình huống ở thiết bị CÔNG KHAI mà phần mềm không ngăn được ngoài đời thật:
  *
  *   1. Mẫu CÓ THẬT trong ô nhưng KHÔNG có thông tin (người dùng tự để vào, không khai báo)  → «phát hiện»
  *      quản lý đánh dấu ô → NHẮC chủ mẫu trước → chủ mẫu nhận và khai báo → hết hạn chờ thì quản lý mới được bỏ mẫu.

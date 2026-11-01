@@ -1,6 +1,6 @@
 'use strict';
 
-// Dựng router Ngân hàng tế bào & Kháng thể với DB trong bộ nhớ + đăng nhập giả (header x-test-user).
+// Dựng router Ngân hàng Tế bào & Kháng thể với DB trong bộ nhớ + đăng nhập giả (header x-test-user).
 // Dùng cho các file tests/nganHangTeBaoKhangThe*.test.js; không cần data/sci-ace.db.
 
 const fs = require('node:fs');

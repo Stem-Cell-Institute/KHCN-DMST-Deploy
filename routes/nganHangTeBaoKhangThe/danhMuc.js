@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — quản lý danh mục: loại vị trí lưu trữ, mẫu hộp, loại mẫu. 9 endpoint,
+ * Ngân hàng Tế bào & Kháng thể — quản lý danh mục: loại vị trí lưu trữ, mẫu hộp, loại mẫu. 9 endpoint,
  * chỉ Admin / Manager / Phòng KHCN (đọc danh mục vẫn qua GET /meta, mọi người dùng đều xem được).
  * Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js).
  */

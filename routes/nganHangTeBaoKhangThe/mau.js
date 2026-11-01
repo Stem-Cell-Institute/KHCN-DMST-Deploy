@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — mẫu lưu trữ (ống đông lạnh, kháng thể, sinh phẩm...): thêm, sửa, di chuyển,
+ * Ngân hàng Tế bào & Kháng thể — mẫu lưu trữ (ống đông lạnh, kháng thể, sinh phẩm...): thêm, sửa, di chuyển,
  * xóa, lịch sử. 5 endpoint. Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js).
  *
  * Phân quyền (chủ ý): mọi người đã đăng nhập được THÊM mẫu; sửa / di chuyển / xóa chỉ chủ sở hữu hoặc quản lý.

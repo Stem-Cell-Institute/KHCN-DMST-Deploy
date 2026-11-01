@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — tìm mẫu xuyên kho và xuất danh sách kiểm kê CSV. 2 endpoint.
+ * Ngân hàng Tế bào & Kháng thể — tìm mẫu xuyên kho và xuất danh sách kiểm kê CSV. 2 endpoint.
  * Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js).
  *
  * Từ khóa `q` khớp với MỌI thông tin về mẫu (tên, đề tài, passage, ghi chú, ngày, số tế bào, thể tích, loại mẫu,

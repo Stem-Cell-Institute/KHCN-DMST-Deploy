@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * API Ngân hàng tế bào & Kháng thể — mount tại /api/ngan-hang-te-bao-khang-the
+ * API Ngân hàng Tế bào & Kháng thể — mount tại /api/ngan-hang-te-bao-khang-the
  * Vị trí lưu trữ (tủ/bình → ngăn → giá) → hộp (lưới hàng x cột) → mẫu (ống đông lạnh, kháng thể, sinh phẩm...).
  *
  * Tài liệu: readme/MODULE-NGAN-HANG-TE-BAO-KHANG-THE.md. Test: tests/nganHangTeBaoKhangThe.test.js.

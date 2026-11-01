@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ngân hàng tế bào & Kháng thể — vai trò trong module, nhóm nghiên cứu, hồ sơ thành viên, tìm người. 14 endpoint.
+ * Ngân hàng Tế bào & Kháng thể — vai trò trong module, nhóm nghiên cứu, hồ sơ thành viên, tìm người. 14 endpoint.
  * Mount tại /api/ngan-hang-te-bao-khang-the (xem index.js).
  *
  * Ai làm được gì:
