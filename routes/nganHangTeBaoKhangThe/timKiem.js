@@ -49,7 +49,7 @@ module.exports = function createTimKiemRouter(ctx) {
     } else {
       where.push(`t.status IN ${HOLDING}`);
     }
-    for (const [khoa, cot, nhan] of [['sample_type_id', 't.sample_type_id', 'Loại mẫu'], ['box_id', 't.box_id', 'Hộp'], ['nhom_id', 't.nhom_id', 'Nhóm']]) {
+    for (const [khoa, cot, nhan] of [['sample_type_id', 't.sample_type_id', 'Loại mẫu'], ['box_id', 't.box_id', 'Hộp'], ['nhom_id', 't.nhom_id', 'Nhóm'], ['id', 't.id', 'Mã mẫu']]) {
       if (q[khoa] != null && q[khoa] !== '') {
         const id = toInt(q[khoa]);
         if (id == null) return [null, `${nhan} lọc không hợp lệ.`];

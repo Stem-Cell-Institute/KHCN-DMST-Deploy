@@ -3,7 +3,7 @@
   'use strict';
 
   var API = '/api/ngan-hang-te-bao-khang-the';
-  var state = { meta: null, me: null, groups: [], tree: null, sel: null, expanded: {}, box: null, search: null };
+  var state = { meta: null, me: null, groups: [], tree: null, sel: null, expanded: {}, box: null, search: null, cv: null, audit: null };
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- tiện ích ----------
@@ -127,6 +127,7 @@
         state.box = r[1];
         renderTree();
         if (state.search) return runSearch(state.search.p); // đang xem kết quả tìm: làm mới kết quả
+        if (state.cv) return taiCv();
         renderDetail();
       })
       .catch(function (e) {
@@ -137,9 +138,12 @@
 
   function select(type, id) {
     state.search = null;
+    state.cv = null;
+    state.audit = null;
     state.sel = { type: type, id: id };
     state.box = null;
     location.hash = type + '=' + id;
+    manHinhHep(true);
     if (type === 'box') {
       api('GET', '/boxes/' + id).then(function (b) { state.box = b; renderTree(); renderDetail(); }).catch(function (e) { say(e.message, 'err'); });
     } else {
@@ -293,6 +297,14 @@
     put($('nhm-tree'), root.length ? tatCa : null, root.length ? h('ul', { role: 'tree', class: 'nhm-treeul' }, root) : h('p', { class: 'nhm-muted' }, 'Chưa có thiết bị lưu trữ nào.'));
   }
 
+  /** Màn hình điện thoại / máy tính bảng dọc: sơ đồ kho nằm trên đầu, nên chọn xong thì gập lại và cuộn tới nội dung. */
+  function manHinhHep(cuon) {
+    if (!window.matchMedia || !window.matchMedia('(max-width: 900px)').matches) return;
+    var r = $('nhm-rail');
+    if (r) r.open = false;
+    if (cuon) setTimeout(function () { var d = $('nhm-detail'); if (d && d.scrollIntoView) d.scrollIntoView({ block: 'start' }); }, 60);
+  }
+
   // ---------- khu vực chi tiết ----------
   function fact(label, value) { return h('div', { class: 'nhm-fact' }, [h('b', {}, label), value == null || value === '' ? '—' : String(value)]); }
 
@@ -300,6 +312,7 @@
     var box = $('nhm-detail');
     var sel = state.sel;
     if (state.search) return renderSearch(box);
+    if (state.cv) return renderCongViec(box);
     if (!sel) { put(box, h('p', { class: 'nhm-muted' }, 'Chọn một thiết bị, vị trí lưu trữ hoặc hộp ở bên trái.')); return; }
     if (sel.type === 'box') return renderBox(box);
     var c = state.tree.containers.filter(function (x) { return x.id === sel.id; })[0];
@@ -340,41 +353,83 @@
     var info = state.box;
     if (!info) { put(root, h('div', { class: 'nhm-loading' }, 'Đang tải hộp…')); return; }
     var b = info.box, byPos = {};
+    $('nhm-crumb').textContent = info.path.concat([b.name || b.code]).join(' › ');
     info.tubes.forEach(function (t) { byPos[t.row_no + ',' + t.col_no] = t; });
+    (info.phat_hien || []).forEach(function (p) { byPos[p.row_no + ',' + p.col_no] = { phat_hien: p }; });
     var m = state.meta.canManage;
-    var grid = h('div', { class: 'nhm-grid', style: 'grid-template-columns: 26px repeat(' + b.cols + ', var(--nhm-o, 64px))' });
+    var cb = info.quan_ly_boi === 'cellbank';
+    var kk = state.audit && state.audit.boxId === b.id;
+    var grid = h('div', { class: 'nhm-grid' + (kk ? ' nhm-grid--kk' : ''), style: 'grid-template-columns: 26px repeat(' + b.cols + ', var(--nhm-o, 64px))' });
     grid.appendChild(h('div', { class: 'nhm-gh' }));
     for (var c = 1; c <= b.cols; c++) grid.appendChild(h('div', { class: 'nhm-gh' }, c));
     for (var r = 1; r <= b.rows; r++) {
       grid.appendChild(h('div', { class: 'nhm-gh' }, rowLabel(r)));
-      for (var cc = 1; cc <= b.cols; cc++) grid.appendChild(cell(b, r, cc, byPos[r + ',' + cc]));
+      for (var cc = 1; cc <= b.cols; cc++) grid.appendChild(cell(b, r, cc, byPos[r + ',' + cc], info));
     }
-    put(root, 
-      h('div', { class: 'nhm-title' }, [h('h2', {}, b.name || b.code), h('span', { class: 'nhm-muted' }, (b.name ? b.code + ' · ' : '') + b.rows + '×' + b.cols + ' · ' + info.tubes.length + ' mẫu')]),
+    var dem = info.tubes.filter(function (t) { return t.status === 'in_storage'; }).length;
+    var kkBar = kk ? h('div', { class: 'nhm-notice nhm-notice--kk', role: 'status' }, [
+      h('div', { class: 'nhm-notice-row' }, [
+        h('span', {}, 'Đang kiểm kê hộp. Mở hộp ngoài đời, bấm vào những mẫu KHÔNG thấy (chuyển sang gạch đỏ). Mẫu không bấm là có mặt. Đã đánh dấu không thấy: ' + Object.keys(state.audit.khong).length + ' / ' + dem + ' mẫu.'),
+        h('span', { class: 'nhm-notice-act' }, [
+          nutNho('Hoàn tất kiểm kê', 'primary', function () { hoanTatKiemKe(info); }),
+          nutNho('Thoát', '', function () { state.audit = null; renderDetail(); }),
+        ]),
+      ]),
+    ]) : null;
+    put(root,
+      h('div', { class: 'nhm-title' }, [h('h2', {}, b.name || b.code), h('span', { class: 'nhm-muted' }, (b.name ? b.code + ' · ' : '') + b.rows + '×' + b.cols + ' · ' + info.tubes.length + ' mẫu' + (cb ? ' · Cellbank' : ''))]),
       h('div', { class: 'nhm-path' }, info.path.join(' › ')),
+      cb && !m ? h('p', { class: 'nhm-hint' }, 'Thiết bị do Cellbank quản lý: bạn không tự thêm hay lấy mẫu ở đây. Bấm vào mẫu để xem và gửi yêu cầu.') : null,
+      kkBar,
       h('div', { class: 'nhm-actions' }, [
         h('button', { class: 'nhm-btn', type: 'button', onclick: function () { window.print(); } }, 'In sơ đồ hộp'),
+        m && !kk ? h('button', { class: 'nhm-btn', type: 'button', onclick: function () { state.audit = { boxId: b.id, khong: {} }; renderDetail(); } }, 'Kiểm kê hộp') : null,
         m ? h('button', { class: 'nhm-btn', type: 'button', onclick: function () { boxEditForm(b); } }, 'Chỉnh sửa hộp') : null,
         m ? h('button', { class: 'nhm-btn nhm-btn--danger', type: 'button', onclick: function () { deleteBox(b); } }, 'Xóa hộp') : null,
       ]),
       b.notes ? h('p', { class: 'nhm-muted' }, b.notes) : null,
       h('div', { class: 'nhm-gridwrap' }, [grid]),
-      h('p', { class: 'nhm-muted' }, 'Bấm vào ô trống để thêm mẫu; bấm vào ô có mẫu để xem chi tiết. Kéo mẫu sang ô trống để di chuyển trong hộp.')
+      h('p', { class: 'nhm-muted nhm-small' }, 'Bấm vào ô trống để thêm mẫu; bấm vào ô có mẫu để xem chi tiết. Màu đỏ: mẫu đang được lấy ra. Gạch vàng: mẫu nghi mất. Ô vàng «?»: có mẫu nhưng chưa khai báo.')
     );
   }
 
-  function cell(box, r, c, t) {
-    var cls = 'nhm-cell' + (t ? ' nhm-cell--full' + (t.status === 'checked_out' ? ' nhm-cell--out' : '') : '');
-    var nhan = posLabel(r, c) + (t ? ', ' + t.name + ', ' + (STATUS_VN[t.status] || t.status) : ', trống, thêm mẫu');
-    var el = h('div', { class: cls, role: 'button', tabindex: '0', title: posLabel(r, c) + (t ? ' — ' + t.name : ' (trống)'), 'aria-label': nhan, 'data-r': r, 'data-c': c }, t ? t.name : '');
-    var open = function () { t ? tubeDialog(box, t) : tubeForm(box, r, c); };
+  function hoanTatKiemKe(info) {
+    var khong = Object.keys(state.audit.khong).map(Number);
+    var thay = info.tubes.filter(function (t) { return t.status === 'in_storage' && !state.audit.khong[t.id]; }).map(function (t) { return t.id; });
+    if (khong.length && !window.confirm('Có ' + khong.length + ' mẫu không thấy: hệ thống sẽ mở vụ việc nghi mất và gửi thông báo cho chủ mẫu. Tiếp tục?')) return;
+    api('POST', '/boxes/' + info.box.id + '/audit', { thay: thay, khong_thay: khong })
+      .then(function (r) { state.audit = null; say('Đã kiểm kê: ' + r.thay + ' có mặt, ' + r.khong_thay + ' không thấy (' + r.vu_viec_moi + ' vụ việc mới).', 'ok'); return reload(true); })
+      .then(taiMe)
+      .catch(function (e) { say(e.message, 'err'); });
+  }
+
+  function cell(box, r, c, t, info) {
+    var ph = t && t.phat_hien;
+    if (ph) t = null;
+    var kk = state.audit && state.audit.boxId === box.id;
+    var cls = 'nhm-cell' + (t ? ' nhm-cell--full' + (t.status === 'checked_out' ? ' nhm-cell--out' : '') + (t.nghi_mat ? ' nhm-cell--mat' : '') : '') + (ph ? ' nhm-cell--ph' : '');
+    var nhan = posLabel(r, c) + (ph ? ', mẫu chưa khai báo: ' + ph.mo_ta : t ? ', ' + t.name + ', ' + (STATUS_VN[t.status] || t.status) + (t.nghi_mat ? ', nghi mất' : '') : ', trống, thêm mẫu');
+    var el = h('div', { class: cls, role: 'button', tabindex: '0', title: nhan, 'aria-label': nhan, 'data-r': r, 'data-c': c }, ph ? '?' : t ? t.name : '');
+    var open;
+    if (kk) {
+      // chế độ kiểm kê: chỉ mẫu đang lưu kho bấm được; bấm = «không thấy»
+      if (t && t.status === 'in_storage') {
+        if (state.audit.khong[t.id]) el.classList.add('nhm-cell--kk-khong');
+        open = function () { if (state.audit.khong[t.id]) delete state.audit.khong[t.id]; else state.audit.khong[t.id] = true; renderDetail(); };
+      } else open = function () {};
+    } else if (ph) open = function () { phatHienDialog(box, ph.id); };
+    else if (t) open = function () { tubeDialog(box, t); };
+    else open = function () {
+      if (info && info.quan_ly_boi === 'cellbank' && !state.meta.canManage) { say('Thiết bị này do Cellbank quản lý: chỉ quản lý module mới thêm mẫu. Bạn có thể gửi yêu cầu cho mẫu đã có.', 'err'); return; }
+      tubeForm(box, r, c);
+    };
     el.addEventListener('click', open);
     el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
-    if (t && t.can_edit && t.status === 'in_storage') {
+    if (!kk && t && t.can_edit && t.status === 'in_storage' && !(info && info.quan_ly_boi === 'cellbank' && !state.meta.canManage)) {
       el.draggable = true;
       el.addEventListener('dragstart', function (e) { e.dataTransfer.setData('text/plain', String(t.id)); e.dataTransfer.effectAllowed = 'move'; });
     }
-    if (!t) {
+    if (!kk && !t && !ph) {
       el.addEventListener('dragover', function (e) { e.preventDefault(); el.classList.add('nhm-cell--over'); });
       el.addEventListener('dragleave', function () { el.classList.remove('nhm-cell--over'); });
       el.addEventListener('drop', function (e) {
@@ -457,7 +512,8 @@
     return [{ value: '', label: '— không chọn —' }].concat(state.meta.sampleTypes.map(function (s) { return { value: s.id, label: s.name }; }));
   }
 
-  function tubeForm(box, r, c, tube) {
+  function tubeForm(box, r, c, tube, opts) {
+    var claim = opts && opts.claimId;
     var quanLy = state.meta.canManage;
     var chu = tube ? null : chuMauWidget(state.groups || []);
     var nhomOpts = [{ value: '', label: '— không —' }].concat((state.groups || []).map(function (g) { return { value: g.id, label: g.ten }; }));
@@ -479,12 +535,13 @@
     }
     if (!tube) {
       // Thêm cùng lô: n ống liên tiếp từ ô này (sang hàng kế khi hết cột)
-      fields.push({ name: 'count', label: 'Số ống cùng lô (1–100, đặt vào các ô liên tiếp từ ô này)', type: 'number', value: 1 });
+      if (!claim) fields.push({ name: 'count', label: 'Số ống cùng lô (1–100, đặt vào các ô liên tiếp từ ô này)', type: 'number', value: 1 });
       fields.push({ name: 'chu', label: 'Chủ mẫu', type: 'custom', widget: chu });
     }
     openForm({
-      title: tube ? 'Chỉnh sửa thông tin mẫu' : 'Thêm mẫu tại ' + posLabel(r, c),
+      title: tube ? 'Chỉnh sửa thông tin mẫu' : (claim ? 'Nhận và khai báo mẫu tại ' : 'Thêm mẫu tại ') + posLabel(r, c),
       fields: fields,
+      extraButtons: !tube && !claim && quanLy ? [h('button', { type: 'button', class: 'nhm-btn', onclick: function () { phatHienForm(box, r, c); } }, 'Ô này có mẫu nhưng chưa khai báo')] : [],
       onSubmit: function (v) {
         var body = { name: v.name, sample_type_id: v.sample_type_id === '' ? null : Number(v.sample_type_id), passage: v.passage,
           cell_count: v.cell_count, volume_ml: v.volume_ml, freeze_date: v.freeze_date, project: v.project, notes: v.notes };
@@ -492,11 +549,12 @@
           if (quanLy) { body.chu_loai = v.chu_loai || null; body.nhom_id = v.nhom_id === '' ? null : Number(v.nhom_id); }
           return api('PATCH', '/tubes/' + tube.id, body).then(function () { say('Đã cập nhật thông tin mẫu.', 'ok'); return reload(true); });
         }
-        var n = Number(v.count) || 1;
+        var n = claim ? 1 : Number(v.count) || 1;
         return chuMauBody(v.chu).then(function (extra) {
+          if (claim) return api('POST', '/findings/' + claim + '/claim', Object.assign({}, body, extra));
           var all = Object.assign({ box_id: box.id, row_no: r, col_no: c }, body, extra);
           return n > 1 ? api('POST', '/tubes/bulk', Object.assign(all, { count: n })) : api('POST', '/tubes', all);
-        }).then(function () { say(n > 1 ? 'Đã thêm ' + n + ' mẫu.' : 'Đã thêm mẫu.', 'ok'); return taiNhom().then(function () { return reload(true); }); });
+        }).then(function () { say(claim ? 'Đã nhận và khai báo mẫu. Cảm ơn bạn.' : n > 1 ? 'Đã thêm ' + n + ' mẫu.' : 'Đã thêm mẫu.', 'ok'); return taiNhom().then(function () { return claim ? (state.cv ? lamMoiCv() : reload(true).then(taiMe)) : reload(true); }); });
       },
     });
   }
@@ -556,6 +614,11 @@
   var ACTION_VN = {
     store: 'Nhập kho', move: 'Di chuyển', edit: 'Sửa thông tin', delete: 'Xóa', checkout: 'Lấy ra', checkin: 'Trả lại',
     thaw: 'Rã đông', discard: 'Hủy mẫu', transfer: 'Chuyển chủ sở hữu', box_move: 'Hộp đổi chỗ', box_edit: 'Hộp đổi mã',
+    yc_gui: 'Gửi yêu cầu lấy mẫu', yc_duyet: 'Duyệt yêu cầu', yc_tu_choi: 'Từ chối yêu cầu', yc_huy: 'Hủy yêu cầu', yc_leo_thang: 'Yêu cầu chuyển quản lý',
+    yc_dinh_tuyen_lai: 'Đổi người duyệt', giao: 'Giao mẫu', tra: 'Nhận lại mẫu', khai_bao_bo_sung: 'Khai báo bổ sung', bao_mat: 'Báo mất',
+    nguoi_nhan_lay: 'Có người nhận đã lấy', xac_nhan_lay: 'Xác nhận người lấy', tu_choi_nhan: 'Từ chối lời nhận', tim_thay: 'Tìm thấy', huy_bao_mat: 'Hủy báo mất',
+    that_lac: 'Thất lạc', kiem_ke_thay: 'Kiểm kê: có mặt', kiem_ke_khong_thay: 'Kiểm kê: không thấy', nhom_doi: 'Nhóm đổi', nhom_giai_the: 'Nhóm giải thể',
+    nhom_gop: 'Nhóm gộp', nhom_truong_xac_nhan: 'Trưởng nhóm xác nhận', nhom_truong_tu_choi: 'Trưởng nhóm từ chối', chu_roi_di: 'Chủ mẫu rời đi', chu_tro_lai: 'Chủ mẫu quay lại',
   };
   var STATUS_VN = { in_storage: 'Đang lưu kho', checked_out: 'Đã lấy ra', thawed: 'Đã rã đông', discarded: 'Đã hủy' };
   var FIELD_VN = {
@@ -624,7 +687,7 @@
   function tubeDialog(box, t) {
     var body = h('div', {}, [
       h('div', { class: 'nhm-facts' }, [
-        fact('Vị trí', posLabel(t.row_no, t.col_no)), fact('Trạng thái', STATUS_VN[t.status] || t.status), fact('Loại mẫu', t.sample_type_name),
+        fact('Vị trí', posLabel(t.row_no, t.col_no)), fact('Trạng thái', (STATUS_VN[t.status] || t.status) + (t.nghi_mat ? ' — NGHI MẤT' : '')), fact('Loại mẫu', t.sample_type_name),
         fact('Loại chủ mẫu', loaiChuVN(t.chu_loai)), fact('Nhóm nghiên cứu', t.nhom_ten), fact('Passage', t.passage), fact('Số tế bào', t.cell_count), fact('Thể tích (mL)', t.volume_ml),
         fact('Ngày đông lạnh', t.freeze_date), fact('Người sở hữu', t.owner_name), fact('Đề tài', t.project), fact('Ghi chú', t.notes),
       ]),
@@ -633,17 +696,25 @@
     ]);
     var btn = function (label, cls, fn) { return h('button', { type: 'button', class: 'nhm-btn' + (cls ? ' nhm-btn--' + cls : ''), onclick: fn }, label); };
     var buttons = [];
+    var cbKhoa = state.box && state.box.quan_ly_boi === 'cellbank' && !state.meta.canManage; // mẫu ở thiết bị Cellbank: người dùng thường chỉ sửa mô tả
+    var laChu = state.me && t.owner_user_id === state.me.id;
     if (t.can_edit) {
       buttons.push(btn('Chỉnh sửa', '', function () { tubeForm(box, t.row_no, t.col_no, t); }));
-      if (t.status === 'in_storage') {
+      if (t.status === 'in_storage' && !cbKhoa) {
         buttons.push(btn('Di chuyển', '', function () { moveForm(box, t); }));
         buttons.push(btn('Lấy ra', '', function () { trangThaiForm(t, 'checkout', 'Lấy mẫu ra', 'Lấy ra'); }));
       }
-      if (t.status === 'checked_out') buttons.push(btn('Trả lại', '', function () { trangThaiForm(t, 'checkin', 'Trả mẫu lại kho', 'Trả lại'); }));
-      buttons.push(btn('Rã đông', '', function () { trangThaiForm(t, 'thaw', 'Rã đông mẫu', 'Rã đông', 'Rã đông là không hoàn tác: mẫu sẽ rời khỏi hộp và nhả ô. Tiếp tục?'); }));
-      buttons.push(btn('Hủy mẫu', 'danger', function () { trangThaiForm(t, 'discard', 'Hủy mẫu', 'Hủy mẫu', 'Hủy mẫu là không hoàn tác: mẫu sẽ rời khỏi hộp và nhả ô. Tiếp tục?'); }));
-      buttons.push(btn('Xóa', 'danger', function () { deleteTube(t); }));
+      if (t.status === 'checked_out' && !cbKhoa) buttons.push(btn('Trả lại', '', function () { trangThaiForm(t, 'checkin', 'Trả mẫu lại kho', 'Trả lại'); }));
+      if (!cbKhoa) {
+        buttons.push(btn('Rã đông', '', function () { trangThaiForm(t, 'thaw', 'Rã đông mẫu', 'Rã đông', 'Rã đông là không hoàn tác: mẫu sẽ rời khỏi hộp và nhả ô. Tiếp tục?'); }));
+        buttons.push(btn('Hủy mẫu', 'danger', function () { trangThaiForm(t, 'discard', 'Hủy mẫu', 'Hủy mẫu', 'Hủy mẫu là không hoàn tác: mẫu sẽ rời khỏi hộp và nhả ô. Tiếp tục?'); }));
+        buttons.push(btn('Xóa', 'danger', function () { deleteTube(t); }));
+      }
+      if (t.status === 'in_storage' && !t.nghi_mat) buttons.push(btn('Báo không còn ở vị trí', '', function () { baoMatForm(t); }));
     }
+    // người khác muốn lấy mẫu: gửi yêu cầu (quản lý tự thao tác được nên không cần)
+    if (!laChu && !state.meta.canManage && t.status === 'in_storage' && !t.nghi_mat) buttons.unshift(btn('Xin lấy mẫu này', 'primary', function () { xinMauForm(t); }));
+    if (t.nghi_mat) buttons.unshift(btn('Mẫu nghi mất — xem vụ việc', 'danger', function () { closeDialog(); moCongViec('nghimat'); }));
     if (state.meta.canManage) buttons.push(btn('Chuyển chủ', '', function () { transferForm(t); }));
     openInfo(t.name, body, buttons);
     api('GET', '/tubes/' + t.id + '/history').then(function (r) {
@@ -652,8 +723,8 @@
       slot.replaceChildren(h('table', { class: 'nhm-hist' }, [
         h('tr', {}, ['Thời gian', 'Hành động', 'Chi tiết', 'Người thực hiện'].map(function (x) { return h('th', {}, x); })),
       ].concat(r.history.map(function (x) {
-        return h('tr', {}, [gioDia(x.at), ACTION_VN[x.action] || x.action, chiTietLichSu(x), x.user_name || '']
-          .map(function (v) { return h('td', {}, v); }));
+        return h('tr', {}, [gioDia(x.at), ACTION_VN[x.action] || x.action, chiTietLichSu(x), x.user_label || x.user_name || '']
+          .map(function (v, i) { return h('td', { 'data-l': ['Thời gian', 'Hành động', 'Chi tiết', 'Người'][i] }, v); }));
       }))));
     }).catch(function () { var s = $('nhm-hist'); if (s) s.textContent = 'Không tải được lịch sử.'; });
   }
@@ -688,6 +759,8 @@
   }
 
   function runSearch(p) {
+    state.cv = null;
+    state.audit = null;
     state.sel = null;
     state.box = null;
     state.search = { p: p, result: null };
@@ -753,9 +826,9 @@
       var rows = r.items.map(function (it) {
         var vt = it.box_id ? it.path.concat([it.box_code]).join(' › ') + (it.row_no ? ' › ' + posLabel(it.row_no, it.col_no) : '') : '—';
         return h('tr', {}, [
-          h('td', {}, h('button', { type: 'button', class: 'nhm-link', onclick: function () { moMauTuKetQua(it); } }, it.name)),
-          h('td', {}, it.sample_type_name || ''), h('td', {}, vt),
-          h('td', {}, STATUS_VN[it.status] || it.status), h('td', {}, it.owner_name || ''),
+          h('td', { 'data-l': 'Tên mẫu' }, h('button', { type: 'button', class: 'nhm-link', onclick: function () { moMauTuKetQua(it); } }, it.name)),
+          h('td', { 'data-l': 'Loại mẫu' }, it.sample_type_name || ''), h('td', { 'data-l': 'Vị trí' }, vt),
+          h('td', { 'data-l': 'Trạng thái' }, STATUS_VN[it.status] || it.status), h('td', { 'data-l': 'Người sở hữu' }, it.owner_name || ''),
         ]);
       });
       var truoc = h('button', { type: 'button', class: 'nhm-btn nhm-btn--sm', disabled: r.offset <= 0, onclick: function () { runSearch(Object.assign({}, p, { offset: Math.max(0, r.offset - TRANG) })); } }, '‹ Trước');
@@ -983,6 +1056,255 @@
     })) : null);
   }
 
+  // ---------- yêu cầu lấy mẫu, mẫu chưa khai báo, mẫu nghi mất ----------
+  function taiMe() {
+    return api('GET', '/me').then(function (m) { state.me = m; capNhatHuy(); return m; });
+  }
+
+  /** Số việc chờ trên nút «Công việc»: yêu cầu cần tôi xử lý + mẫu chưa khai báo + mẫu nghi mất đang mở. */
+  function capNhatHuy() {
+    var me = state.me;
+    var n = me ? me.yeuCau.inbox + me.phatHienMo + me.vuViecMo : 0;
+    var b = $('nhm-work-badge');
+    if (b) { b.textContent = n ? String(n) : ''; b.classList.toggle('nhm-hide', !n); }
+    renderBanner();
+  }
+
+  /** Sau một thao tác ở bảng công việc: nạp lại số đếm và danh sách (và hộp đang mở nếu có). */
+  function lamMoiCv() {
+    return taiMe().then(function () { return state.cv ? taiCv() : reload(true); });
+  }
+
+  function xinMauForm(t) {
+    openForm({
+      title: 'Xin lấy mẫu: ' + t.name,
+      fields: [{ name: 'ly_do', label: 'Lý do / mục đích sử dụng', type: 'textarea', required: true }],
+      submitLabel: 'Gửi yêu cầu',
+      onSubmit: function (v) {
+        return api('POST', '/tubes/' + t.id + '/requests', { ly_do: v.ly_do }).then(function (r) {
+          say('Đã gửi yêu cầu tới ' + r.cap_ten + '. Nếu quá ' + gioDia(r.han_phan_hoi) + ' chưa ai phản hồi, yêu cầu sẽ chuyển cho quản lý module. Theo dõi ở «Công việc».', 'ok');
+          return taiMe();
+        });
+      },
+    });
+  }
+
+  function baoMatForm(t) {
+    openForm({
+      title: 'Báo mẫu không còn ở vị trí: ' + t.name,
+      fields: [{ name: 'mo_ta', label: 'Ghi chú (đã tìm ở đâu, lần cuối thấy khi nào…)', type: 'textarea' }],
+      submitLabel: 'Báo mất',
+      onSubmit: function (v) {
+        return api('POST', '/tubes/' + t.id + '/report-missing', { mo_ta: v.mo_ta }).then(function () {
+          say('Đã báo. Chủ mẫu, trưởng nhóm và quản lý đã được thông báo; ai đã lấy mẫu có thể tự nhận.', 'ok');
+          return reload(true).then(taiMe);
+        });
+      },
+    });
+  }
+
+  function dongYForm(y, ketQua) {
+    var tuChoi = ketQua === 'reject';
+    openForm({
+      title: (tuChoi ? 'Từ chối' : 'Duyệt') + ' yêu cầu: ' + y.mau_ten,
+      fields: [{
+        name: 'ly_do', type: 'textarea', required: tuChoi || y.can_ly_do,
+        label: tuChoi ? 'Lý do từ chối (người xin sẽ đọc được)' : y.can_ly_do ? 'Lý do xử lý thay ' + y.cap_ten + ' (bắt buộc, ghi vào lịch sử)' : 'Ghi chú (không bắt buộc)',
+      }],
+      submitLabel: tuChoi ? 'Từ chối' : 'Duyệt',
+      onSubmit: function (v) { return api('POST', '/requests/' + y.id + '/' + ketQua, { ly_do: v.ly_do }).then(function () { say(tuChoi ? 'Đã từ chối.' : 'Đã duyệt. Người xin và quản lý module đã được thông báo.', 'ok'); return lamMoiCv(); }); },
+    });
+  }
+
+  function hoiRoiLam(cauHoi, fn) { if (window.confirm(cauHoi)) fn().then(lamMoiCv).catch(function (e) { say(e.message, 'err'); }); }
+
+  /** Thẻ một yêu cầu. */
+  function theYeuCau(y) {
+    var trangThai = { cho_duyet: 'Chờ ' + y.cap_ten + ' duyệt', da_duyet: 'Đã duyệt — chờ quản lý giao mẫu', tu_choi: 'Bị từ chối', da_giao: 'Đã giao cho người xin', da_tra: 'Đã trả', da_huy: 'Đã hủy' }[y.trang_thai] || y.trang_thai;
+    var nut = [];
+    if (y.co_the_xu_ly) {
+      nut.push(nutNho('Duyệt', 'primary', function () { dongYForm(y, 'approve'); }));
+      nut.push(nutNho('Từ chối', '', function () { dongYForm(y, 'reject'); }));
+    }
+    if (y.co_the_giao) nut.push(nutNho('Giao mẫu', 'primary', function () { hoiRoiLam('Giao mẫu «' + y.mau_ten + '» cho ' + y.nguoi_gui_ten + '? Mẫu chuyển sang «đã lấy ra».', function () { return api('POST', '/requests/' + y.id + '/deliver'); }); }));
+    if (y.co_the_nhan_lai) nut.push(nutNho('Nhận lại mẫu', 'primary', function () { hoiRoiLam('Ghi nhận đã nhận lại mẫu «' + y.mau_ten + '» vào kho?', function () { return api('POST', '/requests/' + y.id + '/return'); }); }));
+    if (y.co_the_huy) nut.push(nutNho('Hủy yêu cầu', 'danger', function () { hoiRoiLam('Hủy yêu cầu này?', function () { return api('POST', '/requests/' + y.id + '/cancel'); }); }));
+    nut.push(nutNho('Xem mẫu', '', function () { moMauTheoId(y.tube_id); }));
+    return h('div', { class: 'nhm-card' }, [
+      h('div', { class: 'nhm-card-top' }, [h('strong', {}, y.mau_ten), h('span', { class: 'nhm-chip' }, trangThai)]),
+      h('div', { class: 'nhm-small' }, y.nguoi_gui_ten + ' xin lấy · ' + y.vi_tri),
+      y.ly_do ? h('div', { class: 'nhm-small' }, 'Lý do: ' + y.ly_do) : null,
+      h('div', { class: 'nhm-small nhm-muted' }, 'Chủ mẫu: ' + (y.chu_ten || '—') + (y.nhom_ten ? ' · nhóm ' + y.nhom_ten : '') + (y.trang_thai === 'cho_duyet' ? ' · hạn phản hồi ' + gioDia(y.han_phan_hoi) : '')),
+      y.leo_thang_luc ? h('div', { class: 'nhm-small nhm-muted' }, 'Đã chuyển quản lý module lúc ' + gioDia(y.leo_thang_luc) + ' (quá hạn phản hồi).') : null,
+      y.xu_ly_ten && y.trang_thai !== 'cho_duyet' ? h('div', { class: 'nhm-small nhm-muted' }, 'Xử lý bởi ' + y.xu_ly_ten + (y.xu_ly_thay ? ' (xử lý thay)' : '') + (y.ly_do_xu_ly ? ': ' + y.ly_do_xu_ly : '')) : null,
+      h('div', { class: 'nhm-card-act' }, nut),
+    ]);
+  }
+
+  /** Mở mẫu theo id (từ bảng công việc): tìm vị trí rồi mở hộp + hộp thoại. */
+  function moMauTheoId(id) {
+    api('GET', '/tubes/search?status=all&id=' + id).then(function (r) {
+      var it = r.items.filter(function (x) { return x.id === id; })[0];
+      if (it) { state.cv = null; moMauTuKetQua(it); } else say('Không tìm thấy mẫu.', 'err');
+    }).catch(function (e) { say(e.message, 'err'); });
+  }
+
+  // ----- mẫu chưa khai báo -----
+  function phatHienForm(box, r, c) {
+    var nguoi = chonNguoi({ label: 'Người nghi là chủ mẫu' });
+    var nhomOpts = [{ value: '', label: '— chưa biết —' }].concat((state.groups || []).map(function (g) { return { value: g.id, label: g.ten }; }));
+    openForm({
+      title: 'Ô ' + posLabel(r, c) + ' có mẫu chưa khai báo',
+      fields: [
+        { name: 'mo_ta', label: 'Mô tả mẫu (chữ viết trên ống, màu nắp, kiểu hộp con…)', type: 'textarea', required: true },
+        { name: 'nguoi', label: 'Người nghi là chủ mẫu (nếu đoán được)', type: 'custom', widget: nguoi },
+        { name: 'nhom_id', label: 'Hoặc nhóm nghi là chủ mẫu', type: 'select', options: nhomOpts },
+      ],
+      submitLabel: 'Đánh dấu ô',
+      onSubmit: function (v) {
+        return api('POST', '/findings', { box_id: box.id, row_no: r, col_no: c, mo_ta: v.mo_ta, nghi_user_id: v.nguoi ? v.nguoi.id : null, nghi_nhom_id: v.nhom_id === '' ? null : Number(v.nhom_id) })
+          .then(function () { say('Đã đánh dấu. Việc tiếp theo: bấm vào ô và «Nhắc chủ mẫu».', 'ok'); return reload(true).then(taiMe); });
+      },
+    });
+  }
+
+  /** Các nút xử lý một mục «mẫu chưa khai báo» (dùng ở thẻ và ở hộp thoại). `xong` chạy sau khi thao tác thành công. */
+  function nutPhatHien(ph, box, xong) {
+    var nut = [nutNho('Đây là mẫu của tôi', 'primary', function () {
+      var b = box || { id: ph.box_id };
+      tubeForm(b, ph.row_no, ph.col_no, null, { claimId: ph.id });
+    })];
+    if (state.meta.canManage) {
+      nut.push(nutNho('Nhắc chủ mẫu', '', function () {
+        api('POST', '/findings/' + ph.id + '/remind').then(function (r) {
+          say('Đã nhắc lần ' + r.nhac_lan + (r.nguoi_nhan ? ' (email tới ' + r.nguoi_nhan + ' người)' : ' (chưa biết chủ mẫu: nhắc trên bảng chung)') + '. Được bỏ mẫu từ ' + gioDia(r.han_bo) + '.', 'ok');
+          return xong();
+        }).catch(function (e) { say(e.message, 'err'); });
+      }));
+      nut.push(nutNho('Bỏ mẫu', 'danger', function () {
+        if (!ph.nhac_lan) { say('Việc đầu tiên là nhắc chủ mẫu cập nhật thông tin: bấm «Nhắc chủ mẫu» trước.', 'err'); return; }
+        openForm({
+          title: 'Bỏ mẫu chưa khai báo tại ' + ph.vi_tri,
+          fields: [{ name: 'ly_do', label: 'Lý do bỏ mẫu' + (ph.co_the_bo ? '' : ' (chưa hết hạn chờ — chỉ admin bỏ sớm được)'), type: 'textarea', required: true }],
+          submitLabel: 'Bỏ mẫu',
+          onSubmit: function (v) { return api('POST', '/findings/' + ph.id + '/discard', { ly_do: v.ly_do }).then(function () { say('Đã ghi nhận bỏ mẫu.', 'ok'); return xong(); }); },
+        });
+      }));
+      nut.push(nutNho('Đánh dấu nhầm', '', function () {
+        if (window.confirm('Hủy đánh dấu ô này (đánh dấu nhầm)?')) api('POST', '/findings/' + ph.id + '/cancel', { ly_do: 'Đánh dấu nhầm' }).then(xong).catch(function (e) { say(e.message, 'err'); });
+      }));
+    }
+    return nut;
+  }
+
+  function phatHienDialog(box, id) {
+    api('GET', '/findings/' + id).then(function (r) {
+      var ph = r.finding;
+      var xong = function () { closeDialog(); return reload(true).then(taiMe); };
+      var body = h('div', {}, [
+        h('div', { class: 'nhm-facts' }, [
+          fact('Vị trí', ph.vi_tri), fact('Mô tả mẫu', ph.mo_ta), fact('Nghi là của', ph.nghi_ten || ph.nghi_nhom_ten || 'chưa biết'),
+          fact('Đã nhắc', ph.nhac_lan ? ph.nhac_lan + ' lần (đầu tiên ' + gioDia(ph.nhac_dau_luc) + ')' : 'chưa nhắc'),
+          fact('Được bỏ mẫu từ', ph.han_bo ? gioDia(ph.han_bo) : 'sau khi đã nhắc + 7 ngày'), fact('Phát hiện bởi', ph.phat_hien_ten),
+        ]),
+        h('p', { class: 'nhm-hint' }, 'Mẫu này đang nằm trong ô nhưng chưa có thông tin trong hệ thống. Nếu là mẫu của bạn hoặc của nhóm bạn, hãy bấm «Đây là mẫu của tôi» và điền thông tin.'),
+        h('strong', {}, 'Lịch sử'),
+        h('table', { class: 'nhm-hist' }, [h('tr', {}, ['Thời gian', 'Hành động', 'Ghi chú', 'Người thực hiện'].map(function (x) { return h('th', {}, x); }))]
+          .concat(r.history.map(function (x) {
+            return h('tr', {}, [gioDia(x.at), PH_ACTION_VN[x.action] || x.action, x.note || '', x.user_label || ''].map(function (v, i) { return h('td', { 'data-l': ['Thời gian', 'Hành động', 'Ghi chú', 'Người'][i] }, v); }));
+          }))),
+      ]);
+      openInfo('Mẫu chưa khai báo', body, nutPhatHien(ph, box, xong));
+    }).catch(function (e) { say(e.message, 'err'); });
+  }
+  var PH_ACTION_VN = { phat_hien: 'Phát hiện', nhac: 'Nhắc chủ mẫu', da_khai_bao: 'Chủ mẫu đã khai báo', da_bo: 'Bỏ mẫu', da_bo_som: 'Bỏ mẫu sớm (admin)', da_huy: 'Hủy đánh dấu' };
+
+  function theMauChuaKhaiBao(ph) {
+    return h('div', { class: 'nhm-card nhm-card--vang' }, [
+      h('div', { class: 'nhm-card-top' }, [h('strong', {}, ph.vi_tri), h('span', { class: 'nhm-chip nhm-chip--warn' }, ph.nhac_lan ? 'Đã nhắc ' + ph.nhac_lan + ' lần' : 'Chưa nhắc')]),
+      h('div', { class: 'nhm-small' }, 'Mô tả: ' + ph.mo_ta),
+      h('div', { class: 'nhm-small nhm-muted' }, 'Nghi là của: ' + (ph.nghi_ten || ph.nghi_nhom_ten || 'chưa biết') + (ph.han_bo ? ' · quản lý được bỏ mẫu từ ' + gioDia(ph.han_bo) : '')),
+      h('div', { class: 'nhm-card-act' }, [nutNho('Xem ô', '', function () { state.cv = null; select('box', ph.box_id); })].concat(nutPhatHien(ph, null, lamMoiCv))),
+    ]);
+  }
+
+  // ----- mẫu nghi mất -----
+  var VV_TT = { mo: 'Đang tìm', cho_chu_xac_nhan: 'Có người nhận đã lấy — chờ chủ mẫu xác nhận', da_xac_nhan_lay: 'Đã xác nhận người lấy', da_tim_thay: 'Đã tìm thấy', that_lac: 'Thất lạc', da_huy: 'Báo nhầm' };
+  function theNghiMat(v) {
+    var nut = [];
+    if (v.co_the_nhan_lay) nut.push(nutNho('Tôi đã lấy mẫu này', 'primary', function () {
+      openForm({
+        title: 'Tôi đã lấy mẫu: ' + v.mau_ten,
+        fields: [{ name: 'ghi_chu', label: 'Ghi chú (lấy khi nào, để làm gì…)', type: 'textarea' }],
+        submitLabel: 'Xác nhận tôi đã lấy',
+        onSubmit: function (f) { return api('POST', '/incidents/' + v.id + '/taken', { ghi_chu: f.ghi_chu }).then(function () { say('Đã ghi nhận. Chủ mẫu sẽ xác nhận.', 'ok'); return lamMoiCv(); }); },
+      });
+    }));
+    if (v.co_the_xac_nhan) {
+      nut.push(nutNho('Đúng, người này đã lấy', 'primary', function () { hoiRoiLam('Xác nhận ' + v.nguoi_nhan_ten + ' đã lấy mẫu không qua yêu cầu? Mẫu chuyển sang «đã lấy ra» và tính một lần lấy không xin phép.', function () { return api('POST', '/incidents/' + v.id + '/confirm'); }); }));
+      nut.push(nutNho('Không đúng', '', function () { hoiRoiLam('Không đồng ý lời nhận này? Vụ việc mở lại.', function () { return api('POST', '/incidents/' + v.id + '/reject', {}); }); }));
+    }
+    if (v.co_the_tim_thay) nut.push(nutNho('Đã tìm thấy mẫu', '', function () { hoiRoiLam('Đóng vụ việc vì đã tìm thấy mẫu?', function () { return api('POST', '/incidents/' + v.id + '/found'); }); }));
+    if (v.co_the_chot_that_lac) nut.push(nutNho('Chốt thất lạc', 'danger', function () {
+      openForm({
+        title: 'Chốt thất lạc: ' + v.mau_ten,
+        fields: [{ name: 'ly_do', label: 'Lý do chốt thất lạc', type: 'textarea', required: true }],
+        submitLabel: 'Chốt thất lạc',
+        onSubmit: function (f) { return api('POST', '/incidents/' + v.id + '/lost', { ly_do: f.ly_do }).then(function () { say('Đã chốt thất lạc.', 'ok'); return lamMoiCv(); }); },
+      });
+    }));
+    nut.push(nutNho('Xem mẫu', '', function () { moMauTheoId(v.tube_id); }));
+    return h('div', { class: 'nhm-card nhm-card--vang' }, [
+      h('div', { class: 'nhm-card-top' }, [h('strong', {}, v.mau_ten), h('span', { class: 'nhm-chip nhm-chip--warn' }, VV_TT[v.trang_thai] || v.trang_thai)]),
+      h('div', { class: 'nhm-small' }, v.vi_tri + ' · chủ mẫu ' + (v.chu_ten || '—')),
+      v.mo_ta ? h('div', { class: 'nhm-small' }, v.mo_ta) : null,
+      v.nguoi_nhan_ten ? h('div', { class: 'nhm-small' }, v.nguoi_nhan_ten + ' cho biết đã lấy' + (v.nhan_ghi_chu ? ': ' + v.nhan_ghi_chu : '')) : null,
+      h('div', { class: 'nhm-small nhm-muted' }, 'Báo bởi ' + v.nguoi_bao_ten + ' lúc ' + gioDia(v.created_at) + ' · chốt thất lạc được từ ' + gioDia(v.han_nhan)),
+      h('div', { class: 'nhm-card-act' }, nut),
+    ]);
+  }
+
+  // ----- bảng «Công việc» -----
+  function moCongViec(tab) {
+    state.search = null; state.sel = null; state.box = null; state.audit = null;
+    state.cv = { tab: tab || 'inbox', data: null };
+    if (location.hash !== '#cong-viec') location.hash = 'cong-viec';
+    renderTree();
+    renderDetail();
+    taiCv();
+    var rail = $('nhm-rail'); if (rail && window.matchMedia('(max-width: 900px)').matches) rail.open = false;
+  }
+
+  function taiCv() {
+    var c = state.cv; if (!c) return Promise.resolve();
+    var url = { inbox: '/requests?view=inbox', mine: '/requests?view=mine', all: '/requests?view=all', phathien: '/findings', nghimat: '/incidents', vipham: '/violations' }[c.tab];
+    return api('GET', url).then(function (r) {
+      if (state.cv !== c) return;
+      c.data = r.requests || r.findings || r.incidents || r.violations || [];
+      renderDetail();
+    }).catch(function (e) { say(e.message, 'err'); });
+  }
+
+  function renderCongViec(root) {
+    var c = state.cv, me = state.me || { yeuCau: { inbox: 0, mine: 0 }, phatHienMo: 0, vuViecMo: 0 };
+    var tabs = [['inbox', 'Cần tôi xử lý', me.yeuCau.inbox], ['mine', 'Yêu cầu của tôi', me.yeuCau.mine], ['phathien', 'Mẫu chưa khai báo', me.phatHienMo], ['nghimat', 'Mẫu nghi mất', me.vuViecMo]];
+    if (state.meta.canManage) tabs.push(['all', 'Tất cả yêu cầu', 0], ['vipham', 'Lấy không xin phép', 0]);
+    var bar = h('div', { class: 'nhm-tabs', role: 'tablist' }, tabs.map(function (t) {
+      return h('button', { type: 'button', role: 'tab', class: 'nhm-tab' + (t[0] === c.tab ? ' nhm-tab--on' : ''), 'aria-selected': String(t[0] === c.tab), onclick: function () { moCongViec(t[0]); } },
+        [t[1], t[2] ? h('span', { class: 'nhm-count' }, String(t[2])) : null]);
+    }));
+    var noiDung;
+    if (!c.data) noiDung = h('div', { class: 'nhm-loading' }, 'Đang tải…');
+    else if (c.tab === 'vipham') {
+      noiDung = c.data.length ? h('div', { class: 'nhm-cards' }, c.data.map(function (x) {
+        return h('div', { class: 'nhm-card' }, [h('div', { class: 'nhm-card-top' }, [h('strong', {}, x.ten), h('span', { class: 'nhm-chip nhm-chip--warn' }, x.so_lan + ' lần')]),
+          h('div', { class: 'nhm-small nhm-muted' }, (x.nhom_ten ? 'Nhóm ' + x.nhom_ten + ' · ' : '') + 'gần nhất ' + gioDia(x.gan_nhat))]);
+      })) : h('p', { class: 'nhm-muted' }, 'Chưa có trường hợp lấy mẫu không xin phép nào được chủ mẫu xác nhận.');
+    } else if (!c.data.length) noiDung = h('p', { class: 'nhm-muted' }, { inbox: 'Không có yêu cầu nào đang chờ bạn xử lý.', mine: 'Bạn chưa gửi yêu cầu nào.', phathien: 'Không có mẫu nào đang chờ chủ mẫu khai báo.', nghimat: 'Không có mẫu nào đang bị báo nghi mất.', all: 'Chưa có yêu cầu nào.' }[c.tab]);
+    else noiDung = h('div', { class: 'nhm-cards' }, c.data.map(c.tab === 'phathien' ? theMauChuaKhaiBao : c.tab === 'nghimat' ? theNghiMat : theYeuCau));
+    put(root, h('div', { class: 'nhm-title' }, [h('h2', {}, 'Công việc')]), bar, noiDung);
+  }
+
   // ---------- măng-sét: lời chào, về trang chủ, đăng xuất ----------
   function logout() {
     fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }).catch(function () {}).then(function () {
@@ -1038,7 +1360,12 @@
         state.sel = { type: m[1], id: id };
         if (m[1] === 'box') return api('GET', '/boxes/' + id).then(function (bx) { state.box = bx; }).catch(function () { state.sel = null; });
       }
-    }).then(function () { renderTree(); renderDetail(); }).catch(function (e) {
+    }).then(function () {
+      $('nhm-work').addEventListener('click', function () { moCongViec('inbox'); });
+      renderTree(); renderDetail(); capNhatHuy();
+      if (location.hash === '#cong-viec') moCongViec('inbox');
+      else if (state.sel) manHinhHep(false); // mở thẳng một hộp / vị trí: điện thoại gập sơ đồ lại để thấy nội dung
+    }).catch(function (e) {
       $('nhm-tree').textContent = '';
       say(e.message, 'err');
     });

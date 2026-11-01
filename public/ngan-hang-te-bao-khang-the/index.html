@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Ngân hàng tế bào &amp; Kháng thể — STIMS</title>
   <link rel="stylesheet" href="/public/css/a11y.css" />
   <script src="/public/js/a11y.js" defer></script>
@@ -31,16 +31,19 @@
   </header>
 
   <div class="nhm-shell">
-    <details class="nhm-rail" open>
-      <summary>Sơ đồ kho lưu trữ</summary>
+    <aside class="nhm-rail">
       <form id="nhm-search-form" class="nhm-search" role="search">
         <input id="nhm-search-q" type="search" placeholder="Tìm mẫu theo mọi thông tin…" aria-label="Tìm mẫu" />
         <button type="submit" class="nhm-btn nhm-btn--primary">Tìm</button>
       </form>
-      <button type="button" class="nhm-rail-add nhm-hide" id="nhm-add-root">+ Thêm thiết bị lưu trữ</button>
-      <button type="button" class="nhm-rail-add nhm-hide" id="nhm-manage-catalog">Quản trị module</button>
-      <div id="nhm-tree" class="nhm-tree" aria-label="Sơ đồ kho lưu trữ"><div class="nhm-loading">Đang tải…</div></div>
-    </details>
+      <button type="button" class="nhm-rail-add" id="nhm-work">Công việc <span id="nhm-work-badge" class="nhm-count nhm-hide"></span></button>
+      <details class="nhm-treebox" id="nhm-rail" open>
+        <summary><span>Sơ đồ kho lưu trữ</span><span id="nhm-crumb" class="nhm-crumb"></span></summary>
+        <button type="button" class="nhm-rail-add nhm-hide" id="nhm-add-root">+ Thêm thiết bị lưu trữ</button>
+        <button type="button" class="nhm-rail-add nhm-hide" id="nhm-manage-catalog">Quản trị module</button>
+        <div id="nhm-tree" class="nhm-tree" aria-label="Sơ đồ kho lưu trữ"><div class="nhm-loading">Đang tải…</div></div>
+      </details>
+    </aside>
     <main class="nhm-main">
       <div id="nhm-banner"></div>
       <div id="nhm-msg" class="nhm-msg" role="status" aria-live="polite"></div>
