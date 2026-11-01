@@ -38,9 +38,9 @@ test('gửi yêu cầu: cần lý do, không xin mẫu của mình, chỉ xin m�
   assert.equal(ok.status, 201);
   assert.equal(ok.json.cap, 'chu_mau');
   assert.equal((await xin('sv', m)).status, 409, 'đã có yêu cầu khác chưa xong');
-  await s.api('alice', 'POST', `/tubes/${m}/checkout`);
+  await s.api('alice', 'POST', `/tubes/${m}/checkout`, { note: 'Ghi thao tác thử' });
   const m2 = (await them('alice', kho.box, 1, 2)).json.id;
-  await s.api('alice', 'POST', `/tubes/${m2}/checkout`);
+  await s.api('alice', 'POST', `/tubes/${m2}/checkout`, { note: 'Ghi thao tác thử' });
   assert.equal((await xin('bob', m2)).status, 409, 'mẫu không còn đang lưu kho');
 });
 
@@ -228,13 +228,13 @@ test('danh sách: mine, inbox (đúng người duyệt), all chỉ quản lý; s
 test('xóa / rã đông / hủy mẫu thì đóng yêu cầu đang chờ; trả mẫu đang giao thì kết thúc yêu cầu', async () => {
   const m = (await them('alice', kho.box, 8, 1)).json.id;
   const r = await xin('bob', m);
-  await s.api('alice', 'POST', `/tubes/${m}/discard`);
+  await s.api('alice', 'POST', `/tubes/${m}/discard`, { note: 'Ghi thao tác thử' });
   assert.equal(s.db.prepare('SELECT trang_thai FROM nhm_yeu_cau WHERE id = ?').get(r.json.id).trang_thai, 'da_huy');
   const m2 = (await them('alice', kho.box, 8, 2)).json.id;
   const r2 = await xin('bob', m2);
   await s.api('alice', 'POST', `/requests/${r2.json.id}/approve`);
   await s.api('manager', 'POST', `/requests/${r2.json.id}/deliver`);
-  assert.equal((await s.api('alice', 'POST', `/tubes/${m2}/checkin`)).status, 200);
+  assert.equal((await s.api('alice', 'POST', `/tubes/${m2}/checkin`, { note: 'Ghi thao tác thử' })).status, 200);
   assert.equal(s.db.prepare('SELECT trang_thai FROM nhm_yeu_cau WHERE id = ?').get(r2.json.id).trang_thai, 'da_tra');
   const m3 = (await them('alice', kho.box, 8, 3)).json.id;
   const r3 = await xin('bob', m3);

@@ -9,7 +9,7 @@
  *      chủ mẫu báo hoặc quản lý kiểm kê hộp → ai đã lấy có thể tự nhận → chủ mẫu xác nhận (tính vào số lần vi phạm) →
  *      hết hạn không ai nhận thì quản lý chốt thất lạc.
  *
- * 18 endpoint. Hạn chờ nằm ở services/nganHangTeBaoKhangTheYeuCau.js (HAN). Mọi bước ghi lịch sử (của ô cho «phát hiện»,
+ * 18 endpoint. Hạn chờ nằm ở services/nganHangTeBaoKhangTheYeuCau.js (layHan). Mọi bước ghi lịch sử (của ô cho «phát hiện»,
  * của mẫu cho «nghi mất»); email chạy nền.
  */
 
@@ -34,11 +34,11 @@ module.exports = function createPhatHienRouter(ctx) {
                             (SELECT COALESCE(NULLIF(fullname, ''), email) FROM users WHERE id = p.nguoi_phat_hien_id) AS phat_hien_ten
                      FROM nhm_phat_hien p JOIN nhm_boxes b ON b.id = p.box_id`;
 
-  /** Ngày sớm nhất quản lý được bỏ mẫu: lần nhắc ĐẦU + HAN.CHO_BO_NGAY; chưa nhắc thì chưa có. */
+  /** Ngày sớm nhất quản lý được bỏ mẫu: lần nhắc ĐẦU + hạn bỏ mẫu (cấu hình); chưa nhắc thì chưa có. */
   function hanBo(p) {
     if (!p.nhac_dau_luc) return null;
     const t = new Date(p.nhac_dau_luc.replace(' ', 'T') + 'Z').getTime();
-    return YeuCau.sauNgay(YeuCau.HAN.CHO_BO_NGAY, t);
+    return YeuCau.sauNgay(YeuCau.layHan(db).CHO_BO_NGAY, t);
   }
 
   function dinhDangPh(req, p) {
@@ -176,7 +176,7 @@ module.exports = function createPhatHienRouter(ctx) {
     if (!p.nhac_lan) return fail(res, 409, 'Việc đầu tiên là nhắc chủ mẫu cập nhật thông tin: hãy bấm «Nhắc chủ mẫu» trước khi bỏ mẫu.');
     const han = hanBo(p);
     const som = !hanDen(han);
-    if (som && !laAdmin(req)) return fail(res, 409, `Chưa hết hạn chờ: chỉ bỏ mẫu được từ ${han} (UTC), ${YeuCau.HAN.CHO_BO_NGAY} ngày sau lần nhắc đầu tiên.`);
+    if (som && !laAdmin(req)) return fail(res, 409, `Chưa hết hạn chờ: chỉ bỏ mẫu được từ ${han} (UTC), ${YeuCau.layHan(db).CHO_BO_NGAY} ngày sau lần nhắc đầu tiên.`);
     db.transaction(() => {
       db.prepare("UPDATE nhm_phat_hien SET trang_thai = 'da_bo', xu_ly_boi = ?, xu_ly_luc = datetime('now'), bo_som = ?, ly_do_xu_ly = ? WHERE id = ?").run(req.user.id, som ? 1 : 0, lyDo, id);
       ghiLs(id, som ? 'da_bo_som' : 'da_bo', req.user.id, lyDo);
@@ -226,6 +226,7 @@ module.exports = function createPhatHienRouter(ctx) {
       co_the_nhan_lay: v.trang_thai === 'mo' && v.owner_user_id !== req.user.id,
       co_the_xac_nhan: v.trang_thai === 'cho_chu_xac_nhan' && quyen && v.nguoi_nhan_id !== req.user.id,
       co_the_tim_thay: mo && quyen,
+      co_the_tu_lay: mo && v.owner_user_id === req.user.id,
       co_the_chot_that_lac: mo && canManage(req) && (hanDen(v.han_nhan) || laAdmin(req)),
     };
   }
@@ -241,7 +242,7 @@ module.exports = function createPhatHienRouter(ctx) {
       const vvId = db.transaction(() => {
         const info = db
           .prepare('INSERT INTO nhm_vu_viec (tube_id, nguon, nguoi_bao_id, mo_ta, han_nhan) VALUES (?, ?, ?, ?, ?)')
-          .run(id, tube.owner_user_id === req.user.id ? 'chu_mau' : 'quan_ly', req.user.id, moTa, YeuCau.sauNgay(YeuCau.HAN.CHO_NHAN_NGAY));
+          .run(id, tube.owner_user_id === req.user.id ? 'chu_mau' : 'quan_ly', req.user.id, moTa, YeuCau.sauNgay(YeuCau.layHan(db).CHO_NHAN_NGAY));
         logMove(id, 'bao_mat', tube.box_id ? tube : null, null, req.user.id, `Vụ việc #${info.lastInsertRowid}: báo mẫu không còn ở vị trí${moTa ? ' — ' + moTa : ''}`);
         return Number(info.lastInsertRowid);
       })();
@@ -319,6 +320,23 @@ module.exports = function createPhatHienRouter(ctx) {
     res.json({ ok: true });
   });
 
+  // «Chính tôi đã lấy mẫu của mình»: chủ mẫu khai bổ sung thao tác (bắt buộc ghi mục đích); mẫu chuyển «đã lấy ra», vụ việc đóng, KHÔNG tính vi phạm
+  router.post('/incidents/:id/self-taken', (req, res) => {
+    const v = layVv(req, res);
+    if (!v) return;
+    if (v.owner_user_id !== req.user.id) return fail(res, 403, 'Chỉ chủ mẫu mới khai mình đã tự lấy mẫu.');
+    if (v.trang_thai !== 'mo' && v.trang_thai !== 'cho_chu_xac_nhan') return fail(res, 409, 'Vụ việc này đã đóng.');
+    const note = toStr((req.body || {}).note, 500);
+    if (!note || note.length < 3) return fail(res, 400, 'Phải ghi thông tin thao tác: mục đích bạn đã lấy mẫu.');
+    db.transaction(() => {
+      db.prepare("UPDATE nhm_vu_viec SET trang_thai = 'da_tim_thay', xu_ly_boi = ?, xu_ly_luc = datetime('now'), ly_do_xu_ly = ? WHERE id = ?").run(req.user.id, 'Chủ mẫu tự lấy: ' + note, v.id);
+      db.prepare("UPDATE nhm_tubes SET status = 'checked_out', updated_at = datetime('now') WHERE id = ? AND status = 'in_storage'").run(v.tube_id);
+      logMove(v.tube_id, 'chu_tu_lay', null, null, req.user.id, 'Vụ việc #' + v.id + ': chủ mẫu khai đã tự lấy mẫu — ' + note);
+    })();
+    audit(req, 'incident_self_taken', '#' + v.id + ' mẫu id=' + v.tube_id + ' — ' + note);
+    res.json({ ok: true });
+  });
+
   router.post('/incidents/:id/found', (req, res) => {
     const v = layVv(req, res);
     if (!v) return;
@@ -340,7 +358,7 @@ module.exports = function createPhatHienRouter(ctx) {
     const lyDo = toStr((req.body || {}).ly_do, 500);
     if (!lyDo || lyDo.length < 5) return fail(res, 400, 'Phải ghi lý do chốt thất lạc (ít nhất 5 ký tự).');
     const som = !hanDen(v.han_nhan);
-    if (som && !laAdmin(req)) return fail(res, 409, `Chưa hết hạn chờ người nhận: chỉ chốt thất lạc được từ ${v.han_nhan} (UTC), ${YeuCau.HAN.CHO_NHAN_NGAY} ngày sau khi báo.`);
+    if (som && !laAdmin(req)) return fail(res, 409, `Chưa hết hạn chờ người nhận: chỉ chốt thất lạc được từ ${v.han_nhan} (UTC), ${YeuCau.layHan(db).CHO_NHAN_NGAY} ngày sau khi báo.`);
     const tube = taiMau(v.tube_id);
     db.transaction(() => {
       db.prepare("UPDATE nhm_vu_viec SET trang_thai = 'that_lac', xu_ly_boi = ?, xu_ly_luc = datetime('now'), ly_do_xu_ly = ? WHERE id = ?").run(req.user.id, lyDo, v.id);
@@ -407,7 +425,7 @@ module.exports = function createPhatHienRouter(ctx) {
         if (db.prepare("SELECT 1 FROM nhm_vu_viec WHERE tube_id = ? AND trang_thai IN ('mo','cho_chu_xac_nhan')").get(x)) continue; // đã có vụ việc
         const info = db
           .prepare("INSERT INTO nhm_vu_viec (tube_id, nguon, nguoi_bao_id, mo_ta, han_nhan) VALUES (?, 'kiem_ke', ?, ?, ?)")
-          .run(x, req.user.id, `Kiểm kê hộp ${box.code}: không thấy mẫu${t.thay_luc ? '; lần cuối thấy ' + t.thay_luc + ' (UTC)' : ''}`, YeuCau.sauNgay(YeuCau.HAN.CHO_NHAN_NGAY));
+          .run(x, req.user.id, `Kiểm kê hộp ${box.code}: không thấy mẫu${t.thay_luc ? '; lần cuối thấy ' + t.thay_luc + ' (UTC)' : ''}`, YeuCau.sauNgay(YeuCau.layHan(db).CHO_NHAN_NGAY));
         logMove(x, 'kiem_ke_khong_thay', t.box_id ? t : null, null, req.user.id, `Kiểm kê hộp ${box.code}: không thấy mẫu — vụ việc #${info.lastInsertRowid}${t.thay_luc ? '; lần cuối thấy ' + t.thay_luc + ' (UTC)' : ''}`);
         moVu.push({ vvId: Number(info.lastInsertRowid), tube: t });
       }

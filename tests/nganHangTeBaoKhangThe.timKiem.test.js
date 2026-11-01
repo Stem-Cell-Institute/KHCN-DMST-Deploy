@@ -64,7 +64,7 @@ test('tìm mẫu: lọc theo loại mẫu, người sở hữu (me / id), hộp;
 
 test('tìm mẫu: mặc định chỉ mẫu còn trong kho; status=all thấy cả mẫu đã rã đông / hủy', async () => {
   const id = (await tim('?q=MSC')).json.items[0].id;
-  await s.api('bob', 'POST', `/tubes/${id}/thaw`);
+  await s.api('bob', 'POST', `/tubes/${id}/thaw`, { note: 'Ghi thao tác thử' });
   assert.equal((await tim('?q=MSC')).json.total, 0);
   assert.equal((await tim('?q=MSC&status=thawed')).json.total, 1);
   assert.equal((await tim('?q=MSC&status=all')).json.items[0].status, 'thawed');

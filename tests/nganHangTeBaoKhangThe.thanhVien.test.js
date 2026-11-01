@@ -219,7 +219,7 @@ test('thiết bị Cellbank: người dùng thường không thêm, di chuyển,
   // mẫu công khai không được chuyển vào thiết bị Cellbank
   const cong = await them('alice', kho.box, 7, 1, {});
   assert.equal((await s.api('alice', 'POST', `/tubes/${cong.json.id}/move`, { box_id: cellbank.box, row_no: 3, col_no: 3 })).status, 403);
-  assert.equal((await s.api('manager', 'POST', `/tubes/${t.json.id}/checkout`, {})).status, 200);
+  assert.equal((await s.api('manager', 'POST', `/tubes/${t.json.id}/checkout`, { note: 'Ghi thao tác thử' })).status, 200);
 });
 
 test('Cellbank / công khai chỉ đặt ở thiết bị gốc, vị trí con thừa hưởng; cây trả quan_ly_boi hiệu lực', async () => {

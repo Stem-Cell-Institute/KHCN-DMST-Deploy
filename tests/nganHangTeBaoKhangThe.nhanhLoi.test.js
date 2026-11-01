@@ -73,7 +73,7 @@ test('xóa mẫu hai lần: lần hai 404; lịch sử mẫu đã xóa vẫn đ�
   assert.equal((await s.api('alice', 'DELETE', `/tubes/${t.json.id}`)).status, 404);
   assert.equal((await s.api('alice', 'GET', `/tubes/${t.json.id}/history`)).status, 200);
   assert.equal((await s.api('alice', 'GET', '/tubes/99999/history')).status, 404);
-  assert.equal((await s.api('alice', 'POST', `/tubes/${t.json.id}/checkout`)).status, 404); // mẫu đã xóa không còn thao tác được
+  assert.equal((await s.api('alice', 'POST', `/tubes/${t.json.id}/checkout`, { note: 'Ghi thao tác thử' })).status, 404); // mẫu đã xóa không còn thao tác được
 });
 
 test('thân yêu cầu không phải đối tượng JSON (mảng, chuỗi) không làm sập — trả 400, không 500', async () => {

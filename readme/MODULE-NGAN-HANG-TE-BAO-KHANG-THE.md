@@ -1,7 +1,7 @@
 # Module Ngân hàng tế bào & Kháng thể
 
 Trang: `public/ngan-hang-te-bao-khang-the/index.html` (địa chỉ ngắn `/ngan-hang-te-bao-khang-the`) ·
-API: `/api/ngan-hang-te-bao-khang-the/*` (70 route)
+API: `/api/ngan-hang-te-bao-khang-the/*` (73 route)
 
 Mã nguồn: `routes/nganHangTeBaoKhangThe/` (`index.js`, `boiCanh.js`, `khoLuuTru.js`, `danhMuc.js`, `thanhVien.js`,
 `timKiem.js`, `yeuCau.js`, `phatHien.js`, `mau.js`), `services/nganHangTeBaoKhangThe.js` (hàm thuần), `services/nganHangTeBaoKhangTheKhoiTao.js` (tạo bảng,
@@ -38,7 +38,7 @@ thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở n
 - Vai trò module **không** đụng `users.role` dùng chung toàn hệ thống. **`users.role` = `manager` hay `phong_khcn` không còn tự có
   quyền quản lý** ở module này: phải được admin gán vai trò «Quản lý module».
 - Mọi người dùng đọc được toàn bộ kho (kể cả tên người sở hữu): kho là tài nguyên dùng chung của Viện.
-- Bảng phân quyền đầy đủ của 70 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
+- Bảng phân quyền đầy đủ của 73 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
   với danh sách route thật: thêm/bớt route mà quên cập nhật bảng thì test đỏ.
 
 ### Hai loại thiết bị lưu trữ
@@ -90,6 +90,14 @@ in_storage ──checkout──▶ checked_out ──checkin──▶ in_storage
 | `discarded` Đã hủy | nhả | ✘ |
 
 - Rã đông / hủy là **điểm cuối**, không hoàn tác. Mẫu đang lấy ra thì không di chuyển được (trả lại trước).
+- **Chủ mẫu tự lấy mẫu của mình** (thiết bị công khai) thì không cần ai duyệt, nhưng **bắt buộc khai thông tin thao tác** — lấy ra: mục
+  đích sử dụng; trả lại: tình trạng khi trả (còn lại bao nhiêu, có vấn đề gì không); rã đông: mục đích; hủy: lý do. Thiếu hoặc quá ngắn
+  (< 3 ký tự) thì 400 và mẫu không đổi trạng thái. Quản lý thao tác hộ cũng phải khai. Thông tin vào lịch sử mẫu và nhật ký hoạt động.
+  (Quyền và trạng thái được kiểm trước, nên người lạ vẫn nhận 403.)
+- Mẫu của mình ở thiết bị **Cellbank** thì chủ mẫu không tự lấy được mà phải **gửi yêu cầu** như người khác (Trưởng CIPP duyệt); chủ mẫu
+  không duyệt được yêu cầu của chính mình. Ở thiết bị công khai thì ngược lại: gửi yêu cầu cho mẫu của mình bị từ chối, hãy «Lấy ra».
+- Chủ mẫu thấy mẫu của mình biến mất vì **chính mình đã lấy mà chưa ghi**: bấm **«Chính tôi đã lấy mẫu này»** ở vụ việc nghi mất, ghi
+  mục đích (bắt buộc). Mẫu chuyển «đã lấy ra», lịch sử ghi `chu_tu_lay`, vụ việc đóng, **không** tính vào số lần lấy không xin phép.
 - **Xóa** (`DELETE /tubes/:id`) là xóa mềm (`deleted_at`) dành cho nhập nhầm; mẫu đã dùng xong thì dùng rã đông / hủy
   để còn dấu vết.
 - Chỉ mục duy nhất một phần `ux_nhm_tube_position` bảo đảm một ô một mẫu **ở mức CSDL** (an toàn cả khi hai người
@@ -166,7 +174,7 @@ mẫu đang nghi mất hoặc không còn lưu kho thì không xin được.
 
 Sinh viên **không bao giờ** là người duyệt: người sắp ra trường không thể duyệt, nên người ở lại duyệt ngay từ đầu.
 
-- **Quá 3 ngày** (`HAN.PHAN_HOI_NGAY`) người duyệt cấp dưới chưa phản hồi thì yêu cầu **tự chuyển quản lý module** (bộ hẹn giờ 30 phút
+- **Quá hạn phản hồi** (mặc định 3 ngày, chỉnh được) người duyệt cấp dưới chưa phản hồi thì yêu cầu **tự chuyển quản lý module** (bộ hẹn giờ 30 phút
   trong tiến trình; câu UPDATE có điều kiện nên chạy chồng không chuyển hai lần; thư báo quản lý; lịch sử ghi không có người thao tác).
 - Chủ mẫu / trưởng nhóm vừa **rời đi**, nhóm đổi trưởng nhóm hay trưởng nhóm từ chối: các yêu cầu đang chờ được **định tuyến lại ngay**.
 - **Quản lý module và admin luôn xử lý được.** Nếu họ không phải người duyệt của cấp hiện tại thì là **«xử lý thay»**: bắt buộc ghi lý do
@@ -187,7 +195,7 @@ Sinh viên **không bao giờ** là người duyệt: người sắp ra trườn
    viên đang hoạt động của nhóm nghi; không biết gì thì chỉ hiện trên bảng «Mẫu chưa khai báo» (ai đăng nhập cũng thấy). Nhắc lại được.
 3. Chủ mẫu bấm **«Đây là mẫu của tôi»**, điền thông tin ngay tại ô: ô thành mẫu bình thường, chủ mẫu là người nhận, lịch sử mẫu ghi
    `khai_bao_bo_sung`, quản lý nhận thư.
-4. Quản lý chỉ được **«Bỏ mẫu»** khi **đã nhắc** và qua **7 ngày** (`HAN.CHO_BO_NGAY`) kể từ lần nhắc đầu, kèm lý do bắt buộc. Admin bỏ sớm
+4. Quản lý chỉ được **«Bỏ mẫu»** khi **đã nhắc** và qua **hạn chờ** (mặc định 7 ngày, chỉnh được) kể từ lần nhắc đầu, kèm lý do bắt buộc. Admin bỏ sớm
    hơn được, ghi `da_bo_som`.
 5. Mỗi mục có lịch sử riêng (`nhm_phat_hien_ls`, chặn sửa / xóa bằng trigger) vì mẫu chưa có bản ghi để gắn lịch sử.
 
@@ -201,9 +209,24 @@ Phần mềm không ngăn được hành vi ngoài đời; nó giúp **phát hi�
   mẫu vẫn giữ ô, không xin lấy được.
 - Người đã lấy bấm **«Tôi đã lấy mẫu này»** → chủ mẫu (hoặc trưởng nhóm / quản lý) **xác nhận** (mẫu chuyển «đã lấy ra», tính một lần lấy
   không xin phép cho người đó — quản lý xem ở thẻ «Lấy không xin phép») hoặc **từ chối** (vụ việc mở lại). Người nhận không tự xác nhận.
-- Tìm thấy mẫu thì đóng vụ việc. Hết **14 ngày** (`HAN.CHO_NHAN_NGAY`) không ai nhận, quản lý **chốt thất lạc** (mẫu thành «đã hủy», đóng
+- Tìm thấy mẫu thì đóng vụ việc. Hết **hạn chờ người nhận** (mặc định 14 ngày, chỉnh được) không ai nhận, quản lý **chốt thất lạc** (mẫu thành «đã hủy», đóng
   yêu cầu liên quan); admin chốt sớm được, ghi rõ.
 - Mức xử lý người lấy không xin phép là chính sách của Viện — hệ thống chỉ giữ bằng chứng (số lần theo người, có nhóm).
+
+## Cấu hình các hạn
+
+Ba hạn chờ chỉnh được ở **Quản trị module → Cấu hình hạn** (admin và quản lý module; `GET/PUT /settings`, lưu ở bảng `nhm_cau_hinh`,
+đọc qua `layHan(db)`):
+
+| Hạn | Mặc định | Khoảng |
+|---|---|---|
+| Người duyệt cấp dưới phản hồi (quá hạn chuyển quản lý module) | 3 ngày | 1–30 |
+| Chờ chủ mẫu khai báo trước khi được bỏ mẫu (tính từ lần nhắc đầu) | 7 ngày | 1–90 |
+| Chờ người lấy tự nhận trước khi chốt thất lạc | 14 ngày | 1–90 |
+
+Hạn mới áp dụng cho yêu cầu và vụ việc **tạo sau khi lưu** (yêu cầu / vụ việc đang chạy giữ hạn đã ghi); riêng hạn bỏ mẫu chưa khai
+báo được tính lúc xem nên đổi là áp dụng ngay cho mọi mục đang chờ. Mỗi lần đổi ghi nhật ký «cũ → mới». Giá trị hỏng hoặc ngoài
+khoảng trong CSDL bị bỏ qua, dùng mặc định. Email và thông báo lỗi luôn nói đúng số ngày đang áp dụng.
 
 ## Điện thoại
 
@@ -213,7 +236,6 @@ phóng to; lưới hộp cuộn ngang. Máy cảm ứng không có kéo-thả: d
 
 ## Chưa làm
 
-- Chỉnh các hạn (`HAN`) từ giao diện quản trị: hiện là hằng số trong `services/nganHangTeBaoKhangTheYeuCau.js`.
 - Nút «Tôi sắp mở tủ X» (ghi dấu ai vào tủ lúc nào, để thu hẹp danh sách người liên quan khi có vụ việc): đã cân nhắc, **chưa bật**
   vì thêm một thao tác cho mọi người dùng.
 - Liên kết duyệt một chạm trong email không cần đăng nhập (xem lý do ở mục «Yêu cầu lấy mẫu»).

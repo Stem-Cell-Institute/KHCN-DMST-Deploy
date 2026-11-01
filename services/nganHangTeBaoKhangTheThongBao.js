@@ -13,7 +13,7 @@
  */
 
 const { esc } = require('./baoCaoPhongThongBao');
-const { HAN, CAP_VN, quanLyModule, nguoiConHoatDong, truongNhomHieuLuc } = require('./nganHangTeBaoKhangTheYeuCau');
+const { layHan, CAP_VN, quanLyModule, nguoiConHoatDong, truongNhomHieuLuc } = require('./nganHangTeBaoKhangTheYeuCau');
 
 const EMAIL_HOP_LE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TRANG = '/public/ngan-hang-te-bao-khang-the/index.html';
@@ -72,7 +72,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
         [{ text: `${ten(nguoiGui)} xin lấy một mẫu cần bạn duyệt (cấp duyệt: ${CAP_VN[yc.cap]}).` }]
           .concat(thongTinMau(tube, duongDan))
           .concat(yc.ly_do ? [{ nhan: 'Lý do', text: yc.ly_do }] : [])
-          .concat([{ text: `Vui lòng duyệt hoặc từ chối trong vòng ${HAN.PHAN_HOI_NGAY} ngày; quá hạn yêu cầu sẽ chuyển cho quản lý module.` }]),
+          .concat([{ text: `Vui lòng duyệt hoặc từ chối trong vòng ${layHan(db).PHAN_HOI_NGAY} ngày; quá hạn yêu cầu sẽ chuyển cho quản lý module.` }]),
         lienKet('#cong-viec')
       );
       return guiDen(gop(nguoiGui.id, nguoiDuyet), `[Ngân hàng mẫu] Yêu cầu lấy mẫu: ${tube.name}`, thu);
@@ -126,7 +126,7 @@ function taoThongBao({ db, mailSend, baseUrl }) {
       const thu = dungThu(
         [{ text: `Quản lý module phát hiện một mẫu trong hộp nhưng CHƯA có thông tin trong hệ thống${lanThu > 1 ? ' (nhắc lần ' + lanThu + ')' : ''}. Nếu là mẫu của bạn hoặc của nhóm bạn, vui lòng vào hệ thống bấm «Đây là mẫu của tôi» và điền thông tin.` },
           { nhan: 'Vị trí', text: duongDan }, { nhan: 'Mô tả mẫu', text: ph.mo_ta }]
-          .concat([{ text: `Mẫu chưa được khai báo sau ${HAN.CHO_BO_NGAY} ngày kể từ lần nhắc đầu tiên có thể bị quản lý loại bỏ.` }]),
+          .concat([{ text: `Mẫu chưa được khai báo sau ${layHan(db).CHO_BO_NGAY} ngày kể từ lần nhắc đầu tiên có thể bị quản lý loại bỏ.` }]),
         lienKet('#cong-viec')
       );
       return guiDen(gop(nguoiNhac && nguoiNhac.id, nguoiNhan), '[Ngân hàng mẫu] Nhắc khai báo mẫu chưa có thông tin', thu);

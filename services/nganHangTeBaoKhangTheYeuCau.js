@@ -10,16 +10,52 @@
  *     mẫu của cán bộ / nghiên cứu viên còn hoạt động → chủ mẫu
  *     mẫu của SINH VIÊN (kể cả đang học) hoặc chủ mẫu đã rời đi → trưởng nhóm đã xác nhận
  *     không có trưởng nhóm, trưởng nhóm chưa xác nhận / đã rời đi, nhóm giải thể → quản lý module
- *   Quá hạn phản hồi (HAN.PHAN_HOI_NGAY) mà chưa ai xử lý → chuyển quản lý module.
+ *   Quá hạn phản hồi (layHan(db).PHAN_HOI_NGAY) mà chưa ai xử lý → chuyển quản lý module.
  * Sinh viên KHÔNG BAO GIỜ là người duyệt: người ra trường không thể duyệt, nên người còn ở lại duyệt thay ngay từ đầu.
  */
 
-// Các hạn (ngày). Một chỗ duy nhất để chỉnh.
-const HAN = {
+// Các hạn (ngày). Giá trị MẶC ĐỊNH; quản lý chỉnh được (bảng nhm_cau_hinh, Quản trị module → Cấu hình hạn). Luôn đọc qua layHan(db).
+const HAN_MAC_DINH = {
   PHAN_HOI_NGAY: 3, // người duyệt cấp dưới không phản hồi → chuyển quản lý
   CHO_BO_NGAY: 7, // mẫu chưa khai báo: từ lần nhắc đầu tiên đến khi quản lý được bỏ mẫu
   CHO_NHAN_NGAY: 14, // mẫu nghi mất: không ai nhận → quản lý được chốt thất lạc
 };
+const GIOI_HAN_HAN = { PHAN_HOI_NGAY: [1, 30], CHO_BO_NGAY: [1, 90], CHO_NHAN_NGAY: [1, 90] };
+const KHOA_HAN = { PHAN_HOI_NGAY: 'han_phan_hoi_ngay', CHO_BO_NGAY: 'han_cho_bo_ngay', CHO_NHAN_NGAY: 'han_cho_nhan_ngay' };
+const NHAN_HAN = {
+  PHAN_HOI_NGAY: 'Hạn người duyệt phản hồi (quá hạn chuyển quản lý module)',
+  CHO_BO_NGAY: 'Hạn chờ chủ mẫu khai báo trước khi được bỏ mẫu (tính từ lần nhắc đầu)',
+  CHO_NHAN_NGAY: 'Hạn chờ người lấy tự nhận trước khi chốt thất lạc',
+};
+
+/** Các hạn đang áp dụng: mặc định, đè bằng giá trị quản lý đã lưu (giá trị hỏng hoặc ngoài khoảng thì bỏ qua). */
+function layHan(db) {
+  const out = { ...HAN_MAC_DINH };
+  let rows = [];
+  try {
+    rows = db.prepare('SELECT key, value FROM nhm_cau_hinh').all();
+  } catch (e) {
+    return out; // bảng chưa có (DB chưa chạy schema): dùng mặc định
+  }
+  for (const k of Object.keys(KHOA_HAN)) {
+    const r = rows.find((x) => x.key === KHOA_HAN[k]);
+    const n = r ? Number(r.value) : NaN;
+    const [min, max] = GIOI_HAN_HAN[k];
+    if (Number.isInteger(n) && n >= min && n <= max) out[k] = n;
+  }
+  return out;
+}
+
+/** Lưu các hạn (đã kiểm tra khoảng ở nơi gọi). Chỉ ảnh hưởng yêu cầu / vụ việc TẠO SAU đó, trừ hạn bỏ mẫu (tính lúc đọc). */
+function luuHan(db, giaTri, userId) {
+  const up = db.prepare(
+    "INSERT INTO nhm_cau_hinh (key, value, updated_by, updated_at) VALUES (?, ?, ?, datetime('now')) " +
+      'ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_by = excluded.updated_by, updated_at = excluded.updated_at'
+  );
+  db.transaction(() => {
+    for (const k of Object.keys(giaTri)) up.run(KHOA_HAN[k], String(giaTri[k]), userId || null);
+  })();
+}
 
 const CAP_VN = {
   chu_mau: 'Chủ mẫu',
@@ -117,6 +153,6 @@ function nguoiDuyetHienTai(db, yc, tube) {
 }
 
 module.exports = {
-  HAN, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, hopTrongCellbank, nguoiCoVaiTro, quanLyModule,
+  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, hopTrongCellbank, nguoiCoVaiTro, quanLyModule,
   truongNhomHieuLuc, xacDinhCap, nguoiDuyetHienTai,
 };

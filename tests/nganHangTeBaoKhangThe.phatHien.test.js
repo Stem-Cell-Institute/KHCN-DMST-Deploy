@@ -193,7 +193,7 @@ test('báo mất: chủ mẫu, trưởng nhóm hoặc quản lý; mẫu phải �
   assert.equal((await s.api('bob', 'GET', `/boxes/${kho.box}`)).json.tubes.find((t) => t.id === m).nghi_mat, true);
   s.vv = r.json.id;
   const co = (await them('alice', kho.box, 8, 2, {})).json.id;
-  await s.api('alice', 'POST', `/tubes/${co}/checkout`);
+  await s.api('alice', 'POST', `/tubes/${co}/checkout`, { note: 'Ghi thao tác thử' });
   assert.equal((await s.api('alice', 'POST', `/tubes/${co}/report-missing`, {})).status, 409, 'mẫu đã lấy ra rồi');
 });
 

@@ -33,10 +33,10 @@ test('lấy ra rồi trả lại: giữ nguyên ô, hiện trạng thái, không
   const hop = (await s.api('alice', 'GET', `/boxes/${kho.box}`)).json;
   assert.equal(hop.tubes.find((t) => t.id === id).status, 'checked_out');
   assert.equal((await s.api('alice', 'POST', `/tubes/${id}/move`, { box_id: kho.box, row_no: 5, col_no: 5 })).status, 409);
-  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/checkout`)).status, 409); // đã lấy ra rồi
-  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/checkin`)).status, 200);
+  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/checkout`, { note: 'Ghi thao tác thử' })).status, 409); // đã lấy ra rồi
+  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/checkin`, { note: 'Ghi thao tác thử' })).status, 200);
   assert.equal(trangThai(id), 'in_storage');
-  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/checkin`)).status, 409); // chưa lấy ra
+  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/checkin`, { note: 'Ghi thao tác thử' })).status, 409); // chưa lấy ra
   assert.deepEqual(await hanhDong(id), ['checkin', 'checkout', 'store']);
   const h = (await s.api('alice', 'GET', `/tubes/${id}/history`)).json.history;
   assert.equal(h[1].note, 'chạy thí nghiệm');
@@ -44,14 +44,14 @@ test('lấy ra rồi trả lại: giữ nguyên ô, hiện trạng thái, không
 
 test('rã đông nhả ô, mẫu biến khỏi lưới nhưng lịch sử còn; không thể di chuyển / rã đông lại', async () => {
   const id = await taoMau('alice', 2, 2);
-  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/thaw`)).status, 200);
+  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/thaw`, { note: 'Ghi thao tác thử' })).status, 200);
   assert.equal(trangThai(id), 'thawed');
   const hop = (await s.api('alice', 'GET', `/boxes/${kho.box}`)).json;
   assert.ok(!hop.tubes.some((t) => t.id === id));
   // ô đã được nhả: đặt mẫu mới vào được
   assert.equal((await s.api('alice', 'POST', '/tubes', { box_id: kho.box, row_no: 2, col_no: 2, name: 'mới' })).status, 201);
-  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/thaw`)).status, 409);
-  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/checkout`)).status, 409);
+  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/thaw`, { note: 'Ghi thao tác thử' })).status, 409);
+  assert.equal((await s.api('alice', 'POST', `/tubes/${id}/checkout`, { note: 'Ghi thao tác thử' })).status, 409);
   assert.equal((await s.api('alice', 'POST', `/tubes/${id}/move`, { box_id: kho.box, row_no: 9, col_no: 9 })).status, 409);
   assert.deepEqual(await hanhDong(id), ['thaw', 'store']);
 });
@@ -60,13 +60,13 @@ test('hủy mẫu từ mọi trạng thái còn lại; hủy hai lần bị 409'
   const a = await taoMau('alice', 3, 1);
   assert.equal((await s.api('alice', 'POST', `/tubes/${a}/discard`, { note: 'nhiễm mycoplasma' })).status, 200);
   assert.equal(trangThai(a), 'discarded');
-  assert.equal((await s.api('alice', 'POST', `/tubes/${a}/discard`)).status, 409);
+  assert.equal((await s.api('alice', 'POST', `/tubes/${a}/discard`, { note: 'Ghi thao tác thử' })).status, 409);
   const b = await taoMau('alice', 3, 2);
-  await s.api('alice', 'POST', `/tubes/${b}/thaw`);
-  assert.equal((await s.api('alice', 'POST', `/tubes/${b}/discard`)).status, 200);
+  await s.api('alice', 'POST', `/tubes/${b}/thaw`, { note: 'Ghi thao tác thử' });
+  assert.equal((await s.api('alice', 'POST', `/tubes/${b}/discard`, { note: 'Ghi thao tác thử' })).status, 200);
   const c = await taoMau('alice', 3, 3);
-  await s.api('alice', 'POST', `/tubes/${c}/checkout`);
-  assert.equal((await s.api('alice', 'POST', `/tubes/${c}/discard`)).status, 200);
+  await s.api('alice', 'POST', `/tubes/${c}/checkout`, { note: 'Ghi thao tác thử' });
+  assert.equal((await s.api('alice', 'POST', `/tubes/${c}/discard`, { note: 'Ghi thao tác thử' })).status, 200);
 });
 
 test('vòng đời: người lạ 403, mẫu không có 404, quản lý được thao tác hộ', async () => {
@@ -76,7 +76,7 @@ test('vòng đời: người lạ 403, mẫu không có 404, quản lý được
     assert.equal((await s.api('alice', 'POST', `/tubes/99999/${act}`)).status, 404, act);
     assert.equal((await s.api(null, 'POST', `/tubes/${id}/${act}`)).status, 401, act);
   }
-  assert.equal((await s.api('manager', 'POST', `/tubes/${id}/checkout`)).status, 200);
+  assert.equal((await s.api('manager', 'POST', `/tubes/${id}/checkout`, { note: 'Ghi thao tác thử' })).status, 200);
   assert.equal(trangThai(id), 'checked_out');
   assert.equal((await s.api('manager', 'GET', `/tubes/${id}/history`)).json.history[0].user_name, 'manager@sci.edu.vn');
 });
@@ -86,7 +86,7 @@ test('xóa hộp / vật chứa: mẫu đã rã đông hoặc hủy không chặ
   const b = await s.api('manager', 'POST', '/boxes', { container_id: f.json.id, template_id: kho.tpl99 });
   const t = await s.api('alice', 'POST', '/tubes', { box_id: b.json.ids[0], row_no: 1, col_no: 1, name: 'x' });
   assert.equal((await s.api('manager', 'DELETE', `/boxes/${b.json.ids[0]}`)).status, 409);
-  await s.api('alice', 'POST', `/tubes/${t.json.id}/discard`);
+  await s.api('alice', 'POST', `/tubes/${t.json.id}/discard`, { note: 'Ghi thao tác thử' });
   assert.equal((await s.api('manager', 'DELETE', `/containers/${f.json.id}`)).status, 200);
 });
 

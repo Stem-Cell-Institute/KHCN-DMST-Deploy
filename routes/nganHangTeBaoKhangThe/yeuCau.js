@@ -17,7 +17,7 @@ const { toInt, toStr } = require('../../services/nganHangTeBaoKhangThe');
 const CHU_KY_QUET_MS = 30 * 60 * 1000;
 
 module.exports = function createYeuCauRouter(ctx) {
-  const { db, canManage, audit, fail, logMove, thongBao, guiNen, moTaViTri, nguoiDung, YeuCau } = ctx;
+  const { db, canManage, audit, fail, logMove, thongBao, guiNen, moTaViTri, nguoiDung, hopTrongCellbank, YeuCau } = ctx;
   const router = express.Router();
   const ten = (u) => (u ? u.fullname || u.email : '(không rõ)');
 
@@ -69,7 +69,8 @@ module.exports = function createYeuCauRouter(ctx) {
     if (!tube) return fail(res, 404, 'Không tìm thấy mẫu.');
     const hs = db.prepare('SELECT trang_thai FROM nhm_ho_so WHERE user_id = ?').get(req.user.id);
     if (hs && hs.trang_thai === 'da_roi_di') return fail(res, 403, 'Hồ sơ của bạn được đánh dấu đã rời đi. Liên hệ quản lý module.');
-    if (tube.owner_user_id === req.user.id) return fail(res, 400, 'Đây là mẫu của bạn: dùng «Lấy ra» thay vì gửi yêu cầu.');
+    // mẫu ở thiết bị công khai là của mình thì tự «Lấy ra» (kèm thông tin thao tác); ở Cellbank thì chủ mẫu cũng phải gửi yêu cầu
+    if (tube.owner_user_id === req.user.id && !(tube.box_id && hopTrongCellbank(tube.box_id))) return fail(res, 400, 'Đây là mẫu của bạn: dùng «Lấy ra» thay vì gửi yêu cầu.');
     if (tube.status !== 'in_storage') return fail(res, 409, 'Chỉ xin được mẫu đang lưu kho.');
     if (db.prepare("SELECT 1 FROM nhm_vu_viec WHERE tube_id = ? AND trang_thai IN ('mo','cho_chu_xac_nhan')").get(id)) {
       return fail(res, 409, 'Mẫu này đang bị báo nghi mất, chưa xin lấy được.');
@@ -80,7 +81,7 @@ module.exports = function createYeuCauRouter(ctx) {
     const lyDo = toStr((req.body || {}).ly_do, 500);
     if (!lyDo) return fail(res, 400, 'Hãy ghi lý do / mục đích xin mẫu.');
     const { cap, nguoiDuyet } = YeuCau.xacDinhCap(db, tube, req.user.id);
-    const han = YeuCau.sauNgay(YeuCau.HAN.PHAN_HOI_NGAY);
+    const han = YeuCau.sauNgay(YeuCau.layHan(db).PHAN_HOI_NGAY);
     const yeuCauId = db.transaction(() => {
       const info = db
         .prepare('INSERT INTO nhm_yeu_cau (tube_id, nguoi_gui_id, ly_do, cap, han_phan_hoi) VALUES (?, ?, ?, ?, ?)')
@@ -219,7 +220,7 @@ module.exports = function createYeuCauRouter(ctx) {
           .prepare("UPDATE nhm_yeu_cau SET cap = 'quan_ly', leo_thang_luc = datetime('now'), updated_at = datetime('now') WHERE id = ? AND trang_thai = 'cho_duyet' AND cap = ?")
           .run(y.id, y.cap);
         if (!r.changes) return false;
-        logMove(y.tube_id, 'yc_leo_thang', null, null, null, `Yêu cầu #${y.id}: ${YeuCau.CAP_VN[y.cap]} quá hạn phản hồi ${YeuCau.HAN.PHAN_HOI_NGAY} ngày, chuyển quản lý module`);
+        logMove(y.tube_id, 'yc_leo_thang', null, null, null, `Yêu cầu #${y.id}: ${YeuCau.CAP_VN[y.cap]} quá hạn phản hồi ${YeuCau.layHan(db).PHAN_HOI_NGAY} ngày, chuyển quản lý module`);
         return true;
       })();
       if (!ok) continue;
@@ -239,7 +240,7 @@ module.exports = function createYeuCauRouter(ctx) {
       const moi = YeuCau.xacDinhCap(db, tube, y.nguoi_gui_id);
       if (moi.cap === y.cap) continue;
       db.transaction(() => {
-        db.prepare("UPDATE nhm_yeu_cau SET cap = ?, han_phan_hoi = ?, updated_at = datetime('now') WHERE id = ? AND trang_thai = 'cho_duyet'").run(moi.cap, YeuCau.sauNgay(YeuCau.HAN.PHAN_HOI_NGAY), y.id);
+        db.prepare("UPDATE nhm_yeu_cau SET cap = ?, han_phan_hoi = ?, updated_at = datetime('now') WHERE id = ? AND trang_thai = 'cho_duyet'").run(moi.cap, YeuCau.sauNgay(YeuCau.layHan(db).PHAN_HOI_NGAY), y.id);
         logMove(y.tube_id, 'yc_dinh_tuyen_lai', null, null, null, `Yêu cầu #${y.id}: ${YeuCau.CAP_VN[y.cap]} → ${YeuCau.CAP_VN[moi.cap]} (người duyệt thay đổi)`);
       })();
       doi++;

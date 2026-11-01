@@ -287,6 +287,8 @@
 .nhm-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .nhm-card-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .nhm-addrole { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--ke); }
+.nhm-han { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.nhm-han input { width: 96px; padding: 9px 10px; font: inherit; border: 1px solid var(--ke-dam); border-radius: 2px; }
 .nhm-addrole select { padding: 9px 10px; font: inherit; border: 1px solid var(--ke-dam); border-radius: 2px; }
 
 /* ── Thông báo: bạn được ghi là trưởng nhóm ── */
@@ -343,7 +345,9 @@
   .nhm-facts { grid-template-columns: 1fr; }
   /* ô nhập ≥ 16px để iOS không tự phóng to trang khi bấm vào */
   .nhm-form input, .nhm-form select, .nhm-form textarea, .nhm-search input, .nhm-searchbar input, .nhm-searchbar select,
-  .nhm-lbl select, .nhm-picker input, .nhm-addrole select { font-size: 16px; min-height: 46px; }
+  .nhm-lbl select, .nhm-picker input, .nhm-han { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.nhm-han input { width: 96px; padding: 9px 10px; font: inherit; border: 1px solid var(--ke-dam); border-radius: 2px; }
+.nhm-addrole select { font-size: 16px; min-height: 46px; }
   .nhm-searchbar > * { flex: 1 1 100%; }
   .nhm-tabs { scroll-snap-type: x proximity; }
   .nhm-tab { min-height: 46px; scroll-snap-align: start; }

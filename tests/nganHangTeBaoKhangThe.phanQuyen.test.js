@@ -90,11 +90,14 @@ const ROUTES = [
   ['POST', '/incidents/:id/taken', 'auth'],
   ['POST', '/incidents/:id/confirm', 'auth'],
   ['POST', '/incidents/:id/reject', 'auth'],
+  ['POST', '/incidents/:id/self-taken', 'auth'],
   ['POST', '/incidents/:id/found', 'auth'],
   ['POST', '/incidents/:id/lost', 'manage'],
   ['POST', '/incidents/:id/cancel', 'auth'],
   ['GET', '/violations', 'manage'],
   ['POST', '/boxes/:id/audit', 'manage'],
+  ['GET', '/settings', 'auth'],
+  ['PUT', '/settings', 'manage'],
 ];
 const cuThe = (p) => p.replace(/:[A-Za-z_]+/g, '99999');
 
@@ -197,7 +200,7 @@ test('route chủ sở hữu: người lạ bị 403 trên mẫu của người 
   ];
   for (const [m, p, body] of thaoTac) assert.equal((await api(m, p, nguoiLa.token, body)).s, 403, `${m} ${p}`);
   assert.equal((await api('PATCH', `/tubes/${ids.tube}`, nguoiThuong.token, { name: 'Mẫu của NCV 2' })).s, 200);
-  assert.equal((await api('POST', `/tubes/${ids.tube}/checkout`, admin, {})).s, 200); // quản lý thao tác hộ
+  assert.equal((await api('POST', `/tubes/${ids.tube}/checkout`, admin, { note: 'Quản lý thao tác hộ' })).s, 200); // quản lý thao tác hộ
 });
 
 test('thẻ trang chủ: /api/homepage-stats có số liệu module; địa chỉ cũ chuyển hướng về trang mới', async () => {

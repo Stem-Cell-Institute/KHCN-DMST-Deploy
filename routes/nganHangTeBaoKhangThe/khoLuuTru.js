@@ -20,6 +20,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     res.json({
       canManage: canManage(req),
       isAdmin: laAdmin(req),
+      han: ctx.YeuCau.layHan(db),
       loaiChu: LOAI_CHU_VN,
       containerTypes: db.prepare('SELECT * FROM nhm_container_types ORDER BY sort_order, name').all(),
       boxTemplates: db.prepare('SELECT * FROM nhm_box_templates ORDER BY rows, cols, name').all(),

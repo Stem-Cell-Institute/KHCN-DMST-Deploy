@@ -10,7 +10,7 @@ const express = require('express');
 const { toInt, toStr, parseSo, isUniqueError, layThayDoi, moTaThayDoi } = require('../../services/nganHangTeBaoKhangThe');
 
 module.exports = function createDanhMucRouter(ctx) {
-  const { db, requireManage, audit, fail } = ctx;
+  const { db, requireManage, audit, fail, YeuCau } = ctx;
   const router = express.Router();
 
   const doiTuong = {
@@ -133,6 +133,33 @@ module.exports = function createDanhMucRouter(ctx) {
       audit(req, `${hau}_delete`, `id=${id} ${cur.name}`);
       res.json({ ok: true });
     });
+  });
+
+  // ---------- cấu hình các hạn chờ ----------
+  // Ai cũng đọc được (giao diện cần nói đúng «sau 7 ngày…»); chỉ quản lý chỉnh. Chỉ ảnh hưởng yêu cầu / vụ việc tạo SAU khi lưu
+  // (hạn đã ghi cho yêu cầu và vụ việc đang chạy giữ nguyên); riêng hạn bỏ mẫu chưa khai báo được tính lúc đọc nên đổi là áp dụng ngay.
+  router.get('/settings', (req, res) => {
+    res.json({ han: YeuCau.layHan(db), mac_dinh: YeuCau.HAN_MAC_DINH, gioi_han: YeuCau.GIOI_HAN_HAN, nhan: YeuCau.NHAN_HAN });
+  });
+
+  router.put('/settings', requireManage, (req, res) => {
+    const body = req.body || {};
+    const moi = {};
+    for (const k of Object.keys(YeuCau.KHOA_HAN)) {
+      if (!(k in body)) continue;
+      const n = toInt(body[k]);
+      const [min, max] = YeuCau.GIOI_HAN_HAN[k];
+      if (n == null || n < min || n > max) return fail(res, 400, `${YeuCau.NHAN_HAN[k]}: phải là số nguyên từ ${min} đến ${max} ngày.`);
+      moi[k] = n;
+    }
+    if (!Object.keys(moi).length) return fail(res, 400, 'Không có hạn nào cần cập nhật.');
+    const truoc = YeuCau.layHan(db);
+    const doi = Object.keys(moi).filter((k) => moi[k] !== truoc[k]);
+    if (doi.length) {
+      YeuCau.luuHan(db, moi, req.user.id);
+      audit(req, 'settings_update', doi.map((k) => `${YeuCau.NHAN_HAN[k]}: ${truoc[k]} → ${moi[k]} ngày`).join('; '));
+    }
+    res.json({ ok: true, changed: doi.length, han: YeuCau.layHan(db) });
   });
 
   return router;

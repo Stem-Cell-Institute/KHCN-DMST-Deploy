@@ -80,7 +80,7 @@ test('loại mẫu: thêm, sửa tên, không xóa khi còn mẫu (kể cả m�
   const m = await s.api('alice', 'POST', '/tubes', { box_id: kho.box, row_no: 1, col_no: 1, name: 'pUC19', sample_type_id: loai.json.id });
   assert.equal(m.status, 201);
   assert.equal((await s.api('manager', 'DELETE', `/sample-types/${loai.json.id}`)).status, 409);
-  await s.api('alice', 'POST', `/tubes/${m.json.id}/discard`);
+  await s.api('alice', 'POST', `/tubes/${m.json.id}/discard`, { note: 'Ghi thao tác thử' });
   assert.equal((await s.api('manager', 'DELETE', `/sample-types/${loai.json.id}`)).status, 409); // mẫu đã hủy vẫn tham chiếu
   assert.equal((await s.api('manager', 'PATCH', `/sample-types/${loai.json.id}`, { name: 'Plasmid DNA' })).status, 200);
   const rong = await s.api('manager', 'POST', '/sample-types', { name: 'Không ai dùng' });

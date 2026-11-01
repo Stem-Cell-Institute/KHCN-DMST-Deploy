@@ -16,10 +16,10 @@ const {
 // in_storage <-> checked_out giữ nguyên ô (mẫu chỉ ra ngoài tạm); thawed / discarded nhả ô trong hộp
 // (HOLDING không còn chứa chúng nên chỉ mục duy nhất ux_nhm_tube_position tự nhả).
 const CHUYEN_TRANG_THAI = {
-  checkout: { tu: ['in_storage'], den: 'checked_out', loi: 'Chỉ lấy ra được mẫu đang lưu kho.' },
-  checkin: { tu: ['checked_out'], den: 'in_storage', loi: 'Chỉ trả lại được mẫu đang được lấy ra.' },
-  thaw: { tu: ['in_storage', 'checked_out'], den: 'thawed', loi: 'Chỉ rã đông được mẫu đang lưu kho hoặc đang được lấy ra.' },
-  discard: { tu: ['in_storage', 'checked_out', 'thawed'], den: 'discarded', loi: 'Mẫu này đã được hủy.' },
+  checkout: { tu: ['in_storage'], den: 'checked_out', loi: 'Chỉ lấy ra được mẫu đang lưu kho.', nhan: 'mục đích sử dụng' },
+  checkin: { tu: ['checked_out'], den: 'in_storage', loi: 'Chỉ trả lại được mẫu đang được lấy ra.', nhan: 'tình trạng khi trả (còn lại bao nhiêu, có vấn đề gì không)' },
+  thaw: { tu: ['in_storage', 'checked_out'], den: 'thawed', loi: 'Chỉ rã đông được mẫu đang lưu kho hoặc đang được lấy ra.', nhan: 'mục đích rã đông' },
+  discard: { tu: ['in_storage', 'checked_out', 'thawed'], den: 'discarded', loi: 'Mẫu này đã được hủy.', nhan: 'lý do hủy' },
 };
 
 module.exports = function createMauRouter(ctx) {
@@ -305,7 +305,9 @@ module.exports = function createMauRouter(ctx) {
       if (!canEditTube(req, cur)) return fail(res, 403, 'Chỉ người sở hữu hoặc quản lý mới được thao tác trên mẫu này.');
       if (chanCellbank(req, res, cur)) return;
       if (!rule.tu.includes(cur.status)) return fail(res, 409, rule.loi);
+      // Chủ mẫu tự lấy mẫu của mình thì không cần ai duyệt, nhưng PHẢI khai thông tin thao tác: lịch sử và nhật ký cần biết vì sao mẫu rời khỏi kho
       const note = toStr((req.body || {}).note, 500);
+      if (!note || note.length < 3) return fail(res, 400, 'Phải ghi thông tin thao tác: ' + rule.nhan + '.');
       db.transaction(() => {
         db.prepare("UPDATE nhm_tubes SET status = ?, updated_at = datetime('now') WHERE id = ?").run(rule.den, id);
         // mẫu đang giao cho người xin mà được trả / dùng hết / hủy thì yêu cầu kết thúc; yêu cầu chờ duyệt thì đóng lại

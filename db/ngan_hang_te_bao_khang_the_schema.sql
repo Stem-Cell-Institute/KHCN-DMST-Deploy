@@ -161,6 +161,15 @@ BEGIN SELECT RAISE(ABORT, 'Lịch sử mẫu chỉ được thêm, không đư�
 CREATE TRIGGER IF NOT EXISTS trg_nhm_movements_khong_xoa BEFORE DELETE ON nhm_movements
 BEGIN SELECT RAISE(ABORT, 'Lịch sử mẫu chỉ được thêm, không được xóa'); END;
 
+-- Cấu hình do quản lý chỉnh (hiện: các hạn chờ). Không có dòng thì dùng giá trị mặc định trong
+-- services/nganHangTeBaoKhangTheYeuCau.js (HAN_MAC_DINH).
+CREATE TABLE IF NOT EXISTS nhm_cau_hinh (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_by INTEGER,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- ═══ Đợt 2: yêu cầu lấy mẫu, mẫu chưa khai báo, mẫu nghi mất ═══════════════════════════════════════════════
 
 -- Yêu cầu lấy mẫu của người khác. cap = ai đang là người duyệt:
