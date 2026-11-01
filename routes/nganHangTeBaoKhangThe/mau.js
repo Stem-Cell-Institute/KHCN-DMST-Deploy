@@ -125,6 +125,10 @@ module.exports = function createMauRouter(ctx) {
       );
     const tubeId = Number(info.lastInsertRowid);
     logMove(tubeId, 'store', null, { box_id: boxId, row_no: row, col_no: col }, userId, null);
+    // sinh viên mới kích hoạt chưa có nhóm: nhóm chọn ở mẫu đầu tiên trở thành nhóm trong hồ sơ
+    if (chu.chu_loai === 'sinh_vien' && chu.nhom_id) {
+      db.prepare("UPDATE nhm_ho_so SET nhom_id = ?, updated_at = datetime('now') WHERE user_id = ? AND loai = 'sinh_vien' AND nhom_id IS NULL").run(chu.nhom_id, userId);
+    }
     return tubeId;
   }
 

@@ -69,13 +69,13 @@
         <div class="auth-page">
             <div class="auth-card">
                 <h2>Đăng ký tài khoản</h2>
-                <p class="note">Chỉ chấp nhận email có đuôi <strong>@sci.edu.vn</strong>. Tài khoản dùng chung cho tất cả module (Nhiệm vụ KHCN, Đề tài cấp Viện, Hội đồng đạo đức). Nếu bạn chưa có email này, vui lòng liên hệ đơn vị quản lý.<br><br>
+                <p class="note"><strong>Cán bộ:</strong> dùng email đuôi <strong>@sci.edu.vn</strong>. Tài khoản dùng chung cho tất cả module (Nhiệm vụ KHCN, Đề tài cấp Viện, Hội đồng đạo đức). Nếu bạn chưa có email này, vui lòng liên hệ đơn vị quản lý.<br><br><strong>Sinh viên của Viện:</strong> dùng <u>đúng email mà Trung tâm quản lý người học đã đăng ký cho bạn</u> (không nhất thiết đuôi @sci.edu.vn). Tài khoản sinh viên dùng được Đặt lịch thiết bị và Ngân hàng tế bào &amp; Kháng thể. Chưa nhận được thư xác minh thì liên hệ quản lý module để kiểm tra danh sách.<br><br>
                 <strong>Cách đăng ký:</strong> nhập email và họ tên, hệ thống sẽ gửi thư xác minh tới hộp thư đó; mở liên kết trong thư để đặt mật khẩu.<br><br>
                 <strong>Sinh viên / khách</strong> chỉ cần đặt lịch thiết bị phòng thí nghiệm CRD (email bất kỳ): <a href="crd-dang-ky.html">Đăng ký tài khoản CRD Lab Booking</a>.</p>
                 <div id="msg" class="msg"></div>
                 <form id="form-dang-ky" action="/api/register" method="POST">
                     <div class="form-group">
-                        <label for="email">Email (đuôi @sci.edu.vn)</label>
+                        <label for="email">Email (@sci.edu.vn, hoặc email sinh viên đã được Viện đăng ký)</label>
                         <input type="email" id="email" name="email" placeholder="vd: nguyenvan@sci.edu.vn" required autocomplete="email">
                         <span class="hint" id="email-hint"></span>
                     </div>
@@ -122,9 +122,10 @@
             const v = this.value.trim().toLowerCase();
             if (!v) { emailHint.textContent = ''; return; }
             if (!v.endsWith(ALLOWED_DOMAIN)) {
-                emailHint.textContent = 'Chỉ chấp nhận email có đuôi ' + ALLOWED_DOMAIN;
-                emailHint.style.color = '#dc3545';
-                this.classList.add('error');
+                // email ngoài Viện: máy chủ quyết định (chỉ sinh viên có tên trong danh sách của Viện mới nhận được thư xác minh)
+                emailHint.textContent = 'Email ngoài Viện: chỉ sinh viên đã được Viện đăng ký trước mới nhận được thư xác minh.';
+                emailHint.style.color = 'var(--primary)';
+                this.classList.remove('error');
             } else {
                 emailHint.textContent = 'Định dạng email hợp lệ.';
                 emailHint.style.color = 'var(--primary)';
@@ -136,10 +137,6 @@
             e.preventDefault();
             clearMsg();
             const email = emailEl.value.trim().toLowerCase();
-            if (!email.endsWith(ALLOWED_DOMAIN)) {
-                showMsg('Vui lòng sử dụng email có đuôi ' + ALLOWED_DOMAIN + '.', 'error');
-                return;
-            }
             btn.disabled = true;
             try {
                 const res = await fetch('/api/register', {

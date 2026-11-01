@@ -310,9 +310,13 @@ test('giới hạn theo địa chỉ IP trên đường gửi thư xác minh', (
 
 // ── CHỐT 8: kiểm đầu vào & nội dung thư ──────────────────────────────────────────────────────────
 
-test('đuôi email ngoài @sci.edu.vn, email sai định dạng hoặc thiếu họ tên: 400 và không gửi thư', () =>
+test('email ngoài @sci.edu.vn không có trong danh sách sinh viên: 202 như thường (không dò được danh sách) nhưng KHÔNG gửi thư; sai định dạng / thiếu họ tên: 400', () =>
   voiApp(async (u) => {
-    assert.equal((await u.dangKy('ai-do@gmail.com')).s, 400);
+    const ngoai = await u.dangKy('ai-do@gmail.com');
+    assert.equal(ngoai.s, 202);
+    assert.equal(ngoai.d.daGuiThu, true);
+    assert.equal(u.thu.length, 0, 'không gửi thư cho email ngoài danh sách');
+    assert.equal(u.user('ai-do@gmail.com'), undefined);
     assert.equal((await u.dangKy('khong-hop-le')).s, 400);
     assert.equal((await u.dangKy('a\r\nBcc: x@evil.com@sci.edu.vn')).s, 400);
     assert.equal((await u.dangKy(EM, 'A')).s, 400);

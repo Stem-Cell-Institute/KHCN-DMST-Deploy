@@ -191,11 +191,12 @@
    */
   function chuMauWidget(groups) {
     var hs = state.me && state.me.hoSo;
-    if (hs) {
+    if (hs && hs.nhom_id) {
       return { node: h('div', { class: 'nhm-fixed' }, [h('b', {}, 'Chủ mẫu: '), loaiChuVN(hs.loai) + (hs.nhom_ten ? ' · nhóm ' + hs.nhom_ten : ''), h('span', { class: 'nhm-muted nhm-small' }, ' (theo hồ sơ do quản lý gán)')]),
         get: function () { return {}; } };
     }
     var loai = h('select', { 'aria-label': 'Loại chủ mẫu' }, [h('option', { value: '' }, '— chọn loại chủ mẫu —')].concat(LOAI_CHU.map(function (l) { return h('option', { value: l[0] }, l[1]); })));
+    if (hs) loai.classList.add('nhm-hide'); // đã có hồ sơ (vd sinh viên mới kích hoạt): loại chủ lấy từ hồ sơ, chỉ chọn nhóm
     var nhom = h('select', { 'aria-label': 'Nhóm nghiên cứu' }, [h('option', { value: '' }, '— chọn nhóm nghiên cứu —')]
       .concat(groups.map(function (g) { return h('option', { value: g.id }, g.ten + (g.truong_ten ? ' (trưởng nhóm: ' + g.truong_ten + ')' : ' (chưa có trưởng nhóm)')); }))
       .concat([h('option', { value: 'moi' }, '+ Nhóm khác (nhập nhóm mới)…')]));
@@ -207,20 +208,21 @@
     ]);
     nhom.addEventListener('change', function () { moi.classList.toggle('nhm-hide', nhom.value !== 'moi'); });
     return {
-      node: h('div', {}, [loai, nhom, moi]),
-      get: function () { return { chu_loai: loai.value, nhom: nhom.value, tenMoi: tenMoi.value.trim(), truong: truong.get() }; },
+      node: h('div', {}, [hs ? h('p', { class: 'nhm-hint' }, 'Bạn là ' + loaiChuVN(hs.loai).toLowerCase() + ' của Viện: hãy chọn nhóm nghiên cứu của bạn (nhóm sẽ được ghi vào hồ sơ).') : null, loai, nhom, moi]),
+      get: function () { return { hoSo: !!hs, chu_loai: loai.value, nhom: nhom.value, tenMoi: tenMoi.value.trim(), truong: truong.get() }; },
     };
   }
 
   /** Từ giá trị của chuMauWidget → promise trả phần thân gửi kèm khi thêm mẫu ({chu_loai, nhom_id}). Nhóm mới thì đề xuất trước. */
   function chuMauBody(v) {
-    if (v.chu_loai === undefined) return Promise.resolve({}); // đã có hồ sơ: máy chủ tự lấy
-    if (!v.chu_loai) return Promise.reject(new Error('Chọn loại chủ mẫu.'));
-    if (v.chu_loai !== 'can_bo' && !v.nhom) return Promise.reject(new Error('Chọn nhóm nghiên cứu của mẫu.'));
-    if (v.nhom !== 'moi') return Promise.resolve({ chu_loai: v.chu_loai, nhom_id: v.nhom ? Number(v.nhom) : null });
+    if (v.chu_loai === undefined) return Promise.resolve({}); // đã có hồ sơ và nhóm: máy chủ tự lấy
+    if (!v.hoSo && !v.chu_loai) return Promise.reject(new Error('Chọn loại chủ mẫu.'));
+    if ((v.hoSo || v.chu_loai !== 'can_bo') && !v.nhom) return Promise.reject(new Error('Chọn nhóm nghiên cứu của mẫu.'));
+    var loaiGui = v.hoSo ? {} : { chu_loai: v.chu_loai };
+    if (v.nhom !== 'moi') return Promise.resolve(Object.assign(loaiGui, { nhom_id: v.nhom ? Number(v.nhom) : null }));
     if (!v.tenMoi) return Promise.reject(new Error('Nhập tên nhóm nghiên cứu mới.'));
     if (!v.truong) return Promise.reject(new Error('Chọn trưởng nhóm từ danh sách tài khoản.'));
-    return api('POST', '/groups/propose', { ten: v.tenMoi, truong_user_id: v.truong.id }).then(function (r) { return { chu_loai: v.chu_loai, nhom_id: r.id }; });
+    return api('POST', '/groups/propose', { ten: v.tenMoi, truong_user_id: v.truong.id }).then(function (r) { return Object.assign(loaiGui, { nhom_id: r.id }); });
   }
 
   // ---------- biểu tượng ----------
@@ -1036,6 +1038,84 @@
     }).catch(loiTrongSlot(body));
   }
 
+  // ----- danh sách sinh viên của Viện (Trung tâm quản lý người học) -----
+  var TINH_TRANG_SV = { cho_kich_hoat: 'Chờ kích hoạt', da_kich_hoat: 'Đã kích hoạt', het_han: 'Hết hạn', da_xoa: 'Đã thu hồi' };
+  var luocSv = { q: '', tt: '' };
+
+  function nhapDanhSachForm(reopen) {
+    openForm({
+      title: 'Nhập danh sách sinh viên',
+      fields: [
+        { name: 'text', label: 'Dán danh sách (mỗi dòng: email, họ tên, mã sinh viên, khóa / đợt, hạn dùng — cột sau email và họ tên có thể bỏ trống; dán thẳng từ Excel được)', type: 'textarea', required: true },
+        { name: 'het_han', label: 'Hạn dùng mặc định cho dòng không ghi hạn (hết ngày này thì khóa quyền vào module)', type: 'date', required: true },
+      ],
+      submitLabel: 'Nhập',
+      onSubmit: function (v) {
+        return api('POST', '/students/import', { text: v.text, het_han: v.het_han }).then(function (r) {
+          var dong = [h('p', {}, r.moi + ' mới, ' + r.cap_nhat + ' cập nhật, ' + r.bo_qua + ' bỏ qua. Đã tạo sẵn ' + r.tao_tai_khoan + ' tài khoản chờ kích hoạt.')];
+          if (r.dat_lai_crd) dong.push(h('p', { class: 'nhm-hint' }, r.dat_lai_crd + ' tài khoản Đặt lịch cũ trùng email phải kích hoạt lại bằng Đăng ký chính (vì trước đó chưa xác minh hộp thư).'));
+          if (r.tai_khoan_khac) dong.push(h('p', { class: 'nhm-muted nhm-small' }, r.tai_khoan_khac + ' email đã có tài khoản vai trò khác: không đổi.'));
+          if (r.loi.length) dong.push(h('ul', { class: 'nhm-small' }, r.loi.map(function (e) { return h('li', {}, 'Dòng ' + e.dong + ': ' + e.message); })));
+          // openForm tự đóng hộp thoại sau khi onSubmit xong: mở kết quả ở lượt sau
+          setTimeout(function () {
+            openInfo('Kết quả nhập danh sách', h('div', {}, dong), []);
+            var dongNut = document.querySelector('#nhm-dialog .nhm-form-actions .nhm-btn');
+            if (dongNut) dongNut.addEventListener('click', reopen);
+          }, 0);
+        });
+      },
+    });
+  }
+
+  function suaSinhVienForm(s, reopen) {
+    openForm({
+      title: 'Sửa / gia hạn: ' + s.fullname,
+      fields: [
+        { name: 'fullname', label: 'Họ tên', required: true, value: s.fullname },
+        { name: 'het_han', label: 'Hạn dùng (hết ngày này thì khóa quyền vào module)', type: 'date', required: true, value: s.het_han },
+        { name: 'ma_sv', label: 'Mã sinh viên', value: s.ma_sv },
+        { name: 'khoa', label: 'Khóa / đợt', value: s.khoa },
+        { name: 'ghi_chu', label: 'Ghi chú', type: 'textarea', value: s.ghi_chu },
+      ],
+      onSubmit: function (v) { return api('PATCH', '/students/' + s.id, v).then(function () { say('Đã lưu.', 'ok'); reopen(); }); },
+    });
+  }
+
+  function tabSinhVien(body, reopen) {
+    var qs = [];
+    if (luocSv.q) qs.push('q=' + encodeURIComponent(luocSv.q));
+    if (luocSv.tt) qs.push('tinh_trang=' + luocSv.tt);
+    api('GET', '/students' + (qs.length ? '?' + qs.join('&') : '')).then(function (r) {
+      var err = h('div', { class: 'nhm-err' });
+      var dem = {};
+      r.students.forEach(function (s) { dem[s.tinh_trang] = (dem[s.tinh_trang] || 0) + 1; });
+      var tim = h('input', { type: 'search', placeholder: 'Tìm theo email, tên, mã sinh viên, khóa…', 'aria-label': 'Tìm sinh viên' }); tim.value = luocSv.q;
+      var loc = h('select', { 'aria-label': 'Lọc tình trạng' }, [h('option', { value: '' }, 'Mọi tình trạng')].concat(Object.keys(TINH_TRANG_SV).map(function (k) { return h('option', { value: k }, TINH_TRANG_SV[k]); }))); loc.value = luocSv.tt;
+      var ap = function () { luocSv.q = tim.value.trim(); luocSv.tt = loc.value; reopen(); };
+      tim.addEventListener('keydown', function (e) { if (e.key === 'Enter') ap(); });
+      loc.addEventListener('change', ap);
+      var cards = r.students.map(function (s) {
+        var chipCls = 'nhm-chip' + (s.tinh_trang === 'het_han' || s.tinh_trang === 'da_xoa' ? ' nhm-chip--warn' : '');
+        var nut = [nutNho('Gia hạn / sửa', '', function () { suaSinhVienForm(s, reopen); })];
+        if (s.tinh_trang !== 'da_xoa') nut.push(nutNho('Thu hồi', 'danger', function () {
+          if (window.confirm('Thu hồi quyền của ' + s.fullname + '? Họ không vào được module này nữa (Đặt lịch thiết bị vẫn dùng được).')) api('DELETE', '/students/' + s.id).then(reopen).catch(function (e) { err.textContent = e.message; });
+        }));
+        return h('div', { class: 'nhm-card' + (s.tinh_trang === 'het_han' || s.tinh_trang === 'da_xoa' ? ' nhm-card--roi' : '') }, [
+          h('div', { class: 'nhm-card-top' }, [h('strong', {}, s.fullname), h('span', { class: chipCls }, TINH_TRANG_SV[s.tinh_trang])]),
+          h('div', { class: 'nhm-small nhm-muted' }, s.email + (s.ma_sv ? ' · ' + s.ma_sv : '') + (s.khoa ? ' · ' + s.khoa : '') + (s.nhom_ten ? ' · nhóm ' + s.nhom_ten : '')),
+          h('div', { class: 'nhm-small' }, 'Hạn dùng: hết ngày ' + s.het_han.split('-').reverse().join('/')),
+          h('div', { class: 'nhm-card-act' }, nut),
+        ]);
+      });
+      put(body, h('div', {}, [
+        h('div', { class: 'nhm-dm-head' }, [h('strong', {}, 'Sinh viên của Viện (' + r.students.length + ')'), nutNho('+ Nhập danh sách', 'primary', function () { nhapDanhSachForm(reopen); })]),
+        h('p', { class: 'nhm-muted nhm-small' }, 'Danh sách do Trung tâm quản lý người học cung cấp. Chỉ email trong danh sách mới đăng ký được tài khoản sinh viên (sau khi xác minh hộp thư). Đã kích hoạt: ' + (dem.da_kich_hoat || 0) + ' · chờ: ' + (dem.cho_kich_hoat || 0) + ' · hết hạn: ' + (dem.het_han || 0) + '. Danh sách là dữ liệu cá nhân: chỉ Admin và quản lý module xem.'),
+        h('div', { class: 'nhm-searchbar' }, [tim, loc, nutNho('Lọc', '', ap)]),
+        r.students.length ? h('div', { class: 'nhm-cards' }, cards) : h('p', { class: 'nhm-muted' }, 'Chưa có sinh viên nào khớp.'),
+        err]));
+    }).catch(loiTrongSlot(body));
+  }
+
   /** Các hạn chờ: người duyệt phản hồi, bỏ mẫu chưa khai báo, chốt thất lạc. */
   function tabCauHinh(body, reopen) {
     api('GET', '/settings').then(function (r) {
@@ -1068,7 +1148,7 @@
 
   function quanTriDialog(tab) {
     tab = tab || 'danhmuc';
-    var tabs = [['danhmuc', 'Danh mục', tabDanhMuc], ['nhom', 'Nhóm nghiên cứu', tabNhom], ['thanhvien', 'Thành viên', tabThanhVien], ['cauhinh', 'Cấu hình hạn', tabCauHinh]];
+    var tabs = [['danhmuc', 'Danh mục', tabDanhMuc], ['nhom', 'Nhóm nghiên cứu', tabNhom], ['thanhvien', 'Thành viên', tabThanhVien], ['sinhvien', 'Sinh viên', tabSinhVien], ['cauhinh', 'Cấu hình hạn', tabCauHinh]];
     if (state.me && state.me.laAdmin) tabs.push(['vaitro', 'Vai trò', tabVaiTro]);
     var body = h('div', { class: 'nhm-tabbody' }, h('div', { class: 'nhm-loading' }, 'Đang tải…'));
     var bar = h('div', { class: 'nhm-tabs', role: 'tablist' }, tabs.map(function (t) {
@@ -1083,7 +1163,10 @@
   function renderBanner() {
     var slot = $('nhm-banner');
     var ds = (state.me && state.me.nhomChoXacNhan) || [];
-    put(slot, ds.length ? h('div', { class: 'nhm-notice', role: 'alert' }, ds.map(function (g) {
+    var sv = state.me && state.me.sinhVien;
+    var conNgay = sv ? Math.ceil((new Date(sv.het_han + 'T23:59:59+07:00').getTime() - Date.now()) / 86400000) : null;
+    var thongBaoHan = sv && conNgay <= 30 ? h('div', { class: 'nhm-hint', role: 'status' }, 'Quyền vào Ngân hàng tế bào & Kháng thể của tài khoản sinh viên đến hết ngày ' + sv.het_han.split('-').reverse().join('/') + ' (còn ' + Math.max(conNgay, 0) + ' ngày). Cần gia hạn thì liên hệ quản lý module.') : null;
+    put(slot, thongBaoHan, ds.length ? h('div', { class: 'nhm-notice', role: 'alert' }, ds.map(function (g) {
       var xong = function () { return api('GET', '/me').then(function (m) { state.me = m; return taiNhom(); }).then(renderBanner); };
       return h('div', { class: 'nhm-notice-row' }, [
         h('span', {}, 'Bạn được ghi là trưởng nhóm «' + g.ten + '»' + (g.de_xuat_ten ? ' (do ' + g.de_xuat_ten + ' đề xuất)' : '') + '. Khi có người xin lấy mẫu của nhóm, bạn là người duyệt. Đúng không?'),

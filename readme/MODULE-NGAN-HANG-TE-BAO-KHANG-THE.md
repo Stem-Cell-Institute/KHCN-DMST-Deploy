@@ -1,9 +1,9 @@
 # Module Ngân hàng tế bào & Kháng thể
 
 Trang: `public/ngan-hang-te-bao-khang-the/index.html` (địa chỉ ngắn `/ngan-hang-te-bao-khang-the`) ·
-API: `/api/ngan-hang-te-bao-khang-the/*` (73 route)
+API: `/api/ngan-hang-te-bao-khang-the/*` (77 route)
 
-Mã nguồn: `routes/nganHangTeBaoKhangThe/` (`index.js`, `boiCanh.js`, `khoLuuTru.js`, `danhMuc.js`, `thanhVien.js`,
+Mã nguồn: `routes/nganHangTeBaoKhangThe/` (`index.js`, `boiCanh.js`, `khoLuuTru.js`, `danhMuc.js`, `thanhVien.js`, `sinhVien.js`,
 `timKiem.js`, `yeuCau.js`, `phatHien.js`, `mau.js`), `services/nganHangTeBaoKhangThe.js` (hàm thuần), `services/nganHangTeBaoKhangTheKhoiTao.js` (tạo bảng,
 chuyển hướng, số liệu trang chủ), `services/nganHangTeBaoKhangTheYeuCau.js` (đường duyệt, các hạn), `services/nganHangTeBaoKhangTheThongBao.js` (email), `db/ngan_hang_te_bao_khang_the_schema.sql`, `public/ngan-hang-te-bao-khang-the/*`.
 Test: `tests/nganHangTeBaoKhangThe*.test.js` + `tests/helpers/nganHangServer.js`.
@@ -33,12 +33,13 @@ thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở n
 | **Quản lý module** (2–3 người) | bảng `nhm_vai_tro` | Thiết bị lưu trữ, hộp, danh mục, nhóm nghiên cứu, hồ sơ thành viên, sửa / xử lý mọi mẫu, xuất CSV, chuyển chủ sở hữu mẫu. Là người xử lý yêu cầu lấy mẫu: giao mẫu, nhận lại, xử lý thay khi người duyệt vắng. |
 | **Trưởng CIPP** (quản lý Cellbank) | bảng `nhm_vai_tro` | Duyệt yêu cầu lấy mẫu ở thiết bị **Cellbank**. Không có quyền quản lý kho. |
 | Người dùng thường | mọi tài khoản còn lại | Tìm mẫu, thêm mẫu vào thiết bị công khai, sửa / di chuyển / lấy ra / rã đông / hủy / xóa **mẫu của mình**. |
+| Sinh viên của Viện (`sinh_vien`) | danh sách chờ do Trung tâm quản lý người học cung cấp | Như người dùng thường, **tới hết hạn dùng** ghi trong danh sách; tài khoản chỉ vào được module này và Đặt lịch thiết bị (xem «Sinh viên của Viện»). |
 | Tài khoản `crd_user` | — | Bị chặn khỏi cả module (`authMiddleware`). |
 
 - Vai trò module **không** đụng `users.role` dùng chung toàn hệ thống. **`users.role` = `manager` hay `phong_khcn` không còn tự có
   quyền quản lý** ở module này: phải được admin gán vai trò «Quản lý module».
 - Mọi người dùng đọc được toàn bộ kho (kể cả tên người sở hữu): kho là tài nguyên dùng chung của Viện.
-- Bảng phân quyền đầy đủ của 73 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
+- Bảng phân quyền đầy đủ của 77 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
   với danh sách route thật: thêm/bớt route mà quên cập nhật bảng thì test đỏ.
 
 ### Hai loại thiết bị lưu trữ
@@ -158,6 +159,37 @@ nhãn admin tự đặt được giữ.
 Thẻ module (`homepage_modules.code = 'sample_storage'`) hiện **bật sẵn** (`enabled: 1` ở `HOMEPAGE_MODULES_DEFAULT`
 trong `server.js`). Tắt chỉ làm mờ thẻ trên trang chủ — **không** chặn trang hay API, giống mọi module khác. Muốn ra
 mắt từ từ: đổi mặc định thành `0` rồi để admin bật khi sẵn sàng.
+
+## Sinh viên của Viện (danh sách chờ, xác minh, hết hạn)
+
+Cán bộ có email `@sci.edu.vn` đăng ký tài khoản bình thường (có xác minh hộp thư). Sinh viên **không** có email đó, và đăng ký ở module Đặt lịch
+thiết bị **không xác minh hộp thư** (ai gõ email của người khác cũng đăng ký được) nên không thể dùng nó để biết ai là sinh viên của Viện. Cách làm:
+
+1. **Danh sách chờ:** Trung tâm quản lý người học gửi email các đợt sinh viên mới; quản lý module dán vào **Quản trị module → Sinh viên → Nhập danh sách**
+   (mỗi dòng: email, họ tên, mã sinh viên, khóa / đợt, hạn dùng; dán thẳng từ Excel được; hạn mặc định cho dòng không ghi hạn). Nhập lại nhiều lần
+   không trùng (cập nhật và gia hạn). Bảng `nhm_sinh_vien`.
+2. Với mỗi email, hệ thống **tạo sẵn** tài khoản vai trò `sinh_vien` **chưa kích hoạt** (mật khẩu rỗng — cách tài khoản tạo sẵn đang dùng).
+3. Sinh viên vào trang **Đăng ký chính** (`dang-ky.html`), nhập **đúng email đó** → nhận thư xác minh tới **chính hộp thư** (liên kết dùng một lần, 2 giờ) →
+   đặt mật khẩu → tài khoản kích hoạt. Chưa xác minh được hộp thư thì không có tài khoản. Email ngoài `@sci.edu.vn` mà **không** có trong danh sách (hoặc hết
+   hạn) nhận **cùng thông báo** nhưng **không có thư** — không ai dò được ai nằm trong danh sách.
+4. Lần đầu vào module, tài khoản có **hồ sơ «sinh viên»** (chưa có nhóm): sinh viên chọn nhóm nghiên cứu ở mẫu đầu tiên (hoặc đề xuất nhóm; trưởng nhóm xác nhận),
+   nhóm đó được ghi vào hồ sơ; sau đó chỉ thêm mẫu cho nhóm của mình.
+
+**Chặn chiếm email.** Đăng ký CRD bằng email đang nằm trong danh sách bị từ chối (cùng thông báo «email đã được sử dụng»). Tài khoản `crd_user` **cũ** trùng email
+với danh sách (đăng ký trước đó, chưa xác minh hộp thư) bị **đặt lại**: vai trò `sinh_vien`, mật khẩu rỗng — chủ email thật xác minh lại là lấy lại được, người
+chiếm trước mất quyền. Tài khoản vai trò khác (vd cán bộ) trùng email thì **không đụng tới**.
+
+**Quyền của vai trò `sinh_vien`** (`services/vaiTroHanChe.js`, dùng ở `authMiddleware` và cổng `.html` trong `server.js`): API chỉ `/api/crd/` (Đặt lịch thiết bị) và
+`/api/ngan-hang-te-bao-khang-the/`; trang `.html` chỉ Đặt lịch, trang chủ, trang module; mọi thứ khác 403 / chuyển về trang module. Vai trò `crd_user` giữ nguyên
+hành vi cũ (chỉ Đặt lịch). Tài khoản dùng chung cho Đặt lịch thiết bị và Ngân hàng — không cần hai tài khoản.
+
+**Hết hạn: chỉ khóa module này.** Hết **ngày** ghi ở cột hạn (giờ Việt Nam), `ctx.chanSinhVien` trả 403 «đã hết hạn» cho mọi API của module (kể cả `/me`), hồ sơ
+chuyển «đã rời đi» (yêu cầu về mẫu của họ chuyển cho trưởng nhóm / quản lý, lịch sử ghi `chu_roi_di`). Tài khoản **không bị khóa**: vẫn đặt lịch thiết bị. Bộ quét
+30 phút (cùng bộ hẹn giờ với yêu cầu quá hạn) đánh dấu dòng «hết hạn» và xử lý ngay cả khi chưa ai vào. **Gia hạn** (sửa hạn) hoặc nhập lại danh sách thì mở lại và
+ghi `chu_tro_lai`; **thu hồi** thì khóa và phải nhập lại để cấp lại. Dòng đã hết hạn / thu hồi **quá 365 ngày bị xóa** khỏi danh sách (dữ liệu cá nhân).
+
+**Dữ liệu cá nhân:** danh sách chỉ có email, họ tên, mã sinh viên, khóa, hạn; chỉ Admin và quản lý module xem; nhật ký hoạt động ghi số lượng chứ **không ghi email**; mỗi
+lần xem danh sách có một dòng nhật ký. Email phải khớp đúng email Trung tâm cung cấp (không phân biệt hoa thường); sửa từng dòng ở thẻ «Sinh viên».
 
 ## Yêu cầu lấy mẫu
 

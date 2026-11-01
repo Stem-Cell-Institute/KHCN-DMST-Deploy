@@ -5061,9 +5061,7 @@ function userIdIsBanned(userId) {
   }
 }
 
-function isCrdOnlyUserRole(role) {
-  return String(role || '').toLowerCase() === CRD_ONLY_USER_ROLE;
-}
+const vaiTroHanChe = require('./services/vaiTroHanChe');
 
 // Vai trò HĐKHCN (chu_tich/thu_ky/thanh_vien/totruong_tham_dinh_tc/thanh_vien_tham_dinh_tc) và Phòng
 // KHCN (phong_khcn) có thể được cấp THÊM cho một user qua bảng council_role_grants, tách biệt khỏi
@@ -5158,18 +5156,6 @@ function usersWithAnyRole(tokens) {
   }
 }
 
-/** Pathname không gồm query (vd /api/crd/state). */
-function isApiPathAllowedForCrdOnlyUser(urlPath) {
-  const p = (urlPath || '').split('?')[0];
-  if (p.startsWith('/api/crd/')) return true;
-  if (p === '/api/me' || p === '/api/logout') return true;
-  if (p === '/api/activity/track') return true;
-  if (p === '/api/health') return true;
-  if (p.startsWith('/api/pub-analytics')) return true;
-  if (p.startsWith('/api/dashboard-perms/') && p.endsWith('/check')) return true;
-  return false;
-}
-
 function authMiddleware(req, res, next) {
   const token = getTokenFromReq(req);
   if (!token) {
@@ -5195,15 +5181,10 @@ function authMiddleware(req, res, next) {
       /* giữ payload JWT nếu DB lỗi */
     }
     req.user = reqUser;
-    if (isCrdOnlyUserRole(payload.role)) {
-      const p = (req.originalUrl || req.url || '').split('?')[0];
-      if (!isApiPathAllowedForCrdOnlyUser(p)) {
-        return res.status(403).json({
-          message:
-            'Tài khoản này chỉ dùng cho module Đặt lịch thiết bị CRD. Để dùng Nhiệm vụ KHCN, Hội đồng đạo đức, v.v., vui lòng đăng ký/đăng nhập bằng email @sci.edu.vn trên trang chính.',
-        });
-      }
-    }
+    // vai trò chỉ dùng một số module (crd_user, sinh_vien): xem services/vaiTroHanChe.js; kiểm cả vai trò trong token lẫn trong DB
+    const p = (req.originalUrl || req.url || '').split('?')[0];
+    const loiVaiTro = vaiTroHanChe.kiemTraApi(payload.role, p) || vaiTroHanChe.kiemTraApi(reqUser.role, p);
+    if (loiVaiTro) return res.status(403).json({ message: loiVaiTro });
     next();
   } catch (e) {
     return res.status(401).json({ message: 'Phiên đăng nhập hết hạn' });
@@ -5446,7 +5427,7 @@ app.use(
     setAuthCookie,
     userEmailIsMasterAdmin,
     isSafeEmailFormat,
-    allowedDomain: ALLOWED_EMAIL_DOMAIN,
+    allowedDomain: ALLOWED_EMAIL_DOMAIN, emailDuocPhep: (em) => require('./services/nganHangTeBaoKhangTheSinhVien').emailDuocDangKy(db, em),
   })
 );
 
@@ -5574,7 +5555,7 @@ app.use('/api', require('./routes/crd/dangKyCongKhai')({
   db,
   jwt,
   JWT_SECRET,
-  setAuthCookie,
+  setAuthCookie, emailSinhVienDangCho: (em) => require('./services/nganHangTeBaoKhangTheSinhVien').emailDuocDangKy(db, em),
 }));
 
 /** email (chuẩn hoá) → thời điểm gửi mail quên mật khẩu gần nhất — chống email bomb SMTP */
@@ -16803,20 +16784,9 @@ app.use((req, res, next) => {
   if (token0) {
     try {
       const payload0 = jwt.verify(token0, JWT_SECRET);
-      if (!userIdIsBanned(payload0.id) && isCrdOnlyUserRole(payload0.role)) {
-        const base0 = path.basename(reqPath);
-        const htmlOkForCrd = new Set([
-          'crd-booking-v2.html',
-          'crd-dang-ky.html',
-          'dang-nhap.html',
-          'quen-mat-khau.html',
-          'dat-lai-mat-khau.html',
-        ]);
-        const pathNormCrd = (reqPath || '').replace(/\\/g, '/');
-        const crdPublicEquipment = pathNormCrd.includes('/public/equipment/public.html');
-        if (!htmlOkForCrd.has(base0) && !crdPublicEquipment) {
-          return res.redirect(302, '/crd-booking-v2.html');
-        }
+      // vai trò chỉ dùng một số module (crd_user, sinh_vien): chỉ mở các trang của module đó (services/vaiTroHanChe.js)
+      if (!userIdIsBanned(payload0.id) && !vaiTroHanChe.trangHtmlDuocPhep(payload0.role, reqPath)) {
+        return res.redirect(302, vaiTroHanChe.trangMacDinh(payload0.role));
       }
     } catch (e) {
       /* token lỗi — xử lý bước dưới */

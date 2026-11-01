@@ -17,6 +17,9 @@
 
 const express = require('express');
 
+const THONG_BAO_EMAIL_DA_DUNG =
+  'Email này đã được sử dụng. Hãy đăng nhập hoặc dùng email khác. (Sinh viên của Viện đã được đăng ký trước: kích hoạt tài khoản ở trang Đăng ký chính, dang-ky.html.)';
+
 module.exports = function createCrdDangKyCongKhaiRouter({
   ALLOWED_EMAIL_DOMAIN,
   CRD_ONLY_USER_ROLE,
@@ -25,6 +28,7 @@ module.exports = function createCrdDangKyCongKhaiRouter({
   jwt,
   JWT_SECRET,
   setAuthCookie,
+  emailSinhVienDangCho = () => false,
 }) {
 const router = express.Router();
 // Đăng ký chỉ phục vụ module Đặt lịch CRD — chấp nhận mọi email NGOẠI TRỪ @sci.edu.vn (nhân sự Viện dùng /api/register + dang-ky.html)
@@ -41,6 +45,9 @@ router.post('/crd/public/register', async (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em) || em.length > 190) {
     return res.status(400).json({ message: 'Email không hợp lệ.' });
   }
+  // Email đã nằm trong danh sách sinh viên của Viện: phải kích hoạt qua Đăng ký chính (có xác minh hộp thư), không chiếm trước ở đây.
+  // Cùng một thông báo với «email đã được sử dụng» để không ai dò được danh sách.
+  if (emailSinhVienDangCho(em)) return res.status(400).json({ message: THONG_BAO_EMAIL_DA_DUNG });
   if (!fn || fn.length < 2) {
     return res.status(400).json({ message: 'Vui lòng nhập họ và tên (ít nhất 2 ký tự).' });
   }
@@ -65,7 +72,7 @@ router.post('/crd/public/register', async (req, res) => {
     return res.status(201).json({ message: 'Đăng ký thành công', token, user });
   } catch (e) {
     if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      return res.status(400).json({ message: 'Email này đã được sử dụng. Hãy đăng nhập hoặc dùng email khác.' });
+      return res.status(400).json({ message: THONG_BAO_EMAIL_DA_DUNG });
     }
     throw e;
   }

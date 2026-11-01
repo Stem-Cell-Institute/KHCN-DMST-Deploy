@@ -18,12 +18,13 @@ const USERS = {
   sv: { id: 5, email: 'sv@sci.edu.vn', role: 'researcher' }, // sinh viên, KHÔNG có hồ sơ
   truong: { id: 6, email: 'truong@sci.edu.vn', role: 'researcher' }, // trưởng nhóm
   cellbank: { id: 7, email: 'cellbank@sci.edu.vn', role: 'researcher' }, // Trưởng CIPP
+  svmoi: { id: 8, email: 'svmoi@gmail.com', role: 'sinh_vien' }, // sinh viên Viện (email ngoài, vai trò hạn chế)
 };
 
 async function dungServer() {
   const db = new Database(':memory:');
   db.pragma('foreign_keys = ON');
-  db.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, fullname TEXT, email TEXT, role TEXT, is_banned INTEGER DEFAULT 0)');
+  db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, fullname TEXT, email TEXT, role TEXT, password TEXT DEFAULT '', is_banned INTEGER DEFAULT 0)");
   for (const u of Object.values(USERS)) db.prepare('INSERT INTO users (id, fullname, email, role) VALUES (?, ?, ?, ?)').run(u.id, u.email, u.email, u.role);
   db.prepare("INSERT INTO users (id, fullname, email, is_banned) VALUES (9, 'Bị khóa', 'locked@sci.edu.vn', 1)").run();
   db.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'ngan_hang_te_bao_khang_the_schema.sql'), 'utf8'));

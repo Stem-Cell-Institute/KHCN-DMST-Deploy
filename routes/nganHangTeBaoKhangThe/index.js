@@ -17,6 +17,7 @@ const createMauRouter = require('./mau');
 const createThanhVienRouter = require('./thanhVien');
 const createYeuCauRouter = require('./yeuCau');
 const createPhatHienRouter = require('./phatHien');
+const createSinhVienRouter = require('./sinhVien');
 const createTimKiemRouter = require('./timKiem');
 const createDanhMucRouter = require('./danhMuc');
 const khoiTao = require('../../services/nganHangTeBaoKhangTheKhoiTao');
@@ -25,7 +26,10 @@ function createNganHangMauRouter(deps) {
   const ctx = taoBoiCanh(deps);
   const router = express.Router();
   router.use(deps.authMiddleware);
+  // tài khoản sinh viên: hết hạn / bị thu hồi thì không vào module (Đặt lịch thiết bị vẫn dùng được); còn hạn thì tự có hồ sơ «sinh viên»
+  router.use((req, res, next) => ctx.chanSinhVien(req, res, next));
   router.use(createKhoLuuTruRouter(ctx));
+  router.use(createSinhVienRouter(ctx));
   router.use(createThanhVienRouter(ctx));
   router.use(createDanhMucRouter(ctx));
   router.use(createTimKiemRouter(ctx));
@@ -34,11 +38,12 @@ function createNganHangMauRouter(deps) {
   router.use(createMauRouter(ctx));
   // cho test và bộ hẹn giờ gọi trực tiếp
   router.quetQuaHan = ctx.quetQuaHan;
+  router.quetSinhVien = ctx.quetSinhVien;
   router.dinhTuyenLai = ctx.dinhTuyenLai;
   // Bộ hẹn giờ trong tiến trình: chuyển yêu cầu quá hạn lên quản lý (đa số máy chỉ chạy MỘT tiến trình; câu lệnh UPDATE
   // có điều kiện nên chạy chồng cũng không chuyển hai lần). Không giữ tiến trình sống (unref).
   if (deps.nhacTuDong) {
-    const quet = () => Promise.resolve(ctx.quetQuaHan()).catch((e) => console.warn('[ngan-hang] quét quá hạn lỗi:', e && e.message));
+    const quet = () => Promise.resolve().then(() => ctx.quetQuaHan()).then(() => ctx.quetSinhVien()).catch((e) => console.warn('[ngan-hang] quét quá hạn lỗi:', e && e.message));
     const dau = setTimeout(quet, 2 * 60 * 1000);
     const lap = setInterval(quet, ctx.CHU_KY_QUET_MS);
     for (const t of [dau, lap]) if (t.unref) t.unref();

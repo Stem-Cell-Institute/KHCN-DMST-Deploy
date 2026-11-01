@@ -98,6 +98,10 @@ const ROUTES = [
   ['POST', '/boxes/:id/audit', 'manage'],
   ['GET', '/settings', 'auth'],
   ['PUT', '/settings', 'manage'],
+  ['GET', '/students', 'manage'],
+  ['POST', '/students/import', 'manage'],
+  ['PATCH', '/students/:id', 'manage'],
+  ['DELETE', '/students/:id', 'manage'],
 ];
 const cuThe = (p) => p.replace(/:[A-Za-z_]+/g, '99999');
 

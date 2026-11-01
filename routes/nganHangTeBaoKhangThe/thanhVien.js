@@ -60,6 +60,7 @@ module.exports = function createThanhVienRouter(ctx) {
       laAdmin: laAdmin(req),
       canManage: canManage(req),
       laTruongCellbank: laTruongCellbank(req),
+      sinhVien: ctx.thongTinSinhVien ? ctx.thongTinSinhVien(req) : null,
       vaiTro: [...vaiTroModule(req)],
       hoSo: hoSo || null,
       nhomChoXacNhan: choXacNhan,

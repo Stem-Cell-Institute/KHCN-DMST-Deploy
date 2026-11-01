@@ -161,6 +161,25 @@ BEGIN SELECT RAISE(ABORT, 'Lịch sử mẫu chỉ được thêm, không đư�
 CREATE TRIGGER IF NOT EXISTS trg_nhm_movements_khong_xoa BEFORE DELETE ON nhm_movements
 BEGIN SELECT RAISE(ABORT, 'Lịch sử mẫu chỉ được thêm, không được xóa'); END;
 
+-- Danh sách sinh viên của Viện do Trung tâm quản lý người học cung cấp (xem services/nganHangTeBaoKhangTheSinhVien.js).
+-- Chỉ email có trong danh sách và còn hạn mới đăng ký được tài khoản vai trò sinh_vien (sau khi xác minh hộp thư).
+--   het_han     hết NGÀY này (giờ Việt Nam) thì khóa quyền vào module Ngân hàng; tài khoản vẫn dùng được Đặt lịch thiết bị
+--   trang_thai  'cho' còn hiệu lực | 'het_han' đã quét hết hạn | 'da_xoa' quản lý thu hồi
+CREATE TABLE IF NOT EXISTS nhm_sinh_vien (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL UNIQUE,
+  fullname TEXT NOT NULL,
+  ma_sv TEXT,
+  khoa TEXT,
+  het_han TEXT NOT NULL,
+  trang_thai TEXT NOT NULL DEFAULT 'cho' CHECK (trang_thai IN ('cho','het_han','da_xoa')),
+  ghi_chu TEXT,
+  created_by INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_nhm_sinh_vien_han ON nhm_sinh_vien(het_han);
+
 -- Cấu hình do quản lý chỉnh (hiện: các hạn chờ). Không có dòng thì dùng giá trị mặc định trong
 -- services/nganHangTeBaoKhangTheYeuCau.js (HAN_MAC_DINH).
 CREATE TABLE IF NOT EXISTS nhm_cau_hinh (
