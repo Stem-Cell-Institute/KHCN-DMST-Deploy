@@ -516,3 +516,8 @@
 .nhm-ct__loai { color: var(--chu-phu); font-size: 0.74rem; }
 .nhm-ct__dong--nay .nhm-ct__ic { color: var(--son); }
 @media (hover: none) { .nhm-ct__dong { min-height: 40px; } }
+
+/* Màn hình hẹp: sơ đồ kho đang mở thì cây vị trí nhỏ bên dưới trùng thông tin → ẩn; sơ đồ kho gập thì cây nhỏ hiện để bấm quay lui */
+@media (max-width: 900px) {
+  .nhm-shell:has(#nhm-rail[open]) .nhm-ct { display: none; }
+}
