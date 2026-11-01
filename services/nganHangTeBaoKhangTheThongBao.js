@@ -19,10 +19,11 @@ const EMAIL_HOP_LE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TRANG = '/public/ngan-hang-te-bao-khang-the/index.html';
 
 function dungThu(doan, lienKet) {
-  const text = doan.map((d) => (d.nhan ? `${d.nhan}: ${d.text}` : d.text)).join('\n') + (lienKet ? `\n\nMở trong hệ thống: ${lienKet}` : '') + '\n\n— Hệ thống STIMS, Viện Tế bào gốc';
+  // mỗi đoạn: {nhan?, text, href?}; có href thì trong HTML là liên kết bấm được, trong bản chữ in kèm địa chỉ
+  const text = doan.map((d) => (d.nhan ? `${d.nhan}: ${d.text}` : d.text) + (d.href ? ` ${d.href}` : '')).join('\n') + (lienKet ? `\n\nMở trong hệ thống: ${lienKet}` : '') + '\n\n— Hệ thống STIMS, Viện Tế bào gốc';
   const html =
     '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#16233d">' +
-    doan.map((d) => `<p style="margin:0 0 8px">${d.nhan ? `<strong>${esc(d.nhan)}:</strong> ` : ''}${esc(d.text).replace(/\n/g, '<br>')}</p>`).join('') +
+    doan.map((d) => `<p style="margin:0 0 8px">${d.nhan ? `<strong>${esc(d.nhan)}:</strong> ` : ''}${d.href ? `<a href="${esc(d.href)}" style="color:#b7281e;font-weight:bold">${esc(d.text)}</a>` : esc(d.text).replace(/\n/g, '<br>')}</p>`).join('') +
     (lienKet ? `<p style="margin:14px 0 0"><a href="${esc(lienKet)}" style="color:#b7281e;font-weight:bold">Mở trong hệ thống</a></p>` : '') +
     '<p style="margin:18px 0 0;color:#5a6783;font-size:12px">Hệ thống STIMS, Viện Tế bào gốc — thư tự động, vui lòng không trả lời.</p></div>';
   return { text, html };
@@ -32,7 +33,7 @@ function dungThu(doan, lienKet) {
 function taoThongBao({ db, mailSend, baseUrl }) {
   const goc = String(baseUrl || '').replace(/\/+$/, '');
   const lienKet = (hash) => (goc ? `${goc}${TRANG}${hash || ''}` : '');
-  const linkPhieu = (id) => (goc ? [{ nhan: 'Phiếu yêu cầu (in được, cần đăng nhập)', text: `${goc}/api/ngan-hang-te-bao-khang-the/requests/${id}/print` }] : []);
+  const linkPhieu = (id) => (goc ? [{ nhan: 'Phiếu yêu cầu', text: 'Mở và in phiếu (cần đăng nhập)', href: `${goc}/api/ngan-hang-te-bao-khang-the/requests/${id}/print` }] : []);
 
   /** Gộp nhiều danh sách người nhận: bỏ trùng, bỏ người thực hiện, bỏ địa chỉ hỏng. */
   function gop(boQuaUserId, ...dsList) {
@@ -80,11 +81,12 @@ function taoThongBao({ db, mailSend, baseUrl }) {
     },
 
     /** Đã duyệt → người yêu cầu + quản lý module (để xử lý giao mẫu). */
-    yeuCauDaDuyet({ yc, tube, nguoiGui, nguoiXuLy, duongDan, xuLyThay }) {
+    yeuCauDaDuyet({ yc, tube, nguoiGui, nguoiXuLy, duongDan, xuLyThay, donViTen }) {
       const thu = dungThu(
         [{ text: `Yêu cầu lấy mẫu của ${ten(nguoiGui)} đã được duyệt${xuLyThay ? ' (quản lý xử lý thay: ' + (yc.ly_do_xu_ly || '') + ')' : ''}.` }]
           .concat(thongTinMau(tube, duongDan))
-          .concat([{ nhan: 'Người duyệt', text: ten(nguoiXuLy) }, { text: 'Quản lý module sẽ liên hệ giao mẫu cho bạn.' }])
+          .concat([{ nhan: 'Người duyệt', text: ten(nguoiXuLy) }].concat(yc.ly_do_xu_ly ? [{ nhan: 'Ghi chú của người duyệt', text: yc.ly_do_xu_ly }] : []))
+          .concat([{ text: `${donViTen ? 'Quản lý ' + donViTen : 'Quản lý module'} sẽ liên hệ giao mẫu cho bạn.` }])
           .concat(linkPhieu(yc.id)),
         lienKet('#cong-viec')
       );

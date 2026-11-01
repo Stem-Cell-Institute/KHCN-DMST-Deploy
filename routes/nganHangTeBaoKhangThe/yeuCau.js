@@ -167,7 +167,7 @@ module.exports = function createYeuCauRouter(ctx) {
     const duongDan = moTaViTri(tube.box_id, tube.row_no, tube.col_no);
     const nguoiGui = nguoiDung(y.nguoi_gui_id);
     guiNen(ketQua === 'duyet'
-      ? thongBao.yeuCauDaDuyet({ yc: moi, tube, nguoiGui, nguoiXuLy, duongDan, xuLyThay: q.thay })
+      ? thongBao.yeuCauDaDuyet({ yc: moi, tube, nguoiGui, nguoiXuLy, duongDan, xuLyThay: q.thay, donViTen: (YeuCau.donViCuaHop(db, tube.box_id) || {}).ten || null })
       : thongBao.yeuCauTuChoi({ yc: moi, tube, nguoiGui, nguoiXuLy, duongDan }));
     res.json({ ok: true, trang_thai: ketQua === 'duyet' ? 'da_duyet' : 'tu_choi', xu_ly_thay: q.thay });
   }
