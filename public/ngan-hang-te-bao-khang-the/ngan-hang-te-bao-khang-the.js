@@ -555,14 +555,14 @@
     });
   }
 
-  /** Hộp trong giá của bình nitơ: khai VỊ TRÍ SỐ của hộp trong giá (1–50, từ đáy lên), mỗi lần một hộp. */
+  /** Hộp trong giá của bình nitơ: khai VỊ TRÍ SỐ của hộp trong giá (1–50, số 1 ở trên cùng), mỗi lần một hộp. */
   function boxTrongGiaForm(containerId) {
     var tpl = state.meta.boxTemplates.map(function (t) { return { value: t.id, label: t.name + ' (' + t.rows + '×' + t.cols + ')' }; });
     var da = state.tree.boxes.filter(function (x) { return x.container_id === containerId && x.vi_tri; }).map(function (x) { return x.vi_tri; });
     openForm({
       title: 'Thêm hộp vào giá',
       fields: [
-        { name: 'vi_tri', label: 'Vị trí hộp trong giá (số 1–50, tính từ đáy lên)', type: 'number', required: true, value: da.length ? Math.min(50, Math.max.apply(null, da) + 1) : 1 },
+        { name: 'vi_tri', label: 'Vị trí hộp trong giá (số 1–50, số 1 ở trên cùng, càng lớn càng sâu)', type: 'number', required: true, value: da.length ? Math.min(50, Math.max.apply(null, da) + 1) : 1 },
         { name: 'template_id', label: 'Mẫu hộp', type: 'select', options: tpl },
         { name: 'name', label: 'Tên hộp' },
         { name: 'notes', label: 'Ghi chú', type: 'textarea' },
@@ -585,7 +585,7 @@
         { name: 'rows', label: 'Số hàng (1–26)', type: 'number', value: b.rows },
         { name: 'cols', label: 'Số cột (1–30)', type: 'number', value: b.cols },
         { name: 'notes', label: 'Ghi chú', type: 'textarea', value: b.notes },
-      ].concat(trongBinhNito(containerById(b.container_id)) ? [{ name: 'vi_tri', label: 'Vị trí hộp trong giá (số 1–50, tính từ đáy lên)', type: 'number', value: b.vi_tri }] : []),
+      ].concat(trongBinhNito(containerById(b.container_id)) ? [{ name: 'vi_tri', label: 'Vị trí hộp trong giá (số 1–50, số 1 ở trên cùng, càng lớn càng sâu)', type: 'number', value: b.vi_tri }] : []),
       onSubmit: function (v) {
         var body = { name: v.name, code: v.code, container_id: Number(v.container_id), rows: Number(v.rows), cols: Number(v.cols), notes: v.notes };
         if ('vi_tri' in v) body.vi_tri = v.vi_tri === '' || v.vi_tri == null ? null : Number(v.vi_tri);

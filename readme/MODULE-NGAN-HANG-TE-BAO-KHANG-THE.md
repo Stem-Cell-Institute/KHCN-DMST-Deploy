@@ -66,12 +66,12 @@ Chọn ở ô «Ai quản lý thiết bị này» khi **Thêm / Chỉnh sửa th
 ### Bình nitơ lỏng: giá (rack) rồi hộp theo vị trí số
 
 Bình nitơ có nhiều giá, mỗi giá có nhiều hộp. Với thiết bị gốc có loại **Bình nitơ lỏng** (nhận biết theo tên loại, không phân biệt dấu): thêm **giá (rack)** trước và khai
-**vị trí giá trong bình** (`nhm_containers.vi_tri`, 1–50); trong giá thêm **hộp** và khai **vị trí hộp trong giá** (`nhm_boxes.vi_tri`, 1–50, tính từ đáy lên) —
+**vị trí giá trong bình** (`nhm_containers.vi_tri`, 1–50); trong giá thêm **hộp** và khai **vị trí hộp trong giá** (`nhm_boxes.vi_tri`, 1–50, số 1 ở trên cùng, càng lớn càng sâu) —
 thay cho ô «Số lượng hộp», mỗi lần một hộp. Số không được trùng trong cùng bình (giá) / cùng giá (hộp), API trả 409. Cây kho và danh sách sắp theo vị trí số.
 Tủ và thiết bị khác giữ cách cũ (thêm nhiều hộp một lần, không đánh số).
 
 **Mô hình bình xuyên thấu** (`public/ngan-hang-te-bao-khang-the/binh-ln.js`): khi xem bình, giá hoặc hộp nằm trong bình nitơ, cột bên phải (điện thoại: khung gập ở đầu trang)
-hiện mặt cắt đứng (giá đứng cạnh nhau, hộp xếp từ đáy lên) và hình nhìn từ trên xuống (các vị trí giá quanh cổ bình, đánh số). **Chấm đỏ** đánh dấu mục đang chọn:
+hiện mặt cắt đứng (giá đứng cạnh nhau, hộp xếp từ trên xuống, số 1 ở trên cùng) và hình nhìn từ trên xuống (các vị trí giá quanh cổ bình, đánh số). **Chấm đỏ** đánh dấu mục đang chọn:
 chọn giá → chấm ở giá; chọn hộp → ở ô hộp; rê chuột / chạm một ô ống trên lưới hộp → ngay vị trí ô đó; hình nhìn từ trên chấm đúng vị trí giá. Bấm vào giá / hộp trên mô hình để mở mục đó. Không in ra giấy.
 
 ### Loại chủ mẫu và nhóm nghiên cứu

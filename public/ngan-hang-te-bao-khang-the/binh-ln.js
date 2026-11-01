@@ -2,7 +2,7 @@
  * Mô hình bình nitơ lỏng xuyên thấu: các giá (rack) và hộp theo đúng khai báo trong hệ thống,
  * chấm đỏ đánh dấu mục đang chọn (giá, hộp hoặc một ô ống trên lưới hộp).
  *
- * Gồm hai hình trong một SVG: mặt cắt đứng (giá đứng cạnh nhau, hộp xếp từ đáy lên theo «vị trí số»)
+ * Gồm hai hình trong một SVG: mặt cắt đứng (giá đứng cạnh nhau, hộp xếp từ trên xuống theo «vị trí số»: số 1 ở trên cùng)
  * và nhìn từ trên xuống (các vị trí giá quanh cổ bình, đánh số như trên bình thật).
  * Không phụ thuộc thư viện nào; module chính dùng qua window.NhmBinhLn.tao(...).
  */
@@ -75,7 +75,7 @@
       g.appendChild(khung);
       var gm = { x: xGia(r.so), w: wGia, el: khung, boxes: {} };
       r.boxes.forEach(function (b) {
-        var y = BODY_BOTTOM - b._so * hNgan;
+        var y = BODY_TOP + (b._so - 1) * hNgan; // số 1 ở TRÊN CÙNG, số càng lớn càng sâu
         var hop = el('rect', { x: xGia(r.so) + 1.5, y: y + 0.6, width: wGia - 3, height: Math.max(1.6, hNgan - 1.2), rx: 1.2, class: 'ln-hop' });
         if (opts.chonHop) { hop.style.cursor = 'pointer'; hop.addEventListener('click', function (e) { e.stopPropagation(); opts.chonHop(b.id); }); }
         g.appendChild(hop);

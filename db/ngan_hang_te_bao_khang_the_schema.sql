@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS nhm_boxes (
   code TEXT NOT NULL,
   name TEXT,
   notes TEXT,
-  -- Vị trí SỐ của hộp trong giá (rack) của bình nitơ lỏng (1–50), tính từ đáy lên; NULL = không đánh số
+  -- Vị trí SỐ của hộp trong giá (rack) của bình nitơ lỏng (1–50), số 1 ở trên cùng, càng lớn càng sâu; NULL = không đánh số
   vi_tri INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50),
   deleted_at TEXT,
   created_by INTEGER,
