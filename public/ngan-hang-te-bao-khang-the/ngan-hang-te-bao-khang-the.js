@@ -1114,7 +1114,7 @@
       });
       put(body, h('div', {}, [
         h('strong', {}, 'Vai trò trong module (' + r.roles.length + ')'),
-        h('p', { class: 'nhm-muted nhm-small' }, 'Chỉ Admin cấp và gỡ vai trò. Quản lý module (2–3 người) quản lý thiết bị, hộp, danh mục, nhóm và mọi mẫu; Trưởng CIPP duyệt yêu cầu lấy mẫu ở thiết bị Cellbank.'),
+        h('p', { class: 'nhm-muted nhm-small' }, 'Chỉ Admin cấp và gỡ vai trò. Quản lý module (2–3 người) quản lý thiết bị, hộp, danh mục, nhóm và mọi mẫu; Trưởng CIPP là người duyệt của đơn vị Cellbank (người duyệt của các đơn vị khác gán ở thẻ Đơn vị quản lý).'),
         r.roles.length ? h('div', { class: 'nhm-cards' }, rows) : h('p', { class: 'nhm-muted' }, 'Chưa gán vai trò nào.'),
         h('div', { class: 'nhm-addrole' }, [nguoi.node, sel, nutNho('Cấp vai trò', '', function () {
           var u = nguoi.get();
