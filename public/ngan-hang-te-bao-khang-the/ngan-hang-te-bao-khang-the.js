@@ -338,6 +338,14 @@
     return { tank: tank, racks: Object.keys(racks).map(function (k) { return racks[k]; }) };
   }
 
+  // Kéo rộng / thu hẹp cửa sổ sau khi đã tải trang: sơ đồ bình tự mở khi màn hình rộng, gập khi hẹp (khỏi kẹt ở trạng thái cũ)
+  if (window.matchMedia) {
+    var mqHep = window.matchMedia('(max-width: 900px)');
+    var doiCoMan = function (e) { Array.prototype.forEach.call(document.querySelectorAll('.nhm-ln'), function (d) { d.open = !e.matches; }); };
+    if (mqHep.addEventListener) mqHep.addEventListener('change', doiCoMan);
+    else if (mqHep.addListener) mqHep.addListener(doiCoMan);
+  }
+
   /** Gắn mô hình bình vào bảng chi tiết nếu mục đang xem nằm trong bình nitơ; sel = {gia}|{hop}|null. */
   function ganBinh(root, containerId, sel) {
     root.classList.remove('nhm-detail--ln');
@@ -355,7 +363,7 @@
     var r = giaCua(c);
     m.chon(sel || (r && r.id === c.id ? { gia: r.id } : null));
     var det = h('details', { class: 'nhm-ln' }, [h('summary', {}, [h('span', { class: 'nhm-ln__tit' }, 'Sơ đồ bình ' + tank.name), tom]), m.node]);
-    if (window.innerWidth > 900) det.open = true;
+    det.open = !window.matchMedia('(max-width: 900px)').matches; // máy tính: mở sẵn; điện thoại: gập lại
     root.classList.add('nhm-detail--ln');
     root.appendChild(det);
   }
