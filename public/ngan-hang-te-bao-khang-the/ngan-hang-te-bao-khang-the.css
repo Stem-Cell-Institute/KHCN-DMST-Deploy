@@ -58,25 +58,6 @@
 .nhm-count--canh { min-width: 22px; margin: 0; padding: 0 7px; background: var(--son); }
 .nhm-viec--canh:hover .nhm-count--canh { color: var(--son); background: #fff; }
 
-/* ── Cây ─────────────────────────────────────────────────────────────────── */
-
-.nhm-tree ul { list-style: none; margin: 0; padding-left: 14px; }
-.nhm-tree > ul { padding-left: 0; }
-.nhm-node {
-  display: flex; align-items: center; gap: 6px; width: 100%; text-align: left;
-  padding: 7px 8px; background: none; color: var(--muc);
-  font: inherit; font-size: 0.9rem; line-height: 1.35;
-  border: 0; border-left: 2px solid transparent; border-radius: 0; cursor: pointer;
-  transition: background-color 140ms ease;
-}
-.nhm-node:hover { background: #eef0f5; }
-/* Mốc chọn: kẻ son bên trái — son là màu tín hiệu duy nhất */
-.nhm-node--on { background: #eef0f5; border-left-color: var(--son); font-weight: 700; }
-.nhm-node__caret { width: 14px; flex: none; color: var(--chu-mo); font-size: 0.8rem; }
-.nhm-node__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nhm-node__meta { flex: none; font-size: 0.75rem; color: var(--chu-phu); font-variant-numeric: tabular-nums; }
-.nhm-node--box .nhm-node__label::before { content: "▦ "; color: var(--chu-mo); }
-
 /* ── Vùng nội dung ───────────────────────────────────────────────────────── */
 
 .nhm-main { padding: 22px 28px 72px; min-width: 0; }
@@ -218,23 +199,6 @@
 
 .nhm-small { font-size: 0.8rem; }
 
-/* ── Cây thư mục: đường nối dọc, biểu tượng theo loại, thẻ Cellbank / Công khai ── */
-.nhm-tree-tools { display: flex; gap: 16px; margin: 0 0 8px; font-size: 0.8rem; }
-.nhm-tree ul, .nhm-treeul { list-style: none; margin: 0; padding: 0; }
-.nhm-tree ul ul { margin-left: 15px; padding-left: 8px; border-left: 1px solid var(--ke-dam); }
-.nhm-node { min-height: 40px; gap: 4px; padding: 4px 8px 4px 4px; }
-.nhm-node__caret { width: 20px; text-align: center; font-size: 0.95rem; }
-.nhm-node__icon { flex: none; display: inline-flex; color: var(--chu-mo); }
-.nhm-node--on .nhm-node__icon { color: var(--muc); }
-.nhm-node--box .nhm-node__label::before { content: none; }
-.nhm-node--container .nhm-node__label { font-weight: 600; }
-.nhm-node--box .nhm-node__label { font-weight: 400; }
-.nhm-tag {
-  flex: none; padding: 1px 6px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
-  color: var(--chu-phu); border: 1px solid var(--ke-dam); border-radius: 2px;
-}
-.nhm-tag--cb { color: var(--muc); border-color: var(--muc); }
-
 /* ── Bên trong một vị trí lưu trữ ── */
 .nhm-inside { margin: 14px 0; }
 .nhm-inside h3 { margin: 0 0 6px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--chu-phu); }
@@ -309,7 +273,6 @@
 .nhm-btn--primary.nhm-btn--sm { color: #fff; }
 
 @media (max-width: 600px) {
-  .nhm-node { min-height: 44px; }
   .nhm-card-act .nhm-btn, .nhm-notice-act .nhm-btn { flex: 1 1 auto; }
 }
 
@@ -398,18 +361,13 @@
 
 /* ── Thanh bên gọn hơn trên máy tính (điện thoại giữ cỡ chạm 44px ở trên) ── */
 @media (min-width: 901px) {
-  .nhm-shell { grid-template-columns: 280px minmax(0, 1fr); }
+  .nhm-shell { grid-template-columns: 300px minmax(0, 1fr); }
   .nhm-rail { padding: 16px 14px 18px 18px; }
   .nhm-search input { min-height: 34px; font-size: 0.8rem; }
   .nhm-search .nhm-btn { min-height: 34px; font-size: 0.8rem; }
   .nhm-rail-add { min-height: 32px; margin-bottom: 8px; padding: 0 10px; font-size: 0.78rem; }
   .nhm-treebox > summary { padding-bottom: 6px; margin-bottom: 8px; font-size: 0.7rem; }
   .nhm-tree-tools { margin-bottom: 4px; font-size: 0.72rem; }
-  .nhm-node { min-height: 30px; padding: 2px 6px 2px 2px; font-size: 0.8rem; line-height: 1.25; }
-  .nhm-node__caret { width: 16px; font-size: 0.8rem; }
-  .nhm-node__meta { font-size: 0.68rem; }
-  .nhm-tag { padding: 0 5px; font-size: 0.56rem; }
-  .nhm-tree ul ul { margin-left: 11px; padding-left: 5px; }
 }
 
 /* ── Mô hình bình nitơ lỏng xuyên thấu (binh-ln.js) ─────────────────────────
@@ -447,7 +405,9 @@
 .ln-cham .ln-vong { animation: ln-nhay 1.6s ease-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes ln-nhay { 0% { transform: scale(0.7); opacity: 1; } 100% { transform: scale(1.5); opacity: 0.25; } }
 @media (prefers-reduced-motion: reduce) { .ln-cham .ln-vong { animation: none; } }
-.ln-chuthich { margin: 6px 0 0; font-size: 0.78rem; line-height: 1.4; color: var(--chu-phu); }
+/* chú thích vị trí chấm đỏ: chỉ để trình đọc màn hình (đã có chấm đỏ + nhãn Rack trên hình) */
+.ln-chuthich { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.nhm-ln[open] .nhm-ln__tom { display: none; } /* mở rồi thì chấm đỏ đã nói đủ; gập lại mới cần dòng mô tả */
 
 @media (min-width: 901px) {
   .nhm-detail--ln { display: grid; grid-template-columns: minmax(0, 1fr) 300px; column-gap: 22px; align-items: start; }
@@ -476,3 +436,85 @@
 /* Dòng giải thích Cellbank / đơn vị quản lý: chỉ màn hình rộng; nhỏ và sát vì không phải thông tin chính */
 .nhm-hint--rong { margin: 2px 0 8px; padding: 3px 10px; font-size: 0.76rem; line-height: 1.4; color: var(--chu-phu); }
 @media (max-width: 900px) { .nhm-hint--rong { display: none; } }
+
+/* ── Cây kho lưu trữ ───────────────────────────────────────────────────────
+   Ba cấp, nheo mắt vẫn phân biệt được:
+     thiết bị  = dải tiêu đề nền nhạt, hai dòng (tên đậm / loại · số mẫu), nhãn Cellbank | Public bên phải
+     Rack/ngăn = hàng có đường nối, số vị trí trong ô nhỏ, chữ đậm vừa
+     hộp       = lá nhẹ: chữ thường, thanh đầy + số mẫu / sức chứa
+   Mục đang chọn = khối mực đặc, chữ trắng. Các cấp cha của nó có nền nhạt (đường đi). */
+.nhm-tree-tools { display: flex; gap: 16px; margin: 0 0 10px; font-size: 0.8rem; }
+.nhm-treeul, .nhm-treeul ul { list-style: none; margin: 0; padding: 0; }
+.nhm-treeul > li + li { margin-top: 8px; }
+
+.nhm-node {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 3px 8px; text-align: left;
+  background: none; color: var(--muc); font: inherit; font-size: 0.86rem; line-height: 1.3;
+  border: 0; border-radius: 3px; cursor: pointer; transition: background-color 140ms ease, color 140ms ease;
+}
+.nhm-node:hover { background: #eceff5; }
+.nhm-node:focus-visible { outline: 2px solid var(--muc); outline-offset: -2px; }
+.nhm-node__caret { position: relative; flex: none; width: 12px; height: 12px; }
+.nhm-node__caret--dong::before, .nhm-node__caret--mo::before {
+  content: ""; position: absolute; left: 2px; top: 2px; width: 6px; height: 6px;
+  border-right: 1.6px solid var(--chu-phu); border-bottom: 1.6px solid var(--chu-phu); transform: rotate(-45deg); transition: transform 140ms ease;
+}
+.nhm-node__caret--mo::before { transform: rotate(45deg); top: 1px; }
+.nhm-node__icon { flex: none; display: inline-flex; color: var(--chu-mo); }
+.nhm-node__ten { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nhm-node__meta { flex: none; font-size: 0.72rem; color: var(--chu-phu); font-variant-numeric: tabular-nums; }
+.nhm-node__so {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; padding: 0 5px;
+  font-size: 0.68rem; font-weight: 700; color: var(--chu-phu); background: #e3e7f0; border-radius: 3px; font-variant-numeric: tabular-nums;
+}
+/* thanh đầy của hộp chạy dọc đáy hàng: không chiếm chiều ngang của tên */
+.nhm-node__bar { position: absolute; left: 36px; right: 9px; bottom: 3px; height: 3px; overflow: hidden; background: var(--ke); border-radius: 2px; }
+.nhm-node__bar > i { display: block; height: 100%; background: var(--muc); }
+
+/* Cấp 0: thiết bị — dải tiêu đề */
+.nhm-node--l0 { min-height: 46px; padding: 5px 9px 5px 6px; background: #eceff5; }
+.nhm-node--l0:hover { background: #e2e6f0; }
+.nhm-node--l0 .nhm-node__stack { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.nhm-node--l0 .nhm-node__ten { display: block; flex: none; font-size: 0.94rem; font-weight: 700; letter-spacing: -0.005em; }
+.nhm-node--l0 .nhm-node__phu { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--chu-phu); font-variant-numeric: tabular-nums; }
+.nhm-node--l0 .nhm-node__icon svg { width: 22px; height: 22px; }
+/* Cấp 1: Rack / ngăn */
+.nhm-node--l1 { font-weight: 600; }
+/* Cấp 2: hộp */
+.nhm-node--l2 { position: relative; min-height: 34px; padding-bottom: 8px; font-size: 0.82rem; font-weight: 400; }
+.nhm-node--l2 .nhm-node__icon svg { width: 16px; height: 16px; }
+
+/* Đường nối: mỗi con có nhánh ngang nối vào đường dọc của cha; con cuối cắt đường dọc tại nhánh */
+.nhm-treeul ul { margin: 2px 0 0 18px; }
+.nhm-treeul ul > li { position: relative; padding-left: 14px; }
+.nhm-treeul ul > li::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; border-left: 1px solid var(--ke-dam); }
+.nhm-treeul ul > li:last-child::before { bottom: auto; height: 17px; }
+.nhm-treeul ul > li::after { content: ""; position: absolute; left: 0; top: 17px; width: 10px; border-top: 1px solid var(--ke-dam); }
+
+/* Đường đi tới mục chọn và mục đang chọn */
+.nhm-node--duong { background: #f1f3f8; }
+.nhm-node--l0.nhm-node--duong { background: #dde3ee; }
+.nhm-node--on, .nhm-node--on:hover, .nhm-node--l0.nhm-node--on { background: var(--muc); color: #fff; }
+.nhm-node--on .nhm-node__icon, .nhm-node--on .nhm-node__meta, .nhm-node--on .nhm-node__phu { color: rgba(255, 255, 255, 0.82); }
+.nhm-node--on .nhm-node__caret::before { border-color: #fff; }
+.nhm-node--on .nhm-node__so { color: #fff; background: rgba(255, 255, 255, 0.2); }
+.nhm-node--on .nhm-node__bar { background: rgba(255, 255, 255, 0.28); }
+.nhm-node--on .nhm-node__bar > i { background: #fff; }
+.nhm-node--on .nhm-tag { color: #fff; border-color: rgba(255, 255, 255, 0.65); }
+.nhm-node--duong .nhm-node__bar { background: #d3d9e6; }
+
+/* Nhãn quản lý thiết bị */
+.nhm-tag {
+  flex: none; padding: 1px 6px; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--chu-phu); border: 1px solid var(--ke-dam); border-radius: 2px;
+}
+.nhm-tag--cb { color: var(--muc); border-color: var(--muc); }
+
+/* Màn hình hẹp / cảm ứng: hàng cao hơn để chạm */
+@media (max-width: 900px), (hover: none) {
+  .nhm-node { min-height: 44px; }
+  .nhm-node--l0 { min-height: 54px; }
+  .nhm-node--l2 { min-height: 44px; }
+  .nhm-treeul ul > li:last-child::before { height: 22px; }
+  .nhm-treeul ul > li::after { top: 22px; }
+}

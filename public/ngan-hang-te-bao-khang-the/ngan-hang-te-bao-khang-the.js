@@ -271,14 +271,34 @@
     }
     (kids[0] || []).forEach(dem);
 
-    function nodeBtn(cls, on, ic, label, meta, onclick, caret, extra) {
-      return h('button', { type: 'button', class: 'nhm-node ' + cls + (on ? ' nhm-node--on' : ''), 'aria-current': on ? 'true' : null, onclick: onclick }, [
-        h('span', { class: 'nhm-node__caret', 'aria-hidden': 'true' }, caret || ''),
-        h('span', { class: 'nhm-node__icon' }, icon(ic)),
-        h('span', { class: 'nhm-node__label' }, label),
-        extra || null,
-        h('span', { class: 'nhm-node__meta' }, meta),
-      ]);
+    // Đường đi tới mục đang chọn (các cấp cha) để tô nhạt: nhìn là biết mình đang ở nhánh nào
+    var theoId = {};
+    t.containers.forEach(function (c) { theoId[c.id] = c; });
+    var duongTo = {};
+    if (state.sel) {
+      var dau = state.sel.type === 'box' ? (t.boxes.filter(function (b) { return b.id === state.sel.id; })[0] || {}).container_id : state.sel.id;
+      for (var cap = theoId[dau], n = 0; cap && n < 50; cap = theoId[cap.parent_id], n++) duongTo[cap.id] = true;
+    }
+
+    /**
+     * Một hàng của cây. o.cap: 'l0' thiết bị (dải tiêu đề hai dòng), 'l1' Rack / ngăn (hàng có đường nối), 'l2' hộp (lá nhẹ, kèm thanh đầy).
+     * Ba cấp khác nhau về nền, cỡ chữ và độ đậm để nheo mắt vẫn thấy phân cấp.
+     */
+    function nutCay(o) {
+      var cls = 'nhm-node nhm-node--' + o.cap + (o.on ? ' nhm-node--on' : '') + (o.duong ? ' nhm-node--duong' : '');
+      var kids = [h('span', { class: 'nhm-node__caret' + (o.coCon ? (o.mo ? ' nhm-node__caret--mo' : ' nhm-node__caret--dong') : ''), 'aria-hidden': 'true' })];
+      if (o.cap === 'l0') {
+        kids.push(h('span', { class: 'nhm-node__icon' }, icon(o.icon)));
+        // nhãn quản lý nằm ở dòng phụ để tên thiết bị có trọn chiều rộng
+        kids.push(h('span', { class: 'nhm-node__stack' }, [h('span', { class: 'nhm-node__ten' }, o.ten), h('span', { class: 'nhm-node__phu' }, [o.tag || null, o.phu])]));
+      } else {
+        if (o.viTri) kids.push(h('span', { class: 'nhm-node__so', title: 'Vị trí số ' + o.viTri }, String(o.viTri)));
+        if (o.cap === 'l2') kids.push(h('span', { class: 'nhm-node__icon' }, icon(o.icon))); // Rack / ngăn nhận ra nhờ ô số và đường nối, khỏi tốn chỗ cho biểu tượng
+        kids.push(h('span', { class: 'nhm-node__ten' }, o.ten));
+        kids.push(h('span', { class: 'nhm-node__meta', title: o.metaTitle || null }, o.meta));
+        if (o.thanh != null) kids.push(h('span', { class: 'nhm-node__bar', 'aria-hidden': 'true' }, h('i', { style: 'width:' + o.thanh + '%' })));
+      }
+      return h('button', { type: 'button', class: cls, 'aria-current': o.on ? 'true' : null, title: o.ten, onclick: o.onclick }, kids);
     }
 
     function build(parentKey, depth) {
@@ -287,16 +307,24 @@
         var children = (kids[c.id] || []).length + (boxesBy[c.id] || []).length;
         var open = !!state.expanded[c.id];
         var la = state.sel && state.sel.type === 'container' && state.sel.id === c.id;
-        var tag = c.parent_id == null ? h('span', { class: 'nhm-tag' + (c.quan_ly_boi === 'cellbank' ? ' nhm-tag--cb' : '') }, c.quan_ly_boi === 'cellbank' ? (c.don_vi_ten || 'Đơn vị') : 'Public') : null;
+        var laGoc = c.parent_id == null;
+        var tag = laGoc ? h('span', { class: 'nhm-tag' + (c.quan_ly_boi === 'cellbank' ? ' nhm-tag--cb' : '') }, c.quan_ly_boi === 'cellbank' ? (c.don_vi_ten || 'Đơn vị') : 'Public') : null;
         var li = h('li', { role: 'treeitem', 'aria-expanded': children ? String(open) : null }, [
-          nodeBtn('nhm-node--container', la, c.parent_id == null ? 'tu' : 'ngan', (c.vi_tri ? c.vi_tri + '. ' : '') + c.name, tong[c.id] + ' mẫu',
-            function () { state.expanded[c.id] = la ? !open : true; select('container', c.id); }, children ? (open ? '▾' : '▸') : '', tag),
+          nutCay({
+            cap: laGoc ? 'l0' : 'l1', on: la, duong: !!duongTo[c.id] && !la, icon: laGoc ? 'tu' : 'ngan', ten: c.name, viTri: c.vi_tri,
+            phu: c.type_name + ' · ' + tong[c.id] + ' mẫu', meta: String(tong[c.id]), metaTitle: tong[c.id] + ' mẫu', tag: tag, coCon: !!children, mo: open,
+            onclick: function () { state.expanded[c.id] = la ? !open : true; select('container', c.id); },
+          }),
         ]);
         if (open && children) {
           var ul = h('ul', { role: 'group' }, build(c.id, depth + 1));
           (boxesBy[c.id] || []).forEach(function (b) {
-            ul.appendChild(h('li', { role: 'treeitem' }, [nodeBtn('nhm-node--box', state.sel && state.sel.type === 'box' && state.sel.id === b.id, 'hop',
-              (b.vi_tri ? b.vi_tri + '. ' : '') + (b.name || b.code), b.tube_count + '/' + b.rows * b.cols, function () { select('box', b.id); })]));
+            var tongO = b.rows * b.cols;
+            ul.appendChild(h('li', { role: 'treeitem' }, [nutCay({
+              cap: 'l2', on: state.sel && state.sel.type === 'box' && state.sel.id === b.id, icon: 'hop', ten: b.name || b.code, viTri: b.vi_tri,
+              meta: b.tube_count + '/' + tongO, metaTitle: b.tube_count + ' mẫu trên ' + tongO + ' ô', thanh: b.tube_count ? Math.max(6, Math.round((100 * b.tube_count) / tongO)) : 0,
+              onclick: function () { select('box', b.id); },
+            })]));
           });
           li.appendChild(ul);
         }
