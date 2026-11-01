@@ -46,7 +46,7 @@ async function dungServer() {
       headers: { 'content-type': 'application/json', ...(user ? { 'x-test-user': user } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
-    const text = await res.text();
+    const text = Buffer.from(await res.arrayBuffer()).toString('utf8'); // giữ nguyên BOM nếu có
     let json = null;
     try {
       json = JSON.parse(text);

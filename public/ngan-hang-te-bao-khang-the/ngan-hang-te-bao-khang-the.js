@@ -3,7 +3,7 @@
   'use strict';
 
   var API = '/api/ngan-hang-te-bao-khang-the';
-  var state = { meta: null, tree: null, sel: null, expanded: {}, box: null };
+  var state = { meta: null, tree: null, sel: null, expanded: {}, box: null, search: null };
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- tiện ích ----------
@@ -127,6 +127,7 @@
         state.tree = r[0];
         state.box = r[1];
         renderTree();
+        if (state.search) return runSearch(state.search.p); // đang xem kết quả tìm: làm mới kết quả
         renderDetail();
       })
       .catch(function (e) {
@@ -136,6 +137,7 @@
   }
 
   function select(type, id) {
+    state.search = null;
     state.sel = { type: type, id: id };
     state.box = null;
     location.hash = type + '=' + id;
@@ -199,6 +201,7 @@
   function renderDetail() {
     var box = $('nhm-detail');
     var sel = state.sel;
+    if (state.search) return renderSearch(box);
     if (!sel) { put(box, h('p', { class: 'nhm-muted' }, 'Chọn một thiết bị, vị trí lưu trữ hoặc hộp ở bên trái.')); return; }
     if (sel.type === 'box') return renderBox(box);
     var c = state.tree.containers.filter(function (x) { return x.id === sel.id; })[0];
@@ -357,12 +360,20 @@
         { name: 'freeze_date', label: 'Ngày đông lạnh', type: 'date', value: tube && tube.freeze_date },
         { name: 'project', label: 'Đề tài / dự án', value: tube && tube.project },
         { name: 'notes', label: 'Ghi chú', type: 'textarea', value: tube && tube.notes },
-      ],
+      ].concat(tube ? [] : [
+        // Thêm cùng lô: n ống liên tiếp từ ô này (sang hàng kế khi hết cột), mã vạch = tiền tố + số thứ tự
+        { name: 'count', label: 'Số ống cùng lô (1–100, đặt vào các ô liên tiếp từ ô này)', type: 'number', value: 1 },
+        { name: 'barcode_prefix', label: 'Tiền tố mã vạch cho cả lô (nếu thêm nhiều ống)', placeholder: 'ví dụ HELA-' },
+      ]),
       onSubmit: function (v) {
         var body = { name: v.name, barcode: v.barcode, sample_type_id: v.sample_type_id === '' ? null : Number(v.sample_type_id), passage: v.passage,
           cell_count: v.cell_count, volume_ml: v.volume_ml, freeze_date: v.freeze_date, project: v.project, notes: v.notes };
-        var p = tube ? api('PATCH', '/tubes/' + tube.id, body) : api('POST', '/tubes', Object.assign({ box_id: box.id, row_no: r, col_no: c }, body));
-        return p.then(function () { say(tube ? 'Đã cập nhật thông tin mẫu.' : 'Đã thêm mẫu.', 'ok'); return reload(true); });
+        var n = tube ? 1 : Number(v.count) || 1;
+        var p;
+        if (tube) p = api('PATCH', '/tubes/' + tube.id, body);
+        else if (n > 1) p = api('POST', '/tubes/bulk', Object.assign({ box_id: box.id, row_no: r, col_no: c, count: n, barcode_prefix: v.barcode_prefix }, body));
+        else p = api('POST', '/tubes', Object.assign({ box_id: box.id, row_no: r, col_no: c }, body));
+        return p.then(function () { say(tube ? 'Đã cập nhật thông tin mẫu.' : n > 1 ? 'Đã thêm ' + n + ' mẫu.' : 'Đã thêm mẫu.', 'ok'); return reload(true); });
       },
     });
   }
@@ -508,6 +519,95 @@
     });
   }
 
+  // ---------- tìm mẫu xuyên kho ----------
+  var TRANG = 25;
+
+  function timKiemQuery(p, kemTrang) {
+    var a = [];
+    ['q', 'sample_type_id', 'owner', 'status'].forEach(function (k) { if (p[k]) a.push(k + '=' + encodeURIComponent(p[k])); });
+    if (kemTrang) { a.push('limit=' + TRANG); a.push('offset=' + (p.offset || 0)); }
+    return a.join('&');
+  }
+
+  function runSearch(p) {
+    state.sel = null;
+    state.box = null;
+    state.search = { p: p, result: null };
+    if (location.hash) location.hash = '';
+    renderTree();
+    renderDetail();
+    api('GET', '/tubes/search?' + timKiemQuery(p, true)).then(function (r) {
+      if (!state.search || state.search.p !== p) return; // đã chuyển sang việc khác
+      state.search.result = r;
+      renderDetail();
+    }).catch(function (e) { say(e.message, 'err'); });
+  }
+
+  function moMauTuKetQua(it) {
+    var t = Object.assign({}, it, { owner_name: it.owner_name });
+    if (it.status === 'in_storage' || it.status === 'checked_out') {
+      // còn trong hộp: mở hộp rồi mở hộp thoại của mẫu ngay trên lưới
+      state.search = null;
+      state.sel = { type: 'box', id: it.box_id };
+      location.hash = 'box=' + it.box_id;
+      var cur = it.container_id;
+      while (cur) { state.expanded[cur] = true; var c = state.tree.containers.filter(function (x) { return x.id === cur; })[0]; cur = c && c.parent_id; }
+      api('GET', '/boxes/' + it.box_id).then(function (b) {
+        state.box = b;
+        renderTree();
+        renderDetail();
+        var tube = b.tubes.filter(function (x) { return x.id === it.id; })[0];
+        if (tube) tubeDialog(b.box, tube);
+      }).catch(function (e) { say(e.message, 'err'); });
+    } else {
+      tubeDialog({ id: it.box_id }, t); // đã rã đông / hủy: không còn ô trong hộp
+    }
+  }
+
+  function renderSearch(root) {
+    var s = state.search, p = s.p, r = s.result;
+    var typeSel = h('select', { name: 'sample_type_id', 'aria-label': 'Loại mẫu' }, [h('option', { value: '' }, 'Mọi loại mẫu')].concat(
+      state.meta.sampleTypes.map(function (x) { return h('option', { value: x.id }, x.name); })));
+    typeSel.value = p.sample_type_id || '';
+    var qIn = h('input', { name: 'q', type: 'search', placeholder: 'Tên, mã vạch, đề tài, passage, ghi chú…', 'aria-label': 'Từ khóa' });
+    qIn.value = p.q || '';
+    var mine = h('input', { type: 'checkbox', name: 'owner' }); mine.checked = p.owner === 'me';
+    var all = h('input', { type: 'checkbox', name: 'status' }); all.checked = p.status === 'all';
+    var form = h('form', { class: 'nhm-searchbar', onsubmit: function (ev) {
+      ev.preventDefault();
+      runSearch({ q: qIn.value.trim(), sample_type_id: typeSel.value, owner: mine.checked ? 'me' : '', status: all.checked ? 'all' : '', offset: 0 });
+    } }, [
+      qIn, typeSel,
+      h('label', { class: 'nhm-check' }, [mine, 'Chỉ mẫu của tôi']),
+      h('label', { class: 'nhm-check' }, [all, 'Gồm mẫu đã rã đông / hủy']),
+      h('button', { type: 'submit', class: 'nhm-btn nhm-btn--primary' }, 'Tìm'),
+      state.meta.canManage ? h('button', { type: 'button', class: 'nhm-btn', onclick: function () { window.location.href = API + '/tubes/export.csv?' + timKiemQuery(p, false); } }, 'Xuất CSV') : null,
+    ]);
+
+    var body;
+    if (!r) body = h('div', { class: 'nhm-loading' }, 'Đang tìm…');
+    else if (!r.items.length) body = h('p', { class: 'nhm-muted' }, 'Không có mẫu nào khớp.');
+    else {
+      var rows = r.items.map(function (it) {
+        var vt = it.box_id ? it.path.concat([it.box_code]).join(' › ') + (it.row_no ? ' › ' + posLabel(it.row_no, it.col_no) : '') : '—';
+        return h('tr', {}, [
+          h('td', {}, h('button', { type: 'button', class: 'nhm-link', onclick: function () { moMauTuKetQua(it); } }, it.name)),
+          h('td', {}, it.barcode || ''), h('td', {}, it.sample_type_name || ''), h('td', {}, vt),
+          h('td', {}, STATUS_VN[it.status] || it.status), h('td', {}, it.owner_name || ''),
+        ]);
+      });
+      var truoc = h('button', { type: 'button', class: 'nhm-btn nhm-btn--sm', disabled: r.offset <= 0, onclick: function () { runSearch(Object.assign({}, p, { offset: Math.max(0, r.offset - TRANG) })); } }, '‹ Trước');
+      var sau = h('button', { type: 'button', class: 'nhm-btn nhm-btn--sm', disabled: r.offset + r.items.length >= r.total, onclick: function () { runSearch(Object.assign({}, p, { offset: r.offset + TRANG })); } }, 'Sau ›');
+      body = h('div', {}, [
+        h('div', { class: 'nhm-gridwrap' }, h('table', { class: 'nhm-hist nhm-results' }, [
+          h('tr', {}, ['Tên mẫu', 'Mã vạch', 'Loại mẫu', 'Vị trí', 'Trạng thái', 'Người sở hữu'].map(function (x) { return h('th', {}, x); })),
+        ].concat(rows))),
+        h('div', { class: 'nhm-pager' }, [truoc, h('span', { class: 'nhm-muted' }, (r.offset + 1) + '–' + (r.offset + r.items.length) + ' / ' + r.total), sau]),
+      ]);
+    }
+    put(root, h('div', { class: 'nhm-title' }, [h('h2', {}, 'Tìm mẫu'), r ? h('span', { class: 'nhm-muted' }, r.total + ' kết quả') : null]), form, body);
+  }
+
   // ---------- quản lý danh mục (chỉ quản lý) ----------
   var DANH_MUC = [
     { path: 'container-types', title: 'Loại vị trí lưu trữ', key: 'containerTypes',
@@ -593,6 +693,10 @@
   function init() {
     api('GET', '/meta').then(function (meta) {
       state.meta = meta;
+      $('nhm-search-form').addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        runSearch({ q: $('nhm-search-q').value.trim(), sample_type_id: '', owner: '', status: '', offset: 0 });
+      });
       var addRoot = $('nhm-add-root');
       if (meta.canManage) {
         addRoot.classList.remove('nhm-hide');

@@ -69,6 +69,68 @@ module.exports = function createMauRouter(ctx) {
     return null;
   }
 
+  /** Thêm một mẫu vào ô và ghi dòng «Nhập kho» vào lịch sử. Gọi trong transaction. */
+  function insertTube(t, boxId, row, col, userId) {
+    const info = db
+      .prepare(
+        `INSERT INTO nhm_tubes (barcode, box_id, row_no, col_no, sample_type_id, name, passage, cell_count, volume_ml,
+                                freeze_date, owner_user_id, project, notes, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        t.barcode ?? null, boxId, row, col, t.sample_type_id ?? null, t.name, t.passage ?? null, t.cell_count ?? null,
+        t.volume_ml ?? null, t.freeze_date ?? null, userId, t.project ?? null, t.notes ?? null, userId
+      );
+    const tubeId = Number(info.lastInsertRowid);
+    logMove(tubeId, 'store', null, { box_id: boxId, row_no: row, col_no: col }, userId, null);
+    return tubeId;
+  }
+
+  // Thêm nhiều mẫu cùng lô vào các ô liên tiếp (theo hàng, từ ô bắt đầu). Tất cả hoặc không: một ô bị chiếm
+  // hoặc vượt lưới thì không thêm mẫu nào.
+  router.post('/tubes/bulk', (req, res) => {
+    const body = req.body || {};
+    const boxId = toInt(body.box_id);
+    const row = toInt(body.row_no);
+    const col = toInt(body.col_no);
+    const count = toInt(body.count);
+    if (!count || count < 1 || count > 100) return fail(res, 400, 'Số lượng mẫu phải từ 1 đến 100.');
+    const [t, loi] = readTubeBody(body);
+    if (loi) return fail(res, 400, loi);
+    if (!t.name) return fail(res, 400, 'Thiếu tên mẫu.');
+    if (t.sample_type_id != null && !db.prepare('SELECT 1 FROM nhm_sample_types WHERE id = ?').get(t.sample_type_id)) {
+      return fail(res, 400, 'Loại mẫu không hợp lệ.');
+    }
+    delete t.barcode; // mã vạch mỗi ống một khác: sinh từ tiền tố bên dưới
+    const tienTo = toStr(body.barcode_prefix, 80);
+    const batDau = body.barcode_start == null || body.barcode_start === '' ? 1 : toInt(body.barcode_start);
+    if (batDau == null || batDau < 0) return fail(res, 400, 'Số bắt đầu của mã vạch không hợp lệ.');
+    const first = checkPosition(boxId, row, col);
+    if (first) return fail(res, first.status, first.message);
+    const hop = db.prepare('SELECT rows, cols FROM nhm_boxes WHERE id = ?').get(boxId);
+    const oCan = [];
+    for (let i = 0, r = row, c = col; i < count; i++) {
+      if (r > hop.rows) return fail(res, 400, `Không đủ chỗ: hộp chỉ còn ${i} ô tính từ ô bắt đầu, cần ${count}.`);
+      const bad = checkPosition(boxId, r, c);
+      if (bad) return fail(res, bad.status, `${bad.message} (ô ${String.fromCharCode(64 + r)}${c}).`);
+      oCan.push([r, c]);
+      c++;
+      if (c > hop.cols) { c = 1; r++; }
+    }
+    try {
+      const ids = db.transaction(() =>
+        oCan.map(([r, c], i) =>
+          insertTube({ ...t, barcode: tienTo ? tienTo + String(batDau + i).padStart(3, '0') : null }, boxId, r, c, req.user.id)
+        )
+      )();
+      audit(req, 'tube_bulk_create', `box=${boxId} ${ids.length} mẫu "${t.name}" từ r${row}c${col}`);
+      res.status(201).json({ ids });
+    } catch (e) {
+      if (isUniqueError(e)) return fail(res, 409, 'Một mã vạch sinh ra đã tồn tại. Hãy đổi tiền tố hoặc số bắt đầu.');
+      throw e;
+    }
+  });
+
   router.post('/tubes', (req, res) => {
     const body = req.body || {};
     const boxId = toInt(body.box_id);
@@ -83,21 +145,7 @@ module.exports = function createMauRouter(ctx) {
     const bad = checkPosition(boxId, row, col);
     if (bad) return fail(res, bad.status, bad.message);
     try {
-      const id = db.transaction(() => {
-        const info = db
-          .prepare(
-            `INSERT INTO nhm_tubes (barcode, box_id, row_no, col_no, sample_type_id, name, passage, cell_count, volume_ml,
-                                    freeze_date, owner_user_id, project, notes, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .run(
-            t.barcode ?? null, boxId, row, col, t.sample_type_id ?? null, t.name, t.passage ?? null, t.cell_count ?? null,
-            t.volume_ml ?? null, t.freeze_date ?? null, req.user.id, t.project ?? null, t.notes ?? null, req.user.id
-          );
-        const tubeId = Number(info.lastInsertRowid);
-        logMove(tubeId, 'store', null, { box_id: boxId, row_no: row, col_no: col }, req.user.id, null);
-        return tubeId;
-      })();
+      const id = db.transaction(() => insertTube(t, boxId, row, col, req.user.id))();
       audit(req, 'tube_create', `id=${id} box=${boxId} r${row}c${col}`);
       res.status(201).json({ id });
     } catch (e) {

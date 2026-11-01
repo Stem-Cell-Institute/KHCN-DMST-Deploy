@@ -55,6 +55,8 @@ function isUniqueError(e) {
   return !!(e && /UNIQUE constraint/i.test(String(e.message || '')));
 }
 
+const TRANG_THAI_VN = { in_storage: 'Đang lưu kho', checked_out: 'Đã lấy ra', thawed: 'Đã rã đông', discarded: 'Đã hủy' };
+
 // ---------- Truy vết thay đổi ----------
 
 const NHAN_TRUONG = {
@@ -95,5 +97,5 @@ function thayDoiJson(thayDoi) {
 
 module.exports = {
   MANAGE_ROLES, HOLDING, toInt, toStr, parseSo, parseNgay, placeholders, isUniqueError,
-  NHAN_TRUONG, layThayDoi, moTaThayDoi, thayDoiJson,
+  TRANG_THAI_VN, NHAN_TRUONG, layThayDoi, moTaThayDoi, thayDoiJson,
 };
