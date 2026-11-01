@@ -66,6 +66,7 @@ async function dungServer() {
 
   return {
     api,
+    base,
     db,
     auditLog,
     taoKho,
