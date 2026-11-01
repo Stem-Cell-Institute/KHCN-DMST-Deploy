@@ -115,6 +115,15 @@ function capTen(db, cap, boxId) {
   return dv ? dv.ten : CAP_VN.truong_cellbank;
 }
 
+// Cách gọi người duyệt khi đơn vị gắn với một vai trò (đơn vị Cellbank: Trưởng CIPP chính là Trưởng Cellbank)
+const NHAN_VAI_TRO_DUYET = { truong_cellbank: 'Trưởng Cellbank (Trưởng CIPP)' };
+
+/** Câu chỉ người duyệt để hiện cho người dùng: «Trưởng Cellbank (Trưởng CIPP)» hoặc «người duyệt của <đơn vị>». */
+function nhanNguoiDuyet(donVi) {
+  if (!donVi) return null;
+  return (donVi.vai_tro_duyet && NHAN_VAI_TRO_DUYET[donVi.vai_tro_duyet]) || 'người duyệt của ' + donVi.ten;
+}
+
 /** Người duyệt của một đơn vị còn hoạt động: tài khoản được chỉ định + người giữ vai trò gắn với đơn vị (Cellbank: Trưởng CIPP). */
 function nguoiDuyetDonVi(db, donVi) {
   if (!donVi) return [];
@@ -182,6 +191,6 @@ function nguoiDuyetHienTai(db, yc, tube) {
 }
 
 module.exports = {
-  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, hopTrongCellbank, donViCuaHop, capTen, nguoiDuyetDonVi, nguoiCoVaiTro, quanLyModule,
+  HAN_MAC_DINH, GIOI_HAN_HAN, KHOA_HAN, NHAN_HAN, layHan, luuHan, CAP_VN, sauNgay, bayGio, nguoiConHoatDong, thietBiGocCuaHop, hopTrongCellbank, donViCuaHop, capTen, nhanNguoiDuyet, nguoiDuyetDonVi, nguoiCoVaiTro, quanLyModule,
   truongNhomHieuLuc, xacDinhCap, nguoiDuyetHienTai,
 };

@@ -47,7 +47,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       )
       .all();
     // vị trí con thừa hưởng quan_ly_boi và đơn vị quản lý của thiết bị gốc
-    const tenDonVi = new Map(db.prepare('SELECT id, ten FROM nhm_don_vi').all().map((r) => [r.id, r.ten]));
+    const donVi = new Map(db.prepare('SELECT * FROM nhm_don_vi').all().map((r) => [r.id, r]));
     const byId = new Map(containers.map((c) => [c.id, c]));
     const goc = (c) => {
       for (let i = 0; c.parent_id != null && byId.has(c.parent_id) && i < 50; i++) c = byId.get(c.parent_id);
@@ -57,7 +57,9 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       const g = goc(c);
       c.quan_ly_boi = g.quan_ly_boi;
       c.don_vi_id = g.don_vi_id || null;
-      c.don_vi_ten = g.don_vi_id ? tenDonVi.get(g.don_vi_id) || null : null;
+      const dv = g.don_vi_id ? donVi.get(g.don_vi_id) : null;
+      c.don_vi_ten = dv ? dv.ten : null;
+      c.don_vi_duyet = dv ? ctx.YeuCau.nhanNguoiDuyet(dv) : null; // ai duyệt yêu cầu lấy mẫu ở thiết bị này
     }
     res.json({ containers, boxes });
   });
@@ -297,6 +299,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       phat_hien: phatHien,
       quan_ly_boi: (ctx.YeuCau.thietBiGocCuaHop(db, id) || {}).quan_ly_boi || 'cong_khai',
       don_vi_ten: (ctx.YeuCau.donViCuaHop(db, id) || {}).ten || null,
+      don_vi_duyet: ctx.YeuCau.nhanNguoiDuyet(ctx.YeuCau.donViCuaHop(db, id)),
     });
   });
 

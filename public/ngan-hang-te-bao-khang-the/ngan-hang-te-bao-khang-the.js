@@ -382,7 +382,7 @@
     put(box,
       h('div', { class: 'nhm-title' }, [h('h2', {}, c.name), h('span', { class: 'nhm-muted' }, c.type_name + ' · ' + c.code)]),
       h('div', { class: 'nhm-facts' }, [
-        fact('Quản lý bởi', cb ? (c.don_vi_ten || 'Đơn vị quản lý') + ' — gửi yêu cầu để lấy mẫu, người duyệt của đơn vị quyết định' : 'Public — ai cũng thêm mẫu vào ô trống'),
+        fact('Quản lý bởi', cb ? (c.don_vi_ten || 'Đơn vị quản lý') + ' — người dùng gửi yêu cầu để lấy mẫu; ' + (c.don_vi_duyet || 'người duyệt của đơn vị') + ' duyệt' : 'Public — ai cũng thêm mẫu vào ô trống'),
         fact('Nhiệt độ (°C)', c.temperature_c), fact('Vị trí đặt', c.location_note), fact('Ghi chú', c.notes),
       ]),
       actions,
@@ -432,7 +432,7 @@
     put(root,
       h('div', { class: 'nhm-title' }, [h('h2', {}, b.name || b.code), h('span', { class: 'nhm-muted' }, (b.name ? b.code + ' · ' : '') + b.rows + '×' + b.cols + ' · ' + info.tubes.length + ' mẫu' + (cb ? ' · ' + (info.don_vi_ten || 'Đơn vị quản lý') : ''))]),
       h('div', { class: 'nhm-path' }, info.path.join(' › ')),
-      cb && !m ? h('p', { class: 'nhm-hint' }, 'Thiết bị do ' + (info.don_vi_ten || 'đơn vị quản lý') + ' quản lý: bạn không tự thêm hay lấy mẫu ở đây. Bấm vào mẫu để xem và gửi yêu cầu.') : null,
+      cb && !m ? h('p', { class: 'nhm-hint' }, 'Thiết bị do ' + (info.don_vi_ten || 'đơn vị quản lý') + ' quản lý: bạn không tự thêm hay lấy mẫu ở đây. Muốn lấy mẫu, bấm vào mẫu rồi gửi yêu cầu; ' + (info.don_vi_duyet || 'người duyệt của đơn vị') + ' sẽ duyệt và hệ thống gửi email báo kết quả cho bạn.') : null,
       kkBar,
       h('div', { class: 'nhm-actions' }, [
         h('button', { class: 'nhm-btn', type: 'button', onclick: function () { window.print(); } }, 'In sơ đồ hộp'),
