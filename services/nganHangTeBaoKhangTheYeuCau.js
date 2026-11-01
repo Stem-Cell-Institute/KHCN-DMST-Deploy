@@ -115,13 +115,13 @@ function capTen(db, cap, boxId) {
   return dv ? dv.ten : CAP_VN.truong_cellbank;
 }
 
-// Cách gọi người duyệt khi đơn vị gắn với một vai trò (đơn vị Cellbank: Trưởng CIPP chính là Trưởng Cellbank)
-const NHAN_VAI_TRO_DUYET = { truong_cellbank: 'Trưởng Cellbank (Trưởng CIPP)' };
+// Cách gọi người duyệt hiện cho người dùng: «Quản lý <đơn vị>» (đơn vị Cellbank: người duyệt là Trưởng CIPP, cũng là người quản lý Cellbank)
+const NHAN_VAI_TRO_DUYET = { truong_cellbank: 'Quản lý Cellbank' };
 
-/** Câu chỉ người duyệt để hiện cho người dùng: «Trưởng Cellbank (Trưởng CIPP)» hoặc «người duyệt của <đơn vị>». */
+/** Câu chỉ người duyệt để hiện cho người dùng: «Quản lý Cellbank», «Quản lý <đơn vị>». */
 function nhanNguoiDuyet(donVi) {
   if (!donVi) return null;
-  return (donVi.vai_tro_duyet && NHAN_VAI_TRO_DUYET[donVi.vai_tro_duyet]) || 'người duyệt của ' + donVi.ten;
+  return (donVi.vai_tro_duyet && NHAN_VAI_TRO_DUYET[donVi.vai_tro_duyet]) || 'Quản lý ' + donVi.ten;
 }
 
 /** Người duyệt của một đơn vị còn hoạt động: tài khoản được chỉ định + người giữ vai trò gắn với đơn vị (Cellbank: Trưởng CIPP). */

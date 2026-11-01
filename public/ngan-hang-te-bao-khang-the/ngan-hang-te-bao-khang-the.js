@@ -382,7 +382,7 @@
     put(box,
       h('div', { class: 'nhm-title' }, [h('h2', {}, c.name), h('span', { class: 'nhm-muted' }, c.type_name + ' · ' + c.code)]),
       h('div', { class: 'nhm-facts' }, [
-        fact('Quản lý bởi', cb ? (c.don_vi_ten || 'Đơn vị quản lý') + ' — người dùng gửi yêu cầu để lấy mẫu; ' + (c.don_vi_duyet || 'người duyệt của đơn vị') + ' duyệt' : 'Public — ai cũng thêm mẫu vào ô trống'),
+        fact('Quản lý bởi', cb ? (c.don_vi_ten || 'Đơn vị quản lý') + ' — người dùng gửi yêu cầu để lấy mẫu; ' + (c.don_vi_duyet || 'người duyệt của đơn vị') + ' duyệt yêu cầu' : 'Public — ai cũng thêm mẫu vào ô trống'),
         fact('Nhiệt độ (°C)', c.temperature_c), fact('Vị trí đặt', c.location_note), fact('Ghi chú', c.notes),
       ]),
       actions,
