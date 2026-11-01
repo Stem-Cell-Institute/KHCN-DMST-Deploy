@@ -1826,6 +1826,8 @@
   function moManHinhChon() {
     document.querySelector('.nhm-shell').classList.add('nhm-hide');
     $('nhm-chon-nh').classList.remove('nhm-hide');
+    // lời chào theo hồ sơ (vd «Xin chào Viện trưởng») cũng hiện ở màn hình chọn, không chỉ trong ngân hàng
+    api('GET', '/me').then(function (m) { state.me = m; capNhatLoiChao(); }).catch(function () {});
     api('GET', '/banks').then(function (r) {
       put.apply(null, [$('nhm-chon-ds')].concat(r.ngan_hang.map(function (b) {
         return h('a', { class: 'nhm-chon-the', href: '?nh=' + b.ma }, [
