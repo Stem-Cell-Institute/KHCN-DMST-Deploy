@@ -48,6 +48,10 @@
     soNgan = Math.min(soNgan, 50);
     var hNgan = (BODY_BOTTOM - BODY_TOP) / soNgan;
 
+    // tên hiển thị của Rack: tên đã đặt, chưa đặt thì «Rack N»
+    function tenRack(r) { return r.name || 'Rack ' + r.so; }
+    function ngan(t) { return t.length > 20 ? t.slice(0, 19) + '…' : t; }
+
     // toạ độ từng giá trong mặt cắt (giá thứ 1..soGia chia đều theo chiều ngang)
     var gap = 4;
     var wGia = Math.min(30, (RACK_X1 - RACK_X0 - gap * (soGia + 1)) / soGia);
@@ -72,12 +76,18 @@
     racks.forEach(function (r) {
       var g = el('g', { class: 'ln-nhom' });
       var khung = el('rect', { x: xGia(r.so), y: BODY_TOP, width: wGia, height: BODY_BOTTOM - BODY_TOP, rx: 3, class: 'ln-gia' });
+      var tt = el('title', {});
+      tt.textContent = tenRack(r);
+      khung.appendChild(tt);
       g.appendChild(khung);
       var gm = { x: xGia(r.so), w: wGia, el: khung, boxes: {} };
       r.boxes.forEach(function (b) {
         var y = BODY_TOP + (b._so - 1) * hNgan; // số 1 ở TRÊN CÙNG, số càng lớn càng sâu
         var hop = el('rect', { x: xGia(r.so) + 1.5, y: y + 0.6, width: wGia - 3, height: Math.max(1.6, hNgan - 1.2), rx: 1.2, class: 'ln-hop' });
         if (opts.chonHop) { hop.style.cursor = 'pointer'; hop.addEventListener('click', function (e) { e.stopPropagation(); opts.chonHop(b.id); }); }
+        var tb = el('title', {});
+        tb.textContent = tenRack(r) + ' · ' + (b.name || 'Hộp ' + (b.vi_tri ? 'vị trí ' + b.vi_tri : b.code));
+        hop.appendChild(tb);
         g.appendChild(hop);
         var v = { x: xGia(r.so) + 1.5, y: y, w: wGia - 3, h: hNgan, b: b, el: hop, gia: gm };
         theoHop[b.id] = v;
@@ -117,6 +127,13 @@
     ]);
     svg.appendChild(cham);
     svg.appendChild(chamTren);
+    // nhãn tên Rack đang chọn: trên đầu mặt cắt và phía trên hình nhìn từ trên
+    var tenCat = chu(110, BODY_TOP - 6, '', 'ln-ten');
+    var tenTren = chu(CX, 12, '', 'ln-ten');
+    tenCat.style.display = 'none';
+    tenTren.style.display = 'none';
+    svg.appendChild(tenCat);
+    svg.appendChild(tenTren);
 
     var chuThich = document.createElement('p');
     chuThich.className = 'ln-chuthich';
@@ -130,6 +147,8 @@
       truocDo = [];
       cham.style.display = 'none';
       chamTren.style.display = 'none';
+      tenCat.style.display = 'none';
+      tenTren.style.display = 'none';
     }
     function dat(n) { n.classList.add('ln-on'); truocDo.push(n); }
 
@@ -163,6 +182,12 @@
       }
       cham.setAttribute('transform', 'translate(' + px.toFixed(1) + ' ' + py.toFixed(1) + ')');
       cham.style.display = '';
+      var nhan = ngan(tenRack(rack));
+      tenCat.textContent = nhan;
+      tenCat.setAttribute('x', Math.max(46, Math.min(174, gm.x + gm.w / 2)).toFixed(1));
+      tenCat.style.display = '';
+      tenTren.textContent = nhan;
+      tenTren.style.display = '';
       var t = viTriTren[rack.so];
       if (t) { chamTren.setAttribute('transform', 'translate(' + t.x.toFixed(1) + ' ' + t.y.toFixed(1) + ')'); chamTren.style.display = ''; }
       chuThich.textContent = mo + ' — chấm đỏ trên mô hình.';
