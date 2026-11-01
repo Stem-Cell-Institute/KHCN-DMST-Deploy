@@ -373,7 +373,7 @@
     var subs = state.tree.containers.filter(function (x) { return x.parent_id === c.id; });
     var m = state.meta.canManage;
     var actions = m ? h('div', { class: 'nhm-actions' }, [
-      h('button', { class: 'nhm-btn nhm-btn--primary', type: 'button', onclick: function () { containerForm(null, c.id); } }, '+ Ngăn / giá bên trong'),
+      h('button', { class: 'nhm-btn nhm-btn--primary', type: 'button', onclick: function () { containerForm(null, c.id); } }, '+ Ngăn / Rack bên trong'),
       h('button', { class: 'nhm-btn nhm-btn--primary', type: 'button', onclick: function () { boxForm(c.id); } }, '+ Hộp'),
       h('button', { class: 'nhm-btn', type: 'button', onclick: function () { containerForm(c); } }, 'Chỉnh sửa'),
       h('button', { class: 'nhm-btn nhm-btn--danger', type: 'button', onclick: function () { deleteContainer(c); } }, 'Xóa'),
@@ -535,7 +535,7 @@
     var cha = parentId != null ? containerById(parentId) : c ? containerById(c.parent_id) : null;
     if (!cha || cha.parent_id != null || !trongBinhNito(cha)) return [];
     var da = state.tree.containers.filter(function (x) { return x.parent_id === cha.id && (!c || x.id !== c.id) && x.vi_tri; }).map(function (x) { return x.vi_tri; });
-    return [{ name: 'vi_tri', label: 'Vị trí giá trong bình (số 1–50)', type: 'number', required: true, value: c && c.vi_tri ? c.vi_tri : (da.length ? Math.max.apply(null, da) + 1 : 1) }];
+    return [{ name: 'vi_tri', label: 'Vị trí Rack trong bình (số 1–50)', type: 'number', required: true, value: c && c.vi_tri ? c.vi_tri : (da.length ? Math.max.apply(null, da) + 1 : 1) }];
   }
 
   function boxForm(containerId) {
@@ -562,9 +562,9 @@
     var tpl = state.meta.boxTemplates.map(function (t) { return { value: t.id, label: t.name + ' (' + t.rows + '×' + t.cols + ')' }; });
     var da = state.tree.boxes.filter(function (x) { return x.container_id === containerId && x.vi_tri; }).map(function (x) { return x.vi_tri; });
     openForm({
-      title: 'Thêm hộp vào giá',
+      title: 'Thêm hộp vào Rack',
       fields: [
-        { name: 'vi_tri', label: 'Vị trí hộp trong giá (số 1–50, số 1 ở trên cùng, càng lớn càng sâu)', type: 'number', required: true, value: da.length ? Math.min(50, Math.max.apply(null, da) + 1) : 1 },
+        { name: 'vi_tri', label: 'Vị trí hộp trong Rack (số 1–50, số 1 ở trên cùng, càng lớn càng sâu)', type: 'number', required: true, value: da.length ? Math.min(50, Math.max.apply(null, da) + 1) : 1 },
         { name: 'template_id', label: 'Mẫu hộp', type: 'select', options: tpl },
         { name: 'name', label: 'Tên hộp' },
         { name: 'notes', label: 'Ghi chú', type: 'textarea' },
@@ -587,7 +587,7 @@
         { name: 'rows', label: 'Số hàng (1–26)', type: 'number', value: b.rows },
         { name: 'cols', label: 'Số cột (1–30)', type: 'number', value: b.cols },
         { name: 'notes', label: 'Ghi chú', type: 'textarea', value: b.notes },
-      ].concat(trongBinhNito(containerById(b.container_id)) ? [{ name: 'vi_tri', label: 'Vị trí hộp trong giá (số 1–50, số 1 ở trên cùng, càng lớn càng sâu)', type: 'number', value: b.vi_tri }] : []),
+      ].concat(trongBinhNito(containerById(b.container_id)) ? [{ name: 'vi_tri', label: 'Vị trí hộp trong Rack (số 1–50, số 1 ở trên cùng, càng lớn càng sâu)', type: 'number', value: b.vi_tri }] : []),
       onSubmit: function (v) {
         var body = { name: v.name, code: v.code, container_id: Number(v.container_id), rows: Number(v.rows), cols: Number(v.cols), notes: v.notes };
         if ('vi_tri' in v) body.vi_tri = v.vi_tri === '' || v.vi_tri == null ? null : Number(v.vi_tri);

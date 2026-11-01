@@ -55,7 +55,7 @@
     var x0 = (RACK_X0 + RACK_X1) / 2 - tongRong / 2;
     var xGia = function (so) { return x0 + (so - 1) * (wGia + gap); };
 
-    var svg = el('svg', { viewBox: '0 0 300 330', class: 'ln-svg', role: 'img', 'aria-label': 'Mô hình bình nitơ lỏng ' + (du.tank.name || '') + ': ' + racks.length + ' giá' });
+    var svg = el('svg', { viewBox: '0 0 300 330', class: 'ln-svg', role: 'img', 'aria-label': 'Mô hình bình nitơ lỏng ' + (du.tank.name || '') + ': ' + racks.length + ' Rack' });
 
     // vỏ bình xuyên thấu: nắp, cổ, thân, bình trong
     svg.appendChild(el('rect', { x: 84, y: 6, width: 52, height: 12, rx: 4, class: 'ln-nap' }));
@@ -121,7 +121,7 @@
     var chuThich = document.createElement('p');
     chuThich.className = 'ln-chuthich';
     chuThich.setAttribute('aria-live', 'polite');
-    var mac = 'Bấm vào giá, hộp hoặc một ô trên lưới hộp để xem vị trí trong bình.';
+    var mac = 'Bấm vào Rack, hộp hoặc một ô trên lưới hộp để xem vị trí trong bình.';
     chuThich.textContent = mac;
 
     var truocDo = [];
@@ -144,12 +144,14 @@
       if (!gm) { chuThich.textContent = mac; baoChon(''); return; }
       var rack = racks.filter(function (r) { return theoGia[r.id] === gm; })[0];
       dat(gm.el);
-      var px, py, mo = 'Giá ' + rack.so + (rack.name ? ' (' + rack.name + ')' : '');
+      var px, py;
+      // tên Rack: «Rack N» (kèm tên riêng nếu khác); tên hộp lấy nguyên tên đã đặt, không thêm chữ «hộp» thừa
+      var mo = 'Rack ' + rack.so + (rack.name && rack.name.trim().toLowerCase() !== 'rack ' + rack.so ? ' (' + rack.name + ')' : '');
       if (v) {
         dat(v.el);
         px = v.x + v.w / 2;
         py = v.y + v.h / 2;
-        mo += ' · hộp ' + (v.b.vi_tri ? 'vị trí ' + v.b.vi_tri : v.b.name || v.b.code);
+        mo += ' · ' + (v.b.name ? v.b.name + (v.b.vi_tri ? ' (vị trí ' + v.b.vi_tri + ')' : '') : 'Hộp ' + (v.b.vi_tri ? 'vị trí ' + v.b.vi_tri : v.b.code));
         if (sel.row && sel.col && v.b.rows && v.b.cols) {
           px = v.x + (v.w * (sel.col - 0.5)) / v.b.cols;
           py = v.y + (Math.max(v.h, 2) * (sel.row - 0.5)) / v.b.rows;

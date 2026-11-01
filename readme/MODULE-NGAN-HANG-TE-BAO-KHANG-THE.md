@@ -63,10 +63,10 @@ Chọn ở ô «Ai quản lý thiết bị này» khi **Thêm / Chỉnh sửa th
 - Đổi thiết bị từ đơn vị sang Public (hoặc ngược lại) thì các yêu cầu đang chờ được định tuyến lại.
 - Thông báo, lịch sử mẫu và danh sách yêu cầu nêu tên đơn vị («Người duyệt của …»); cấp duyệt trong bảng `nhm_yeu_cau.cap` vẫn lưu giá trị cũ `truong_cellbank`.
 
-### Bình nitơ lỏng: giá (rack) rồi hộp theo vị trí số
+### Bình nitơ lỏng: Rack rồi hộp theo vị trí số
 
-Bình nitơ có nhiều giá, mỗi giá có nhiều hộp. Với thiết bị gốc có loại **Bình nitơ lỏng** (nhận biết theo tên loại, không phân biệt dấu): thêm **giá (rack)** trước và khai
-**vị trí giá trong bình** (`nhm_containers.vi_tri`, 1–50); trong giá thêm **hộp** và khai **vị trí hộp trong giá** (`nhm_boxes.vi_tri`, 1–50, số 1 ở trên cùng, càng lớn càng sâu) —
+Bình nitơ có nhiều giá, mỗi giá có nhiều hộp. Với thiết bị gốc có loại **Bình nitơ lỏng** (nhận biết theo tên loại, không phân biệt dấu): thêm **Rack** trước và khai
+**vị trí Rack trong bình** (`nhm_containers.vi_tri`, 1–50); trong Rack thêm **hộp** và khai **vị trí hộp trong Rack** (`nhm_boxes.vi_tri`, 1–50, số 1 ở trên cùng, càng lớn càng sâu) —
 thay cho ô «Số lượng hộp», mỗi lần một hộp. Số không được trùng trong cùng bình (giá) / cùng giá (hộp), API trả 409. Cây kho và danh sách sắp theo vị trí số.
 Tủ và thiết bị khác giữ cách cũ (thêm nhiều hộp một lần, không đánh số).
 

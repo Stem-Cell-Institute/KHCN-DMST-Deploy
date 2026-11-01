@@ -129,7 +129,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       return fail(res, 400, 'Vị trí lưu trữ cha không tồn tại.');
     }
     if (b.parent_id != null && 'quan_ly_boi' in b) return fail(res, 400, 'Chỉ thiết bị gốc mới chọn được kiểu quản lý; vị trí con thừa hưởng từ thiết bị gốc.');
-    if (trungViTriGia(b.parent_id ?? null, b.vi_tri ?? null)) return fail(res, 409, `Vị trí số ${b.vi_tri} đã có giá khác trong vị trí này.`);
+    if (trungViTriGia(b.parent_id ?? null, b.vi_tri ?? null)) return fail(res, 409, `Vị trí số ${b.vi_tri} đã có Rack khác trong vị trí này.`);
     try {
       const code = b.code || nextCode('nhm_containers', 'VC-');
       const info = db
@@ -167,7 +167,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     if ('quan_ly_boi' in b && chaMoi != null) return fail(res, 400, 'Chỉ thiết bị gốc mới chọn được kiểu quản lý; vị trí con thừa hưởng từ thiết bị gốc.');
     if (!Object.keys(b).length) return fail(res, 400, 'Không có dữ liệu cần cập nhật.');
     if (('vi_tri' in b || 'parent_id' in b) && trungViTriGia(chaMoi, 'vi_tri' in b ? b.vi_tri : cur.vi_tri, id)) {
-      return fail(res, 409, `Vị trí số ${'vi_tri' in b ? b.vi_tri : cur.vi_tri} đã có giá khác trong vị trí này.`);
+      return fail(res, 409, `Vị trí số ${'vi_tri' in b ? b.vi_tri : cur.vi_tri} đã có Rack khác trong vị trí này.`);
     }
     const thayDoi = layThayDoi(cur, b);
     const cols = Object.keys(thayDoi);
@@ -239,9 +239,9 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     if (!count || count < 1 || count > 50) return fail(res, 400, 'Số lượng hộp phải từ 1 đến 50.');
     // khai vị trí số trong giá (bình nitơ): mỗi lần một hộp, không trùng vị trí đã có
     const viTri = body.vi_tri == null || body.vi_tri === '' ? null : toInt(body.vi_tri);
-    if (body.vi_tri != null && body.vi_tri !== '' && (viTri == null || viTri < 1 || viTri > 50)) return fail(res, 400, 'Vị trí hộp trong giá phải là số từ 1 đến 50.');
+    if (body.vi_tri != null && body.vi_tri !== '' && (viTri == null || viTri < 1 || viTri > 50)) return fail(res, 400, 'Vị trí hộp trong Rack phải là số từ 1 đến 50.');
     if (viTri != null && count > 1) return fail(res, 400, 'Khai vị trí số thì thêm từng hộp một.');
-    if (trungViTriHop(containerId, viTri)) return fail(res, 409, `Vị trí số ${viTri} trong giá này đã có hộp.`);
+    if (trungViTriHop(containerId, viTri)) return fail(res, 409, `Vị trí số ${viTri} trong Rack này đã có hộp.`);
     const baseName = toStr(body.name, 150);
     const customCode = toStr(body.code, 60);
     if (customCode && count > 1) return fail(res, 400, 'Không đặt mã tùy chỉnh khi tạo nhiều hộp cùng lúc.');
@@ -314,7 +314,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     }
     if ('vi_tri' in body) {
       upd.vi_tri = body.vi_tri == null || body.vi_tri === '' ? null : toInt(body.vi_tri);
-      if (upd.vi_tri != null && (upd.vi_tri < 1 || upd.vi_tri > 50)) return fail(res, 400, 'Vị trí hộp trong giá phải là số từ 1 đến 50.');
+      if (upd.vi_tri != null && (upd.vi_tri < 1 || upd.vi_tri > 50)) return fail(res, 400, 'Vị trí hộp trong Rack phải là số từ 1 đến 50.');
     }
     if ('container_id' in body) {
       const cid = toInt(body.container_id);
@@ -345,7 +345,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     if (!Object.keys(upd).length) return fail(res, 400, 'Không có dữ liệu cần cập nhật.');
     const cidMoi = 'container_id' in upd ? upd.container_id : cur.container_id;
     const viTriMoi = 'vi_tri' in upd ? upd.vi_tri : cur.vi_tri;
-    if (('vi_tri' in upd || 'container_id' in upd) && trungViTriHop(cidMoi, viTriMoi, id)) return fail(res, 409, `Vị trí số ${viTriMoi} trong giá này đã có hộp.`);
+    if (('vi_tri' in upd || 'container_id' in upd) && trungViTriHop(cidMoi, viTriMoi, id)) return fail(res, 409, `Vị trí số ${viTriMoi} trong Rack này đã có hộp.`);
     const thayDoi = layThayDoi(cur, upd);
     const cols = Object.keys(thayDoi);
     if (!cols.length) return res.json({ ok: true, changed: 0 });
