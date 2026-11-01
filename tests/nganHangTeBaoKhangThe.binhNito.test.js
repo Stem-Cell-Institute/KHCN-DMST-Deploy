@@ -15,7 +15,7 @@ let giaType;
 test.before(async () => {
   s = await dungServer();
   kho = await s.taoKho();
-  giaType = kho.meta.containerTypes.find((t) => /Giá/.test(t.name)).id;
+  giaType = kho.meta.containerTypes.find((t) => /^Rack$/.test(t.name)).id;
   const nito = kho.meta.containerTypes.find((t) => /nitơ/i.test(t.name)).id;
   binh = (await s.api('manager', 'POST', '/containers', { name: 'Bình LN test', type_id: nito })).json.id;
 });

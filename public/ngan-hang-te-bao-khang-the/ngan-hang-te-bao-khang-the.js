@@ -360,7 +360,7 @@
   var boDau = function (t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase(); };
   /** Vật chứa nằm trong (hoặc là) bình nitơ lỏng? Nhận biết theo tên LOẠI của thiết bị gốc («Bình nitơ lỏng»). */
   function trongBinhNito(c) { var g = gocCua(c); return !!g && boDau(g.type_name).indexOf('nito') >= 0; }
-  /** Giá (rack) chứa vật chứa c: tổ tiên là con trực tiếp của bình. */
+  /** Rack chứa vật chứa c: tổ tiên là con trực tiếp của bình. */
   function giaCua(c) {
     var g = gocCua(c);
     if (!c || !g || c === g) return null;

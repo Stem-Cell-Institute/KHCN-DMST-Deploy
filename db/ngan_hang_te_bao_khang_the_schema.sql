@@ -304,7 +304,7 @@ INSERT OR IGNORE INTO nhm_container_types (name, default_temp_c, sort_order)
     ('Tủ lạnh 4°C', 4, 3),
     ('Bình nitơ lỏng', -196, 4),
     ('Ngăn', NULL, 5),
-    ('Giá (rack)', NULL, 6),
+    ('Rack', NULL, 6),
     ('Ngăn kéo', NULL, 7),
     ('Hộp', NULL, 8))
   WHERE NOT EXISTS (SELECT 1 FROM nhm_meta WHERE key = 'seed_v1');
@@ -328,6 +328,10 @@ INSERT OR IGNORE INTO nhm_sample_types (name)
   WHERE NOT EXISTS (SELECT 1 FROM nhm_meta WHERE key = 'seed_v1');
 
 INSERT OR IGNORE INTO nhm_meta (key, value) VALUES ('seed_v1', datetime('now'));
+
+-- Đổi tên loại có sẵn «Giá (rack)» thành «Rack» cho dữ liệu đã tạo từ bản trước (chỉ khi chưa có loại tên Rack; id giữ nguyên nên không mất liên kết)
+UPDATE nhm_container_types SET name = 'Rack'
+  WHERE name = 'Giá (rack)' AND NOT EXISTS (SELECT 1 FROM nhm_container_types WHERE name = 'Rack');
 
 -- Đơn vị quản lý thiết bị: thiết bị gắn với đơn vị thì mọi yêu cầu lấy mẫu phải được người duyệt của đơn vị đồng ý.
 -- Thiết bị không gắn đơn vị là Public. Người duyệt = các tài khoản trong nhm_don_vi_duyet, cộng (nếu có) những người giữ
