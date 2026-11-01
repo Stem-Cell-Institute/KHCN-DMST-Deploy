@@ -499,3 +499,6 @@
 .nhm-crumbs .nhm-link:hover { text-decoration-color: var(--muc); }
 .nhm-crumbs .nhm-link:focus-visible { outline: 2px solid var(--muc); outline-offset: 1px; }
 @media (hover: none) { .nhm-crumbs .nhm-link { padding: 10px 4px; } } /* chạm: vùng bấm đủ lớn */
+
+/* Dòng nhắc ngắn trên đầu hộp: nhỏ, sát, nhường chỗ cho lưới hộp */
+.nhm-hint--gon { margin: 2px 0 8px; padding: 4px 10px; font-size: 0.78rem; line-height: 1.4; }
