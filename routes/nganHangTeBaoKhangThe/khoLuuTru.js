@@ -6,10 +6,12 @@
  */
 
 const express = require('express');
-const { HOLDING, toInt, toStr, parseSo, placeholders, isUniqueError } = require('../../services/nganHangTeBaoKhangThe');
+const {
+  HOLDING, toInt, toStr, parseSo, placeholders, isUniqueError, layThayDoi, moTaThayDoi,
+} = require('../../services/nganHangTeBaoKhangThe');
 
 module.exports = function createKhoLuuTruRouter(ctx) {
-  const { db, canManage, canEditTube, requireManage, audit, fail, subtreeIds, activeTubeCountInBoxes, nextCode } = ctx;
+  const { db, canManage, canEditTube, requireManage, audit, fail, subtreeIds, duongDan, activeTubeCountInBoxes, nextCode, logMove } = ctx;
   const router = express.Router();
 
   // ---------- Danh mục & cây ----------
@@ -110,15 +112,17 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       if (subtreeIds(id).includes(b.parent_id)) return fail(res, 400, 'Không thể chuyển vị trí lưu trữ vào chính nó hoặc vị trí lưu trữ con.');
     }
     if ('code' in b && !b.code) return fail(res, 400, 'Mã vị trí lưu trữ không được để trống.');
-    const cols = Object.keys(b);
-    if (!cols.length) return fail(res, 400, 'Không có dữ liệu cần cập nhật.');
+    if (!Object.keys(b).length) return fail(res, 400, 'Không có dữ liệu cần cập nhật.');
+    const thayDoi = layThayDoi(cur, b);
+    const cols = Object.keys(thayDoi);
+    if (!cols.length) return res.json({ ok: true, changed: 0 });
     try {
       db.prepare(`UPDATE nhm_containers SET ${cols.map((c) => c + ' = ?').join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(
         ...cols.map((c) => b[c]),
         id
       );
-      audit(req, 'container_update', `id=${id}`);
-      res.json({ ok: true });
+      audit(req, 'container_update', `id=${id} ${cur.name}: ${moTaThayDoi(thayDoi)}`);
+      res.json({ ok: true, changed: cols.length });
     } catch (e) {
       if (isUniqueError(e)) return fail(res, 409, 'Mã vị trí lưu trữ đã tồn tại.');
       throw e;
@@ -201,10 +205,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     const id = toInt(req.params.id);
     const box = id && db.prepare('SELECT * FROM nhm_boxes WHERE id = ? AND deleted_at IS NULL').get(id);
     if (!box) return fail(res, 404, 'Không tìm thấy hộp.');
-    const containers = db.prepare('SELECT id, parent_id, name FROM nhm_containers WHERE deleted_at IS NULL').all();
-    const byId = new Map(containers.map((c) => [c.id, c]));
-    const path = [];
-    for (let c = byId.get(box.container_id); c && path.length < 50; c = byId.get(c.parent_id)) path.unshift(c.name);
+    const path = duongDan(box.container_id);
     const tubes = db
       .prepare(
         `SELECT t.id, t.barcode, t.row_no, t.col_no, t.name, t.passage, t.cell_count, t.volume_ml, t.freeze_date,
@@ -255,15 +256,39 @@ module.exports = function createKhoLuuTruRouter(ctx) {
         if (!tpl || tpl.rows !== rows || tpl.cols !== cols) upd.template_id = null;
       }
     }
-    const cols = Object.keys(upd);
-    if (!cols.length) return fail(res, 400, 'Không có dữ liệu cần cập nhật.');
+    if (!Object.keys(upd).length) return fail(res, 400, 'Không có dữ liệu cần cập nhật.');
+    const thayDoi = layThayDoi(cur, upd);
+    const cols = Object.keys(thayDoi);
+    if (!cols.length) return res.json({ ok: true, changed: 0 });
     try {
-      db.prepare(`UPDATE nhm_boxes SET ${cols.map((c) => c + ' = ?').join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(
-        ...cols.map((c) => upd[c]),
-        id
-      );
-      audit(req, 'box_update', `id=${id}`);
-      res.json({ ok: true });
+      db.transaction(() => {
+        db.prepare(`UPDATE nhm_boxes SET ${cols.map((c) => c + ' = ?').join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(
+          ...cols.map((c) => upd[c]),
+          id
+        );
+        // Hộp đổi chỗ hoặc đổi mã: ghi vào lịch sử của từng mẫu đang nằm trong hộp, để xem lịch sử mẫu
+        // vẫn biết mẫu đã theo hộp sang tủ khác.
+        const moi = { ...cur, ...upd };
+        let note = null;
+        let action = null;
+        if (thayDoi.container_id) {
+          action = 'box_move';
+          note = `Hộp ${moi.code}: ${duongDan(cur.container_id).join(' › ')} → ${duongDan(upd.container_id).join(' › ')}`;
+        } else if (thayDoi.code) {
+          action = 'box_edit';
+          note = `Mã hộp: ${cur.code} → ${moi.code}`;
+        }
+        if (action) {
+          const tubes = db
+            .prepare(`SELECT id FROM nhm_tubes WHERE box_id = ? AND deleted_at IS NULL AND status IN ${HOLDING}`)
+            .all(id);
+          for (const t of tubes) logMove(t.id, action, null, null, req.user.id, note);
+        }
+      })();
+      const hienThi = { ...thayDoi };
+      if (hienThi.container_id) hienThi.container_id = hienThi.container_id.map((v) => duongDan(v).join(' › '));
+      audit(req, 'box_update', `id=${id} ${cur.code}: ${moTaThayDoi(hienThi)}`);
+      res.json({ ok: true, changed: cols.length });
     } catch (e) {
       if (isUniqueError(e)) return fail(res, 409, 'Mã hộp đã tồn tại.');
       throw e;

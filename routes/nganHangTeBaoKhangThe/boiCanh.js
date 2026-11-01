@@ -55,6 +55,15 @@ function taoBoiCanh(deps) {
     return out;
   }
 
+  /** Tên từ gốc tới vị trí lưu trữ, vd ['Tủ A', 'Ngăn 1', 'Giá 1']. */
+  function duongDan(containerId) {
+    const rows = db.prepare('SELECT id, parent_id, name FROM nhm_containers WHERE deleted_at IS NULL').all();
+    const byId = new Map(rows.map((c) => [c.id, c]));
+    const path = [];
+    for (let c = byId.get(containerId); c && path.length < 50; c = byId.get(c.parent_id)) path.unshift(c.name);
+    return path;
+  }
+
   function activeTubeCountInBoxes(boxIds) {
     if (!boxIds.length) return 0;
     return db
@@ -93,7 +102,7 @@ function taoBoiCanh(deps) {
     );
   }
 
-  return { db, canManage, requireManage, canEditTube, audit, fail, subtreeIds, activeTubeCountInBoxes, nextCode, logMove };
+  return { db, canManage, requireManage, canEditTube, audit, fail, subtreeIds, duongDan, activeTubeCountInBoxes, nextCode, logMove };
 }
 
 module.exports = taoBoiCanh;

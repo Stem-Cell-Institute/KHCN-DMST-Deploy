@@ -55,4 +55,45 @@ function isUniqueError(e) {
   return !!(e && /UNIQUE constraint/i.test(String(e.message || '')));
 }
 
-module.exports = { MANAGE_ROLES, HOLDING, toInt, toStr, parseSo, parseNgay, placeholders, isUniqueError };
+// ---------- Truy vết thay đổi ----------
+
+const NHAN_TRUONG = {
+  name: 'Tên', barcode: 'Mã vạch', sample_type_id: 'Loại mẫu', passage: 'Passage', cell_count: 'Số tế bào',
+  volume_ml: 'Thể tích (mL)', freeze_date: 'Ngày đông lạnh', project: 'Đề tài', notes: 'Ghi chú', code: 'Mã',
+  container_id: 'Vị trí lưu trữ', rows: 'Số hàng', cols: 'Số cột', type_id: 'Loại', parent_id: 'Thuộc vị trí',
+  temperature_c: 'Nhiệt độ (°C)', location_note: 'Vị trí đặt', sort_order: 'Thứ tự', template_id: 'Mẫu hộp',
+};
+
+/** Các trường THỰC SỰ đổi giá trị: {trường: [cũ, mới]} (null/undefined coi như nhau). */
+function layThayDoi(cur, upd) {
+  const out = {};
+  for (const k of Object.keys(upd)) {
+    const a = cur[k] == null ? null : cur[k];
+    const b = upd[k] == null ? null : upd[k];
+    if (a !== b) out[k] = [a, b];
+  }
+  return out;
+}
+
+function cat(v) {
+  return v == null ? '(trống)' : String(v).slice(0, 100);
+}
+
+/** «Passage: P12 → P13; Ghi chú: (trống) → x» — dùng cho nhật ký hoạt động. */
+function moTaThayDoi(thayDoi) {
+  return Object.keys(thayDoi)
+    .map((k) => `${NHAN_TRUONG[k] || k}: ${cat(thayDoi[k][0])} → ${cat(thayDoi[k][1])}`)
+    .join('; ');
+}
+
+/** Dạng gọn để lưu vào nhm_movements.note (JSON {trường: [cũ, mới]}, chuỗi cắt 100 ký tự). */
+function thayDoiJson(thayDoi) {
+  const out = {};
+  for (const k of Object.keys(thayDoi)) out[k] = thayDoi[k].map((v) => (typeof v === 'string' ? v.slice(0, 100) : v));
+  return JSON.stringify(out);
+}
+
+module.exports = {
+  MANAGE_ROLES, HOLDING, toInt, toStr, parseSo, parseNgay, placeholders, isUniqueError,
+  NHAN_TRUONG, layThayDoi, moTaThayDoi, thayDoiJson,
+};

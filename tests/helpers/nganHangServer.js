@@ -20,8 +20,9 @@ const USERS = {
 async function dungServer() {
   const db = new Database(':memory:');
   db.pragma('foreign_keys = ON');
-  db.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, fullname TEXT)');
-  for (const u of Object.values(USERS)) db.prepare('INSERT INTO users (id, fullname) VALUES (?, ?)').run(u.id, u.email);
+  db.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, fullname TEXT, email TEXT, is_banned INTEGER DEFAULT 0)');
+  for (const u of Object.values(USERS)) db.prepare('INSERT INTO users (id, fullname, email) VALUES (?, ?, ?)').run(u.id, u.email, u.email);
+  db.prepare("INSERT INTO users (id, fullname, email, is_banned) VALUES (9, 'Bị khóa', 'locked@sci.edu.vn', 1)").run();
   db.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'db', 'ngan_hang_te_bao_khang_the_schema.sql'), 'utf8'));
 
   const auditLog = [];

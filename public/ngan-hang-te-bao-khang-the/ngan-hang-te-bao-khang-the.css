@@ -84,14 +84,14 @@
 
 /* Dãy thông tin: kẻ dọc phân cách như bảng số liệu của trang chủ */
 .nhm-facts {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  border-top: 1px solid var(--ke); border-bottom: 1px solid var(--ke); margin: 14px 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); column-gap: 20px;
+  border-top: 1px solid var(--ke); margin: 14px 0;
 }
+/* Mỗi ô một kẻ ngang dưới: các hàng thẳng hàng dù ô cao thấp khác nhau (kẻ dọc từng làm cột lệch khi xuống dòng) */
 .nhm-fact {
-  padding: 12px 16px; border-left: 1px solid var(--ke); font-size: 0.95rem; font-weight: 600;
+  padding: 10px 0; border-bottom: 1px solid var(--ke); font-size: 0.95rem; font-weight: 600;
   color: var(--muc); font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
 }
-.nhm-fact:first-child { border-left: 0; padding-left: 0; }
 .nhm-fact b { display: block; margin-bottom: 3px; font-size: 0.76rem; font-weight: 500; letter-spacing: 0.04em; color: var(--chu-phu); }
 
 .nhm-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
@@ -161,6 +161,8 @@
 }
 .nhm-form textarea { min-height: 70px; resize: vertical; }
 .nhm-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+/* Nút thao tác luôn nằm sát đáy hộp thoại, không phải cuộn xuống mới thấy (hộp thoại mẫu có tới 8 nút) */
+.nhm-dialog .nhm-form-actions { position: sticky; bottom: -22px; padding: 12px 0 14px; margin-bottom: -22px; background: var(--giay-trang); border-top: 1px solid var(--ke); }
 .nhm-err { min-height: 20px; margin-top: 10px; font-size: 0.86rem; font-weight: 500; color: var(--son); }
 .nhm-hist { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
 .nhm-hist th { text-align: left; padding: 6px 8px 6px 0; font-weight: 600; color: var(--chu-phu); border-bottom: 1px solid var(--muc); }

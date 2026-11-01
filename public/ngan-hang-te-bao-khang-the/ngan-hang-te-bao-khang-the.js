@@ -385,8 +385,72 @@
     });
   }
 
-  var ACTION_VN = { store: 'Nhập kho', move: 'Di chuyển', edit: 'Sửa thông tin', delete: 'Xóa', checkout: 'Lấy ra', checkin: 'Trả lại', thaw: 'Rã đông', discard: 'Hủy mẫu' };
+  var ACTION_VN = {
+    store: 'Nhập kho', move: 'Di chuyển', edit: 'Sửa thông tin', delete: 'Xóa', checkout: 'Lấy ra', checkin: 'Trả lại',
+    thaw: 'Rã đông', discard: 'Hủy mẫu', transfer: 'Chuyển chủ sở hữu', box_move: 'Hộp đổi chỗ', box_edit: 'Hộp đổi mã',
+  };
   var STATUS_VN = { in_storage: 'Đang lưu kho', checked_out: 'Đã lấy ra', thawed: 'Đã rã đông', discarded: 'Đã hủy' };
+  var FIELD_VN = {
+    name: 'Tên', barcode: 'Mã vạch', sample_type_id: 'Loại mẫu', passage: 'Passage', cell_count: 'Số tế bào',
+    volume_ml: 'Thể tích (mL)', freeze_date: 'Ngày đông lạnh', project: 'Đề tài', notes: 'Ghi chú',
+  };
+
+  /** Thời gian lưu trong DB là UTC dạng 'YYYY-MM-DD HH:MM:SS'; hiển thị theo giờ máy người xem. */
+  function gioDia(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(s || '');
+    if (!m) return s || '';
+    var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
+    return d.toLocaleString('vi-VN', { hour12: false, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function viTri(boxId, boxCode, r, c) {
+    return boxId ? (boxCode || '?') + ' ' + posLabel(r, c) : '';
+  }
+
+  /** Cột «Chi tiết» của lịch sử: vị trí đi/đến, hoặc giá trị cũ → mới của lần sửa, hoặc ghi chú. */
+  function chiTietLichSu(x) {
+    var from = viTri(x.from_box_id, x.from_box_code, x.from_row, x.from_col);
+    var to = viTri(x.to_box_id, x.to_box_code, x.to_row, x.to_col);
+    if (x.action === 'edit' && x.note) {
+      try {
+        var d = JSON.parse(x.note);
+        return Object.keys(d).map(function (k) {
+          var v = function (a) { return a == null ? '(trống)' : String(a); };
+          return (FIELD_VN[k] || k) + ': ' + v(d[k][0]) + ' → ' + v(d[k][1]);
+        }).join('; ');
+      } catch (e) { return 'Đã sửa: ' + x.note; } // bản ghi cũ chỉ lưu tên cột
+    }
+    var vt = from || to ? from + ' → ' + to : '';
+    return [vt, x.note && x.action !== 'edit' ? x.note : ''].filter(Boolean).join(' — ');
+  }
+
+  /** Hỏi ghi chú rồi đổi trạng thái mẫu (lấy ra / trả lại / rã đông / hủy). */
+  function trangThaiForm(t, act, title, nhanNut, canhBao) {
+    openForm({
+      title: title + ': ' + t.name,
+      fields: [{ name: 'note', label: 'Ghi chú (không bắt buộc)', type: 'textarea' }],
+      submitLabel: nhanNut,
+      onSubmit: function (v) {
+        if (canhBao && !window.confirm(canhBao)) return Promise.reject(new Error('Đã hủy thao tác.'));
+        return api('POST', '/tubes/' + t.id + '/' + act, { note: v.note }).then(function () { say(title + ' thành công.', 'ok'); return reload(true); });
+      },
+    });
+  }
+
+  function transferForm(t) {
+    api('GET', '/users').then(function (r) {
+      var opts = r.users.map(function (u) { return { value: u.id, label: (u.fullname || u.email) + ' — ' + u.email }; });
+      openForm({
+        title: 'Chuyển chủ sở hữu: ' + t.name,
+        fields: [{ name: 'owner_user_id', label: 'Người nhận', type: 'select', options: opts, value: t.owner_user_id, required: true }],
+        submitLabel: 'Chuyển',
+        onSubmit: function (v) {
+          return api('POST', '/tubes/' + t.id + '/transfer', { owner_user_id: Number(v.owner_user_id) })
+            .then(function () { say('Đã chuyển chủ sở hữu.', 'ok'); return reload(true); });
+        },
+      });
+    }).catch(function (e) { say(e.message, 'err'); });
+  }
 
   function tubeDialog(box, t) {
     var body = h('div', {}, [
@@ -398,21 +462,28 @@
       h('strong', {}, 'Lịch sử thao tác'),
       h('div', { id: 'nhm-hist' }, h('span', { class: 'nhm-muted' }, 'Đang tải…')),
     ]);
-    var buttons = t.can_edit ? [
-      h('button', { type: 'button', class: 'nhm-btn', onclick: function () { tubeForm(box, t.row_no, t.col_no, t); } }, 'Chỉnh sửa'),
-      h('button', { type: 'button', class: 'nhm-btn', onclick: function () { moveForm(box, t); } }, 'Di chuyển'),
-      h('button', { type: 'button', class: 'nhm-btn nhm-btn--danger', onclick: function () { deleteTube(t); } }, 'Xóa'),
-    ] : [];
+    var btn = function (label, cls, fn) { return h('button', { type: 'button', class: 'nhm-btn' + (cls ? ' nhm-btn--' + cls : ''), onclick: fn }, label); };
+    var buttons = [];
+    if (t.can_edit) {
+      buttons.push(btn('Chỉnh sửa', '', function () { tubeForm(box, t.row_no, t.col_no, t); }));
+      if (t.status === 'in_storage') {
+        buttons.push(btn('Di chuyển', '', function () { moveForm(box, t); }));
+        buttons.push(btn('Lấy ra', '', function () { trangThaiForm(t, 'checkout', 'Lấy mẫu ra', 'Lấy ra'); }));
+      }
+      if (t.status === 'checked_out') buttons.push(btn('Trả lại', '', function () { trangThaiForm(t, 'checkin', 'Trả mẫu lại kho', 'Trả lại'); }));
+      buttons.push(btn('Rã đông', '', function () { trangThaiForm(t, 'thaw', 'Rã đông mẫu', 'Rã đông', 'Rã đông là không hoàn tác: mẫu sẽ rời khỏi hộp và nhả ô. Tiếp tục?'); }));
+      buttons.push(btn('Hủy mẫu', 'danger', function () { trangThaiForm(t, 'discard', 'Hủy mẫu', 'Hủy mẫu', 'Hủy mẫu là không hoàn tác: mẫu sẽ rời khỏi hộp và nhả ô. Tiếp tục?'); }));
+      buttons.push(btn('Xóa', 'danger', function () { deleteTube(t); }));
+    }
+    if (state.meta.canManage) buttons.push(btn('Chuyển chủ', '', function () { transferForm(t); }));
     openInfo(t.name, body, buttons);
     api('GET', '/tubes/' + t.id + '/history').then(function (r) {
       var slot = $('nhm-hist');
       if (!slot) return;
       slot.replaceChildren(h('table', { class: 'nhm-hist' }, [
-        h('tr', {}, ['Thời gian', 'Hành động', 'Từ → Đến', 'Người thực hiện'].map(function (x) { return h('th', {}, x); })),
+        h('tr', {}, ['Thời gian', 'Hành động', 'Chi tiết', 'Người thực hiện'].map(function (x) { return h('th', {}, x); })),
       ].concat(r.history.map(function (x) {
-        var from = x.from_box_id ? (x.from_box_code || '?') + ' ' + posLabel(x.from_row, x.from_col) : '';
-        var to = x.to_box_id ? (x.to_box_code || '?') + ' ' + posLabel(x.to_row, x.to_col) : '';
-        return h('tr', {}, [x.at, ACTION_VN[x.action] || x.action, from || to ? from + ' → ' + to : (x.note || ''), x.user_name || '']
+        return h('tr', {}, [gioDia(x.at), ACTION_VN[x.action] || x.action, chiTietLichSu(x), x.user_name || '']
           .map(function (v) { return h('td', {}, v); }));
       }))));
     }).catch(function () { var s = $('nhm-hist'); if (s) s.textContent = 'Không tải được lịch sử.'; });
