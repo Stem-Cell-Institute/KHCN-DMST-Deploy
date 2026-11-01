@@ -413,6 +413,9 @@
    Mực xanh đen cho khung; son đỏ CHỈ cho chấm đánh dấu mục đang chọn. */
 .nhm-ln { border: 1px solid var(--ke); background: var(--giay-trang); border-radius: 2px; }
 .nhm-ln > summary { cursor: pointer; padding: 10px 12px; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--chu-phu); list-style: none; display: flex; justify-content: space-between; }
+.nhm-ln > summary { flex-wrap: wrap; }
+.nhm-ln__tit { flex: 1; }
+.nhm-ln__tom { order: 5; flex: 1 1 100%; margin-top: 3px; font-size: 0.8rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muc); }
 .nhm-ln > summary::-webkit-details-marker { display: none; }
 .nhm-ln > summary::after { content: "+"; }
 .nhm-ln[open] > summary::after { content: "−"; }
@@ -447,6 +450,7 @@
   .nhm-detail--ln > .nhm-ln { grid-column: 2; grid-row: 1 / span 40; position: sticky; top: 12px; }
 }
 @media (max-width: 900px) {
+  .ln-svg { max-height: 250px; }
   .nhm-detail--ln { display: flex; flex-direction: column; }
   .nhm-detail--ln > .nhm-ln { order: -1; margin-bottom: 14px; }
 }

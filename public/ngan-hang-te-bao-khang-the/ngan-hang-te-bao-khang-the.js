@@ -345,14 +345,16 @@
     var c = containerById(containerId);
     if (!c || !trongBinhNito(c) || !window.NhmBinhLn) return;
     var tank = gocCua(c);
+    var tom = h('span', { class: 'nhm-ln__tom' });
     var m = window.NhmBinhLn.tao(duLieuBinh(tank), {
+      khiChon: function (t) { tom.textContent = t; },
       chonGia: function (id) { state.expanded[tank.id] = true; select('container', id); },
       chonHop: function (id) { state.expanded[tank.id] = true; select('box', id); },
     });
     state.ln = m;
     var r = giaCua(c);
     m.chon(sel || (r && r.id === c.id ? { gia: r.id } : null));
-    var det = h('details', { class: 'nhm-ln' }, [h('summary', {}, 'Sơ đồ bình ' + tank.name), m.node]);
+    var det = h('details', { class: 'nhm-ln' }, [h('summary', {}, [h('span', { class: 'nhm-ln__tit' }, 'Sơ đồ bình ' + tank.name), tom]), m.node]);
     if (window.innerWidth > 900) det.open = true;
     root.classList.add('nhm-detail--ln');
     root.appendChild(det);

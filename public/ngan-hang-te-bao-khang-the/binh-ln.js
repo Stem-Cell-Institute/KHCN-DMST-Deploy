@@ -27,7 +27,7 @@
 
   /**
    * du = { tank: {name}, racks: [{ id, name, vi_tri, boxes: [{ id, vi_tri, rows, cols, name, code }] }] }
-   * opts = { chonGia(id), chonHop(id) } (tùy chọn: bấm vào mô hình để chọn)
+   * opts = { chonGia(id), chonHop(id) (bấm vào mô hình để chọn), khiChon(chuỗi mô tả mục đang chọn) } — đều tùy chọn
    * @returns {{node: HTMLElement, chon: function(sel)}} sel = null | {gia:id} | {hop:id} | {hop:id, row, col}
    */
   function tao(du, opts) {
@@ -91,7 +91,7 @@
     });
 
     // nhìn từ trên: các vị trí giá quanh cổ bình
-    var CX = 256, CY = 62, R = 36, rr = Math.max(5, Math.min(9, 24 / Math.sqrt(soGia) + 2));
+    var CX = 250, CY = 62, R = 32, rr = Math.max(5, Math.min(9, 24 / Math.sqrt(soGia) + 2));
     svg.appendChild(el('circle', { cx: CX, cy: CY, r: R + 12, class: 'ln-vo ln-tren' }));
     svg.appendChild(el('circle', { cx: CX, cy: CY, r: R + 3, class: 'ln-trong' }));
     var viTriTren = {};
@@ -133,12 +133,15 @@
     }
     function dat(n) { n.classList.add('ln-on'); truocDo.push(n); }
 
+    // báo cho nơi dùng biết mục đang chọn (điện thoại: hiện ngay trên thanh gập, khỏi phải mở mô hình)
+    function baoChon(t) { if (opts.khiChon) opts.khiChon(t); }
+
     function chon(sel) {
       tat();
-      if (!sel) { chuThich.textContent = mac; return; }
+      if (!sel) { chuThich.textContent = mac; baoChon(''); return; }
       var v = sel.hop != null ? theoHop[sel.hop] : null;
       var gm = v ? v.gia : theoGia[sel.gia];
-      if (!gm) { chuThich.textContent = mac; return; }
+      if (!gm) { chuThich.textContent = mac; baoChon(''); return; }
       var rack = racks.filter(function (r) { return theoGia[r.id] === gm; })[0];
       dat(gm.el);
       var px, py, mo = 'Giá ' + rack.so + (rack.name ? ' (' + rack.name + ')' : '');
@@ -161,6 +164,7 @@
       var t = viTriTren[rack.so];
       if (t) { chamTren.setAttribute('transform', 'translate(' + t.x.toFixed(1) + ' ' + t.y.toFixed(1) + ')'); chamTren.style.display = ''; }
       chuThich.textContent = mo + ' — chấm đỏ trên mô hình.';
+      baoChon(mo);
     }
 
     var node = document.createElement('div');
