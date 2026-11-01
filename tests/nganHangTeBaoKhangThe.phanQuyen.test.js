@@ -100,6 +100,9 @@ const ROUTES = [
   ['PUT', '/settings', 'manage'],
   ['GET', '/students', 'manage'],
   ['POST', '/students/import', 'manage'],
+  ['POST', '/students/import-file', 'manage'],
+  ['GET', '/students/template.xlsx', 'manage'],
+  ['POST', '/students/bulk', 'manage'],
   ['PATCH', '/students/:id', 'manage'],
   ['DELETE', '/students/:id', 'manage'],
 ];

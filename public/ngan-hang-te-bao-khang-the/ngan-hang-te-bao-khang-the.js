@@ -1042,29 +1042,110 @@
   var TINH_TRANG_SV = { cho_kich_hoat: 'Chờ kích hoạt', da_kich_hoat: 'Đã kích hoạt', het_han: 'Hết hạn', da_xoa: 'Đã thu hồi' };
   var luocSv = { q: '', tt: '' };
 
+  /** Gửi tệp (multipart) — api() chỉ gửi JSON. Cùng cách xử lý đăng nhập hết hạn và lỗi. */
+  function apiTep(url, fd) {
+    return fetch(API + url, { method: 'POST', credentials: 'same-origin', body: fd }).then(function (res) {
+      if (res.status === 401) { location.href = '/dang-nhap.html?returnUrl=' + encodeURIComponent(location.pathname); return new Promise(function () {}); }
+      return res.json().catch(function () { return {}; }).then(function (json) {
+        if (!res.ok) { var e = new Error(json.message || 'Lỗi ' + res.status); e.status = res.status; throw e; }
+        return json;
+      });
+    });
+  }
+
+  /** Gọi nhập (hoặc xem trước) cho tệp đã chọn hoặc văn bản đã dán. */
+  function goiNhapSv(v, xemTruoc) {
+    if (v.tep) {
+      var fd = new FormData();
+      fd.append('tep', v.tep);
+      fd.append('het_han', v.het_han);
+      if (xemTruoc) fd.append('xem_truoc', '1');
+      return apiTep('/students/import-file', fd);
+    }
+    return api('POST', '/students/import', { text: v.text, het_han: v.het_han, xem_truoc: !!xemTruoc });
+  }
+
+  function tomTatNhap(r) {
+    var dong = [h('p', {}, (r.xem_truoc ? 'Nếu nhập: ' : 'Đã nhập: ') + r.moi + ' sinh viên mới, ' + r.cap_nhat + ' cập nhật, ' + r.bo_qua + ' bỏ qua. ' + (r.xem_truoc ? 'Sẽ tạo sẵn ' : 'Đã tạo sẵn ') + r.tao_tai_khoan + ' tài khoản chờ kích hoạt.')];
+    if (r.co_tieu_de === false) dong.push(h('p', { class: 'nhm-hint' }, 'Không nhận ra dòng tiêu đề: đọc theo thứ tự cột email, họ tên, mã sinh viên, khóa / đợt, hạn dùng.'));
+    if (r.dat_lai_crd) dong.push(h('p', { class: 'nhm-hint' }, r.dat_lai_crd + ' tài khoản Đặt lịch cũ trùng email phải kích hoạt lại bằng Đăng ký chính (vì trước đó chưa xác minh hộp thư).'));
+    if (r.tai_khoan_khac) dong.push(h('p', { class: 'nhm-muted nhm-small' }, r.tai_khoan_khac + ' email đã có tài khoản vai trò khác: không đổi.'));
+    return dong;
+  }
+
   function nhapDanhSachForm(reopen) {
+    var tep = h('input', { type: 'file', accept: '.xlsx,.csv', 'aria-label': 'Tệp Excel hoặc CSV' });
+    var widget = {
+      node: h('div', {}, [
+        h('a', { class: 'nhm-link', href: API + '/students/template.xlsx', download: 'mau-danh-sach-sinh-vien.xlsx' }, 'Tải mẫu Excel (.xlsx)'),
+        h('p', { class: 'nhm-muted nhm-small' }, 'Điền theo mẫu rồi chọn tệp. Cột được nhận theo TÊN tiêu đề nên không cần đúng thứ tự; tệp của Trung tâm có tiêu đề gần giống (Email, Họ và tên, MSSV, Đợt, Hạn…) thường nhập được luôn.'),
+        tep,
+      ]),
+      get: function () { return tep.files && tep.files[0] ? tep.files[0] : null; },
+    };
     openForm({
       title: 'Nhập danh sách sinh viên',
       fields: [
-        { name: 'text', label: 'Dán danh sách (mỗi dòng: email, họ tên, mã sinh viên, khóa / đợt, hạn dùng — cột sau email và họ tên có thể bỏ trống; dán thẳng từ Excel được)', type: 'textarea', required: true },
+        { name: 'tep', label: 'Tệp Excel (.xlsx) hoặc CSV', type: 'custom', widget: widget },
+        { name: 'text', label: '…hoặc dán danh sách (mỗi dòng: email, họ tên, mã sinh viên, khóa / đợt, hạn dùng; dán thẳng từ Excel được)', type: 'textarea' },
         { name: 'het_han', label: 'Hạn dùng mặc định cho dòng không ghi hạn (hết ngày này thì khóa quyền vào module)', type: 'date', required: true },
       ],
-      submitLabel: 'Nhập',
+      submitLabel: 'Xem trước',
       onSubmit: function (v) {
-        return api('POST', '/students/import', { text: v.text, het_han: v.het_han }).then(function (r) {
-          var dong = [h('p', {}, r.moi + ' mới, ' + r.cap_nhat + ' cập nhật, ' + r.bo_qua + ' bỏ qua. Đã tạo sẵn ' + r.tao_tai_khoan + ' tài khoản chờ kích hoạt.')];
-          if (r.dat_lai_crd) dong.push(h('p', { class: 'nhm-hint' }, r.dat_lai_crd + ' tài khoản Đặt lịch cũ trùng email phải kích hoạt lại bằng Đăng ký chính (vì trước đó chưa xác minh hộp thư).'));
-          if (r.tai_khoan_khac) dong.push(h('p', { class: 'nhm-muted nhm-small' }, r.tai_khoan_khac + ' email đã có tài khoản vai trò khác: không đổi.'));
-          if (r.loi.length) dong.push(h('ul', { class: 'nhm-small' }, r.loi.map(function (e) { return h('li', {}, 'Dòng ' + e.dong + ': ' + e.message); })));
-          // openForm tự đóng hộp thoại sau khi onSubmit xong: mở kết quả ở lượt sau
-          setTimeout(function () {
-            openInfo('Kết quả nhập danh sách', h('div', {}, dong), []);
-            var dongNut = document.querySelector('#nhm-dialog .nhm-form-actions .nhm-btn');
-            if (dongNut) dongNut.addEventListener('click', reopen);
-          }, 0);
-        });
+        if (!v.tep && !String(v.text || '').trim()) return Promise.reject(new Error('Hãy chọn tệp hoặc dán danh sách.'));
+        return goiNhapSv(v, true).then(function (r) { setTimeout(function () { xemTruocNhap(v, r, reopen); }, 0); });
       },
     });
+  }
+
+  /** Bước xem trước: chưa ghi gì; bấm «Nhập» mới ghi. */
+  function xemTruocNhap(v, r, reopen) {
+    var mau = r.mau && r.mau.length ? h('table', { class: 'nhm-hist' }, [h('tr', {}, ['Dòng', 'Email', 'Họ tên', 'Đợt', 'Hạn', ''].map(function (x) { return h('th', {}, x); }))].concat(
+      r.mau.map(function (m) { return h('tr', {}, [m.dong, m.email, m.fullname, m.khoa || '', m.het_han, m.cap_nhat ? 'cập nhật' : 'mới'].map(function (x, i) { return h('td', { 'data-l': ['Dòng', 'Email', 'Họ tên', 'Đợt', 'Hạn', 'Loại'][i] }, x); })); }))) : null;
+    var loi = r.loi && r.loi.length ? h('div', {}, [h('strong', {}, 'Dòng có lỗi (không được nhập): ' + r.loi.length), h('ul', { class: 'nhm-small' }, r.loi.map(function (e) { return h('li', {}, 'Dòng ' + e.dong + ': ' + e.message); }))]) : null;
+    var nhap = nutNho('Nhập ' + (r.moi + r.cap_nhat) + ' sinh viên', 'primary', function () {
+      nhap.disabled = true;
+      goiNhapSv(v, false).then(function (kq) {
+        say('Đã nhập danh sách.', 'ok');
+        openInfo('Kết quả nhập danh sách', h('div', {}, tomTatNhap(kq)), []);
+        var dongNut = document.querySelector('#nhm-dialog .nhm-form-actions .nhm-btn');
+        if (dongNut) dongNut.addEventListener('click', reopen);
+      }).catch(function (e) { nhap.disabled = false; say(e.message, 'err'); });
+    });
+    nhap.disabled = !(r.moi + r.cap_nhat);
+    openInfo('Xem trước danh sách (chưa ghi gì)', h('div', {}, tomTatNhap(r).concat([mau, loi])), [nhap]);
+    var dongNut2 = document.querySelector('#nhm-dialog .nhm-form-actions .nhm-btn:last-child');
+    if (dongNut2) dongNut2.addEventListener('click', reopen);
+  }
+
+  /** Thao tác cả đợt: gia hạn, đánh dấu ra trường (khóa ngay), thu hồi. */
+  function theoDot(body, ds, reopen, err) {
+    var dem = {};
+    ds.forEach(function (s) { if (s.tinh_trang === 'cho_kich_hoat' || s.tinh_trang === 'da_kich_hoat' || s.tinh_trang === 'het_han') dem[s.khoa || ''] = (dem[s.khoa || ''] || 0) + 1; });
+    var dots = Object.keys(dem);
+    if (!dots.length) return null;
+    var sel = h('select', { 'aria-label': 'Chọn đợt' }, dots.map(function (k) { return h('option', { value: k }, (k || '(không ghi đợt)') + ' — ' + dem[k] + ' sinh viên'); }));
+    var chay = function (hanhDong, cauHoi, extra) {
+      if (cauHoi && !window.confirm(cauHoi.replace('{dot}', sel.value || '(không ghi đợt)'))) return;
+      api('POST', '/students/bulk', Object.assign({ khoa: sel.value, hanh_dong: hanhDong }, extra || {})).then(function (r) { say('Đã xử lý ' + r.so_luong + ' sinh viên.', 'ok'); reopen(); }).catch(function (e) { err.textContent = e.message; });
+    };
+    return h('div', { class: 'nhm-card' }, [
+      h('strong', {}, 'Thao tác cả đợt'),
+      h('p', { class: 'nhm-muted nhm-small' }, 'Dùng khi một đợt sinh viên ra trường hoặc được gia hạn. «Đợt» là cột Khóa / Đợt trong danh sách.'),
+      sel,
+      h('div', { class: 'nhm-card-act' }, [
+        nutNho('Gia hạn cả đợt…', '', function () {
+          openForm({
+            title: 'Gia hạn cả đợt «' + (sel.value || '(không ghi đợt)') + '»',
+            fields: [{ name: 'het_han', label: 'Hạn dùng mới (hết ngày này thì khóa quyền vào module)', type: 'date', required: true }],
+            submitLabel: 'Gia hạn',
+            onSubmit: function (v) { return api('POST', '/students/bulk', { khoa: sel.value, hanh_dong: 'gia_han', het_han: v.het_han }).then(function (r) { say('Đã gia hạn ' + r.so_luong + ' sinh viên.', 'ok'); reopen(); }); },
+          });
+        }),
+        nutNho('Đợt đã ra trường', 'danger', function () { chay('ra_truong', 'Đánh dấu đợt «{dot}» đã ra trường? Họ mất quyền vào Ngân hàng tế bào ngay (Đặt lịch thiết bị vẫn dùng được); yêu cầu về mẫu của họ chuyển cho trưởng nhóm / quản lý.'); }),
+        nutNho('Thu hồi cả đợt', 'danger', function () { chay('thu_hoi', 'Thu hồi quyền của cả đợt «{dot}»? Muốn cấp lại phải nhập lại danh sách.'); }),
+      ]),
+    ]);
   }
 
   function suaSinhVienForm(s, reopen) {
@@ -1110,6 +1191,7 @@
       put(body, h('div', {}, [
         h('div', { class: 'nhm-dm-head' }, [h('strong', {}, 'Sinh viên của Viện (' + r.students.length + ')'), nutNho('+ Nhập danh sách', 'primary', function () { nhapDanhSachForm(reopen); })]),
         h('p', { class: 'nhm-muted nhm-small' }, 'Danh sách do Trung tâm quản lý người học cung cấp. Chỉ email trong danh sách mới đăng ký được tài khoản sinh viên (sau khi xác minh hộp thư). Đã kích hoạt: ' + (dem.da_kich_hoat || 0) + ' · chờ: ' + (dem.cho_kich_hoat || 0) + ' · hết hạn: ' + (dem.het_han || 0) + '. Danh sách là dữ liệu cá nhân: chỉ Admin và quản lý module xem.'),
+        theoDot(body, r.students, reopen, err),
         h('div', { class: 'nhm-searchbar' }, [tim, loc, nutNho('Lọc', '', ap)]),
         r.students.length ? h('div', { class: 'nhm-cards' }, cards) : h('p', { class: 'nhm-muted' }, 'Chưa có sinh viên nào khớp.'),
         err]));

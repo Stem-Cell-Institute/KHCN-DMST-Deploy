@@ -1,7 +1,7 @@
 # Module Ngân hàng tế bào & Kháng thể
 
 Trang: `public/ngan-hang-te-bao-khang-the/index.html` (địa chỉ ngắn `/ngan-hang-te-bao-khang-the`) ·
-API: `/api/ngan-hang-te-bao-khang-the/*` (77 route)
+API: `/api/ngan-hang-te-bao-khang-the/*` (80 route)
 
 Mã nguồn: `routes/nganHangTeBaoKhangThe/` (`index.js`, `boiCanh.js`, `khoLuuTru.js`, `danhMuc.js`, `thanhVien.js`, `sinhVien.js`,
 `timKiem.js`, `yeuCau.js`, `phatHien.js`, `mau.js`), `services/nganHangTeBaoKhangThe.js` (hàm thuần), `services/nganHangTeBaoKhangTheKhoiTao.js` (tạo bảng,
@@ -39,7 +39,7 @@ thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở n
 - Vai trò module **không** đụng `users.role` dùng chung toàn hệ thống. **`users.role` = `manager` hay `phong_khcn` không còn tự có
   quyền quản lý** ở module này: phải được admin gán vai trò «Quản lý module».
 - Mọi người dùng đọc được toàn bộ kho (kể cả tên người sở hữu): kho là tài nguyên dùng chung của Viện.
-- Bảng phân quyền đầy đủ của 77 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
+- Bảng phân quyền đầy đủ của 80 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
   với danh sách route thật: thêm/bớt route mà quên cập nhật bảng thì test đỏ.
 
 ### Hai loại thiết bị lưu trữ
@@ -165,9 +165,15 @@ mắt từ từ: đổi mặc định thành `0` rồi để admin bật khi s�
 Cán bộ có email `@sci.edu.vn` đăng ký tài khoản bình thường (có xác minh hộp thư). Sinh viên **không** có email đó, và đăng ký ở module Đặt lịch
 thiết bị **không xác minh hộp thư** (ai gõ email của người khác cũng đăng ký được) nên không thể dùng nó để biết ai là sinh viên của Viện. Cách làm:
 
-1. **Danh sách chờ:** Trung tâm quản lý người học gửi email các đợt sinh viên mới; quản lý module dán vào **Quản trị module → Sinh viên → Nhập danh sách**
-   (mỗi dòng: email, họ tên, mã sinh viên, khóa / đợt, hạn dùng; dán thẳng từ Excel được; hạn mặc định cho dòng không ghi hạn). Nhập lại nhiều lần
-   không trùng (cập nhật và gia hạn). Bảng `nhm_sinh_vien`.
+1. **Danh sách chờ:** Trung tâm quản lý người học gửi email các đợt sinh viên mới; quản lý module vào **Quản trị module → Sinh viên → Nhập danh sách**:
+   - **Tệp Excel (.xlsx) hoặc CSV** — bấm «Tải mẫu Excel» (`GET /students/template.xlsx`: sheet «Danh sách» + sheet «Hướng dẫn»), điền rồi chọn tệp
+     (`POST /students/import-file`, trường `tep`, tối đa 2 MB, không nhận .xls cũ). Cột được nhận theo **tên tiêu đề** (không cần đúng thứ tự, thừa cột thì bỏ qua;
+     tên cột có `Họ đệm` + `Tên` thì ghép lại); dòng tiêu đề có thể không nằm ở dòng 1 (tìm trong 10 dòng đầu). Hạn là ngày Excel hoặc chữ `dd/mm/yyyy`.
+     Tệp của Trung tâm có tiêu đề khác thì thêm tên gọi vào `CAC_COT` trong `services/nganHangTeBaoKhangTheSinhVien.js` (không phải sửa chỗ nào khác).
+   - hoặc **dán** (mỗi dòng: email, họ tên, mã sinh viên, khóa / đợt, hạn dùng; dán thẳng từ Excel được).
+   - Cả hai đều có bước **Xem trước** (`xem_truoc`): hệ thống đọc, đếm mới / cập nhật / bỏ qua, liệt kê dòng lỗi và vài dòng mẫu **mà chưa ghi gì**; bấm «Nhập» mới ghi.
+   - Hạn mặc định áp cho dòng không ghi hạn. Nhập lại nhiều lần không trùng (cập nhật và gia hạn). Bảng `nhm_sinh_vien`.
+   - **Thao tác cả đợt** (`POST /students/bulk`, theo cột «Khóa / Đợt»): gia hạn cả đợt, «đợt đã ra trường» (hết hạn từ hôm qua, khóa module ngay), thu hồi cả đợt.
 2. Với mỗi email, hệ thống **tạo sẵn** tài khoản vai trò `sinh_vien` **chưa kích hoạt** (mật khẩu rỗng — cách tài khoản tạo sẵn đang dùng).
 3. Sinh viên vào trang **Đăng ký chính** (`dang-ky.html`), nhập **đúng email đó** → nhận thư xác minh tới **chính hộp thư** (liên kết dùng một lần, 2 giờ) →
    đặt mật khẩu → tài khoản kích hoạt. Chưa xác minh được hộp thư thì không có tài khoản. Email ngoài `@sci.edu.vn` mà **không** có trong danh sách (hoặc hết

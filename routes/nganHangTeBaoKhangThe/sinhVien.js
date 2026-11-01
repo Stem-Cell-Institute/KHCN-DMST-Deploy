@@ -117,17 +117,16 @@ module.exports = function createSinhVienRouter(ctx) {
     res.json({ students: items, hom_nay: SV.homNay() });
   });
 
-  // ---------- nhập danh sách ----------
+  // ---------- nhập danh sách (dán hoặc tệp Excel / CSV), có xem trước ----------
 
-  router.post('/students/import', requireManage, (req, res) => {
-    const body = req.body || {};
-    const hanMacDinh = body.het_han ? SV.chuanHoaNgay(body.het_han) : null;
-    if (body.het_han && !hanMacDinh) return fail(res, 400, 'Hạn dùng mặc định không hợp lệ (YYYY-MM-DD hoặc DD/MM/YYYY).');
-    const { rows, loi } = SV.docDanhSach(body.text, hanMacDinh);
-    if (!rows.length && !loi.length) return fail(res, 400, 'Danh sách trống.');
+  /**
+   * Áp dụng (hoặc chỉ tính thử khi `thu`) một danh sách đã đọc xong. Không ghi gì khi thu = true.
+   * @returns {object} số liệu + lỗi từng dòng
+   */
+  function nhapDong(req, rows, loiDoc, thu) {
     const hom = SV.homNay();
-    const kq = { moi: 0, cap_nhat: 0, bo_qua: 0, tao_tai_khoan: 0, dat_lai_crd: 0, tai_khoan_khac: 0, loi: loi.slice() };
-    db.transaction(() => {
+    const kq = { moi: 0, cap_nhat: 0, bo_qua: 0, tao_tai_khoan: 0, dat_lai_crd: 0, tai_khoan_khac: 0, loi: loiDoc.slice(), mau: [] };
+    const lam = () => {
       const trung = new Set();
       for (const r of rows) {
         if (r.email.endsWith('@sci.edu.vn')) { kq.bo_qua++; kq.loi.push({ dong: r.dong, message: 'Email @sci.edu.vn đăng ký tài khoản bình thường, không cần nằm trong danh sách.' }); continue; }
@@ -135,31 +134,127 @@ module.exports = function createSinhVienRouter(ctx) {
         trung.add(r.email);
         if (r.het_han < hom) { kq.bo_qua++; kq.loi.push({ dong: r.dong, message: 'Hạn dùng đã qua.' }); continue; }
         const co = SV.timTheoEmail(db, r.email);
+        if (kq.mau.length < 8) kq.mau.push({ dong: r.dong, email: r.email, fullname: r.fullname, khoa: r.khoa, het_han: r.het_han, cap_nhat: !!co });
         if (co) {
-          db.prepare("UPDATE nhm_sinh_vien SET fullname = ?, ma_sv = ?, khoa = ?, het_han = ?, trang_thai = 'cho', updated_at = datetime('now') WHERE id = ?").run(r.fullname, r.ma_sv, r.khoa, r.het_han, co.id);
+          if (!thu) db.prepare("UPDATE nhm_sinh_vien SET fullname = ?, ma_sv = ?, khoa = ?, het_han = ?, trang_thai = 'cho', updated_at = datetime('now') WHERE id = ?").run(r.fullname, r.ma_sv, r.khoa, r.het_han, co.id);
           kq.cap_nhat++;
         } else {
-          db.prepare('INSERT INTO nhm_sinh_vien (email, fullname, ma_sv, khoa, het_han, created_by) VALUES (?, ?, ?, ?, ?, ?)').run(r.email, r.fullname, r.ma_sv, r.khoa, r.het_han, req.user.id);
+          if (!thu) db.prepare('INSERT INTO nhm_sinh_vien (email, fullname, ma_sv, khoa, het_han, created_by) VALUES (?, ?, ?, ?, ?, ?)').run(r.email, r.fullname, r.ma_sv, r.khoa, r.het_han, req.user.id);
           kq.moi++;
         }
         const u = taiKhoan(r.email);
         if (!u) {
           // tài khoản tạo sẵn CHƯA kích hoạt (mật khẩu rỗng): chỉ xác minh hộp thư mới đặt được mật khẩu
-          db.prepare("INSERT INTO users (email, password, fullname, role) VALUES (?, '', ?, 'sinh_vien')").run(r.email, r.fullname);
+          if (!thu) db.prepare("INSERT INTO users (email, password, fullname, role) VALUES (?, '', ?, 'sinh_vien')").run(r.email, r.fullname);
           kq.tao_tai_khoan++;
         } else if (String(u.role || '').toLowerCase() === 'crd_user') {
-          db.prepare("UPDATE users SET role = 'sinh_vien', password = '' WHERE id = ?").run(u.id);
+          if (!thu) db.prepare("UPDATE users SET role = 'sinh_vien', password = '' WHERE id = ?").run(u.id);
           kq.dat_lai_crd++;
         } else if (String(u.role || '').toLowerCase() === 'sinh_vien') {
-          if (daKichHoat(u)) moHoSo(u); // gia hạn: mở lại hồ sơ nếu đã bị khóa
+          if (!thu && daKichHoat(u)) moHoSo(u); // gia hạn: mở lại hồ sơ nếu đã bị khóa
         } else {
           kq.tai_khoan_khac++; // đã có tài khoản vai trò khác: không đụng tới
         }
       }
-    })();
-    audit(req, 'students_import', `${kq.moi} mới, ${kq.cap_nhat} cập nhật, ${kq.bo_qua} bỏ qua, ${kq.dat_lai_crd} tài khoản CRD cũ đặt lại, ${kq.loi.length} lỗi`);
+    };
+    if (thu) lam();
+    else db.transaction(lam)();
     kq.loi = kq.loi.slice(0, 100);
-    res.status(kq.moi + kq.cap_nhat ? 200 : 400).json(kq);
+    return kq;
+  }
+
+  /** Dùng chung cho dán văn bản và tải tệp: đọc → (xem trước | nhập) → trả kết quả. */
+  function traKetQuaNhap(req, res, doc, thu, nguon) {
+    if (!doc.rows.length && !doc.loi.length) return fail(res, 400, 'Danh sách trống.');
+    const kq = nhapDong(req, doc.rows, doc.loi, thu);
+    kq.xem_truoc = !!thu;
+    kq.co_tieu_de = doc.coTieuDe;
+    if (!thu) audit(req, 'students_import', nguon + ': ' + kq.moi + ' mới, ' + kq.cap_nhat + ' cập nhật, ' + kq.bo_qua + ' bỏ qua, ' + kq.dat_lai_crd + ' tài khoản CRD cũ đặt lại, ' + kq.loi.length + ' lỗi');
+    return res.status(kq.moi + kq.cap_nhat || thu ? 200 : 400).json(kq);
+  }
+
+  const hanMacDinhTu = (body) => {
+    const h = body && body.het_han ? SV.chuanHoaNgay(body.het_han) : null;
+    return { h, sai: !!(body && body.het_han) && !h };
+  };
+
+  router.post('/students/import', requireManage, (req, res) => {
+    const body = req.body || {};
+    const { h, sai } = hanMacDinhTu(body);
+    if (sai) return fail(res, 400, 'Hạn dùng mặc định không hợp lệ (YYYY-MM-DD hoặc DD/MM/YYYY).');
+    const doc = SV.docDanhSach(body.text, h);
+    return traKetQuaNhap(req, res, doc, body.xem_truoc === true || body.xem_truoc === 'true', 'dán');
+  });
+
+  // Tệp Excel (.xlsx) hoặc .csv: multipart, trường «tep»; kèm het_han (mặc định) và xem_truoc=1. Chỉ giữ trong bộ nhớ, không ghi đĩa.
+  const upload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: SV.TOI_DA_BYTE, files: 1, fields: 5 } });
+  router.post('/students/import-file', requireManage, (req, res, next) => {
+    upload.single('tep')(req, res, (e) => {
+      if (e) return fail(res, 400, e.code === 'LIMIT_FILE_SIZE' ? 'Tệp quá lớn (tối đa 2 MB).' : 'Không nhận được tệp: ' + e.message);
+      next();
+    });
+  }, async (req, res) => {
+    const { h, sai } = hanMacDinhTu(req.body);
+    if (sai) return fail(res, 400, 'Hạn dùng mặc định không hợp lệ (YYYY-MM-DD hoặc DD/MM/YYYY).');
+    if (!req.file) return fail(res, 400, 'Chưa chọn tệp.');
+    try {
+      const doc = await SV.docTep(req.file.buffer, req.file.originalname, h);
+      return traKetQuaNhap(req, res, doc, req.body.xem_truoc === '1' || req.body.xem_truoc === 'true', 'tệp');
+    } catch (e) {
+      if (e.status) return fail(res, e.status, e.message);
+      console.error('[ngan-hang] đọc tệp sinh viên lỗi:', e);
+      return fail(res, 500, 'Có lỗi khi đọc tệp.');
+    }
+  });
+
+  router.get('/students/template.xlsx', requireManage, async (req, res) => {
+    try {
+      const buf = await SV.taoMauXlsx();
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="mau-danh-sach-sinh-vien.xlsx"');
+      res.send(buf);
+    } catch (e) {
+      console.error('[ngan-hang] tạo tệp mẫu lỗi:', e);
+      fail(res, 500, 'Không tạo được tệp mẫu.');
+    }
+  });
+
+  // ---------- thao tác cả đợt (khóa / đợt nhận vào, đợt ra trường) ----------
+
+  router.post('/students/bulk', requireManage, (req, res) => {
+    const body = req.body || {};
+    const khoa = body.khoa == null ? '' : String(body.khoa).trim();
+    const hanhDong = body.hanh_dong;
+    if (!['gia_han', 'ra_truong', 'thu_hoi'].includes(hanhDong)) return fail(res, 400, 'Hành động không hợp lệ (gia hạn, ra trường, thu hồi).');
+    let han = null;
+    if (hanhDong === 'gia_han') {
+      han = SV.chuanHoaNgay(body.het_han);
+      if (!han || han < SV.homNay()) return fail(res, 400, 'Gia hạn cần một hạn dùng mới từ hôm nay trở đi.');
+    }
+    const ds = db
+      .prepare(`SELECT * FROM nhm_sinh_vien WHERE trang_thai IN ('cho','het_han') AND COALESCE(khoa, '') = ?`)
+      .all(khoa);
+    if (!ds.length) return fail(res, 404, 'Không có sinh viên nào thuộc đợt này.');
+    const hom = SV.homNay();
+    const homQua = SV.homNay(Date.now() - 86400000);
+    db.transaction(() => {
+      for (const e of ds) {
+        if (hanhDong === 'gia_han') {
+          db.prepare("UPDATE nhm_sinh_vien SET het_han = ?, trang_thai = 'cho', updated_at = datetime('now') WHERE id = ?").run(han, e.id);
+          const u = taiKhoan(e.email);
+          if (u && String(u.role).toLowerCase() === 'sinh_vien' && daKichHoat(u)) moHoSo(u);
+        } else if (hanhDong === 'ra_truong') {
+          // đợt đã ra trường: hết hạn từ hôm qua, khóa quyền vào module ngay
+          db.prepare("UPDATE nhm_sinh_vien SET het_han = ?, trang_thai = 'het_han', updated_at = datetime('now') WHERE id = ?").run(homQua, e.id);
+          khoaHoSo(taiKhoan(e.email));
+        } else {
+          db.prepare("UPDATE nhm_sinh_vien SET trang_thai = 'da_xoa', updated_at = datetime('now') WHERE id = ?").run(e.id);
+          khoaHoSo(taiKhoan(e.email));
+        }
+      }
+    })();
+    audit(req, 'students_bulk', `${hanhDong} đợt «${khoa || '(không ghi đợt)'}»: ${ds.length} sinh viên${han ? ', hạn mới ' + han : ''}`);
+    res.json({ ok: true, so_luong: ds.length, hom_nay: hom });
   });
 
   // ---------- sửa / gia hạn / thu hồi ----------
