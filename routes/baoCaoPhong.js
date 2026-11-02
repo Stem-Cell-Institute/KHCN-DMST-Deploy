@@ -3,7 +3,8 @@
  * nhập báo cáo trực tiếp theo biểu mẫu, người quản lý xác nhận hoặc yêu cầu chỉnh sửa.
  *
  * TỪ NGỮ: "xác nhận" = quản lý module kiểm báo cáo của TỪNG PHÒNG (trạng thái nội bộ da_duyet, đường /bao-cao/:id/duyet);
- * "duyệt" CHỈ dành cho Viện trưởng duyệt HỒ SƠ TRÌNH. Hai việc khác nhau, nên hai từ khác nhau trên giao diện và email.
+ * "duyệt" CHỈ dành cho Viện trưởng, và Viện trưởng duyệt TỪNG BÁO CÁO ngay trong giao diện sau khi người quản lý "trình" đợt
+ * (routes/baoCaoPhongVienTruong.js). Hai việc độc lập nhau, nên hai từ khác nhau trên giao diện và email.
  *
  * Mount (server.js): app.use('/api/bao-cao-phong', authMiddleware, createBaoCaoPhongRouter({ db }))
  *
@@ -24,9 +25,11 @@ const { ensureSchema } = require('../services/baoCaoPhongSchema');
 const { chuanHoaMau, kiemTraDuLieu } = require('../services/baoCaoPhongMau');
 const { taoThongBao } = require('../services/baoCaoPhongThongBao');
 const { taoNhacHan } = require('../services/baoCaoPhongNhacHan');
+const ChucDanh = require('../services/baoCaoPhongChucDanh');
 const Xuat = require('../services/baoCaoPhongXuat');
 const { contentDisposition } = require('../lib/filenames');
-const createTrinhRouter = require('./baoCaoPhongTrinh');
+const createVienTruongRouter = require('./baoCaoPhongVienTruong');
+const { taoVienTruong, trangThaiVienTruong } = require('../services/baoCaoPhongVienTruong');
 
 const LOAI_DOT = ['tuan', 'thang', 'quy', 'nam', 'dot_xuat'];
 const NGAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -76,13 +79,12 @@ function treHan(bc, dot, homNay) {
 }
 
 /**
- * @param {{db:object, mailSend?:Function, uploadsRoot?:string, baseUrl?:string}} deps
+ * @param {{db:object, mailSend?:Function, baseUrl?:string}} deps
  *   mailSend — gửi email (nodemailer của server.js); thiếu thì module chạy bình thường, chỉ không gửi thư.
- *   uploadsRoot — thư mục gốc lưu tệp tải lên; thiếu thì bỏ phần hồ sơ trình Viện trưởng.
  *   baseUrl — gốc địa chỉ để đặt liên kết trong email.
  *   nhacTuDong — true thì bật hẹn giờ tự nhắc trước hạn (chỉ server thật; test gọi router.nhacHan.chayMotLan trực tiếp).
  */
-module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, baseUrl, nhacTuDong }) {
+module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacTuDong }) {
   const router = express.Router();
 
   // Module phụ không được phép làm sập cả hệ thống đang chạy thật: nếu khởi tạo bảng lỗi
@@ -98,6 +100,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   const loi = (res, status, message, extra) => res.status(status).json({ message, ...(extra || {}) });
 
   const thongBao = taoThongBao({ db, mailSend, baseUrl });
+  const vt = taoVienTruong({ db }); // quyết định của Viện trưởng, suy ra từ bcp_lich_su
   router.nhacHan = taoNhacHan({ db, thongBao });
   if (nhacTuDong) router.nhacHan.batDau();
   /** Thư báo chạy NỀN: không chờ, không để lỗi (SMTP, mạng…) làm hỏng thao tác chính đã thành công. */
@@ -154,6 +157,14 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   const canXacNhan = (req, res, next) =>
     req.bcp.laQuanLyModule ? next() : loi(res, 403, 'Chỉ người quản lý module mới xác nhận hoặc yêu cầu chỉnh sửa báo cáo của phòng. Viện trưởng duyệt hồ sơ trình.');
 
+  /**
+   * Viện trưởng (không kiêm quản lý module) CHỈ thấy các đợt đã được người quản lý "trình": trình là lúc báo cáo của đợt được
+   * "kích hoạt" trong giao diện của ông. Đợt chưa trình thì với ông như không tồn tại (404): không danh sách, không tiến độ,
+   * không đọc được báo cáo, không góp ý được. Người quản lý, admin và chủ phòng không bị giới hạn này.
+   */
+  const chiXemDaTrinh = (req) => req.bcp.laVienTruong && !req.bcp.laQuanLyModule;
+  const dotDaTrinh = (dotId) => !!db.prepare('SELECT 1 AS ok FROM bcp_trinh_lan WHERE dot_id = ?').get(dotId);
+
   function ghiLichSu(baoCaoId, hanhDong, nguoiId, ghiChu) {
     db.prepare('INSERT INTO bcp_lich_su (bao_cao_id, hanh_dong, nguoi_id, ghi_chu) VALUES (?,?,?,?)').run(
       baoCaoId,
@@ -198,7 +209,8 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       const phong = db
         .prepare(
           `SELECT p.id, p.ma, p.ten, p.active,
-                  (SELECT COUNT(*) FROM bcp_thanh_vien t WHERE t.phong_id = p.id) AS so_truong_phong
+                  (SELECT COUNT(*) FROM bcp_thanh_vien t WHERE t.phong_id = p.id) AS so_truong_phong,
+                  (SELECT COUNT(DISTINCT b.dot_id) FROM bcp_bao_cao b WHERE b.phong_id = p.id) AS so_dot
              FROM bcp_phong p ORDER BY p.active DESC, p.ten`
         )
         .all();
@@ -274,6 +286,33 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     })
   );
 
+  /**
+   * Xóa phòng. CHỈ khi phòng chưa từng được giao đợt nào (kể cả đợt Nháp): báo cáo đã có là hồ sơ của phòng nên không được làm
+   * mất theo. Phòng đã dùng thì "Ngừng dùng" (không giao ở đợt mới, báo cáo cũ vẫn giữ). Xóa kèm việc gỡ các trưởng phòng
+   * đang gắn với phòng và hủy lời mời đang chờ; tài khoản của họ không bị đụng tới.
+   */
+  router.delete(
+    '/phong/:id',
+    canQuanLyModule,
+    bao((req, res) => {
+      const id = docId(req.params.id);
+      if (!id) return loi(res, 400, 'ID không hợp lệ.');
+      const p = db.prepare('SELECT id, ten FROM bcp_phong WHERE id = ?').get(id);
+      if (!p) return loi(res, 404, 'Không tìm thấy phòng.');
+      const soDot = db.prepare('SELECT COUNT(*) AS n FROM bcp_bao_cao WHERE phong_id = ?').get(id).n;
+      if (soDot > 0) {
+        return loi(res, 409, `Phòng đã được giao trong ${soDot} đợt báo cáo nên không xóa được (báo cáo của phòng được giữ lại). Hãy chọn "Ngừng dùng" để phòng không còn được giao ở các đợt mới.`);
+      }
+      let goTruongPhong = 0;
+      db.transaction(() => {
+        goTruongPhong = db.prepare('DELETE FROM bcp_thanh_vien WHERE phong_id = ?').run(id).changes;
+        db.prepare('DELETE FROM bcp_loi_moi WHERE phong_id = ?').run(id);
+        db.prepare('DELETE FROM bcp_phong WHERE id = ?').run(id);
+      })();
+      res.json({ ok: true, go_truong_phong: goTruongPhong });
+    })
+  );
+
   // ══ THÀNH VIÊN (phân quyền) ═══════════════════════════════════════════════
   router.get(
     '/nguoi-dung',
@@ -300,7 +339,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     bao((req, res) => {
       const thanh_vien = db
         .prepare(
-          `SELECT t.id, t.vai_tro, t.phong_id, p.ten AS phong_ten, u.id AS user_id, u.fullname, u.email
+          `SELECT t.id, t.vai_tro, t.chuc_danh, t.phong_id, p.ten AS phong_ten, u.id AS user_id, u.fullname, u.email
              FROM bcp_thanh_vien t
              JOIN users u ON u.id = t.user_id
              LEFT JOIN bcp_phong p ON p.id = t.phong_id
@@ -328,9 +367,12 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       if (!db.prepare('SELECT 1 AS ok FROM users WHERE id = ?').get(userId)) return loi(res, 404, 'Không tìm thấy người dùng.');
 
       let phongId = null;
+      let chucDanh = null; // chỉ có với người phụ trách phòng (truong_phong): Trưởng phòng, Phó trưởng phòng, Quyền trưởng phòng, Kế toán
       if (vaiTro === 'truong_phong') {
+        chucDanh = b.chuc_danh === undefined || b.chuc_danh === null || b.chuc_danh === '' ? ChucDanh.MAC_DINH : b.chuc_danh;
+        if (!ChucDanh.hopLe(chucDanh)) return loi(res, 400, 'Chức danh không hợp lệ.');
         phongId = docId(b.phong_id);
-        if (!phongId) return loi(res, 400, 'Cần chọn phòng cho trưởng phòng.');
+        if (!phongId) return loi(res, 400, 'Cần chọn phòng cho người phụ trách.');
         const p = db.prepare('SELECT id, active FROM bcp_phong WHERE id = ?').get(phongId);
         if (!p) return loi(res, 404, 'Không tìm thấy phòng.');
         if (!p.active) return loi(res, 409, 'Phòng này đang ngừng sử dụng.');
@@ -338,11 +380,12 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       const trung = db
         .prepare('SELECT 1 AS ok FROM bcp_thanh_vien WHERE user_id = ? AND vai_tro = ? AND COALESCE(phong_id,0) = COALESCE(?,0)')
         .get(userId, vaiTro, phongId);
-      if (trung) return loi(res, 409, 'Người này đã có vai trò đó.');
+      if (trung) return loi(res, 409, vaiTro === 'truong_phong' ? 'Người này đã được phân công cho phòng này.' : 'Người này đã có vai trò đó.');
 
       const r = db
-        .prepare('INSERT INTO bcp_thanh_vien (user_id, vai_tro, phong_id, created_by) VALUES (?,?,?,?)')
-        .run(userId, vaiTro, phongId, req.user.id);
+        .prepare('INSERT INTO bcp_thanh_vien (user_id, vai_tro, phong_id, chuc_danh, created_by) VALUES (?,?,?,?,?)')
+        .run(userId, vaiTro, phongId, chucDanh, req.user.id);
+      if (vaiTro === 'truong_phong') dongBoTheoPhong(phongId);
       res.status(201).json({ id: Number(r.lastInsertRowid) });
     })
   );
@@ -353,12 +396,13 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
-      const tv = db.prepare('SELECT id, vai_tro FROM bcp_thanh_vien WHERE id = ?').get(id);
+      const tv = db.prepare('SELECT id, vai_tro, user_id, phong_id FROM bcp_thanh_vien WHERE id = ?').get(id);
       if (!tv) return loi(res, 404, 'Không tìm thấy.');
       if (tv.vai_tro !== 'truong_phong' && !req.bcp.laAdmin) {
         return loi(res, 403, 'Chỉ quản trị viên hệ thống mới gỡ được vai trò quản lý module hoặc Viện trưởng.');
       }
       db.prepare('DELETE FROM bcp_thanh_vien WHERE id = ?').run(id);
+      if (tv.vai_tro === 'truong_phong') goNguoiPhuTrach(tv.user_id, tv.phong_id);
       res.json({ ok: true });
     })
   );
@@ -462,7 +506,115 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     })
   );
 
+  /**
+   * Nhân bản biểu mẫu: tạo biểu mẫu MỚI (phiên bản 1) từ cấu trúc mới nhất của biểu mẫu gốc, để dựng nhanh một biến thể
+   * (vd. mẫu tháng, mẫu quý, mẫu đột xuất) rồi sửa. Biểu mẫu gốc và các đợt đã giao không bị đụng tới.
+   */
+  router.post(
+    '/mau/:id/nhan-ban',
+    canQuanLyModule,
+    bao((req, res) => {
+      const id = docId(req.params.id);
+      if (!id) return loi(res, 400, 'ID không hợp lệ.');
+      const m = db.prepare('SELECT id, ten, mo_ta FROM bcp_mau WHERE id = ?').get(id);
+      if (!m) return loi(res, 404, 'Không tìm thấy biểu mẫu.');
+      const pb = phienBanMoiNhat(id);
+      let moiId;
+      db.transaction(() => {
+        const r = db.prepare('INSERT INTO bcp_mau (ten, mo_ta, created_by) VALUES (?,?,?)').run((m.ten + ' (bản sao)').slice(0, 150), m.mo_ta, req.user.id);
+        moiId = Number(r.lastInsertRowid);
+        db.prepare('INSERT INTO bcp_mau_phien_ban (mau_id, so_phien_ban, truong_json, created_by) VALUES (?,?,?,?)').run(moiId, 1, pb.truong_json, req.user.id);
+      })();
+      res.status(201).json({ id: moiId, so_phien_ban: 1 });
+    })
+  );
+
+  /** Xóa biểu mẫu CHƯA được đợt nào dùng (đợt đã giao ghim phiên bản của nó nên không xóa được). */
+  router.delete(
+    '/mau/:id',
+    canQuanLyModule,
+    bao((req, res) => {
+      const id = docId(req.params.id);
+      if (!id) return loi(res, 400, 'ID không hợp lệ.');
+      if (!db.prepare('SELECT 1 AS ok FROM bcp_mau WHERE id = ?').get(id)) return loi(res, 404, 'Không tìm thấy biểu mẫu.');
+      const soDot = db.prepare('SELECT COUNT(*) AS n FROM bcp_dot d JOIN bcp_mau_phien_ban v ON v.id = d.mau_phien_ban_id WHERE v.mau_id = ?').get(id).n;
+      if (soDot > 0) return loi(res, 409, `Biểu mẫu đã được dùng trong ${soDot} đợt nên không xóa được (đợt đã giao giữ nguyên biểu mẫu của nó).`);
+      db.prepare('DELETE FROM bcp_mau WHERE id = ?').run(id);
+      res.json({ ok: true });
+    })
+  );
+
   // ══ ĐỢT BÁO CÁO ════════════════════════════════════════════════════════════
+  const CACH_NOP = ['mot_nguoi', 'tat_ca'];
+
+  // ── Báo cáo riêng cho từng người phụ trách (đợt có cách nộp "tat_ca") ───────
+  /** Những người đang được phân công phụ trách báo cáo của một phòng (mọi chức danh). */
+  const nguoiPhuTrach = (phongId) =>
+    db.prepare("SELECT user_id FROM bcp_thanh_vien WHERE phong_id = ? AND vai_tro = 'truong_phong' ORDER BY id").all(phongId).map((r) => r.user_id);
+
+  /** Tạo báo cáo của một phòng cho đợt: một báo cáo chung, hoặc (cách nộp tat_ca) mỗi người phụ trách một báo cáo; phòng chưa có ai thì một báo cáo chờ giao. */
+  function taoBaoCaoChoPhong(dotId, phongId, cachNop) {
+    const ins = db.prepare('INSERT INTO bcp_bao_cao (dot_id, phong_id, chu_id) VALUES (?, ?, ?)');
+    const ds = cachNop === 'tat_ca' ? nguoiPhuTrach(phongId) : [];
+    if (ds.length) for (const u of ds) ins.run(dotId, phongId, u);
+    else ins.run(dotId, phongId, null);
+  }
+
+  /**
+   * Đồng bộ báo cáo riêng của một đợt "tat_ca" với danh sách người phụ trách HIỆN TẠI: người mới được phân công có báo cáo riêng (nhận lại báo cáo
+   * chờ giao còn trống nếu có). Không đụng tới đợt đã đóng và đợt "mot_nguoi".
+   */
+  function dongBoBaoCaoDot(dotId) {
+    const dot = db.prepare('SELECT cach_nop, trang_thai FROM bcp_dot WHERE id = ?').get(dotId);
+    if (!dot || dot.cach_nop !== 'tat_ca' || dot.trang_thai === 'dong') return;
+    const phongs = db.prepare('SELECT DISTINCT phong_id FROM bcp_bao_cao WHERE dot_id = ?').all(dotId).map((r) => r.phong_id);
+    db.transaction(() => {
+      for (const phongId of phongs) {
+        const rows = db.prepare('SELECT id, chu_id, trang_thai, du_lieu_json FROM bcp_bao_cao WHERE dot_id = ? AND phong_id = ?').all(dotId, phongId);
+        for (const u of nguoiPhuTrach(phongId)) {
+          if (rows.some((r) => r.chu_id === u)) continue;
+          const chuaGiao = rows.find((r) => r.chu_id == null && r.trang_thai === 'chua_nop' && r.du_lieu_json === '{}');
+          if (chuaGiao) {
+            db.prepare('UPDATE bcp_bao_cao SET chu_id = ? WHERE id = ?').run(u, chuaGiao.id);
+            chuaGiao.chu_id = u;
+          } else {
+            const r = db.prepare('INSERT INTO bcp_bao_cao (dot_id, phong_id, chu_id) VALUES (?, ?, ?)').run(dotId, phongId, u);
+            rows.push({ id: Number(r.lastInsertRowid), chu_id: u, trang_thai: 'chua_nop', du_lieu_json: '{}' });
+          }
+        }
+      }
+    })();
+  }
+
+  /** Có người mới được phân công cho phòng: đồng bộ mọi đợt "tat_ca" chưa đóng có phòng đó. */
+  function dongBoTheoPhong(phongId) {
+    const ds = db
+      .prepare("SELECT DISTINCT d.id FROM bcp_dot d JOIN bcp_bao_cao b ON b.dot_id = d.id WHERE b.phong_id = ? AND d.cach_nop = 'tat_ca' AND d.trang_thai IN ('nhap','dang_mo')")
+      .all(phongId);
+    for (const d of ds) dongBoBaoCaoDot(d.id);
+  }
+
+  /**
+   * Một người không còn phụ trách phòng: trong các đợt "tat_ca" chưa đóng, báo cáo CHƯA NỘP của họ bị bỏ, báo cáo đang cần chỉnh sửa trả về
+   * dạng chờ giao (ai trong phòng cũng nhận được), báo cáo đã nộp/đã xác nhận giữ nguyên làm hồ sơ. Phòng không để trống báo cáo.
+   */
+  function goNguoiPhuTrach(userId, phongId) {
+    const ds = db
+      .prepare("SELECT DISTINCT d.id FROM bcp_dot d JOIN bcp_bao_cao b ON b.dot_id = d.id WHERE b.phong_id = ? AND d.cach_nop = 'tat_ca' AND d.trang_thai IN ('nhap','dang_mo')")
+      .all(phongId);
+    db.transaction(() => {
+      for (const d of ds) {
+        db.prepare("DELETE FROM bcp_bao_cao WHERE dot_id = ? AND phong_id = ? AND chu_id = ? AND trang_thai = 'chua_nop'").run(d.id, phongId, userId);
+        const coChoGiao = db.prepare('SELECT 1 AS ok FROM bcp_bao_cao WHERE dot_id = ? AND phong_id = ? AND chu_id IS NULL').get(d.id, phongId);
+        if (!coChoGiao) {
+          db.prepare("UPDATE bcp_bao_cao SET chu_id = NULL WHERE dot_id = ? AND phong_id = ? AND chu_id = ? AND trang_thai = 'can_chinh_sua'").run(d.id, phongId, userId);
+        }
+        const conLai = db.prepare('SELECT COUNT(*) AS n FROM bcp_bao_cao WHERE dot_id = ? AND phong_id = ?').get(d.id, phongId).n;
+        if (conLai === 0) db.prepare('INSERT INTO bcp_bao_cao (dot_id, phong_id, chu_id) VALUES (?, ?, NULL)').run(d.id, phongId);
+      }
+    })();
+  }
+
   function kiemTraDot(b, { batBuocMau }) {
     const tieuDe = chuoi(b.tieu_de, 200);
     if (!tieuDe) return { loi: 'Cần nhập tiêu đề đợt báo cáo.' };
@@ -481,6 +633,11 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         if (co.length !== phongIds.length) return { loi: 'Có phòng không tồn tại hoặc đã ngừng sử dụng.' };
       }
     }
+    let cachNop = null;
+    if (b.cach_nop !== undefined && b.cach_nop !== null && b.cach_nop !== '') {
+      if (!CACH_NOP.includes(b.cach_nop)) return { loi: 'Cách nộp báo cáo không hợp lệ.' };
+      cachNop = b.cach_nop;
+    }
     let mauId = null;
     if (b.mau_id !== undefined || batBuocMau) {
       mauId = docId(b.mau_id);
@@ -495,6 +652,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         han_nop: b.han_nop,
         mau_id: mauId,
         phong_ids: phongIds,
+        cach_nop: cachNop,
       },
     };
   }
@@ -504,15 +662,16 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     canQuanLy,
     bao((req, res) => {
       const homNay = ngayVN(new Date());
-      const dots = db
+      const tatCaDot = db
         .prepare(
-          `SELECT d.id, d.tieu_de, d.loai, d.ky, d.han_nop, d.trang_thai, d.created_at, m.ten AS mau_ten
+          `SELECT d.id, d.tieu_de, d.loai, d.ky, d.han_nop, d.trang_thai, d.created_at, d.cach_nop, m.ten AS mau_ten
              FROM bcp_dot d
              JOIN bcp_mau_phien_ban v ON v.id = d.mau_phien_ban_id
              JOIN bcp_mau m ON m.id = v.mau_id
             ORDER BY d.id DESC`
         )
         .all();
+      const dots = chiXemDaTrinh(req) ? tatCaDot.filter((d) => dotDaTrinh(d.id)) : tatCaDot;
       const bcs = db.prepare('SELECT dot_id, trang_thai, nop_luc FROM bcp_bao_cao').all();
       const theoDot = new Map();
       for (const b of bcs) {
@@ -527,7 +686,16 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
           dem[r.trang_thai] += 1;
           if (treHan(r, d, homNay)) tre += 1;
         }
-        return { ...d, tong: rows.length, ...dem, tre_han: tre };
+        // Đã trình Viện trưởng chưa (người quản lý cần phân biệt), lần trình mới nhất và Viện trưởng đã xử lý đến đâu.
+        const t = vt.trinhCuaDot(d.id);
+        const tdVt = t ? vt.tienDoDot(d.id) : null;
+        return {
+          ...d, tong: rows.length, ...dem, tre_han: tre,
+          da_trinh: !!t,
+          trinh_lan: t ? t.lan : 0,
+          trinh_luc: t ? t.trinh_luc : null,
+          vt: tdVt ? { cho_quyet_dinh: tdVt.cho_quyet_dinh, duyet: tdVt.duyet, khong_duyet: tdVt.khong_duyet, de_nghi_chinh_sua: tdVt.de_nghi_chinh_sua } : null,
+        };
       });
       res.json({ dot: ds });
     })
@@ -547,12 +715,11 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       db.transaction(() => {
         const r = db
           .prepare(
-            'INSERT INTO bcp_dot (tieu_de, mo_ta, loai, ky, han_nop, mau_phien_ban_id, trang_thai, created_by) VALUES (?,?,?,?,?,?,?,?)'
+            'INSERT INTO bcp_dot (tieu_de, mo_ta, loai, ky, han_nop, mau_phien_ban_id, trang_thai, cach_nop, created_by) VALUES (?,?,?,?,?,?,?,?,?)'
           )
-          .run(g.tieu_de, g.mo_ta, g.loai, g.ky, g.han_nop, pb.id, 'nhap', req.user.id);
+          .run(g.tieu_de, g.mo_ta, g.loai, g.ky, g.han_nop, pb.id, 'nhap', g.cach_nop || 'mot_nguoi', req.user.id);
         dotId = Number(r.lastInsertRowid);
-        const ins = db.prepare('INSERT INTO bcp_bao_cao (dot_id, phong_id) VALUES (?, ?)');
-        for (const pid of g.phong_ids) ins.run(dotId, pid);
+        for (const pid of g.phong_ids) taoBaoCaoChoPhong(dotId, pid, g.cach_nop || 'mot_nguoi');
       })();
       res.status(201).json({ id: dotId });
     })
@@ -573,22 +740,45 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
             WHERE d.id = ?`
         )
         .get(id);
-      if (!d) return loi(res, 404, 'Không tìm thấy đợt báo cáo.');
+      if (!d || (chiXemDaTrinh(req) && !dotDaTrinh(id))) return loi(res, 404, 'Không tìm thấy đợt báo cáo.');
       const homNay = ngayVN(new Date());
       const bao_cao = db
         .prepare(
-          `SELECT b.id, b.phong_id, p.ten AS phong_ten, b.trang_thai, b.nop_luc, b.duyet_luc, b.cap_nhat_luc,
+          `SELECT b.id, b.phong_id, p.ten AS phong_ten, b.chu_id, uc.fullname AS chu_ten,
+                  (SELECT t.chuc_danh FROM bcp_thanh_vien t WHERE t.user_id = b.chu_id AND t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong') AS chuc_danh,
+                  b.trang_thai, b.nop_luc, b.duyet_luc, b.cap_nhat_luc,
                   un.fullname AS nguoi_nop,
                   (b.trang_thai = 'da_duyet' AND b.nguoi_nop_id IS NOT NULL AND b.nguoi_nop_id = b.nguoi_duyet_id) AS tu_duyet
              FROM bcp_bao_cao b
              JOIN bcp_phong p ON p.id = b.phong_id
              LEFT JOIN users un ON un.id = b.nguoi_nop_id
-            WHERE b.dot_id = ? ORDER BY p.ten`
+             LEFT JOIN users uc ON uc.id = b.chu_id
+            WHERE b.dot_id = ? ORDER BY p.ten, uc.fullname`
         )
         .all(id)
         .map((b) => ({ ...b, tre_han: treHan(b, d, homNay) }));
+      // Quyết định của Viện trưởng về từng báo cáo (người quản lý thấy ở bảng tiến độ) và việc đợt đã được trình chưa.
+      const qd = vt.quyetDinhTheoDot(id);
+      for (const b of bao_cao) {
+        b.vien_truong = qd.get(b.id) || null;
+        b.vt_trang_thai = trangThaiVienTruong(b.trang_thai, b.vien_truong);
+      }
+      const trinhVt = vt.trinhCuaDot(id);
       const { truong_json, ...dot } = d;
-      res.json({ dot, truong: parseJson(truong_json, []), bao_cao });
+      res.json({
+        dot,
+        truong: parseJson(truong_json, []),
+        bao_cao,
+        trinh_vt: trinhVt ? { lan: trinhVt.lan, trinh_luc: trinhVt.trinh_luc, nguoi_trinh: trinhVt.nguoi_trinh, loi_nhan: trinhVt.loi_nhan } : null,
+        tien_do_vt: vt.tienDoDot(id),
+        // Lịch sử của đợt: trình Viện trưởng, kết xuất, sửa đợt, mở lại…
+        lich_su: db
+          .prepare(
+            `SELECT h.hanh_dong, h.ghi_chu, h.tao_luc, u.fullname AS nguoi
+               FROM bcp_dot_lich_su h LEFT JOIN users u ON u.id = h.nguoi_id WHERE h.dot_id = ? ORDER BY h.id`
+          )
+          .all(id),
+      });
     })
   );
 
@@ -598,7 +788,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
-      const cu = db.prepare('SELECT id, trang_thai, tieu_de, mo_ta, han_nop FROM bcp_dot WHERE id = ?').get(id);
+      const cu = db.prepare('SELECT id, trang_thai, tieu_de, mo_ta, han_nop, cach_nop FROM bcp_dot WHERE id = ?').get(id);
       if (!cu) return loi(res, 404, 'Không tìm thấy đợt báo cáo.');
       const kq = kiemTraDot(req.body || {}, { batBuocMau: false });
       if (kq.loi) return loi(res, 400, kq.loi);
@@ -607,6 +797,11 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       if (g.mau_id && cu.trang_thai !== 'nhap') {
         return loi(res, 409, 'Chỉ đổi được biểu mẫu khi đợt còn ở trạng thái Nháp.');
       }
+      const doiCachNop = g.cach_nop && g.cach_nop !== cu.cach_nop;
+      if (doiCachNop && cu.trang_thai !== 'nhap') {
+        return loi(res, 409, 'Chỉ đổi được cách nộp báo cáo khi đợt còn ở trạng thái Nháp.');
+      }
+      const cachNopMoi = g.cach_nop || cu.cach_nop;
 
       // Những thay đổi người ta SẼ thấy: hạn nộp, tiêu đề, hướng dẫn. Đợt Nháp chưa ai thấy nên không tính.
       const thayDoi = [];
@@ -642,9 +837,14 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         if (g.mau_id) {
           db.prepare('UPDATE bcp_dot SET mau_phien_ban_id = ? WHERE id = ?').run(phienBanMoiNhat(g.mau_id).id, id);
         }
-        if (g.phong_ids) {
-          const ins = db.prepare('INSERT INTO bcp_bao_cao (dot_id, phong_id) VALUES (?, ?)');
-          for (const pid of g.phong_ids) if (!hienCo.includes(pid)) ins.run(id, pid);
+        if (doiCachNop) {
+          // Đợt còn Nháp nên chưa có báo cáo nào được nhập: dựng lại theo cách nộp mới.
+          db.prepare('UPDATE bcp_dot SET cach_nop = ? WHERE id = ?').run(cachNopMoi, id);
+          const phongCu = db.prepare('SELECT DISTINCT phong_id FROM bcp_bao_cao WHERE dot_id = ?').all(id).map((r) => r.phong_id);
+          db.prepare('DELETE FROM bcp_bao_cao WHERE dot_id = ?').run(id);
+          for (const pid of g.phong_ids || phongCu) taoBaoCaoChoPhong(id, pid, cachNopMoi);
+        } else if (g.phong_ids) {
+          for (const pid of g.phong_ids) if (!hienCo.includes(pid)) taoBaoCaoChoPhong(id, pid, cachNopMoi);
           for (const pid of hienCo) {
             if (!g.phong_ids.includes(pid)) db.prepare('DELETE FROM bcp_bao_cao WHERE dot_id = ? AND phong_id = ?').run(id, pid);
           }
@@ -687,6 +887,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       }
       const r = db.prepare('UPDATE bcp_dot SET trang_thai = ? WHERE id = ? AND trang_thai = ?').run(den, id, tu);
       if (r.changes === 0) return loi(res, 409, thongBaoSai);
+      if (den === 'dang_mo') dongBoBaoCaoDot(id); // người phụ trách có thể đã đổi từ lúc tạo đợt: mỗi người phải có báo cáo riêng trước khi gửi thư
       // Chỉ lần MỞ đầu tiên (Nháp → Đang mở) mới báo trưởng phòng; mở lại đợt đã đóng thì không gửi lại.
       if (tu === 'nhap' && den === 'dang_mo') guiNen(thongBao.baoMoDot(id));
       res.json({ id, trang_thai: den });
@@ -726,32 +927,26 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
              JOIN bcp_dot d ON d.id = b.dot_id
              JOIN bcp_phong p ON p.id = b.phong_id
             WHERE b.phong_id IN (${phongIds.map(() => '?').join(',')})
+              AND (b.chu_id IS NULL OR b.chu_id = ?)
               AND d.trang_thai IN ('dang_mo','dong')
             ORDER BY d.han_nop DESC, d.id DESC`
         )
-        .all(...phongIds);
+        .all(...phongIds, req.user.id);
+      const ids = rows.map((r) => r.id);
+      const qd = vt.quyetDinhTheoIds(ids);
+      const nguoiSua = vt.nguoiYeuCauSua(ids);
       res.json({
         bao_cao: rows.map((r) => ({
           ...r,
           tre_han: treHan(r, { han_nop: r.han_nop, trang_thai: r.dot_trang_thai }, homNay),
           sua_duoc: r.dot_trang_thai === 'dang_mo' && TRANG_THAI_SUA_DUOC.includes(r.trang_thai),
+          // Viện trưởng đã quyết định gì về báo cáo này (phòng thấy ngay trong "Báo cáo của tôi"), và ai đưa báo cáo về sửa.
+          vien_truong: qd.get(r.id) || null,
+          nhan_xet_boi: r.trang_thai === 'can_chinh_sua' ? nguoiSua.get(r.id) || 'quan_ly' : null,
         })),
       });
     })
   );
-
-  /** Hồ sơ trình đang chờ Viện trưởng duyệt, kèm người gửi, lời nhắn và tên tệp để thẻ việc hiện đủ không cần bấm thêm. */
-  function hoSoChoVienTruong() {
-    const ds = db
-      .prepare(
-        `SELECT t.dot_id, d.tieu_de, t.gui_luc, t.loi_nhan, u.fullname AS nguoi_gui
-           FROM bcp_trinh t JOIN bcp_dot d ON d.id = t.dot_id LEFT JOIN users u ON u.id = t.nguoi_gui_id
-          WHERE t.trang_thai = 'da_gui' ORDER BY t.gui_luc`
-      )
-      .all();
-    const tep = db.prepare('SELECT id, ten_goc FROM bcp_trinh_tep WHERE dot_id = ? ORDER BY id');
-    return ds.map((x) => ({ ...x, tep: tep.all(x.dot_id) }));
-  }
 
   /**
    * "Việc của tôi" cho MỌI người có vai trò, nhẹ để trang chủ gọi được: báo cáo của phòng mình đang cần nộp/chỉnh sửa
@@ -769,16 +964,18 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
             `SELECT b.id, b.trang_thai, b.nop_luc, p.ten AS phong_ten, d.id AS dot_id, d.tieu_de, d.han_nop, d.trang_thai AS dot_trang_thai
                FROM bcp_bao_cao b JOIN bcp_dot d ON d.id = b.dot_id JOIN bcp_phong p ON p.id = b.phong_id
               WHERE b.phong_id IN (${phongIds.map(() => '?').join(',')})
+                AND (b.chu_id IS NULL OR b.chu_id = ?)
                 AND d.trang_thai = 'dang_mo' AND b.trang_thai IN ('chua_nop','can_chinh_sua')
               ORDER BY d.han_nop, d.id`
           )
-          .all(...phongIds)
+          .all(...phongIds, req.user.id)
           .map((r) => ({
             id: r.id, trang_thai: r.trang_thai, phong_ten: r.phong_ten, tieu_de: r.tieu_de, han_nop: r.han_nop,
             tre_han: treHan(r, { han_nop: r.han_nop, trang_thai: r.dot_trang_thai }, homNay),
           }));
       }
-      res.json({ bao_cao: baoCao, ho_so_duyet: laVienTruong ? hoSoChoVienTruong() : [] });
+      // dot_duyet: các đợt đã trình mà còn báo cáo chờ Viện trưởng quyết định.
+      res.json({ bao_cao: baoCao, dot_duyet: laVienTruong ? vt.dotChoVienTruong() : [] });
     })
   );
 
@@ -787,7 +984,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     const b = db
       .prepare(
         `SELECT b.*, p.ten AS phong_ten,
-                d.tieu_de, d.mo_ta AS dot_mo_ta, d.loai, d.ky, d.han_nop, d.trang_thai AS dot_trang_thai,
+                d.tieu_de, d.mo_ta AS dot_mo_ta, d.loai, d.ky, d.han_nop, d.cach_nop, d.trang_thai AS dot_trang_thai,
                 v.so_phien_ban, v.truong_json
            FROM bcp_bao_cao b
            JOIN bcp_phong p ON p.id = b.phong_id
@@ -797,8 +994,10 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       )
       .get(id);
     if (!b) return null;
-    const laChuPhong = req.bcp.phongIds.includes(b.phong_id) && b.dot_trang_thai !== 'nhap';
+    // Báo cáo riêng của một người (chu_id) chỉ người đó nhập/xem; báo cáo chung hoặc chờ giao (chu_id rỗng) thì ai trong phòng cũng được.
+    const laChuPhong = req.bcp.phongIds.includes(b.phong_id) && b.dot_trang_thai !== 'nhap' && (b.chu_id == null || b.chu_id === req.user.id);
     if (!req.bcp.laQuanLy && !laChuPhong) return null; // không phân biệt "không có" và "không được xem"
+    if (chiXemDaTrinh(req) && !laChuPhong && !dotDaTrinh(b.dot_id)) return null; // đợt chưa trình: Viện trưởng chưa thấy
     return { b, laChuPhong };
   }
 
@@ -813,10 +1012,12 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       const homNay = ngayVN(new Date());
       const nguoiNopDuyet = db
         .prepare(
-          `SELECT un.fullname AS nguoi_nop, ud.fullname AS nguoi_duyet
+          `SELECT un.fullname AS nguoi_nop, ud.fullname AS nguoi_duyet, uc.fullname AS nguoi_phu_trach,
+                  (SELECT t.chuc_danh FROM bcp_thanh_vien t WHERE t.user_id = b.chu_id AND t.phong_id = b.phong_id AND t.vai_tro = 'truong_phong') AS chuc_danh
              FROM bcp_bao_cao b
              LEFT JOIN users un ON un.id = b.nguoi_nop_id
              LEFT JOIN users ud ON ud.id = b.nguoi_duyet_id
+             LEFT JOIN users uc ON uc.id = b.chu_id
             WHERE b.id = ?`
         )
         .get(id);
@@ -845,6 +1046,9 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         nop_luc: b.nop_luc,
         duyet_luc: b.duyet_luc,
         nguoi_nop: nguoiNopDuyet.nguoi_nop,
+        cach_nop: b.cach_nop,
+        nguoi_phu_trach: nguoiNopDuyet.nguoi_phu_trach, // có khi đợt cách nộp "tat_ca": báo cáo riêng của người này
+        chuc_danh: nguoiNopDuyet.nguoi_phu_trach ? nguoiNopDuyet.chuc_danh : null,
         nguoi_duyet: b.trang_thai === 'da_duyet' ? nguoiNopDuyet.nguoi_duyet : null,
         tu_duyet: tuDuyet,
         nop_boi_toi: b.nguoi_nop_id != null && b.nguoi_nop_id === req.user.id,
@@ -864,6 +1068,11 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         // Cờ cho giao diện; server vẫn kiểm lại ở từng thao tác.
         sua_duoc: laChuPhong && b.dot_trang_thai === 'dang_mo' && TRANG_THAI_SUA_DUOC.includes(b.trang_thai),
         y_kien,
+        // Quyết định của Viện trưởng về báo cáo này (chủ phòng, người quản lý và Viện trưởng đều thấy), và ai đã đưa báo cáo về sửa.
+        vien_truong: vt.quyetDinhMotBaoCao(id),
+        vt_trang_thai: trangThaiVienTruong(b.trang_thai, vt.quyetDinhMotBaoCao(id)),
+        nhan_xet_boi: b.trang_thai === 'can_chinh_sua' ? vt.nguoiYeuCauSua([id]).get(id) || 'quan_ly' : null,
+        da_trinh: !!db.prepare('SELECT 1 AS ok FROM bcp_trinh_lan WHERE dot_id = ?').get(b.dot_id),
         // Chỉ Viện trưởng gửi được ý kiến, và chỉ khi phòng đã nộp (bản nháp chưa phải báo cáo để góp ý).
         y_kien_duoc: req.bcp.laVienTruong && b.dot_trang_thai !== 'nhap' && b.trang_thai !== 'chua_nop',
         duyet_duoc: req.bcp.laQuanLyModule && b.trang_thai === 'da_nop',
@@ -926,6 +1135,8 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       const kq = kiemTraDuLieu(truong, nguon, { nop: true });
       if (!kq.ok) return loi(res, 422, 'Chưa điền đủ hoặc có ô không hợp lệ.', { loi: kq.loi });
 
+      // Báo cáo mà Viện trưởng đã đề nghị chỉnh sửa: nộp lại thì báo Viện trưởng (xem TRƯỚC khi ghi 'nop_lai', vì lúc đó quyết định đã hết hiệu lực).
+      const theoDeNghi = b.trang_thai === 'can_chinh_sua' && (vt.quyetDinhMotBaoCao(b.id) || {}).quyet_dinh === 'de_nghi_chinh_sua';
       let doi = 0;
       db.transaction(() => {
         const r = db
@@ -941,6 +1152,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       })();
       if (!doi) return loi(res, 409, 'Báo cáo vừa đổi trạng thái, hãy tải lại trang.');
       guiNen(thongBao.baoDaNop(b.id, req.user.id, b.trang_thai === 'can_chinh_sua'));
+      if (theoDeNghi) guiNen(thongBao.baoNopLaiTheoDeNghi(b.id, req.user.id));
       res.json({ ok: true, trang_thai: 'da_nop' });
     })
   );
@@ -995,12 +1207,18 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       const noiDung = typeof (req.body && req.body.noi_dung) === 'string' ? req.body.noi_dung.trim() : '';
       if (!noiDung) return loi(res, 400, 'Cần nhập nội dung ý kiến.');
       if (noiDung.length > 2000) return loi(res, 400, 'Ý kiến tối đa 2000 ký tự.');
-      const r = db.prepare('INSERT INTO bcp_y_kien (bao_cao_id, nguoi_id, noi_dung, tao_luc) VALUES (?,?,?,?)').run(id, req.user.id, noiDung, new Date().toISOString());
+      const tao_luc_y_kien = new Date().toISOString();
+      const r = db.prepare('INSERT INTO bcp_y_kien (bao_cao_id, nguoi_id, noi_dung, tao_luc) VALUES (?,?,?,?)').run(id, req.user.id, noiDung, tao_luc_y_kien);
       // Số người sẽ nhận thư (đếm đồng bộ để giao diện báo lại; việc gửi chạy nền): trưởng phòng của phòng đó, và người quản lý module.
       const truongPhong = thongBao.nguoiNhanYKien(id);
       const quanLy = thongBao.nguoiNhanQuanLyYKien(req.user.id, truongPhong);
       guiNen(thongBao.baoYKien(id, req.user.id, noiDung));
-      res.status(201).json({ id: Number(r.lastInsertRowid), da_bao: truongPhong.length, da_bao_quan_ly: quanLy.length });
+      res.status(201).json({
+        id: Number(r.lastInsertRowid),
+        da_bao: truongPhong.length,
+        da_bao_quan_ly: quanLy.length,
+        y_kien: { id: Number(r.lastInsertRowid), noi_dung: noiDung, tao_luc: tao_luc_y_kien, nguoi: req.user.fullname || null },
+      });
     })
   );
 
@@ -1034,6 +1252,11 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
   );
 
 
+  // ══ VIỆN TRƯỞNG DUYỆT TRONG GIAO DIỆN (trình đợt, đọc cả đợt, quyết định từng báo cáo) ══════════════════
+  router.use(
+    createVienTruongRouter({ db, vt, thongBao, guiNen, loi, bao, docId, chuoi, parseJson, nap, ghiLichSu, ngayVN, treHan, dongBoBaoCaoDot, canQuanLy, canQuanLyModule })
+  );
+
   // ══ LỜI MỜI TRƯỞNG PHÒNG QUA EMAIL ═══════════════════════════════════════════
   // Người quản lý nhập email. Đã có tài khoản eoffice → gán luôn (và báo cho họ). CHƯA có → tạo lời mời
   // chờ + gửi thư hướng dẫn đăng ký kèm MÃ DÙNG MỘT LẦN.
@@ -1062,6 +1285,8 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       }
       const phongId = docId(b.phong_id);
       if (!phongId) return loi(res, 400, 'Cần chọn phòng.');
+      const chucDanh = b.chuc_danh === undefined || b.chuc_danh === null || b.chuc_danh === '' ? ChucDanh.MAC_DINH : b.chuc_danh;
+      if (!ChucDanh.hopLe(chucDanh)) return loi(res, 400, 'Chức danh không hợp lệ.');
       const p = db.prepare('SELECT id, ten, active FROM bcp_phong WHERE id = ?').get(phongId);
       if (!p) return loi(res, 404, 'Không tìm thấy phòng.');
       if (!p.active) return loi(res, 409, 'Phòng này đang ngừng sử dụng.');
@@ -1069,9 +1294,10 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       const user = db.prepare('SELECT id, fullname FROM users WHERE lower(email) = ?').get(email);
       if (user) {
         const trung = db.prepare("SELECT 1 AS ok FROM bcp_thanh_vien WHERE user_id = ? AND vai_tro = 'truong_phong' AND phong_id = ?").get(user.id, phongId);
-        if (trung) return loi(res, 409, 'Người này đã là trưởng phòng của phòng này.');
-        db.prepare("INSERT INTO bcp_thanh_vien (user_id, vai_tro, phong_id, created_by) VALUES (?, 'truong_phong', ?, ?)").run(user.id, phongId, req.user.id);
-        guiNen(thongBao.baoDuocGan(user.id, phongId, req.user.id));
+        if (trung) return loi(res, 409, 'Người này đã được phân công cho phòng này.');
+        db.prepare("INSERT INTO bcp_thanh_vien (user_id, vai_tro, phong_id, chuc_danh, created_by) VALUES (?, 'truong_phong', ?, ?, ?)").run(user.id, phongId, chucDanh, req.user.id);
+        dongBoTheoPhong(phongId); // báo cáo riêng phải có trước khi gửi thư báo các đợt đang mở
+        guiNen(thongBao.baoDuocGan(user.id, phongId, req.user.id, chucDanh));
         return res.status(201).json({ ket_qua: 'da_gan', user_id: user.id, fullname: user.fullname });
       }
 
@@ -1081,9 +1307,9 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       const ma = taoMa();
       const hetHan = new Date(Date.now() + HAN_LOI_MOI_MS).toISOString();
       const r = db
-        .prepare('INSERT INTO bcp_loi_moi (email, phong_id, ma_bam, nguoi_moi_id, het_han) VALUES (?,?,?,?,?)')
-        .run(email, phongId, bamMa(ma), req.user.id, hetHan);
-      guiNen(thongBao.baoLoiMoi({ email, phongTen: p.ten, nguoiMoiTen: req.user.fullname, ma, hetHan }));
+        .prepare('INSERT INTO bcp_loi_moi (email, phong_id, chuc_danh, ma_bam, nguoi_moi_id, het_han) VALUES (?,?,?,?,?,?)')
+        .run(email, phongId, chucDanh, bamMa(ma), req.user.id, hetHan);
+      guiNen(thongBao.baoLoiMoi({ email, phongTen: p.ten, nguoiMoiTen: req.user.fullname, ma, hetHan, chucDanh }));
       res.status(201).json({ ket_qua: 'da_moi', id: Number(r.lastInsertRowid), het_han: hetHan });
     })
   );
@@ -1094,7 +1320,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     bao((req, res) => {
       const ds = db
         .prepare(
-          `SELECT l.id, l.email, l.phong_id, p.ten AS phong_ten, l.tao_luc, l.het_han, u.fullname AS nguoi_moi
+          `SELECT l.id, l.email, l.phong_id, l.chuc_danh, p.ten AS phong_ten, l.tao_luc, l.het_han, u.fullname AS nguoi_moi
              FROM bcp_loi_moi l JOIN bcp_phong p ON p.id = l.phong_id LEFT JOIN users u ON u.id = l.nguoi_moi_id
             WHERE l.trang_thai = 'cho' ORDER BY l.id DESC`
         )
@@ -1125,11 +1351,12 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       db.transaction(() => {
         const co = db.prepare("SELECT 1 AS ok FROM bcp_thanh_vien WHERE user_id = ? AND vai_tro = 'truong_phong' AND phong_id = ?").get(req.user.id, l.phong_id);
         if (!co) {
-          db.prepare("INSERT INTO bcp_thanh_vien (user_id, vai_tro, phong_id, created_by) VALUES (?, 'truong_phong', ?, ?)").run(req.user.id, l.phong_id, l.nguoi_moi_id);
+          db.prepare("INSERT INTO bcp_thanh_vien (user_id, vai_tro, phong_id, chuc_danh, created_by) VALUES (?, 'truong_phong', ?, ?, ?)").run(req.user.id, l.phong_id, ChucDanh.hopLe(l.chuc_danh) ? l.chuc_danh : ChucDanh.MAC_DINH, l.nguoi_moi_id);
         }
         db.prepare("UPDATE bcp_loi_moi SET trang_thai = 'da_nhan', nhan_luc = ?, nguoi_nhan_id = ? WHERE id = ? AND trang_thai = 'cho'").run(new Date().toISOString(), req.user.id, l.id);
+        dongBoTheoPhong(l.phong_id);
       })();
-      res.json({ ok: true, phong: { id: p.id, ten: p.ten } });
+      res.json({ ok: true, phong: { id: p.id, ten: p.ten }, chuc_danh: ChucDanh.hopLe(l.chuc_danh) ? l.chuc_danh : ChucDanh.MAC_DINH });
     })
   );
 
@@ -1139,13 +1366,13 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     bao((req, res) => {
       const id = docId(req.params.id);
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
-      const l = db.prepare("SELECT l.id, l.email, p.ten AS phong_ten FROM bcp_loi_moi l JOIN bcp_phong p ON p.id = l.phong_id WHERE l.id = ? AND l.trang_thai = 'cho'").get(id);
+      const l = db.prepare("SELECT l.id, l.email, l.chuc_danh, p.ten AS phong_ten FROM bcp_loi_moi l JOIN bcp_phong p ON p.id = l.phong_id WHERE l.id = ? AND l.trang_thai = 'cho'").get(id);
       if (!l) return loi(res, 404, 'Không tìm thấy lời mời đang chờ.');
       // Mã CŨ mất hiệu lực (ma_bam bị thay): thư gửi nhầm/cũ không dùng được nữa.
       const ma = taoMa();
       const hetHan = new Date(Date.now() + HAN_LOI_MOI_MS).toISOString();
       db.prepare('UPDATE bcp_loi_moi SET ma_bam = ?, het_han = ?, nguoi_moi_id = ? WHERE id = ?').run(bamMa(ma), hetHan, req.user.id, id);
-      guiNen(thongBao.baoLoiMoi({ email: l.email, phongTen: l.phong_ten, nguoiMoiTen: req.user.fullname, ma, hetHan }));
+      guiNen(thongBao.baoLoiMoi({ email: l.email, phongTen: l.phong_ten, nguoiMoiTen: req.user.fullname, ma, hetHan, chucDanh: l.chuc_danh }));
       res.json({ ok: true, het_han: hetHan });
     })
   );
@@ -1171,7 +1398,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
     canQuanLy,
     bao((req, res) => {
       const homNay = ngayVN(new Date());
-      const dots = db.prepare("SELECT id, tieu_de, ky, han_nop, trang_thai FROM bcp_dot WHERE trang_thai = 'dang_mo' ORDER BY han_nop, id").all();
+      const dots = db.prepare("SELECT id, tieu_de, ky, han_nop, trang_thai, cach_nop FROM bcp_dot WHERE trang_thai = 'dang_mo' ORDER BY han_nop, id").all().filter((d) => !chiXemDaTrinh(req) || dotDaTrinh(d.id));
       const bcs = db
         .prepare("SELECT b.dot_id, b.trang_thai, b.nop_luc FROM bcp_bao_cao b JOIN bcp_dot d ON d.id = b.dot_id WHERE d.trang_thai = 'dang_mo'")
         .all();
@@ -1193,21 +1420,29 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
         }
         chuaNopTong += dem.chua_nop;
         treTong += dem.tre_han;
-        return { dot_id: d.id, tieu_de: d.tieu_de, ky: d.ky, han_nop: d.han_nop, ...dem };
+        const t = vt.trinhCuaDot(d.id);
+        const tdVt = t ? vt.tienDoDot(d.id) : null;
+        return {
+          dot_id: d.id, tieu_de: d.tieu_de, ky: d.ky, han_nop: d.han_nop, cach_nop: d.cach_nop, ...dem,
+          // Đã trình Viện trưởng chưa, và ông đã xử lý đến đâu (cho dải "Cần xử lý" của người quản lý).
+          da_trinh: !!t,
+          vt: tdVt ? { cho_quyet_dinh: tdVt.cho_quyet_dinh, duyet: tdVt.duyet, khong_duyet: tdVt.khong_duyet, de_nghi_chinh_sua: tdVt.de_nghi_chinh_sua } : null,
+        };
       });
       // Báo cáo chờ duyệt: tính cả đợt đã đóng (đóng đợt không có nghĩa là đã duyệt xong).
       const choDuyet = db
         .prepare("SELECT COUNT(*) AS n FROM bcp_bao_cao b JOIN bcp_dot d ON d.id = b.dot_id WHERE b.trang_thai = 'da_nop' AND d.trang_thai IN ('dang_mo','dong')")
         .get().n;
-      const choVienTruong = hoSoChoVienTruong();
+      const dotChoVt = vt.dotChoVienTruong();
       res.json({
         la_vien_truong: req.bcp.laVienTruong,
+        dot_cho_vien_truong: dotChoVt,
+        dot_da_trinh: vt.dsDotTrinh({ gioiHan: 30 }),
+        bao_cao_cho_vien_truong: dotChoVt.reduce((n, x) => n + x.cho_quyet_dinh, 0),
         dot_dang_mo: dots.length,
         cho_duyet: choDuyet,
         chua_nop: chuaNopTong,
         tre_han: treTong,
-        cho_vien_truong: choVienTruong.length,
-        ho_so_cho_vien_truong: choVienTruong,
         chi_tiet: chiTiet,
       });
     })
@@ -1245,19 +1480,35 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
 
       const rows = db
         .prepare(
-          `SELECT b.id, b.phong_id, b.trang_thai, b.du_lieu_json, p.ten AS phong_ten, u.fullname AS nguoi_nop
+          `SELECT b.id, b.phong_id, b.trang_thai, b.du_lieu_json,
+                  CASE WHEN uc.fullname IS NULL THEN p.ten ELSE p.ten || ' — ' || uc.fullname END AS phong_ten,
+                  u.fullname AS nguoi_nop
              FROM bcp_bao_cao b
              JOIN bcp_phong p ON p.id = b.phong_id
              LEFT JOIN users u ON u.id = b.nguoi_nop_id
-            WHERE b.dot_id = ? ORDER BY p.ten`
+             LEFT JOIN users uc ON uc.id = b.chu_id
+            WHERE b.dot_id = ? ORDER BY p.ten, uc.fullname`
         )
         .all(id);
       const daNop = (r) => r.trang_thai === 'da_nop' || r.trang_thai === 'da_duyet';
+      // ?bao_cao=ID,ID: chọn đích danh từng báo cáo (đợt mỗi người một báo cáo); không có thì chọn theo phòng (mọi báo cáo của phòng đó).
+      let idsBaoCao = null;
+      if (req.query.bao_cao !== undefined) {
+        idsBaoCao = [...new Set(String(req.query.bao_cao).split(',').map((x) => docId(x.trim())))];
+        if (idsBaoCao.length === 0 || idsBaoCao.includes(null) || idsBaoCao.length > 400) return loi(res, 400, 'Danh sách báo cáo không hợp lệ.');
+      }
       let chon;
-      if (ids === null) chon = rows.filter(daNop);
+      if (idsBaoCao !== null) {
+        chon = rows.filter((r) => idsBaoCao.includes(r.id));
+        if (chon.length !== idsBaoCao.length) return loi(res, 404, 'Có báo cáo không thuộc đợt báo cáo này.');
+        const chua = chon.filter((r) => !daNop(r));
+        if (chua.length) {
+          return loi(res, 409, 'Chưa xuất được vì báo cáo chưa nộp (hoặc đang chờ chỉnh sửa): ' + chua.map((r) => r.phong_ten).join('; ') + '.');
+        }
+      } else if (ids === null) chon = rows.filter(daNop);
       else {
         chon = rows.filter((r) => ids.includes(r.phong_id));
-        if (chon.length !== ids.length) return loi(res, 404, 'Có phòng không thuộc đợt báo cáo này.');
+        if (new Set(chon.map((r) => r.phong_id)).size !== ids.length) return loi(res, 404, 'Có phòng không thuộc đợt báo cáo này.');
         const chua = chon.filter((r) => !daNop(r));
         if (chua.length) {
           return loi(res, 409, 'Chưa xuất được vì phòng chưa nộp (hoặc đang chờ chỉnh sửa): ' + chua.map((r) => r.phong_ten).join('; ') + '.');
@@ -1291,11 +1542,6 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, b
       res.end(buf);
     })
   );
-
-  // ══ HỒ SƠ TRÌNH VIỆN TRƯỞNG (thuộc về một đợt) ════════════════════════════
-  if (uploadsRoot) {
-    router.use('/dot/:id/trinh', canQuanLy, createTrinhRouter({ db, uploadsRoot, thongBao, guiNen, loi, bao, docId }));
-  }
 
   return router;
 };

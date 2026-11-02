@@ -175,14 +175,18 @@ Sau mỗi đợt: **deploy lên production và theo dõi 48h trước khi bắt 
 Làm đúng 8 bước, không bỏ bước nào:
 
 ```bash
-# 1. Chụp ảnh danh sách route TRƯỚC khi sửa
+# 1. Chụp ảnh route TRƯỚC khi sửa: danh sách (có tồn tại không) + hành vi (mã trạng thái, nội dung)
 node scripts/route-inventory.js > /tmp/routes-before.txt
+npm run route:snapshot -- /tmp/snap-before.json      # ~30 giây, chạy trên bản sao DB, không đụng dữ liệu thật
 
 # 2. Branch mới từ main sạch
 git checkout main && git pull && git checkout -b refactor/routes-<slug>
 ```
 
-3. **Bổ sung smoke test** cho nhóm sắp tách vào `tests/smoke.test.js` → chạy `npm test`, phải **xanh trên code cũ**. (Test viết sau khi tách thì không chứng minh được gì.)
+3. **Bổ sung test** cho nhóm sắp tách: mỗi miền một file `tests/<slug>.test.js` — **mẫu: `tests/crd.test.js`** (bảng phân quyền đối chiếu với route thật + test nghiệp vụ ghim hành vi hiện tại). Chạy `npm test`, phải **xanh trên code cũ**. (Test viết sau khi tách thì không chứng minh được gì.)
+
+   - Mỗi file test dùng server hộp cát riêng: gọi `startTestServer({ port: <cổng riêng> })` — Node chạy các file test **song song** nên hai file không được chung cổng.
+   - **Kiểm chứng test bằng đột biến trước khi tin nó:** cố ý phá `server.js` vài chỗ (bỏ `adminOnly`, đổi câu lỗi, bỏ kiểm tra chủ sở hữu, đổi thứ tự route) và xác nhận test **đỏ**. Test xanh ngay lần chạy đầu chưa chứng minh được gì; ở Đợt 2 chính cách này đã tìm ra một lỗ hổng của lưới (thống kê loại lịch đã hủy) trước khi tách.
 
 4. **Tạo `routes/<slug>.js`** theo đúng mẫu factory đang dùng — xem `routes/ytnn.js` làm chuẩn:
 
@@ -215,6 +219,15 @@ node scripts/route-inventory.js > /tmp/routes-after.txt && diff /tmp/routes-befo
 
 Kết quả **phải rỗng**. Có khác biệt = đã làm mất hoặc đổi endpoint.
 
+`diff` trên danh sách chỉ biết route **còn tồn tại**. Để bắt cả việc route còn đó nhưng đổi quyền (401 → 200), đổi mã lỗi hay đổi nội dung, so thêm ảnh hành vi:
+
+```bash
+npm run route:snapshot -- /tmp/snap-after.json
+npm run route:compare -- /tmp/snap-before.json /tmp/snap-after.json
+```
+
+Phải ra **`KẾT LUẬN: GIỐNG NHAU`**. Công cụ tự chạy hai lượt để nhận diện phản hồi tự đổi theo thời gian và bỏ qua chúng, nên mọi khác biệt còn lại đều là thật. Giới hạn: chỉ gọi route GET bằng đủ 3 danh tính, route ghi chỉ gọi không token — logic nghiệp vụ của route ghi vẫn phải có test riêng (bước 3).
+
 ```bash
 npm test
 ```
@@ -224,6 +237,7 @@ npm test
 ### Định nghĩa "Xong" (Definition of Done) — một đợt chỉ được merge khi đủ 5 điều
 
 - [ ] `diff` route-inventory trước/sau = **rỗng**
+- [ ] `route:compare` trước/sau = **GIỐNG NHAU**
 - [ ] `npm test` xanh, có test mới cho nhóm vừa tách
 - [ ] `server.js` giảm đúng số dòng đã chuyển đi (không phát sinh code mới)
 - [ ] Không sửa logic nghiệp vụ trong cùng commit
