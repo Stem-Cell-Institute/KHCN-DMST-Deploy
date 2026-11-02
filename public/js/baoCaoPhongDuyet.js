@@ -358,7 +358,6 @@
             nutQD('de_nghi_chinh_sua', 'Đề nghị chỉnh sửa', '↺', 'e', 'duyet-qd-sua', bat, qd === 'de_nghi_chinh_sua' || (S.soan && S.soan.loai === 'de_nghi_chinh_sua'), function () { moSoan('de_nghi_chinh_sua'); })));
         }
         nodes.push(h('div', { class: 'duyet-hang' }, hang));
-        if (coQuyen) nodes.push(h('p', { class: 'mo duyet-phim-goi-y', text: 'Phím tắt: J sau · K trước · N báo cáo chờ kế tiếp · D duyệt · X không duyệt · Y ý kiến · E đề nghị chỉnh sửa' }));
         ghi(thanh, nodes);
       }
 
