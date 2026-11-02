@@ -29,6 +29,8 @@ const ChucDanh = require('../services/baoCaoPhongChucDanh');
 const Xuat = require('../services/baoCaoPhongXuat');
 const { contentDisposition } = require('../lib/filenames');
 const createVienTruongRouter = require('./baoCaoPhongVienTruong');
+const createKySoRouter = require('./baoCaoPhongKySo');
+const { kySoChung } = require('../services/mysign');
 const { taoVienTruong, trangThaiVienTruong } = require('../services/baoCaoPhongVienTruong');
 
 const LOAI_DOT = ['tuan', 'thang', 'quy', 'nam', 'dot_xuat'];
@@ -83,8 +85,10 @@ function treHan(bc, dot, homNay) {
  *   mailSend — gửi email (nodemailer của server.js); thiếu thì module chạy bình thường, chỉ không gửi thư.
  *   baseUrl — gốc địa chỉ để đặt liên kết trong email.
  *   nhacTuDong — true thì bật hẹn giờ tự nhắc trước hạn (chỉ server thật; test gọi router.nhacHan.chayMotLan trực tiếp).
+ *   uploadsRoot — thư mục tệp tải lên; PDF ký số MySign nằm ở <uploadsRoot>/mysign (services/mysign/).
+ *   kySo — bộ ký số MySign (chỉ test truyền vào, dùng MySign giả lập); mặc định là bộ dùng chung của hệ thống.
  */
-module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacTuDong }) {
+module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacTuDong, uploadsRoot, kySo }) {
   const router = express.Router();
 
   // Module phụ không được phép làm sập cả hệ thống đang chạy thật: nếu khởi tạo bảng lỗi
@@ -1073,6 +1077,8 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
         vt_trang_thai: trangThaiVienTruong(b.trang_thai, vt.quyetDinhMotBaoCao(id)),
         nhan_xet_boi: b.trang_thai === 'can_chinh_sua' ? vt.nguoiYeuCauSua([id]).get(id) || 'quan_ly' : null,
         da_trinh: !!db.prepare('SELECT 1 AS ok FROM bcp_trinh_lan WHERE dot_id = ?').get(b.dot_id),
+        // Bản nộp hiện tại đã được Viện trưởng ký số (MySign) chưa — có thì giao diện hiện nút tải PDF đã ký.
+        ky_so: kySoBc.kyCuaBaoCao(id, b.nop_luc),
         // Chỉ Viện trưởng gửi được ý kiến, và chỉ khi phòng đã nộp (bản nháp chưa phải báo cáo để góp ý).
         y_kien_duoc: req.bcp.laVienTruong && b.dot_trang_thai !== 'nhap' && b.trang_thai !== 'chua_nop',
         duyet_duoc: req.bcp.laQuanLyModule && b.trang_thai === 'da_nop',
@@ -1252,9 +1258,19 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
   );
 
 
+  // ══ VIỆN TRƯỞNG DUYỆT VÀ KÝ SỐ (MySign) ═══════════════════════════════════════════════════════════════
+  // Bộ ký số dùng chung của hệ thống cần thư mục lưu PDF; không có (vd. test cũ) thì chữ ký số coi như chưa bật.
+  const kySoBc = createKySoRouter({
+    db, kySo: kySo || (uploadsRoot ? kySoChung({ db, uploadsRoot }) : null), vt, thongBao, guiNen, loi, bao, docId, parseJson, nap, ghiLichSu,
+  });
+  router.use(kySoBc.router);
+
   // ══ VIỆN TRƯỞNG DUYỆT TRONG GIAO DIỆN (trình đợt, đọc cả đợt, quyết định từng báo cáo) ══════════════════
   router.use(
-    createVienTruongRouter({ db, vt, thongBao, guiNen, loi, bao, docId, chuoi, parseJson, nap, ghiLichSu, ngayVN, treHan, dongBoBaoCaoDot, canQuanLy, canQuanLyModule })
+    createVienTruongRouter({
+      db, vt, thongBao, guiNen, loi, bao, docId, chuoi, parseJson, nap, ghiLichSu, ngayVN, treHan, dongBoBaoCaoDot, canQuanLy, canQuanLyModule,
+      kyCuaBaoCao: kySoBc.kyCuaBaoCao, batKySo: kySoBc.batKySo,
+    })
   );
 
   // ══ LỜI MỜI TRƯỞNG PHÒNG QUA EMAIL ═══════════════════════════════════════════

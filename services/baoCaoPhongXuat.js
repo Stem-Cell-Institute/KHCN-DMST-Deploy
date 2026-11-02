@@ -20,6 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 const { tinhTongHop } = require('./baoCaoPhongMau');
+const { datChoKy } = require('./mysign/pades');
 
 // ── Thông tin cơ quan: hằng số của Viện, in ở đầu mọi văn bản ───────────────
 const CO_QUAN = {
@@ -75,10 +76,10 @@ function tieuDeVanBan(dot) {
 
 /**
  * Dựng mô hình tài liệu cho MỘT báo cáo.
- * @param {{dot:object, truong:object[], baoCao:{phong_ten:string, nguoi_nop?:string, du_lieu:object}, ngayXuat?:Date}} p
+ * @param {{dot:object, truong:object[], baoCao:{phong_ten:string, nguoi_nop?:string, du_lieu:object}, ngayXuat?:Date, kySo?:{ten:string, dong:string[]}}} p
  * @returns {{tieu_de_tep:string, khoi:object[]}}
  */
-function dungMoHinh({ dot, truong, baoCao, ngayXuat }) {
+function dungMoHinh({ dot, truong, baoCao, ngayXuat, kySo }) {
   const du = baoCao.du_lieu || {};
   const { ngay, thang, nam } = ngayVietNam(ngayXuat);
   const khoi = [];
@@ -153,7 +154,8 @@ function dungMoHinh({ dot, truong, baoCao, ngayXuat }) {
     cot: [
       { tieu_de: 'NGƯỜI LẬP BÁO CÁO', ten: baoCao.nguoi_nop || '' },
       { tieu_de: 'TRƯỞNG PHÒNG', ten: phuTrach },
-      { tieu_de: 'VIỆN TRƯỞNG (Phê duyệt)', ten: '' },
+      // kySo: bản PDF Viện trưởng ký số — ô chữ ký thay cho dòng "(Ký, ghi rõ họ tên)", xem taoPdf().
+      kySo ? { tieu_de: 'VIỆN TRƯỞNG (Phê duyệt)', ten: kySo.ten || '', ky_so: kySo.dong || [] } : { tieu_de: 'VIỆN TRƯỞNG (Phê duyệt)', ten: '' },
     ],
   });
 
@@ -348,7 +350,12 @@ async function taoDocx(moHinhs) {
 // ══ PDF ════════════════════════════════════════════════════════════════════
 const DIR_FONT = path.join(__dirname, 'fonts');
 
-function taoPdf(moHinhs) {
+/**
+ * @param {object[]} moHinhs
+ * @param {{choKy?:{ten:string, lyDo?:string, noiKy?:string, luc?:Date}}} [tuyChon]
+ *   choKy — chừa chỗ chữ ký số PAdES tại ô chữ ký số của mô hình (dựng bằng dungMoHinh({kySo})); xem services/mysign/pades.js.
+ */
+function taoPdf(moHinhs, tuyChon) {
   const PDFDocument = require('pdfkit');
   return new Promise((resolve, reject) => {
     const LE = { t: 57, b: 57, l: 85, r: 57 }; // pt: 2cm, 2cm, 3cm, 2cm
@@ -379,6 +386,7 @@ function taoPdf(moHinhs) {
     const CO_BANG = 10;
     const DEM = 4;
     const trangBatDau = [];
+    let oKySo = null; // {trang, rect} của ô chữ ký số, nếu mô hình có
 
     function canGiuaDong(dong, font, co) {
       doc.font(font).fontSize(co).text(dong, LE.l, doc.y, { width: rongNoiDung(), align: 'center' });
@@ -536,7 +544,18 @@ function taoPdf(moHinhs) {
       k.cot.forEach((c, i) => {
         const x = LE.l + i * w;
         doc.font('B').fontSize(CO - 1).text(c.tieu_de, x, y0, { width: w, align: 'center' });
-        doc.font('I').fontSize(CO - 2).text('(Ký, ghi rõ họ tên)', x, doc.y, { width: w, align: 'center' });
+        if (c.ky_so) {
+          // Ô chữ ký số: khung chữ nhật ghi người ký, thời điểm, dịch vụ. Vùng này cũng là ô chữ ký (widget) trong PDF.
+          const yo = doc.y + 4;
+          const o = [x + 4, yo, w - 8, 58];
+          doc.save().lineWidth(0.8).rect(...o).stroke('#1f4e79').restore();
+          doc.fillColor('#1f4e79');
+          c.ky_so.forEach((dong, j) => {
+            doc.font(j === 0 ? 'B' : 'R').fontSize(8.5).text(dong, o[0] + 4, yo + 4 + j * 12, { width: o[2] - 8, align: 'left', lineBreak: false, ellipsis: true });
+          });
+          doc.fillColor('#000000');
+          oKySo = { trang: doc.bufferedPageRange().start + doc.bufferedPageRange().count - 1, rect: o };
+        } else doc.font('I').fontSize(CO - 2).text('(Ký, ghi rõ họ tên)', x, doc.y, { width: w, align: 'center' });
         if (c.ten) doc.font('B').fontSize(CO).text(c.ten, x, y0 + 80, { width: w, align: 'center' });
       });
       doc.x = LE.l;
@@ -562,6 +581,15 @@ function taoPdf(moHinhs) {
         doc.page.margins.bottom = leDuoi;
       }
     });
+
+    if (tuyChon && tuyChon.choKy) {
+      if (!oKySo) {
+        reject(new Error('Mô hình không có ô chữ ký số.'));
+        return;
+      }
+      doc.switchToPage(oKySo.trang);
+      datChoKy(doc, { rect: oKySo.rect, ...tuyChon.choKy });
+    }
 
     doc.end();
   });

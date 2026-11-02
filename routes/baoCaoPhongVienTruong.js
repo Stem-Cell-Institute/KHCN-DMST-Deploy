@@ -16,12 +16,13 @@
  *   - "Đề nghị chỉnh sửa" đưa báo cáo về Cần chỉnh sửa; đợt đã đóng thì TỰ MỞ LẠI (ghi vào lịch sử đợt, thư báo quản lý đóng lại khi xong).
  *   - "Duyệt" và "Không duyệt" không khóa gì, không đổi trạng thái xác nhận của người quản lý: hai việc độc lập.
  *   - Viện trưởng đổi ý được: quyết định mới thay quyết định cũ, cả hai nằm trong lịch sử. Bấm lại đúng quyết định đang có thì bỏ qua (không ghi, không gửi thư).
+ *     Trừ bản đã KÝ SỐ (hoặc đang chờ ký) qua MySign: không đổi được nữa — xem routes/baoCaoPhongKySo.js.
  */
 
 const express = require('express');
 const { QUYET_DINH, HANH_DONG_THEO_QUYET_DINH, trangThaiVienTruong } = require('../services/baoCaoPhongVienTruong');
 
-module.exports = function createVienTruongRouter({ db, vt, thongBao, guiNen, loi, bao, docId, chuoi, parseJson, nap, ghiLichSu, ngayVN, treHan, dongBoBaoCaoDot, canQuanLy, canQuanLyModule }) {
+module.exports = function createVienTruongRouter({ db, vt, thongBao, guiNen, loi, bao, docId, chuoi, parseJson, nap, ghiLichSu, ngayVN, treHan, dongBoBaoCaoDot, canQuanLy, canQuanLyModule, kyCuaBaoCao = () => null, batKySo = () => false }) {
   const router = express.Router();
 
   const dotDaTrinh = (dotId) => !!db.prepare('SELECT 1 AS ok FROM bcp_trinh_lan WHERE dot_id = ?').get(dotId);
@@ -123,6 +124,7 @@ module.exports = function createVienTruongRouter({ db, vt, thongBao, guiNen, loi
           lich_su: (lichSu.get(r.id) || []).map(({ bao_cao_id, ...x }) => x),
           vien_truong: q,
           vt_trang_thai: trangThaiVienTruong(r.trang_thai, q),
+          ky_so: daNop ? kyCuaBaoCao(r.id, r.nop_luc) : null,
         };
       });
       const trinh = vt.trinhCuaDot(id);
@@ -133,7 +135,7 @@ module.exports = function createVienTruongRouter({ db, vt, thongBao, guiNen, loi
         trinh: trinh ? { lan: trinh.lan, trinh_luc: trinh.trinh_luc, nguoi_trinh: trinh.nguoi_trinh, loi_nhan: trinh.loi_nhan } : null,
         tien_do: vt.tienDoDot(id),
         bao_cao: baoCao,
-        co_the: { quyet_dinh: req.bcp.laVienTruong && !!trinh, y_kien: req.bcp.laVienTruong },
+        co_the: { quyet_dinh: req.bcp.laVienTruong && !!trinh, y_kien: req.bcp.laVienTruong, ky_so: req.bcp.laVienTruong && !!trinh && batKySo() },
       });
     })
   );
@@ -165,6 +167,10 @@ module.exports = function createVienTruongRouter({ db, vt, thongBao, guiNen, loi
       if (typeof body.nop_luc !== 'string' || body.nop_luc !== b.nop_luc) {
         return loi(res, 409, 'Báo cáo vừa được phòng nộp lại hoặc thay đổi. Hãy tải lại trang để đọc bản mới trước khi quyết định.');
       }
+      // Chữ ký số không rút lại được: bản đã ký giữ quyết định Duyệt; đang chờ ký thì chờ MySign trả kết quả.
+      const ky = kyCuaBaoCao(id, b.nop_luc);
+      if (ky && ky.trang_thai === 'da_ky') return loi(res, 409, 'Báo cáo này đã được ký số duyệt nên không đổi quyết định được. Muốn khác, phòng cần nộp bản mới.');
+      if (ky && ky.trang_thai === 'dang_cho') return loi(res, 409, 'Báo cáo đang có yêu cầu ký số chờ xác nhận trên MySign. Hãy xác nhận hoặc từ chối trên điện thoại trước.');
 
       const hienTai = vt.quyetDinhMotBaoCao(id);
       if (hienTai && hienTai.quyet_dinh === quyetDinh && (hienTai.ghi_chu || '') === ghiChu) {
