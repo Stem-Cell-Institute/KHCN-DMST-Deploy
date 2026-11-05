@@ -5542,6 +5542,7 @@ app.post('/api/logout', (req, res) => {
   clearAuthCookie(res);
   return res.json({ ok: true });
 });
+app.use('/api/phien', require('./routes/phien')({ jwt, JWT_SECRET, db, setAuthCookie, userIdIsBanned, userEmailIsMasterAdmin })); // khôi phục cookie từ token trong trình duyệt: routes/phien.js
 
 // Client ghi nhận mở trang / hành động (đã đăng nhập). Module CRD-only cũng được phép (whitelist API).
 app.post('/api/activity/track', authMiddleware, (req, res) => {
