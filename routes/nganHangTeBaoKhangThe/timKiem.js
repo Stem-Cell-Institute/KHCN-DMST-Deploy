@@ -72,7 +72,7 @@ module.exports = function createTimKiemRouter(ctx) {
     return [{ where: where.join(' AND '), params, tuKhoa }, null];
   }
 
-  const CHON = `SELECT t.id, t.name, t.status, t.passage, t.cell_count, t.volume_ml, t.the_tich_ul, t.con_lai_ul, t.chu_don_vi, t.freeze_date, t.project, t.notes,
+  const CHON = `SELECT t.id, t.name, t.status, t.passage, t.cell_count, t.volume_ml, t.the_tich_ul, t.con_lai_ul, t.chu_don_vi, t.lo_id, lo.ma AS lo_ma, dtb.id AS dong_id, dtb.ten AS dong_ten, t.freeze_date, t.project, t.notes,
                        t.row_no, t.col_no, t.box_id, t.sample_type_id, t.owner_user_id, t.updated_at, t.chu_loai, t.nhom_id,
                        s.name AS sample_type_name, b.code AS box_code, b.name AS box_name, b.container_id,
                        g.ten AS nhom_ten,
@@ -82,7 +82,8 @@ module.exports = function createTimKiemRouter(ctx) {
                 FROM nhm_tubes t
                 LEFT JOIN nhm_sample_types s ON s.id = t.sample_type_id
                 LEFT JOIN nhm_boxes b ON b.id = t.box_id
-                LEFT JOIN nhm_nhom g ON g.id = t.nhom_id`;
+                LEFT JOIN nhm_nhom g ON g.id = t.nhom_id
+                LEFT JOIN nhm_lo lo ON lo.id = t.lo_id LEFT JOIN nhm_dong_te_bao dtb ON dtb.id = lo.dong_id`;
 
   /** Lấy các mẫu khớp bộ lọc SQL rồi lọc theo từ khóa; trả về cả đường dẫn đầy đủ. */
   function timMau(loc, sapXep) {

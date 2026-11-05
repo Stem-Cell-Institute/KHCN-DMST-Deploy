@@ -6,7 +6,7 @@
   // Ngân hàng đang dùng: lấy từ ?nh= trên địa chỉ ('te_bao' | 'khang_the'). Không có thì hiện màn hình chọn ngân hàng.
   var NH_VN = { te_bao: 'Ngân hàng tế bào', khang_the: 'Ngân hàng kháng thể' };
   var nganHang = (function () { var v = new URLSearchParams(location.search).get('nh'); return NH_VN[v] ? v : null; })();
-  var state = { meta: null, me: null, groups: [], tree: null, sel: null, expanded: {}, box: null, search: null, cv: null, audit: null };
+  var state = { meta: null, me: null, groups: [], tree: null, sel: null, expanded: {}, box: null, search: null, cv: null, audit: null, dtb: null };
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- tiện ích ----------
@@ -175,6 +175,7 @@
 
   function select(type, id) {
     state.search = null;
+    state.dtb = null;
     state.cv = null;
     state.audit = null;
     state.sel = { type: type, id: id };
@@ -278,6 +279,283 @@
   function chuMauBodyKt(v) {
     if (v.loai !== 'ca_nhan') return Promise.resolve({ chu_don_vi: true });
     return chuMauBody(v.ca).then(function (extra) { return Object.assign({ chu_don_vi: false }, v.nguoi ? { owner_user_id: v.nguoi.id } : {}, extra); });
+  }
+
+  // ---------- dòng tế bào: hồ sơ, lô (stock), QC, tệp đính kèm, báo cáo GMO (ngân hàng tế bào) ----------
+  var DANG_NUOI_VN = { bam_dinh: 'Bám dính', huyen_phu: 'Huyền phù', khac: 'Khác' };
+  var LOAI_DONG_VN = { dong_ban_dau: 'Dòng nguyên phát', dong_vo_han: 'Dòng bất tử hóa', ipsc: 'iPSC', khac: 'Khác' };
+  var QC_LOAI_VN = { mycoplasma: 'Mycoplasma', str: 'Xác thực STR', song_sot: 'Tỉ lệ sống sót', vi_khuan_nam: 'Vi khuẩn / nấm', hinh_thai: 'Hình thái', khac: 'Khác' };
+  var QC_KET_QUA_VN = { dat: 'Đạt', khong_dat: 'Không đạt', am_tinh: 'Âm tính', duong_tinh: 'Dương tính', khac: 'Khác' };
+
+  function ngayVn(s) { return s ? String(s).split('-').reverse().join('/') : ''; }
+  function kb(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+  function homNayIso() { return new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10); }
+  function loChoOpts(map, trong) { return (trong ? [{ value: '', label: trong }] : []).concat(Object.keys(map).map(function (k) { return { value: k, label: map[k] }; })); }
+
+  /** Chip mycoplasma: âm tính còn hạn (thường), dương tính hoặc chưa thử / quá hạn (cảnh báo). */
+  function chipMyco(m) {
+    if (!m || !m.co) return h('span', { class: 'nhm-chip nhm-chip--canh' }, 'Chưa thử mycoplasma');
+    var ten = 'Mycoplasma ' + (QC_KET_QUA_VN[m.ket_qua] || '').toLowerCase() + ' · ' + ngayVn(m.ngay);
+    if (m.ket_qua === 'duong_tinh') return h('span', { class: 'nhm-chip nhm-chip--canh' }, ten);
+    return h('span', { class: 'nhm-chip' + (m.qua_han ? ' nhm-chip--canh' : '') }, ten + (m.qua_han ? ' · quá hạn thử' : ''));
+  }
+  function chipGmo(d) {
+    return d.bien_doi_gen ? h('span', { class: 'nhm-chip nhm-chip--gmo' }, 'GMO') : null;
+  }
+  function chipBsl(bsl) { return bsl ? h('span', { class: 'nhm-chip ' + (bsl >= 3 ? 'nhm-chip--bsl3' : 'nhm-chip--gmo') }, 'BSL-' + bsl) : null; }
+
+  function moDongTeBao(id) {
+    state.search = null; state.cv = null; state.sel = null; state.box = null; state.audit = null;
+    var cu = state.dtb;
+    state.dtb = id ? { view: 'ct', id: id, data: null } : { view: 'ds', q: cu && cu.view === 'ds' ? cu.q : '', gmo: cu && cu.view === 'ds' ? cu.gmo : false, data: null };
+    location.hash = id ? 'dong-te-bao=' + id : 'dong-te-bao';
+    renderTree();
+    renderDetail();
+    return taiDtb();
+  }
+
+  function taiDtb() {
+    var d = state.dtb; if (!d) return Promise.resolve();
+    var url = d.view === 'ct' ? '/cell-lines/' + d.id : '/cell-lines?' + (d.q ? 'q=' + encodeURIComponent(d.q) + '&' : '') + (d.gmo ? 'gmo=1' : '');
+    return api('GET', url).then(function (r) {
+      if (state.dtb !== d) return;
+      d.data = r;
+      renderDetail();
+    }).catch(function (e) {
+      if (state.dtb !== d) return;
+      if (d.view === 'ct' && e.status === 404) { say('Không còn dòng tế bào này.', 'err'); return moDongTeBao(); }
+      d.loi = e.message; renderDetail();
+    });
+  }
+
+  function renderDongTeBao(root) {
+    var d = state.dtb;
+    if (d.loi) return put(root, h('p', { class: 'nhm-err' }, d.loi));
+    if (!d.data) return put(root, h('div', { class: 'nhm-loading' }, 'Đang tải…'));
+    return d.view === 'ct' ? renderHoSoDong(root, d.data) : renderDsDong(root, d);
+  }
+
+  function renderDsDong(root, d) {
+    var q = h('input', { type: 'search', placeholder: 'Tìm theo mã, tên, loài, mô, nguồn…', 'aria-label': 'Tìm dòng tế bào', value: d.q || '' });
+    var gmo = h('input', { type: 'checkbox' }); gmo.checked = !!d.gmo;
+    var tim = function () { d.q = q.value.trim(); d.gmo = gmo.checked; d.data = null; renderDetail(); taiDtb(); };
+    q.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); tim(); } });
+    gmo.addEventListener('change', tim);
+    var quanTri = state.meta.canManage || state.meta.laVienTruong;
+    var ds = d.data.cell_lines;
+    put(root,
+      h('div', { class: 'nhm-title' }, [h('h2', {}, 'Dòng tế bào'), h('span', { class: 'nhm-muted' }, d.data.tong + ' dòng')]),
+      h('div', { class: 'nhm-dtb-bar' }, [q, nutNho('Tìm', 'primary', tim), h('label', {}, [gmo, 'Chỉ dòng biến đổi gen']), nutNho('+ Thêm dòng', 'primary', function () { dongForm(null); })]
+        .concat(quanTri ? [nutNho('Báo cáo GMO (in)', '', function () { window.open(API + '/reports/gmo/print?nh=te_bao', '_blank', 'noopener'); }), h('a', { class: 'nhm-btn nhm-btn--sm', href: API + '/reports/gmo.csv?nh=te_bao' }, 'Xuất CSV')] : [])),
+      ds.length ? h('div', { class: 'nhm-cards' }, ds.map(function (x) {
+        return h('div', { class: 'nhm-card' }, [
+          h('div', { class: 'nhm-card-top' }, [h('strong', {}, x.ma + ' · ' + x.ten), h('span', { class: 'nhm-chips' }, [chipGmo(x), chipBsl(x.bsl)])]),
+          h('div', { class: 'nhm-small' }, [x.loai_sinh_vat, x.mo_nguon_goc].filter(Boolean).join(' · ') || '—'),
+          h('div', { class: 'nhm-small nhm-muted' }, x.so_lo + ' lô · ' + x.so_ong + ' ống đang giữ'),
+          h('div', { class: 'nhm-chips' }, chipMyco(x.mycoplasma)),
+          h('div', { class: 'nhm-card-act' }, [nutNho('Mở hồ sơ', 'primary', function () { moDongTeBao(x.id); })]),
+        ]);
+      })) : h('p', { class: 'nhm-muted' }, d.q || d.gmo ? 'Không có dòng tế bào nào khớp.' : 'Chưa có hồ sơ dòng tế bào nào. Bấm «+ Thêm dòng» để tạo; các lô và ống đông lạnh gắn vào dòng.'));
+  }
+
+  function sec(tieuDe, noiDung, nut) {
+    return h('section', { class: 'nhm-dtb-sec' }, [h('h3', {}, [h('span', {}, tieuDe), nut || null]), noiDung]);
+  }
+
+  function renderHoSoDong(root, r) {
+    var d = r.dong, lamMoi = function () { return taiDtb(); };
+    var sua = d.quyen_sua;
+    var thongTin = h('div', { class: 'nhm-facts' }, [
+      fact('Loài', d.loai_sinh_vat), fact('Mô nguồn gốc', d.mo_nguon_goc), fact('Bệnh', d.benh), fact('Loại dòng', LOAI_DONG_VN[d.loai_dong]),
+      fact('Nguồn cung cấp', d.nguon_cung_cap), fact('Mã nguồn', d.ma_nguon), fact('Dạng nuôi', DANG_NUOI_VN[d.dang_nuoi]), fact('Môi trường', d.moi_truong),
+      fact('Bổ sung (serum…)', d.bo_sung), fact('Nhiệt độ nuôi', d.nhiet_do_c != null ? d.nhiet_do_c + ' °C' : null), fact('CO₂', d.co2_phan_tram != null ? d.co2_phan_tram + ' %' : null),
+      fact('Thời gian nhân đôi', d.thoi_gian_nhan_doi), fact('Hình thái', d.hinh_thai), fact('Đặc điểm tăng trưởng', d.dac_diem_tang_truong),
+      fact('Đề tài / dự án', d.du_an), fact('Nhóm nghiên cứu', d.nhom_ten), fact('Người tạo hồ sơ', d.tao_boi_ten), fact('Ghi chú', d.ghi_chu),
+    ]);
+    var anToan = d.bien_doi_gen || d.bsl ? h('div', { class: 'nhm-facts' }, [fact('Biến đổi gen', d.bien_doi_gen ? 'Có' : 'Không'), fact('Cấp an toàn sinh học', d.bsl ? 'BSL-' + d.bsl : null), fact('Mô tả biến đổi (vector, gen, phương pháp)', d.gmo_mo_ta)]) : h('p', { class: 'nhm-muted nhm-small' }, 'Không phải dòng biến đổi gen.');
+
+    var bangLo = r.lo.length ? h('div', { class: 'nhm-bang-cuon' }, h('table', { class: 'nhm-bang' }, [
+      h('tr', {}, ['Mã lô', 'Passage', 'Ngày đông lạnh', 'Tế bào / ống', 'Sống sót', 'Ống còn', 'Ghi chú', ''].map(function (x) { return h('th', {}, x); })),
+    ].concat(r.lo.map(function (l) {
+      return h('tr', {}, [
+        h('td', {}, h('b', {}, l.ma)), l.passage || '—', ngayVn(l.ngay_dong_lanh) || '—', l.so_te_bao_moi_ong != null ? String(l.so_te_bao_moi_ong) : '—', l.ty_le_song_sot != null ? l.ty_le_song_sot + ' %' : '—', String(l.so_ong),
+        [l.moi_truong_dong, l.ghi_chu].filter(Boolean).join(' · ') || '—',
+        sua ? h('span', { class: 'nhm-card-act' }, [nutNho('Sửa', '', function () { loForm(d, l, lamMoi); }), nutNho('Xóa', 'danger', function () {
+          hoi('Xóa lô «' + l.ma + '»? (Chỉ xóa được khi không còn ống đang giữ.)', function () { api('DELETE', '/lots/' + l.id).then(function () { say('Đã xóa lô.', 'ok'); lamMoi(); }).catch(function (e) { say(e.message, 'err'); }); });
+        })]) : '',
+      ].map(function (c) { return c instanceof Node ? (c.tagName === 'TD' ? c : h('td', {}, c)) : h('td', {}, c); }));
+    })))) : h('p', { class: 'nhm-muted nhm-small' }, 'Chưa có lô nào. Mỗi lần đông lạnh một mẻ tế bào là một lô; ống đông lạnh gắn vào lô khi thêm mẫu.');
+
+    var bangQc = r.qc.length ? h('div', { class: 'nhm-bang-cuon' }, h('table', { class: 'nhm-bang' }, [
+      h('tr', {}, ['Ngày', 'Kiểm tra', 'Kết quả', 'Lô', 'Phương pháp / ghi chú', 'Người ghi'].map(function (x) { return h('th', {}, x); })),
+    ].concat(r.qc.map(function (x) {
+      return h('tr', {}, [ngayVn(x.ngay), QC_LOAI_VN[x.loai] || x.loai, h('b', { class: (x.ket_qua === 'duong_tinh' || x.ket_qua === 'khong_dat') ? 'nhm-canh' : '' }, QC_KET_QUA_VN[x.ket_qua] || x.ket_qua), x.lo_ma || 'Cả dòng', [x.phuong_phap, x.ghi_chu].filter(Boolean).join(' · ') || '—', x.user_label || '']
+        .map(function (c) { return h('td', {}, c); }));
+    })))) : h('p', { class: 'nhm-muted nhm-small' }, 'Chưa có kết quả QC nào.');
+
+    var tepNut = sua ? nutNho('+ Tải tệp lên', 'primary', function () { tepForm(d, r, lamMoi); }) : null;
+    var dsTep = r.tep.length ? h('div', {}, r.tep.map(function (t) {
+      var href = API + '/attachments/' + t.id + '/download?nh=te_bao';
+      var gan = t.doi_tuong === 'dong' ? 'Dòng' : t.doi_tuong === 'lo' ? 'Lô ' + ((r.lo.filter(function (l) { return l.id === t.doi_tuong_id; })[0] || {}).ma || '') : 'QC ' + ngayVn((r.qc.filter(function (x) { return x.id === t.doi_tuong_id; })[0] || {}).ngay);
+      return h('div', { class: 'nhm-tep' }, [
+        t.anh ? h('a', { href: href, target: '_blank', rel: 'noopener' }, h('img', { src: href, alt: t.ten_goc })) : null,
+        h('a', { href: href, target: t.anh ? '_blank' : null, rel: 'noopener' }, t.ten_goc),
+        h('span', { class: 'nhm-small nhm-muted' }, kb(t.kich_thuoc) + ' · ' + gan + (t.mo_ta ? ' · ' + t.mo_ta : '') + ' · ' + (t.tao_boi_ten || '') + ' · ' + gioDia(t.tao_luc)),
+        sua || t.tao_boi_ten ? nutNho('Xóa', 'danger', function () {
+          hoi('Xóa tệp «' + t.ten_goc + '»?', function () { api('DELETE', '/attachments/' + t.id).then(function () { say('Đã xóa tệp.', 'ok'); lamMoi(); }).catch(function (e) { say(e.message, 'err'); }); });
+        }) : null,
+      ]);
+    })) : h('p', { class: 'nhm-muted nhm-small' }, 'Chưa có tệp đính kèm (phiếu dữ liệu, kết quả mycoplasma / STR, ảnh hình thái…).');
+
+    var dsOng = r.ong.length ? h('div', { class: 'nhm-bang-cuon' }, h('table', { class: 'nhm-bang' }, [
+      h('tr', {}, ['Ống', 'Lô', 'Vị trí', ''].map(function (x) { return h('th', {}, x); })),
+    ].concat(r.ong.map(function (o) {
+      return h('tr', {}, [o.name + (o.status === 'checked_out' ? ' (đã lấy ra)' : ''), o.lo_ma, o.vi_tri || '—', nutNho('Xem mẫu', '', function () { moMauTheoId(o.id); })].map(function (c) { return c instanceof Node ? h('td', {}, c) : h('td', {}, c); }));
+    })))) : h('p', { class: 'nhm-muted nhm-small' }, 'Chưa có ống nào gắn với dòng này. Khi thêm hoặc sửa mẫu, chọn dòng và lô ở ô «Dòng tế bào và lô».');
+
+    put(root,
+      h('p', {}, nutNho('← Danh sách dòng tế bào', '', function () { moDongTeBao(); })),
+      h('div', { class: 'nhm-title' }, [h('h2', {}, d.ten), h('span', { class: 'nhm-muted' }, d.ma)]),
+      h('div', { class: 'nhm-chips' }, [chipGmo(d), chipBsl(d.bsl), chipMyco(r.mycoplasma)]),
+      sua ? h('div', { class: 'nhm-actions' }, [nutNho('Chỉnh sửa hồ sơ', 'primary', function () { dongForm(d); }), nutNho('Xóa dòng', 'danger', function () {
+        hoi('Xóa dòng «' + d.ten + '» cùng các lô? Chỉ xóa được khi không còn ống đang giữ.', function () { api('DELETE', '/cell-lines/' + d.id).then(function () { say('Đã xóa dòng tế bào.', 'ok'); moDongTeBao(); }).catch(function (e) { say(e.message, 'err'); }); });
+      })]) : null,
+      sec('Thông tin nguồn gốc và nuôi cấy', thongTin),
+      sec('An toàn sinh học', anToan),
+      sec('Lô đông lạnh (stock) — ' + r.lo.length, bangLo, sua ? nutNho('+ Thêm lô', 'primary', function () { loForm(d, null, lamMoi); }) : null),
+      sec('Kiểm soát chất lượng (QC) — mycoplasma nên thử ít nhất mỗi ' + r.han_myco_ngay + ' ngày', bangQc, sua ? nutNho('+ Ghi kết quả QC', 'primary', function () { qcForm(d, r, lamMoi); }) : null),
+      sec('Tệp đính kèm — ' + r.tep.length, dsTep, tepNut),
+      sec('Ống đang giữ — ' + r.ong.length, dsOng));
+  }
+
+  function dongForm(d) {
+    var f = function (name, label, extra) { return Object.assign({ name: name, label: label, value: d && d[name] }, extra || {}); };
+    openForm({
+      title: d ? 'Chỉnh sửa dòng tế bào ' + d.ma : 'Thêm dòng tế bào',
+      fields: [
+        f('ma', 'Mã dòng (duy nhất, vd HEK293-01)', { required: true }), f('ten', 'Tên dòng', { required: true }),
+        f('loai_sinh_vat', 'Loài (người, chuột…)'), f('mo_nguon_goc', 'Mô / cơ quan nguồn gốc'), f('benh', 'Bệnh liên quan'),
+        f('loai_dong', 'Loại dòng', { type: 'select', options: loChoOpts(LOAI_DONG_VN, '— chưa chọn —'), value: d && d.loai_dong || '' }),
+        f('nguon_cung_cap', 'Nguồn cung cấp (ATCC, phòng thí nghiệm…)'), f('ma_nguon', 'Mã tại nguồn (catalog)'),
+        f('dang_nuoi', 'Dạng nuôi', { type: 'select', options: loChoOpts(DANG_NUOI_VN, '— chưa chọn —'), value: d && d.dang_nuoi || '' }),
+        f('moi_truong', 'Môi trường nuôi'), f('bo_sung', 'Bổ sung (serum, kháng sinh…)'),
+        f('nhiet_do_c', 'Nhiệt độ nuôi (°C)', { type: 'number' }), f('co2_phan_tram', 'CO₂ (%)', { type: 'number' }),
+        f('thoi_gian_nhan_doi', 'Thời gian nhân đôi'), f('hinh_thai', 'Hình thái', { type: 'textarea' }), f('dac_diem_tang_truong', 'Đặc điểm tăng trưởng', { type: 'textarea' }),
+        f('du_an', 'Đề tài / dự án'),
+        { name: 'bien_doi_gen', label: 'Dòng biến đổi gen (GMO)?', type: 'select', options: [{ value: '0', label: 'Không' }, { value: '1', label: 'Có — phải mô tả và ghi cấp an toàn sinh học' }], value: d && d.bien_doi_gen ? '1' : '0' },
+        f('gmo_mo_ta', 'Mô tả biến đổi gen (vector, gen, phương pháp) — bắt buộc nếu là GMO', { type: 'textarea' }),
+        { name: 'bsl', label: 'Cấp an toàn sinh học (bắt buộc nếu là GMO)', type: 'select', options: [{ value: '', label: '— chưa ghi —' }, { value: '1', label: 'BSL-1' }, { value: '2', label: 'BSL-2' }, { value: '3', label: 'BSL-3' }, { value: '4', label: 'BSL-4' }], value: d && d.bsl ? String(d.bsl) : '' },
+        f('ghi_chu', 'Ghi chú', { type: 'textarea' }),
+      ],
+      submitLabel: d ? 'Lưu' : 'Tạo hồ sơ',
+      onSubmit: function (v) {
+        var body = {};
+        Object.keys(v).forEach(function (k) { body[k] = v[k]; });
+        body.bien_doi_gen = v.bien_doi_gen === '1';
+        ['loai_dong', 'dang_nuoi', 'bsl'].forEach(function (k) { if (body[k] === '') body[k] = null; });
+        if (body.bsl != null) body.bsl = Number(body.bsl);
+        return (d ? api('PATCH', '/cell-lines/' + d.id, body) : api('POST', '/cell-lines', body)).then(function (r) {
+          say(d ? 'Đã lưu hồ sơ dòng tế bào.' : 'Đã tạo hồ sơ dòng tế bào.', 'ok');
+          return moDongTeBao(d ? d.id : r.id);
+        });
+      },
+    });
+  }
+
+  function loForm(d, l, lamMoi) {
+    var f = function (name, label, extra) { return Object.assign({ name: name, label: label, value: l && l[name] }, extra || {}); };
+    openForm({
+      title: (l ? 'Sửa lô ' + l.ma : 'Thêm lô') + ' — ' + d.ten,
+      fields: [
+        f('ma', 'Mã lô (duy nhất trong dòng, vd L2026-09)', { required: true }), f('passage', 'Passage lúc đông lạnh'),
+        f('ngay_dong_lanh', 'Ngày đông lạnh', { type: 'date' }), f('so_te_bao_moi_ong', 'Số tế bào mỗi ống', { type: 'number' }),
+        f('ty_le_song_sot', 'Tỉ lệ sống sót sau đông lạnh (%)', { type: 'number' }), f('moi_truong_dong', 'Môi trường đông lạnh (vd FBS + 10% DMSO)'),
+        f('ghi_chu', 'Ghi chú', { type: 'textarea' }),
+      ],
+      submitLabel: l ? 'Lưu' : 'Thêm lô',
+      onSubmit: function (v) {
+        return (l ? api('PATCH', '/lots/' + l.id, v) : api('POST', '/cell-lines/' + d.id + '/lots', v)).then(function () { say('Đã lưu lô.', 'ok'); return lamMoi(); });
+      },
+    });
+  }
+
+  function qcForm(d, r, lamMoi) {
+    var loOpts = [{ value: '', label: 'Cả dòng' }].concat(r.lo.map(function (l) { return { value: String(l.id), label: 'Lô ' + l.ma }; }));
+    openForm({
+      title: 'Ghi kết quả QC — ' + d.ten,
+      fields: [
+        { name: 'loai', label: 'Kiểm tra', type: 'select', options: loChoOpts(QC_LOAI_VN), value: 'mycoplasma' },
+        { name: 'ket_qua', label: 'Kết quả (mycoplasma: âm tính / dương tính)', type: 'select', options: loChoOpts(QC_KET_QUA_VN), value: 'am_tinh' },
+        { name: 'ngay', label: 'Ngày kiểm tra', type: 'date', required: true, value: homNayIso() },
+        { name: 'lo_id', label: 'Áp dụng cho', type: 'select', options: loOpts, value: '' },
+        { name: 'phuong_phap', label: 'Phương pháp (PCR, DAPI, bộ kit…)' },
+        { name: 'ghi_chu', label: 'Ghi chú', type: 'textarea' },
+      ],
+      submitLabel: 'Ghi kết quả',
+      onSubmit: function (v) {
+        return api('POST', '/cell-lines/' + d.id + '/qc', v).then(function () {
+          say(v.loai === 'mycoplasma' && v.ket_qua === 'duong_tinh' ? 'Đã ghi. Mycoplasma DƯƠNG TÍNH: hãy cách ly và xử lý dòng này.' : 'Đã ghi kết quả QC (không sửa / xóa được).', v.loai === 'mycoplasma' && v.ket_qua === 'duong_tinh' ? 'err' : 'ok');
+          return lamMoi();
+        });
+      },
+    });
+  }
+
+  /** Tải tệp lên: chọn tệp, gắn vào dòng / một lô / một kết quả QC, mô tả. Gửi multipart (không qua api() JSON). */
+  function tepForm(d, r, lamMoi) {
+    var file = h('input', { type: 'file', accept: '.pdf,.png,.jpg,.jpeg,.webp,.xlsx,.docx,.txt,.csv', 'aria-label': 'Tệp đính kèm' });
+    var gan = h('select', { 'aria-label': 'Gắn vào' }, [h('option', { value: 'dong:' + d.id }, 'Cả dòng')]
+      .concat(r.lo.map(function (l) { return h('option', { value: 'lo:' + l.id }, 'Lô ' + l.ma); }))
+      .concat(r.qc.map(function (x) { return h('option', { value: 'qc:' + x.id }, 'QC ' + (QC_LOAI_VN[x.loai] || x.loai) + ' ' + ngayVn(x.ngay)); })));
+    openForm({
+      title: 'Tải tệp lên — ' + d.ten,
+      fields: [
+        { name: 'tep', label: 'Tệp (PDF, ảnh PNG / JPG / WEBP, .xlsx, .docx, .txt, .csv; tối đa 10 MB)', type: 'custom', widget: { node: file, get: function () { return file.files[0] || null; } } },
+        { name: 'gan', label: 'Gắn vào', type: 'custom', widget: { node: gan, get: function () { return gan.value; } } },
+        { name: 'mo_ta', label: 'Mô tả (không bắt buộc)' },
+      ],
+      submitLabel: 'Tải lên',
+      onSubmit: function (v) {
+        if (!v.tep) return Promise.reject(new Error('Chưa chọn tệp.'));
+        if (v.tep.size > 10 * 1048576) return Promise.reject(new Error('Tệp quá lớn (tối đa 10 MB).'));
+        var p = v.gan.split(':'), f = new FormData();
+        f.append('doi_tuong', p[0]); f.append('doi_tuong_id', p[1]); if (v.mo_ta) f.append('mo_ta', v.mo_ta); f.append('tep', v.tep, v.tep.name);
+        return fetch(API + '/attachments', { method: 'POST', credentials: 'same-origin', headers: { 'X-Ngan-Hang': nganHang }, body: f })
+          .then(function (res) { return res.json().catch(function () { return {}; }).then(function (j) { if (!res.ok) throw new Error(j.message || 'Lỗi ' + res.status); return j; }); })
+          .then(function () { say('Đã tải tệp lên.', 'ok'); return lamMoi(); });
+      },
+    });
+  }
+
+  /** Ô «Dòng tế bào và lô» của form thêm / sửa ống: chọn dòng rồi chọn lô; chọn lô thì điền sẵn passage và ngày đông lạnh nếu còn trống. */
+  function chonDongLo(tube) {
+    var dong = h('select', { 'aria-label': 'Dòng tế bào' }, [h('option', { value: '' }, '— không gắn dòng —')]);
+    var lo = h('select', { 'aria-label': 'Lô' }, [h('option', { value: '' }, '— chọn dòng trước —')]);
+    lo.disabled = true;
+    var lots = {};
+    function napLo(dongId, chon) {
+      if (!dongId) { put(lo, h('option', { value: '' }, '— chọn dòng trước —')); lo.disabled = true; return; }
+      api('GET', '/cell-lines/' + dongId).then(function (r) {
+        lots = {}; r.lo.forEach(function (l) { lots[l.id] = l; });
+        put.apply(null, [lo, h('option', { value: '' }, r.lo.length ? '— chọn lô —' : '— dòng chưa có lô: thêm ở hồ sơ dòng —')].concat(r.lo.map(function (l) { return h('option', { value: l.id }, 'Lô ' + l.ma + (l.passage ? ' · ' + l.passage : '')); })));
+        lo.disabled = false;
+        if (chon) lo.value = String(chon);
+      }).catch(function () {});
+    }
+    api('GET', '/cell-lines').then(function (r) {
+      r.cell_lines.forEach(function (x) { dong.appendChild(h('option', { value: x.id }, x.ma + ' · ' + x.ten)); });
+      if (tube && tube.dong_id) { dong.value = String(tube.dong_id); napLo(tube.dong_id, tube.lo_id); }
+    }).catch(function () {});
+    dong.addEventListener('change', function () { napLo(dong.value, null); });
+    lo.addEventListener('change', function () {
+      var l = lots[lo.value]; if (!l) return;
+      var form = $('nhm-dialog');
+      [['passage', l.passage], ['freeze_date', l.ngay_dong_lanh], ['cell_count', l.so_te_bao_moi_ong]].forEach(function (p) {
+        var inp = form.querySelector('[name="' + p[0] + '"]');
+        if (inp && !inp.value && p[1] != null) inp.value = p[1];
+      });
+    });
+    return { node: h('div', { class: 'nhm-uq-pham' }, [dong, lo]), get: function () { return { lo_id: lo.value }; } };
   }
 
   // ---------- biểu tượng ----------
@@ -478,6 +756,7 @@
     var sel = state.sel;
     if (state.search) return renderSearch(box);
     if (state.cv) return renderCongViec(box);
+    if (state.dtb) return renderDongTeBao(box);
     if (!sel) { put(box, h('p', { class: 'nhm-muted' }, 'Chọn một thiết bị, vị trí lưu trữ hoặc hộp ở bên trái.')); return; }
     if (sel.type === 'box') { renderBox(box); ganBinh(box, state.box && state.box.box ? state.box.box.container_id : null, { hop: sel.id }); return; }
     var c = state.tree.containers.filter(function (x) { return x.id === sel.id; })[0];
@@ -737,6 +1016,7 @@
         options: [{ value: '', label: '— chưa xác định —' }].concat(LOAI_CHU.map(function (l) { return { value: l[0], label: l[1] }; })) });
       fields.push({ name: 'nhom_id', label: kt ? 'Nhóm nghiên cứu — chỉ khi chủ mẫu là cá nhân' : 'Nhóm nghiên cứu (chỉ quản lý đổi)', type: 'select', options: nhomOpts, value: tube.nhom_id || '' });
     }
+    if (!kt && !claim) fields.push({ name: 'dongLo', label: 'Dòng tế bào và lô (không bắt buộc)', type: 'custom', widget: chonDongLo(tube) });
     if (!tube) {
       // Thêm cùng lô: n ống liên tiếp từ ô này (sang hàng kế khi hết cột)
       if (!claim) fields.push({ name: 'count', label: 'Số ống cùng lô (1–100, đặt vào các ô liên tiếp từ ô này)', type: 'number', value: 1 });
@@ -750,6 +1030,7 @@
         var body = { name: v.name, sample_type_id: v.sample_type_id === '' ? null : Number(v.sample_type_id), passage: v.passage,
           cell_count: v.cell_count, volume_ml: v.volume_ml, freeze_date: v.freeze_date, project: v.project, notes: v.notes };
         if (kt) { delete body.passage; delete body.cell_count; delete body.volume_ml; }
+        if (!kt && v.dongLo) body.lo_id = v.dongLo.lo_id ? Number(v.dongLo.lo_id) : null;
         if (kt && !tube) body.the_tich_ul = v.the_tich_ul;
         if (tube) {
           if (quanLy) { body.chu_loai = v.chu_loai || null; body.nhom_id = v.nhom_id === '' ? null : Number(v.nhom_id); }
@@ -976,6 +1257,7 @@
         .concat((t.chu_don_vi ? [] : [fact('Người sở hữu', t.owner_name)]).concat([fact('Đề tài', t.project), fact('Ghi chú', t.notes)])
       )),
       nganHang === 'khang_the' ? theTichPanel(t) : null,
+      nganHang !== 'khang_the' && t.dong_id ? h('div', { class: 'nhm-hint' }, ['Dòng tế bào: ', h('b', {}, t.dong_ten + (t.lo_ma ? ' · lô ' + t.lo_ma : ''))]) : null,
       h('strong', {}, 'Lịch sử thao tác'),
       h('div', { id: 'nhm-hist' }, h('span', { class: 'nhm-muted' }, 'Đang tải…')),
     ]);
@@ -1001,6 +1283,7 @@
     // (chủ mẫu có mẫu ở thiết bị Cellbank cũng phải gửi yêu cầu vì không được tự lấy)
     if ((!laChu || cbKhoa) && !state.meta.canManage && !(state.box && state.box.duoc_don_vi) && t.status === 'in_storage' && !t.nghi_mat) buttons.unshift(btn('Yêu cầu lấy mẫu này', 'primary', function () { xinMauForm(t); }));
     if (t.nghi_mat) buttons.unshift(btn('Mẫu nghi mất — xem vụ việc', 'danger', function () { closeDialog(); moCongViec('nghimat'); }));
+    if (nganHang !== 'khang_the' && t.dong_id) buttons.push(btn('Hồ sơ dòng ' + t.dong_ten, '', function () { closeDialog(); moDongTeBao(t.dong_id); }));
     if (state.meta.canManage) buttons.push(btn('Chuyển chủ', '', function () { transferForm(t); }));
     openInfo(t.name, body, buttons);
     api('GET', '/tubes/' + t.id + '/history').then(function (r) {
@@ -1045,6 +1328,7 @@
   }
 
   function runSearch(p) {
+    state.dtb = null;
     state.cv = null;
     state.audit = null;
     state.sel = null;
@@ -1911,7 +2195,7 @@
 
   // ----- bảng «Việc cần xử lý» -----
   function moCongViec(tab, gapSan) {
-    state.search = null; state.sel = null; state.box = null; state.audit = null;
+    state.search = null; state.sel = null; state.box = null; state.audit = null; state.dtb = null;
     state.cv = { tab: tab || 'inbox', data: null, dsMo: !gapSan };
     if (location.hash !== '#cong-viec') location.hash = 'cong-viec';
     renderTree();
@@ -2082,6 +2366,11 @@
       if (meta.canManage || (meta.laVienTruong && !meta.khongPublic)) { // Viện trưởng chỉ tạo thiết bị riêng, ngân hàng kháng thể không có
         addRoot.classList.remove('nhm-hide');
         addRoot.addEventListener('click', function () { containerForm(null, null); });
+      }
+      if (nganHang === 'te_bao') {
+        var nutDtb = $('nhm-dong-tb');
+        nutDtb.classList.remove('nhm-hide');
+        nutDtb.addEventListener('click', function () { moDongTeBao(); });
       }
       if (nganHang === 'khang_the' && (meta.laVienTruong || meta.canManage)) { // Viện trưởng cấp / thu hồi, quản lý xem
         var nutUq = $('nhm-uy-quyen');

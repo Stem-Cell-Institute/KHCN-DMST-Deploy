@@ -1,7 +1,7 @@
 # Module Ngân hàng Tế bào & Kháng thể
 
 Trang: `public/ngan-hang-te-bao-khang-the/index.html` (địa chỉ ngắn `/ngan-hang-te-bao-khang-the`) ·
-API: `/api/ngan-hang-te-bao-khang-the/*` (95 route)
+API: `/api/ngan-hang-te-bao-khang-the/*` (110 route)
 
 Mã nguồn: `routes/nganHangTeBaoKhangThe/` (`index.js`, `boiCanh.js`, `khoLuuTru.js`, `danhMuc.js`, `thanhVien.js`, `sinhVien.js`,
 `timKiem.js`, `yeuCau.js`, `phatHien.js`, `mau.js`), `services/nganHangTeBaoKhangThe.js` (hàm thuần), `services/nganHangTeBaoKhangTheKhoiTao.js` (tạo bảng,
@@ -46,6 +46,16 @@ Một module, hai ngân hàng. **Dùng chung:** tài khoản, nhóm nghiên cứ
 - **Lịch sử của mẫu** (`nhm_movements`, mở ở hộp thoại mẫu → Lịch sử) ghi đủ quá trình, mỗi dòng có người thao tác và giờ: gửi yêu cầu (người duyệt và quản lý theo dõi), duyệt hoặc từ chối (người duyệt, ghi chú, người được báo), hủy, giao (kèm người đã duyệt), nhận lại.
 - Bảng vai trò được dựng lại một lần khi khởi động để thêm cột phạm vi (giữ nguyên dữ liệu, id và quyền hiện có).
 
+## Hồ sơ dòng tế bào, lô, QC, tệp đính kèm, báo cáo GMO (ngân hàng tế bào)
+
+Chỉ ở ngân hàng **tế bào** (nút «Dòng tế bào» ở thanh bên). Code: `routes/nganHangTeBaoKhangThe/dongTeBao.js` (12 endpoint), `tepDinhKem.js` (3 endpoint), `services/nganHangTeBaoKhangTheDongTeBao.js`; bảng `nhm_dong_te_bao`, `nhm_lo`, `nhm_qc`, `nhm_tep`, cột `nhm_tubes.lo_id`.
+
+- **Hồ sơ dòng tế bào:** mã (duy nhất, không phân biệt hoa thường), tên, loài, mô nguồn gốc, bệnh, loại dòng (nguyên phát / bất tử hóa / iPSC), nguồn cung cấp và mã catalog, dạng nuôi, môi trường, bổ sung, nhiệt độ, CO₂, thời gian nhân đôi, hình thái, đặc điểm tăng trưởng, đề tài, nhóm, ghi chú. Ai có tài khoản module xem và tạo hồ sơ; **sửa / xóa: người tạo hoặc quản lý**. Xóa chỉ khi không còn ống đang giữ (xóa mềm; mã được dùng lại sau đó). Tìm kiếm bỏ dấu, nhiều từ khóa.
+- **Lô (stock):** một dòng có nhiều lô đông lạnh (mã lô duy nhất trong dòng, passage, ngày đông lạnh, số tế bào mỗi ống, tỉ lệ sống sót, môi trường đông lạnh). **Mỗi ống thuộc một lô** (ô «Dòng tế bào và lô» khi thêm / sửa mẫu; chọn lô thì điền sẵn passage, ngày đông lạnh, số tế bào); thay đổi lô ghi vào lịch sử mẫu. Chi tiết dòng liệt kê ống đang giữ và vị trí; hộp và kết quả tìm mẫu hiện «dòng · lô». Ống kháng thể không gắn lô.
+- **QC:** mycoplasma, STR, tỉ lệ sống sót, vi khuẩn / nấm, hình thái, khác; ghi theo dòng hoặc theo lô, kèm ngày (không ở tương lai), phương pháp, ghi chú, người ghi. **Chỉ thêm, không sửa / xóa** (trigger CSDL). Mycoplasma phải là âm / dương tính; lần thử gần nhất quyết định chip trạng thái; **chưa thử hoặc quá 180 ngày kể từ lần thử gần nhất thì cảnh báo «quá hạn thử»**, dương tính thì cảnh báo đỏ.
+- **Tệp đính kèm** (dòng, lô hoặc kết quả QC; tối đa 20 mỗi mục, 10 MB mỗi tệp): PDF, ảnh PNG / JPG / WEBP, .xlsx, .docx, .txt, .csv. **Loại tệp nhận dạng theo NỘI DUNG (đầu tệp) phải khớp phần mở rộng; không tin Content-Type do người dùng gửi.** Tệp lưu ở `uploads/ngan-hang/<năm>/<chuỗi ngẫu nhiên>` (không dùng tên người dùng trong đường dẫn; `khoa` được kiểm `^d{4}/[0-9a-f]{32}$` trước khi đọc nên không đi vòng ra ngoài thư mục), kèm SHA-256. Tải về qua API có đăng nhập: ảnh hiện trực tiếp, loại khác ép tải về, luôn `nosniff` và CSP `sandbox` chặn chạy mã. Xóa chỉ đánh dấu (giữ tệp và dòng ghi). Thêm / xóa: người tạo dòng hoặc quản lý (người đính kèm xóa được tệp của mình). Cần sao lưu thư mục `uploads/ngan-hang` cùng cơ sở dữ liệu.
+- **Báo cáo GMO / an toàn sinh học:** dòng biến đổi gen (`bien_doi_gen`) **bắt buộc mô tả biến đổi (vector, gen, phương pháp) và cấp an toàn sinh học BSL-1…4**. Báo cáo liệt kê các dòng đó kèm nguồn, đề tài / nhóm, số lô, số ống đang giữ, **vị trí lưu trữ**, mycoplasma gần nhất; tổng theo BSL; lọc theo BSL và từ khóa. Ba dạng: màn hình (`GET /reports/gmo`), **CSV** mở được trong Excel (có BOM UTF-8; ô bắt đầu bằng `=`, `+`, `-`, `@` được thêm dấu nháy để Excel không chạy như công thức) và **trang in A4 ngang** có chỗ ký (người lập, cán bộ an toàn sinh học, Viện trưởng). **Chỉ quản lý và Viện trưởng xem được** (danh mục an toàn sinh học); ống ở thiết bị riêng của người khác không được tính.
+
 ## Ủy quyền duyệt (ngân hàng kháng thể)
 
 Viện trưởng không đủ thời gian duyệt hết nên có thể **giao quyền duyệt một phần kháng thể cho quản lý ngân hàng kháng thể**. Code: `routes/nganHangTeBaoKhangThe/uyQuyen.js` (3 endpoint), quy tắc ở `services/nganHangTeBaoKhangTheYeuCau.js` (`nguoiDuocUyQuyen`), bảng `nhm_uy_quyen_duyet`.
@@ -88,7 +98,7 @@ thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở n
 - Vai trò module **không** đụng `users.role` dùng chung toàn hệ thống. **`users.role` = `manager` hay `phong_khcn` không còn tự có
   quyền quản lý** ở module này: phải được admin gán vai trò «Quản lý module».
 - Mọi người dùng đọc được toàn bộ kho (kể cả tên người sở hữu): kho là tài nguyên dùng chung của Viện.
-- Bảng phân quyền đầy đủ của 95 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
+- Bảng phân quyền đầy đủ của 110 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
   với danh sách route thật: thêm/bớt route mà quên cập nhật bảng thì test đỏ.
 
 ### Thiết bị Public và thiết bị có đơn vị quản lý

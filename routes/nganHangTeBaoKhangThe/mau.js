@@ -51,6 +51,7 @@ module.exports = function createMauRouter(ctx) {
       else out.freeze_date = r.value;
     }
     if ('project' in body) out.project = toStr(body.project, 200);
+    if ('lo_id' in body) out.lo_id = body.lo_id == null || body.lo_id === '' ? null : toInt(body.lo_id);
     if ('notes' in body) out.notes = toStr(body.notes, 2000);
     return [out, error];
   }
@@ -135,6 +136,14 @@ module.exports = function createMauRouter(ctx) {
   }
   const xacDinhChu = (req, body, boxId) => (ctx.YeuCau.nganHangCuaHop(db, boxId) === 'khang_the' ? xacDinhChuKhangThe(req, body) : xacDinhChuMau(req, body));
 
+  /** Lô (stock) của dòng tế bào còn dùng được? Ống kháng thể không gắn lô. Trả câu lỗi 400 hoặc null. */
+  function loiLo(loId, boxId) {
+    if (loId == null) return null;
+    if (ctx.YeuCau.nganHangCuaHop(db, boxId) === 'khang_the') return 'Ống kháng thể không gắn lô của dòng tế bào.';
+    const lo = loId && db.prepare('SELECT l.id FROM nhm_lo l JOIN nhm_dong_te_bao d ON d.id = l.dong_id WHERE l.id = ? AND l.deleted_at IS NULL AND d.deleted_at IS NULL').get(loId);
+    return lo ? null : 'Lô của dòng tế bào không tồn tại.';
+  }
+
   /** Ống kháng thể (hộp thuộc ngân hàng kháng thể) phải có thể tích ban đầu (µL). Trả [µL hoặc null, lỗi]. */
   function docTheTichBanDau(body, boxId) {
     if (ctx.YeuCau.nganHangCuaHop(db, boxId) !== 'khang_the') return [null, null];
@@ -142,17 +151,20 @@ module.exports = function createMauRouter(ctx) {
     return [ul, loi ? 'Ống kháng thể phải ghi thể tích ban đầu. ' + loi : null];
   }
 
+  /** Lô còn dùng được thì giữ id, không thì null (đường nhận mẫu chưa khai báo không đi qua loiLo). */
+  const loHopLe = (loId) => (loId && !loiLo(loId, null) ? loId : null);
+
   /** Thêm một mẫu vào ô và ghi dòng «Nhập kho» vào lịch sử. Gọi trong transaction. `ul`: thể tích ban đầu của ống kháng thể. */
   function insertTube(t, chu, boxId, row, col, userId, ul) {
     const info = db
       .prepare(
         `INSERT INTO nhm_tubes (box_id, row_no, col_no, sample_type_id, name, passage, cell_count, volume_ml,
-                                freeze_date, owner_user_id, project, notes, created_by, chu_loai, nhom_id, chu_don_vi)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                                freeze_date, owner_user_id, project, notes, created_by, chu_loai, nhom_id, chu_don_vi, lo_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         boxId, row, col, t.sample_type_id ?? null, t.name, t.passage ?? null, t.cell_count ?? null,
-        t.volume_ml ?? null, t.freeze_date ?? null, chu.donVi ? null : chu.ownerId || userId, t.project ?? null, t.notes ?? null, userId, chu.chu_loai, chu.nhom_id, chu.donVi ? 1 : 0
+        t.volume_ml ?? null, t.freeze_date ?? null, chu.donVi ? null : chu.ownerId || userId, t.project ?? null, t.notes ?? null, userId, chu.chu_loai, chu.nhom_id, chu.donVi ? 1 : 0, loHopLe(t.lo_id)
       );
     const tubeId = Number(info.lastInsertRowid);
     logMove(tubeId, 'store', null, { box_id: boxId, row_no: row, col_no: col }, userId, null);
@@ -186,6 +198,8 @@ module.exports = function createMauRouter(ctx) {
     if (biChanDonVi(req, boxId)) return fail(res, 403, loiThem(boxId));
     const [ul, loiUl] = docTheTichBanDau(body, boxId);
     if (loiUl) return fail(res, 400, loiUl);
+    const loiL = loiLo(t.lo_id, boxId);
+    if (loiL) return fail(res, 400, loiL);
     const hop = db.prepare('SELECT rows, cols FROM nhm_boxes WHERE id = ?').get(boxId);
     const oCan = [];
     for (let i = 0, r = row, c = col; i < count; i++) {
@@ -226,6 +240,8 @@ module.exports = function createMauRouter(ctx) {
     if (biChanDonVi(req, boxId)) return fail(res, 403, loiThem(boxId));
     const [ul, loiUl] = docTheTichBanDau(body, boxId);
     if (loiUl) return fail(res, 400, loiUl);
+    const loiL = loiLo(t.lo_id, boxId);
+    if (loiL) return fail(res, 400, loiL);
     try {
       const id = db.transaction(() => insertTube(t, chu, boxId, row, col, req.user.id, ul))();
       audit(req, 'tube_create', `id=${id} box=${boxId} r${row}c${col}`);
@@ -269,6 +285,7 @@ module.exports = function createMauRouter(ctx) {
       else if (body.chu_don_vi === false) { t.chu_don_vi = 0; if (cur.owner_user_id == null) t.owner_user_id = req.user.id; }
       else return fail(res, 400, 'Chủ mẫu là đơn vị phải là true hoặc false.');
     }
+    if ('lo_id' in t) { const l = loiLo(t.lo_id, cur.box_id); if (l) return fail(res, 400, l); }
     if ('name' in t && !t.name) return fail(res, 400, 'Tên mẫu không được để trống.');
     if (t.sample_type_id != null && !db.prepare('SELECT 1 FROM nhm_sample_types WHERE id = ?').get(t.sample_type_id)) {
       return fail(res, 400, 'Loại mẫu không hợp lệ.');
@@ -287,6 +304,7 @@ module.exports = function createMauRouter(ctx) {
       hienThi.nhom_id = hienThi.nhom_id.map((v) => (v == null ? null : (db.prepare('SELECT ten FROM nhm_nhom WHERE id = ?').get(v) || {}).ten || v));
     }
     if (hienThi.chu_loai) hienThi.chu_loai = hienThi.chu_loai.map((v) => (v == null ? null : LOAI_CHU_VN[v] || v));
+    if (hienThi.lo_id) hienThi.lo_id = hienThi.lo_id.map((v) => (v ? (db.prepare('SELECT d.ma || \' / \' || l.ma AS n FROM nhm_lo l JOIN nhm_dong_te_bao d ON d.id = l.dong_id WHERE l.id = ?').get(v) || {}).n || v : '(chưa gắn)'));
     if (hienThi.chu_don_vi) hienThi.chu_don_vi = hienThi.chu_don_vi.map((v) => (v ? 'AntibodyBank' : 'cá nhân'));
     if (hienThi.owner_user_id) hienThi.owner_user_id = hienThi.owner_user_id.map((v) => (v == null ? '(đơn vị)' : ((db.prepare('SELECT COALESCE(NULLIF(fullname, \'\'), email) AS n FROM users WHERE id = ?').get(v) || {}).n || v)));
     db.transaction(() => {

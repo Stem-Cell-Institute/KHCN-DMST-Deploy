@@ -47,6 +47,7 @@ const COT_THEM_SAU = [
   ['nhm_tubes', 'the_tich_ul', 'REAL'],
   ['nhm_tubes', 'con_lai_ul', 'REAL'],
   ['nhm_tubes', 'chu_don_vi', 'INTEGER NOT NULL DEFAULT 0'],
+  ['nhm_tubes', 'lo_id', 'INTEGER REFERENCES nhm_lo(id)'],
   ['nhm_yeu_cau', 'so_ul_yeu_cau', 'REAL'],
   ['nhm_yeu_cau', 'so_ul_giao', 'REAL'],
   ['nhm_yeu_cau', 'uy_quyen_id', 'INTEGER'],

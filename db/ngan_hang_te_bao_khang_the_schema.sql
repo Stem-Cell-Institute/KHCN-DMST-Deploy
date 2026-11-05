@@ -138,6 +138,8 @@ CREATE TABLE IF NOT EXISTS nhm_tubes (
   con_lai_ul REAL,
   -- Ống KHÁNG THỂ: 1 = chủ mẫu là đơn vị (AntibodyBank; mặc định; owner_user_id / chu_loai / nhom_id để trống), 0 = của cá nhân (vd mua bằng kinh phí cá nhân, xung công quỹ)
   chu_don_vi INTEGER NOT NULL DEFAULT 0,
+  -- Ống tế bào thuộc một LÔ (stock) của một dòng tế bào (nhm_lo → nhm_dong_te_bao); NULL = chưa gắn dòng
+  lo_id INTEGER REFERENCES nhm_lo(id),
   freeze_date TEXT,
   owner_user_id INTEGER,
   project TEXT,
@@ -438,3 +440,91 @@ CREATE TABLE IF NOT EXISTS nhm_uy_quyen_duyet (
   thu_hoi_boi INTEGER
 );
 CREATE INDEX IF NOT EXISTS ix_nhm_uy_quyen_nguoi ON nhm_uy_quyen_duyet(nguoi_id);
+
+-- ═══ Hồ sơ dòng tế bào, lô (stock), kiểm soát chất lượng (QC), tệp đính kèm — ngân hàng TẾ BÀO ═══════════════════════════
+-- Dòng tế bào = thông tin sinh học dùng chung cho mọi ống của dòng đó; một dòng có nhiều LÔ đông lạnh (stock, mỗi lô có passage, ngày đông,
+-- tỉ lệ sống sót); mỗi ống (nhm_tubes.lo_id) thuộc một lô. QC (mycoplasma, STR, sống sót...) ghi theo dòng hoặc lô, chỉ thêm, không sửa / xóa.
+-- bien_doi_gen = 1: dòng biến đổi gen (GMO); bsl = cấp an toàn sinh học 1–4 → báo cáo GMO / an toàn sinh học.
+CREATE TABLE IF NOT EXISTS nhm_dong_te_bao (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ma TEXT NOT NULL,
+  ten TEXT NOT NULL,
+  loai_sinh_vat TEXT,
+  mo_nguon_goc TEXT,
+  benh TEXT,
+  loai_dong TEXT CHECK (loai_dong IS NULL OR loai_dong IN ('dong_ban_dau','dong_vo_han','ipsc','khac')),
+  dang_nuoi TEXT CHECK (dang_nuoi IS NULL OR dang_nuoi IN ('bam_dinh','huyen_phu','khac')),
+  moi_truong TEXT,
+  bo_sung TEXT,
+  nhiet_do_c REAL,
+  co2_phan_tram REAL,
+  thoi_gian_nhan_doi TEXT,
+  hinh_thai TEXT,
+  dac_diem_tang_truong TEXT,
+  nguon_cung_cap TEXT,
+  ma_nguon TEXT,
+  bien_doi_gen INTEGER NOT NULL DEFAULT 0 CHECK (bien_doi_gen IN (0,1)),
+  gmo_mo_ta TEXT,
+  bsl INTEGER CHECK (bsl IS NULL OR bsl BETWEEN 1 AND 4),
+  du_an TEXT,
+  nhom_id INTEGER,
+  ghi_chu TEXT,
+  created_by INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  deleted_at TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_dong_ma ON nhm_dong_te_bao(LOWER(ma)) WHERE deleted_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS nhm_lo (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  dong_id INTEGER NOT NULL REFERENCES nhm_dong_te_bao(id),
+  ma TEXT NOT NULL,
+  passage TEXT,
+  ngay_dong_lanh TEXT,
+  so_te_bao_moi_ong REAL,
+  ty_le_song_sot REAL CHECK (ty_le_song_sot IS NULL OR ty_le_song_sot BETWEEN 0 AND 100),
+  moi_truong_dong TEXT,
+  ghi_chu TEXT,
+  created_by INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  deleted_at TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_lo_ma ON nhm_lo(dong_id, LOWER(ma)) WHERE deleted_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS nhm_qc (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  dong_id INTEGER NOT NULL REFERENCES nhm_dong_te_bao(id),
+  lo_id INTEGER REFERENCES nhm_lo(id),
+  loai TEXT NOT NULL CHECK (loai IN ('mycoplasma','str','song_sot','vi_khuan_nam','hinh_thai','khac')),
+  ket_qua TEXT NOT NULL CHECK (ket_qua IN ('dat','khong_dat','am_tinh','duong_tinh','khac')),
+  ngay TEXT NOT NULL,
+  phuong_phap TEXT,
+  ghi_chu TEXT,
+  user_id INTEGER,
+  user_label TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_nhm_qc_dong ON nhm_qc(dong_id);
+CREATE TRIGGER IF NOT EXISTS trg_nhm_qc_khong_sua BEFORE UPDATE ON nhm_qc BEGIN SELECT RAISE(ABORT, 'Kết quả QC chỉ được thêm, không được sửa'); END;
+CREATE TRIGGER IF NOT EXISTS trg_nhm_qc_khong_xoa BEFORE DELETE ON nhm_qc BEGIN SELECT RAISE(ABORT, 'Kết quả QC chỉ được thêm, không được xóa'); END;
+
+-- Tệp đính kèm (PDF, ảnh, bảng tính...) của dòng / lô / kết quả QC. Nội dung nằm trên đĩa (thư mục uploads/ngan-hang), tên lưu là chuỗi ngẫu nhiên;
+-- xóa chỉ đánh dấu xoa_luc (giữ tệp và dòng này để truy vết). sha256 để biết tệp có bị thay đổi.
+CREATE TABLE IF NOT EXISTS nhm_tep (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  doi_tuong TEXT NOT NULL CHECK (doi_tuong IN ('dong','lo','qc')),
+  doi_tuong_id INTEGER NOT NULL,
+  ten_goc TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  kich_thuoc INTEGER NOT NULL,
+  khoa TEXT NOT NULL UNIQUE,
+  sha256 TEXT NOT NULL,
+  mo_ta TEXT,
+  tao_boi INTEGER,
+  tao_boi_ten TEXT,
+  tao_luc TEXT NOT NULL DEFAULT (datetime('now')),
+  xoa_luc TEXT,
+  xoa_boi INTEGER
+);
+CREATE INDEX IF NOT EXISTS ix_nhm_tep_dt ON nhm_tep(doi_tuong, doi_tuong_id);

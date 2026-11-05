@@ -564,3 +564,20 @@
 /* hộp xác nhận trong trang (thay window.confirm) */
 .nhm-dialog--hoi { width: min(460px, 92vw); }
 .nhm-hoi { margin: 0 0 14px; font-size: 1rem; line-height: 1.5; }
+
+/* ── Dòng tế bào ───────────────────────────────────────────────────────────── */
+.nhm-dtb-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 14px; }
+.nhm-dtb-bar input[type="search"] { flex: 1 1 220px; min-width: 0; }
+.nhm-dtb-bar label { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; font-weight: 600; }
+.nhm-dtb-sec { margin: 22px 0 8px; padding-top: 12px; border-top: 1px solid var(--ke); }
+.nhm-dtb-sec > h3 { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 8px; font-size: 1rem; letter-spacing: -0.01em; }
+.nhm-chip--gmo { color: var(--muc); border-color: var(--muc); font-weight: 700; }
+.nhm-chip--bsl3 { color: var(--son); border-color: var(--son); font-weight: 700; } /* son đỏ chỉ là tín hiệu: BSL-3/4, nhiễm mycoplasma */
+.nhm-chip--canh { color: var(--son); border-color: var(--son); font-weight: 700; }
+.nhm-tep { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--ke); }
+.nhm-tep img { max-height: 64px; max-width: 96px; border: 1px solid var(--ke); border-radius: 2px; }
+.nhm-tep a { font-weight: 600; color: var(--muc); overflow-wrap: anywhere; }
+.nhm-bang { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.nhm-bang th, .nhm-bang td { padding: 6px 8px; border-bottom: 1px solid var(--ke); text-align: left; vertical-align: top; }
+.nhm-bang th { font-weight: 600; color: var(--muc-nhat, #4a5873); }
+.nhm-bang-cuon { overflow-x: auto; }

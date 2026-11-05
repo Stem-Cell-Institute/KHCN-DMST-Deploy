@@ -151,3 +151,6 @@ tmp_server_*.log
 routes-baseline.txt
 routes-before.txt
 routes-after.txt
+
+# Tệp đính kèm của Ngân hàng Tế bào & Kháng thể (dữ liệu người dùng, không đưa vào git)
+uploads/ngan-hang/

@@ -23,6 +23,8 @@ const createDanhMucRouter = require('./danhMuc');
 const createDonViRouter = require('./donVi');
 const createTheTichRouter = require('./theTich');
 const createUyQuyenRouter = require('./uyQuyen');
+const createDongTeBaoRouter = require('./dongTeBao');
+const createTepRouter = require('./tepDinhKem');
 const khoiTao = require('../../services/nganHangTeBaoKhangTheKhoiTao');
 
 function createNganHangMauRouter(deps) {
@@ -46,6 +48,8 @@ function createNganHangMauRouter(deps) {
   router.use(createMauRouter(ctx));
   router.use(createTheTichRouter(ctx)); // thể tích (µL) ống kháng thể
   router.use(createUyQuyenRouter(ctx)); // ủy quyền duyệt (ngân hàng kháng thể)
+  router.use(createDongTeBaoRouter(ctx)); // hồ sơ dòng tế bào, lô, QC, báo cáo GMO
+  router.use(createTepRouter(ctx, deps)); // tệp đính kèm
   // cho test và bộ hẹn giờ gọi trực tiếp
   router.quetQuaHan = ctx.quetQuaHan;
   router.quetSinhVien = ctx.quetSinhVien;

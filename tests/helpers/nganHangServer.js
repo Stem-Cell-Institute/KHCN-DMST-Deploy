@@ -5,6 +5,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const http = require('node:http');
 const express = require('express');
 const Database = require('better-sqlite3');
@@ -43,8 +44,10 @@ async function dungServer() {
     req.user = u;
     next();
   };
+  const thuMucTep = fs.mkdtempSync(path.join(os.tmpdir(), 'nhm-tep-')); // tệp đính kèm của test nằm ở thư mục tạm, xóa khi đóng
   const router = createRouter({
     db,
+    uploadsRoot: thuMucTep,
     authMiddleware: fakeAuth,
     insertUserActivityLog: (req, row) => auditLog.push(row),
     baseUrl: 'https://eoffice.test',
@@ -93,9 +96,11 @@ async function dungServer() {
     router,
     taoKho,
     USERS,
+    thuMucTep,
     async dong() {
       server.close();
       db.close();
+      fs.rmSync(thuMucTep, { recursive: true, force: true });
     },
   };
   return ret;
