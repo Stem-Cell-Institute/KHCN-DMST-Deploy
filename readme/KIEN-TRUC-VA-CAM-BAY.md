@@ -91,6 +91,14 @@ middleware chặn tải mã nguồn/cấu hình bằng **danh sách chặn** ở
 thêm vào gốc mà chưa nằm trong danh sách chặn thì tải về được. Đây là blocklist chứ không phải
 allowlist — đã ghi vào Nợ kỹ thuật.
 
+**Đăng nhập có HAI nơi lưu, dễ lệch nhau.** Trang chủ (công khai) hiện "Xin chào …" chỉ dựa vào `localStorage` (`token`, `user`),
+còn mọi trang module `.html` do máy chủ kiểm bằng **cookie** `auth_token` (JWT 7 ngày, `server.js` quanh `PUBLIC_HTML_AUTH`) rồi mới trả về. Cookie mất
+(trình duyệt "xóa cookie khi đóng", dọn dẹp, hết 7 ngày) mà `localStorage` còn thì người dùng thấy mình đã đăng nhập ở trang chủ nhưng vào module nào cũng bị hỏi
+lại mật khẩu. Cách xử lý: `POST /api/phien/khoi-phuc` (`routes/phien.js`) cấp lại cookie từ token trong header `Authorization` và **gia hạn trượt** (token còn
+dưới 4 ngày thì cấp token mới 7 ngày); `public/js/khoi-phuc-phien.js` gọi nó khi mở trang chủ và khi trang đăng nhập được mở do bị chuyển từ một module (`returnUrl`),
+có chốt chặn vòng lặp 15 giây. Token hỏng/hết hạn thì xóa khỏi `localStorage` để trang chủ không còn hiện "đã đăng nhập" sai. Khi thêm trang đăng nhập hay trang chủ
+mới, nhớ nạp script này; khi đổi cách lưu phiên, giữ hai nơi khớp nhau.
+
 **Hai cơ sở dữ liệu tách biệt:** `data/sci-ace.db` (chính, ~19 MB) và `data/de-tai-cap-vien.db`
 (đề tài cấp Viện, upload riêng). Đừng giả định chỉ có một DB.
 
