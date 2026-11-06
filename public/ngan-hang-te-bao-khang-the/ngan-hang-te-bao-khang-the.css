@@ -417,7 +417,7 @@
 @media (min-width: 901px) {
   /* Cột trái rộng ĐÚNG bằng lưới hộp (26px nhãn hàng + số cột × (ô + 3px khe), số cột do JS đặt ở --nhm-cols), cột phải (sơ đồ + thông tin ống) nằm SÁT ngay cạnh
      và rộng tới 560px: không còn khoảng trống giữa hai cột. Màn hình chật thì cột trái co lại (lưới hộp tự cuộn ngang), cột phải giữ ít nhất 340px. */
-  .nhm-detail--ln { --nhm-trai: calc(26px + var(--nhm-cols, 9) * (var(--nhm-o, 64px) + 3px) + 6px); display: grid; grid-template-columns: minmax(min(var(--nhm-trai), max(240px, calc(100% - 402px))), var(--nhm-trai)) minmax(340px, 620px); justify-content: start; column-gap: 22px; align-items: start; }
+  .nhm-detail--ln { --nhm-trai: max(300px, calc(26px + var(--nhm-cols, 9) * (var(--nhm-o, 64px) + 3px) + 6px)); /* hộp ít cột (vd 1 cột) vẫn đủ rộng cho tên hộp và nút */ display: grid; grid-template-columns: minmax(min(var(--nhm-trai), max(240px, calc(100% - 402px))), var(--nhm-trai)) minmax(340px, 620px); justify-content: start; column-gap: 22px; align-items: start; }
   .nhm-detail--ln > * { grid-column: 1; }
   /* cột phải: sơ đồ + vùng dock (hộp thoại ống hiện ngay dưới sơ đồ); dính khi cuộn, tự cuộn riêng nếu cao hơn màn hình */
   .nhm-detail--ln > .nhm-cot-phai { grid-column: 2; grid-row: 1 / span 40; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
