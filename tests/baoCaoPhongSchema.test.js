@@ -23,11 +23,34 @@ test('lược đồ mới: tạo đủ bảng, nạp biểu mẫu mặc định 
   ensureSchema(db);
   ensureSchema(db);
   const bang = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'bcp_%'").all().map((r) => r.name);
-  for (const t of ['bcp_phong', 'bcp_thanh_vien', 'bcp_mau', 'bcp_mau_phien_ban', 'bcp_dot', 'bcp_bao_cao', 'bcp_lich_su', 'bcp_trinh', 'bcp_trinh_tep', 'bcp_dot_lich_su']) {
+  for (const t of ['bcp_phong', 'bcp_thanh_vien', 'bcp_mau', 'bcp_mau_phien_ban', 'bcp_dot', 'bcp_bao_cao', 'bcp_lich_su', 'bcp_trinh_lan', 'bcp_dot_lich_su']) {
     assert.ok(bang.includes(t), 'thiếu bảng ' + t);
   }
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM bcp_mau').get().n, 1);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM bcp_mau_phien_ban').get().n, 1);
+});
+
+test('nâng cấp DB đã có dữ liệu thật (chưa có bảng bcp_trinh_lan): thêm bảng mới, dữ liệu còn nguyên', () => {
+  const db = dbMoi();
+  ensureSchema(db);
+  const pb = db.prepare('SELECT id FROM bcp_mau_phien_ban LIMIT 1').get().id;
+  const phong = Number(db.prepare("INSERT INTO bcp_phong (ma, ten) VALUES ('a','Phòng A')").run().lastInsertRowid);
+  const dot = Number(db.prepare("INSERT INTO bcp_dot (tieu_de, han_nop, mau_phien_ban_id, trang_thai) VALUES ('Đợt cũ','2026-01-31',?, 'dong')").run(pb).lastInsertRowid);
+  const bc = Number(db.prepare("INSERT INTO bcp_bao_cao (dot_id, phong_id, trang_thai, du_lieu_json) VALUES (?, ?, 'da_duyet', '{\"x\":1}')").run(dot, phong).lastInsertRowid);
+  db.prepare("INSERT INTO bcp_lich_su (bao_cao_id, hanh_dong, nguoi_id) VALUES (?, 'nop', 1)").run(bc);
+  db.exec('DROP TABLE bcp_trinh_lan'); // giống DB trước bản nâng cấp này
+
+  ensureSchema(db);
+  ensureSchema(db); // chạy lại bao nhiêu lần cũng được
+
+  assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='bcp_trinh_lan'").get(), 'bảng mới được tạo');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM bcp_trinh_lan').get().n, 0, 'chưa đợt nào được trình theo cách mới');
+  assert.equal(db.prepare('SELECT du_lieu_json FROM bcp_bao_cao WHERE id = ?').get(bc).du_lieu_json, '{"x":1}', 'báo cáo giữ nguyên');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM bcp_lich_su').get().n, 1, 'lịch sử giữ nguyên');
+  // xóa đợt thì các lần trình của đợt đi theo (khóa ngoại), không để lại dòng mồ côi
+  db.prepare("INSERT INTO bcp_trinh_lan (dot_id, trinh_luc) VALUES (?, '2026-02-01T00:00:00Z')").run(dot);
+  db.prepare('DELETE FROM bcp_dot WHERE id = ?').run(dot);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM bcp_trinh_lan').get().n, 0);
 });
 
 test('đã có biểu mẫu của người quản lý thì KHÔNG nạp thêm mẫu mặc định', () => {

@@ -36,6 +36,7 @@ test.before(async () => {
   const r = await ung.json(QUAN_LY, 'POST', '/dot', { tieu_de: 'Báo cáo tháng 9/2026', loai: 'thang', ky: '9/2026', han_nop: '2099-12-31', mau_id: ID.mau, phong_ids: [ID.phongA, ID.phongB] });
   ID.dot = r.d.id;
   await ung.json(QUAN_LY, 'POST', `/dot/${ID.dot}/mo`, {});
+  ung.daTrinh(ID.dot);
   const bc = Object.fromEntries((await ung.json(QUAN_LY, 'GET', '/dot/' + ID.dot)).d.bao_cao.map((b) => [b.phong_id, b.id]));
   ID.bcA = bc[ID.phongA];
   ID.bcB = bc[ID.phongB];

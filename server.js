@@ -14885,6 +14885,7 @@ try {
   console.warn('[ytnn] Không mount router /ytnn:', e.message);
 }
 app.use('/api/bao-cao-phong', authMiddleware, require('./routes/baoCaoPhong')({ db, uploadsRoot: appPaths.uploadsRoot(), baseUrl: process.env.BASE_URL || '', nhacTuDong: true, mailSend: (o) => (transporter ? transporter.sendMail({ from: getSmtpFrom(), ...o }) : Promise.reject(new Error('mail_not_configured'))) })); // Báo cáo phòng ban: xem routes/baoCaoPhong.js
+app.use('/api/mysign', authMiddleware, require('./routes/mysign')({ db, uploadsRoot: appPaths.uploadsRoot() })); // Ký số MySign dùng chung: xem services/mysign/
 
 // ============================================================
 // ROUTE MỚI — CHỜ PHÒNG KHCN XỬ LÝ
@@ -16879,6 +16880,9 @@ app.get('/public/vendor/chart.umd.js', (req, res) => {
     return res.status(404).send('chart.js bundle not found');
   }
 });
+
+/** pdf.js phục vụ nội bộ (CSP chỉ cho script-src 'self'): chỉ hai tệp dùng để xem trước PDF khi đặt khung chữ ký số (public/js/kysoViTri.js). */
+app.get('/public/vendor/pdfjs/:tep', (req, res) => (['pdf.min.mjs', 'pdf.worker.min.mjs'].includes(req.params.tep) ? res.type('application/javascript').sendFile(path.join(__dirname, 'node_modules', 'pdfjs-dist', 'build', req.params.tep)) : res.status(404).end()));
 
 // Admin UI bridge:
 // - If built bundle exists, serve React app at /admin

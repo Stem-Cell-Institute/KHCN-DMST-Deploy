@@ -20,6 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 const { tinhTongHop } = require('./baoCaoPhongMau');
+const { datChoKy } = require('./mysign/pades');
 
 // ── Thông tin cơ quan: hằng số của Viện, in ở đầu mọi văn bản ───────────────
 const CO_QUAN = {
@@ -75,10 +76,10 @@ function tieuDeVanBan(dot) {
 
 /**
  * Dựng mô hình tài liệu cho MỘT báo cáo.
- * @param {{dot:object, truong:object[], baoCao:{phong_ten:string, nguoi_nop?:string, du_lieu:object}, ngayXuat?:Date}} p
+ * @param {{dot:object, truong:object[], baoCao:{phong_ten:string, nguoi_nop?:string, du_lieu:object}, ngayXuat?:Date, kySo?:{ten:string, dong:string[]}}} p
  * @returns {{tieu_de_tep:string, khoi:object[]}}
  */
-function dungMoHinh({ dot, truong, baoCao, ngayXuat }) {
+function dungMoHinh({ dot, truong, baoCao, ngayXuat, kySo }) {
   const du = baoCao.du_lieu || {};
   const { ngay, thang, nam } = ngayVietNam(ngayXuat);
   const khoi = [];
@@ -153,7 +154,8 @@ function dungMoHinh({ dot, truong, baoCao, ngayXuat }) {
     cot: [
       { tieu_de: 'NGƯỜI LẬP BÁO CÁO', ten: baoCao.nguoi_nop || '' },
       { tieu_de: 'TRƯỞNG PHÒNG', ten: phuTrach },
-      { tieu_de: 'VIỆN TRƯỞNG (Phê duyệt)', ten: '' },
+      // kySo: bản PDF Viện trưởng ký số — ô chữ ký thay cho dòng "(Ký, ghi rõ họ tên)", xem taoPdf().
+      kySo ? { tieu_de: 'VIỆN TRƯỞNG (Phê duyệt)', ten: kySo.ten || '', ky_so: kySo.dong || [] } : { tieu_de: 'VIỆN TRƯỞNG (Phê duyệt)', ten: '' },
     ],
   });
 
@@ -348,7 +350,22 @@ async function taoDocx(moHinhs) {
 // ══ PDF ════════════════════════════════════════════════════════════════════
 const DIR_FONT = path.join(__dirname, 'fonts');
 
-function taoPdf(moHinhs) {
+/**
+ * @param {object[]} moHinhs
+ * @param {{choKy?:{ten:string, lyDo?:string, noiKy?:string, luc?:Date, viTri?:object}, xemTruocKy?:boolean}} [tuyChon]
+ *   choKy — chừa chỗ chữ ký số PAdES tại ô chữ ký số của mô hình (dựng bằng dungMoHinh({kySo})); xem services/mysign/pades.js.
+ *   choKy.viTri — {trang, x, y, w, h}: người ký tự đặt khung. trang tính từ 0; x, y, w, h là TỈ LỆ (0..1) so với khổ trang, gốc ở góc trên-trái.
+ *     Có viTri thì ô chữ ký trong luồng văn bản được chừa trống và khung được vẽ đúng chỗ đã chọn (cả ô chữ ký trong PDF lẫn khung nhìn thấy).
+ *     Không có thì khung nằm ở vị trí mặc định của biểu mẫu (cột Viện trưởng ở khối chữ ký).
+ *   xemTruocKy — bản xem trước để người ký kéo khung: giống hệt bản ký (cùng số trang, cùng bố cục) nhưng KHÔNG vẽ khung và không chừa chữ ký.
+ * Trả về Buffer. taoPdfChiTiet trả thêm thông tin trang để giao diện đặt khung.
+ */
+function taoPdf(moHinhs, tuyChon) {
+  return taoPdfChiTiet(moHinhs, tuyChon).then((r) => r.pdf);
+}
+
+/** @returns {Promise<{pdf:Buffer, meta:{so_trang:number, kho:number[], mac_dinh:object|null}}>} */
+function taoPdfChiTiet(moHinhs, tuyChon) {
   const PDFDocument = require('pdfkit');
   return new Promise((resolve, reject) => {
     const LE = { t: 57, b: 57, l: 85, r: 57 }; // pt: 2cm, 2cm, 3cm, 2cm
@@ -360,7 +377,8 @@ function taoPdf(moHinhs) {
     });
     const chunks = [];
     doc.on('data', (c) => chunks.push(c));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    let meta = null;
+    doc.on('end', () => resolve({ pdf: Buffer.concat(chunks), meta }));
     doc.on('error', reject);
 
     try {
@@ -379,6 +397,22 @@ function taoPdf(moHinhs) {
     const CO_BANG = 10;
     const DEM = 4;
     const trangBatDau = [];
+    let oKySo = null; // {trang, rect, dong} của ô chữ ký số mặc định, nếu mô hình có
+    const viTriKy = tuyChon && tuyChon.choKy && tuyChon.choKy.viTri ? tuyChon.choKy.viTri : null;
+    const xemTruocKy = !!(tuyChon && tuyChon.xemTruocKy);
+    // Khung nhìn thấy của ô chữ ký số: viền + các dòng thông tin người ký. Cỡ chữ thu theo chiều cao khung (khung nhỏ vẫn chứa đủ dòng).
+    function veOKy(rect, dong, trang) {
+      const [x, y, w, h] = rect;
+      if (trang !== undefined) doc.switchToPage(trang);
+      const co = Math.max(5, Math.min(8.5, (h - 8) / (dong.length * 1.4)));
+      const dan = co * 1.4;
+      doc.save().lineWidth(0.8).rect(x, y, w, h).stroke('#1f4e79').restore();
+      doc.fillColor('#1f4e79');
+      dong.forEach((d, j) => {
+        doc.font(j === 0 ? 'B' : 'R').fontSize(co).text(d, x + 4, y + 4 + j * dan, { width: w - 8, align: 'left', lineBreak: false, ellipsis: true });
+      });
+      doc.fillColor('#000000');
+    }
 
     function canGiuaDong(dong, font, co) {
       doc.font(font).fontSize(co).text(dong, LE.l, doc.y, { width: rongNoiDung(), align: 'center' });
@@ -536,7 +570,21 @@ function taoPdf(moHinhs) {
       k.cot.forEach((c, i) => {
         const x = LE.l + i * w;
         doc.font('B').fontSize(CO - 1).text(c.tieu_de, x, y0, { width: w, align: 'center' });
-        doc.font('I').fontSize(CO - 2).text('(Ký, ghi rõ họ tên)', x, doc.y, { width: w, align: 'center' });
+        if (c.ky_so) {
+          // Ô chữ ký số: khung chữ nhật ghi người ký, thời điểm, dịch vụ. Vùng này cũng là ô chữ ký (widget) trong PDF.
+          const yo = doc.y + 4;
+          const o = [x + 4, yo, w - 8, 58];
+          // Người ký tự đặt khung (hoặc đang xem trước để đặt): vùng này để trống, khung vẽ sau ở chỗ đã chọn.
+          if (!viTriKy && !xemTruocKy) {
+            doc.save().lineWidth(0.8).rect(...o).stroke('#1f4e79').restore();
+            doc.fillColor('#1f4e79');
+            c.ky_so.forEach((dong, j) => {
+              doc.font(j === 0 ? 'B' : 'R').fontSize(8.5).text(dong, o[0] + 4, yo + 4 + j * 12, { width: o[2] - 8, align: 'left', lineBreak: false, ellipsis: true });
+            });
+            doc.fillColor('#000000');
+          }
+          oKySo = { trang: doc.bufferedPageRange().start + doc.bufferedPageRange().count - 1, rect: o, dong: c.ky_so };
+        } else doc.font('I').fontSize(CO - 2).text('(Ký, ghi rõ họ tên)', x, doc.y, { width: w, align: 'center' });
         if (c.ten) doc.font('B').fontSize(CO).text(c.ten, x, y0 + 80, { width: w, align: 'center' });
       });
       doc.x = LE.l;
@@ -563,8 +611,38 @@ function taoPdf(moHinhs) {
       }
     });
 
+    // Thông tin trang cho giao diện đặt khung (số trang, khổ trang, vị trí mặc định của khung).
+    const soTrang = doc.bufferedPageRange().count;
+    const cao = doc.page.height;
+    const rong = doc.page.width;
+    meta = {
+      so_trang: soTrang,
+      kho: [rong, cao],
+      mac_dinh: oKySo ? { trang: oKySo.trang, x: oKySo.rect[0] / rong, y: oKySo.rect[1] / cao, w: oKySo.rect[2] / rong, h: oKySo.rect[3] / cao } : null,
+    };
+
+    if (tuyChon && tuyChon.choKy && !xemTruocKy) {
+      if (!oKySo) {
+        reject(new Error('Mô hình không có ô chữ ký số.'));
+        return;
+      }
+      let rect = oKySo.rect;
+      let trang = oKySo.trang;
+      if (viTriKy) {
+        if (!Number.isInteger(viTriKy.trang) || viTriKy.trang < 0 || viTriKy.trang >= soTrang) {
+          reject(Object.assign(new Error('Trang đặt khung chữ ký không có trong báo cáo (báo cáo có ' + soTrang + ' trang).'), { maLoi: 'vi_tri' }));
+          return;
+        }
+        trang = viTriKy.trang;
+        rect = [viTriKy.x * rong, viTriKy.y * cao, viTriKy.w * rong, viTriKy.h * cao];
+        veOKy(rect, oKySo.dong, trang);
+      }
+      doc.switchToPage(trang);
+      datChoKy(doc, { rect, ...tuyChon.choKy });
+    }
+
     doc.end();
   });
 }
 
-module.exports = { CO_QUAN, dungMoHinh, taoDocx, taoPdf, tieuDeVanBan, chuCaiNhom, fmtNgay };
+module.exports = { CO_QUAN, dungMoHinh, taoDocx, taoPdf, taoPdfChiTiet, tieuDeVanBan, chuCaiNhom, fmtNgay };
