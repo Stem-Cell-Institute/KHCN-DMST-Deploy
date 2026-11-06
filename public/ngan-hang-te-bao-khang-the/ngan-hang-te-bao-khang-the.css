@@ -732,3 +732,9 @@
 .nhm-dialog:not(.nhm-dialog--dock) .nhm-form-actions--gon { justify-content: flex-start; gap: 5px; }
 .nhm-dialog:not(.nhm-dialog--dock) .nhm-form-actions--gon .nhm-btn { min-height: 28px; padding: 0 9px; font-size: 0.76rem; }
 @media (max-width: 600px) { .nhm-dialog .nhm-form-actions--gon .nhm-btn { min-height: 38px; padding: 0 10px; font-size: 0.8rem; flex: 0 1 auto; } }
+
+/* «Dòng tế bào và lô» trong thông tin ống: phẳng, không khung trong khung */
+.nhm-dl-phang { display: grid; gap: 3px; margin: 0 0 8px; padding: 0 0 8px; border-bottom: 1px solid var(--ke); }
+.nhm-dl-phang > strong { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--chu-phu); }
+.nhm-dl-phang .nhm-dl-tt { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; gap: 2px; }
+.nhm-dl-phang__mo { justify-self: start; padding: 0; font-size: 0.8rem; }

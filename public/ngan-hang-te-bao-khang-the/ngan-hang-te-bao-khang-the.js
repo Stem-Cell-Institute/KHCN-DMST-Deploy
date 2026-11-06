@@ -702,10 +702,11 @@
 
   /** Thẻ «Dòng tế bào · lô» trong hộp thoại ống: thông tin dòng, lô, chỉ dẫn mở hồ sơ. Tải chi tiết dòng khi mở. */
   function dongLoPanel(t) {
-    var khung = h('div', { class: 'nhm-dl-tt' }, h('span', { class: 'nhm-muted' }, 'Đang tải dòng tế bào…'));
+    // không đặt khung trong khung: phần này phẳng, chỉ có nhãn nhỏ, nội dung và một đường kẻ phân cách
+    var khung = h('div', { class: 'nhm-dl-phang' }, h('span', { class: 'nhm-muted' }, 'Đang tải dòng tế bào…'));
     api('GET', '/cell-lines/' + t.dong_id).then(function (r) {
       var l = r.lo.filter(function (x) { return x.id === t.lo_id; })[0] || null;
-      put(khung, h('strong', { class: 'nhm-small' }, 'Dòng tế bào và lô'), theDong(r, l), h('div', { class: 'nhm-card-act' }, [nutNho('Mở hồ sơ dòng', '', function () { closeDialog(); moDongTeBao(t.dong_id); })]));
+      put(khung, h('strong', {}, 'Dòng tế bào và lô'), theDong(r, l), h('button', { type: 'button', class: 'nhm-link nhm-dl-phang__mo', onclick: function () { closeDialog(); moDongTeBao(t.dong_id); } }, 'Mở hồ sơ dòng ›'));
     }).catch(function () { put(khung, null); });
     return khung;
   }
