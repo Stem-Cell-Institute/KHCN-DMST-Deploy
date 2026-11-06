@@ -89,6 +89,7 @@ module.exports = function createThanhVienRouter(ctx) {
       hoSo: hoSo || null,
       nhomChoXacNhan: choXacNhan,
       yeuCau: ctx.demYeuCau ? ctx.demYeuCau(req) : { mine: 0, inbox: 0 },
+      denHan: ctx.demDenHan ? ctx.demDenHan(req) : 0,
       phatHienMo: db.prepare(`SELECT COUNT(*) AS c FROM nhm_phat_hien WHERE trang_thai = 'cho_chu_mau' AND ${ctx.dkKhongAn(req, 'box_id')}`).get().c,
       vuViecMo: db.prepare(`SELECT COUNT(*) AS c FROM nhm_vu_viec v WHERE v.trang_thai IN ('mo','cho_chu_xac_nhan') AND ${ctx.dkKhongAn(req, '(SELECT box_id FROM nhm_tubes WHERE id = v.tube_id)')}`).get().c,
     });

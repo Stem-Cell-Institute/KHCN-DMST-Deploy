@@ -652,3 +652,38 @@
 /* xem trước sơ đồ ở form thêm thiết bị theo mẫu */
 .nhm-mau-xem { margin-top: 8px; display: grid; gap: 4px; }
 .nhm-mau-xem .tb-svg, .nhm-mau-xem .ln-svg { max-height: 230px; }
+
+/* ══ Đến hạn, đợt kiểm kê, nhiệt độ thiết bị ═══════════════════════════════════════════════════════
+   Son đỏ CHỈ là tín hiệu (cảnh báo, việc khẩn, số đo ngoài khoảng); còn lại mực xanh đen và nền giấy. */
+
+.nhm-card--do { border-left-color: var(--son); background: #fbeceb; }
+.nhm-card--xong { background: none; }
+.nhm-tags { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.nhm-tag--canh { color: var(--son); border-color: var(--son); font-weight: 700; }
+.nhm-cauhinh__nhom { display: block; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--ke); }
+
+/* đợt kiểm kê: danh sách hộp */
+.nhm-kk-hop { list-style: none; margin: 10px 0 4px; padding: 0; border-top: 1px solid var(--ke); }
+.nhm-kk-hop__muc { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 8px 0; border-bottom: 1px solid var(--ke); font-size: 0.88rem; }
+.nhm-kk-hop__muc--xong { color: var(--chu-phu); }
+.nhm-kk-hop__ten { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; min-width: 0; }
+.nhm-kk-hop__thieu { color: var(--son); }
+
+/* nhiệt độ thiết bị */
+.nhm-nhiet { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--muc); max-width: 720px; }
+.nhm-nhiet__dau { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-bottom: 8px; }
+.nhm-nhiet__dau h3 { margin: 0; font-size: 1rem; }
+.nhm-nhiet .nhm-small { margin: 4px 0; font-variant-numeric: tabular-nums; }
+.nhm-nhiet__xau { color: var(--son); font-weight: 700; }
+.nhm-nhiet__khung { margin: 10px 0 4px; border: 1px solid var(--ke); background: #fff; }
+.nhm-nhiet__hinh { display: block; width: 100%; height: auto; max-height: 240px; }
+.nhm-nhiet__dai { fill: #eef0f5; }
+.nhm-nhiet__bien { stroke: var(--ke-dam); stroke-width: 1; stroke-dasharray: 4 3; }
+.nhm-nhiet__duong { fill: none; stroke: var(--muc); stroke-width: 1.6; stroke-linejoin: round; }
+.nhm-nhiet__cham { fill: var(--muc); }
+.nhm-nhiet__cham--ngoai { fill: var(--son); stroke: #fff; stroke-width: 1.2; }
+.nhm-nhiet__nhan { fill: var(--chu-phu); font-size: 11px; font-variant-numeric: tabular-nums; }
+.nhm-nhiet__nk { margin-top: 10px; font-size: 0.86rem; }
+.nhm-nhiet__nk > summary { cursor: pointer; color: var(--chu-phu); }
+.nhm-notice--canh { margin: 8px 0 10px; }
+@media (max-width: 600px) { .nhm-nhiet { margin-top: 22px; } .nhm-kk-hop__muc .nhm-btn { flex: 1 1 100%; } }

@@ -792,7 +792,10 @@
         var open = !!state.expanded[c.id];
         var la = state.sel && state.sel.type === 'container' && state.sel.id === c.id;
         var laGoc = c.parent_id == null;
-        var tag = laGoc ? h('span', { class: 'nhm-tag' + (c.rieng ? ' nhm-tag--rieng' : c.quan_ly_boi === 'cellbank' ? ' nhm-tag--cb' : '') }, c.rieng ? 'Riêng tư' : c.quan_ly_boi === 'cellbank' ? (c.don_vi_ten || 'Đơn vị') : 'Public') : null;
+        var tag = laGoc ? h('span', { class: 'nhm-tags' }, [
+          h('span', { class: 'nhm-tag' + (c.rieng ? ' nhm-tag--rieng' : c.quan_ly_boi === 'cellbank' ? ' nhm-tag--cb' : '') }, c.rieng ? 'Riêng tư' : c.quan_ly_boi === 'cellbank' ? (c.don_vi_ten || 'Đơn vị') : 'Public'),
+          c.canh_bao_nhiet ? h('span', { class: 'nhm-tag nhm-tag--canh', title: 'Đang có cảnh báo nhiệt độ' }, 'Cảnh báo') : null,
+        ]) : null;
         var li = h('li', { role: 'treeitem', 'aria-expanded': children ? String(open) : null }, [
           nutCay({
             cap: laGoc ? 'l0' : 'l1', on: la, duong: !!duongTo[c.id] && !la, icon: laGoc ? 'tu' : 'ngan', ten: c.name, viTri: c.vi_tri,
@@ -1046,6 +1049,7 @@
     var actions = m ? h('div', { class: 'nhm-actions' }, [
       h('button', { class: 'nhm-btn nhm-btn--primary', type: 'button', onclick: function () { containerForm(null, c.id); } }, '+ Ngăn / Rack bên trong'),
       h('button', { class: 'nhm-btn nhm-btn--primary', type: 'button', onclick: function () { boxForm(c.id); } }, '+ Hộp'),
+      h('button', { class: 'nhm-btn', type: 'button', onclick: function () { moDotKiemKe(c.id); } }, 'Mở đợt kiểm kê'),
       h('button', { class: 'nhm-btn', type: 'button', onclick: function () { containerForm(c); } }, 'Chỉnh sửa'),
       h('button', { class: 'nhm-btn nhm-btn--danger', type: 'button', onclick: function () { deleteContainer(c); } }, 'Xóa'),
     ]) : null;
@@ -1061,6 +1065,7 @@
       boxes.length || subs.length ? null : h('p', { class: 'nhm-muted' }, 'Chưa có hộp hay ngăn nào bên trong.')
     );
     ganBinh(box, c.id, null);
+    if (c.parent_id == null) box.appendChild(nhietDoPanel(c)); // nhiệt độ chỉ ghi cho thiết bị gốc (tủ, bình)
   }
 
   function renderBox(root) {
@@ -1083,10 +1088,10 @@
     var dem = info.tubes.filter(function (t) { return t.status === 'in_storage'; }).length;
     var kkBar = kk ? h('div', { class: 'nhm-notice nhm-notice--kk', role: 'status' }, [
       h('div', { class: 'nhm-notice-row' }, [
-        h('span', {}, 'Đang kiểm kê hộp. Kiểm tra thực tế, bấm vào những mẫu KHÔNG thấy (chuyển sang gạch đỏ). Mẫu không bấm là có mặt. Đã đánh dấu không thấy: ' + Object.keys(state.audit.khong).length + ' / ' + dem + ' mẫu.'),
+        h('span', {}, (state.audit.dot ? 'Đang kiểm kê trong một đợt. ' : 'Đang kiểm kê hộp. ') + 'Kiểm tra thực tế, bấm vào những mẫu KHÔNG thấy (chuyển sang gạch đỏ). Mẫu không bấm là có mặt. Đã đánh dấu không thấy: ' + Object.keys(state.audit.khong).length + ' / ' + dem + ' mẫu.'),
         h('span', { class: 'nhm-notice-act' }, [
           nutNho('Hoàn tất kiểm kê', 'primary', function () { hoanTatKiemKe(info); }),
-          nutNho('Thoát', '', function () { state.audit = null; renderDetail(); }),
+          nutNho(state.audit.dot ? 'Về đợt kiểm kê' : 'Thoát', '', function () { var dot = state.audit.dot; state.audit = null; if (dot) { moCongViec('kiemke'); state.cv.moDot = dot; } else renderDetail(); }),
         ]),
       ]),
     ]) : null;
@@ -1109,10 +1114,16 @@
   function hoanTatKiemKe(info) {
     var khong = Object.keys(state.audit.khong).map(Number);
     var thay = info.tubes.filter(function (t) { return t.status === 'in_storage' && !state.audit.khong[t.id]; }).map(function (t) { return t.id; });
+    var dot = state.audit.dot;
     var gui = function () {
-      api('POST', '/boxes/' + info.box.id + '/audit', { thay: thay, khong_thay: khong })
-        .then(function (r) { state.audit = null; say('Đã kiểm kê: ' + r.thay + ' có mặt, ' + r.khong_thay + ' không thấy (' + r.vu_viec_moi + ' vụ việc mới).', 'ok'); return reload(true); })
-        .then(taiMe)
+      // đang kiểm trong một đợt: ghi vào đợt (có tiến độ) rồi quay lại danh sách hộp của đợt; không thì kiểm kê hộp lẻ
+      api('POST', dot ? '/inventories/' + dot + '/boxes/' + info.box.id : '/boxes/' + info.box.id + '/audit', { thay: thay, khong_thay: khong })
+        .then(function (r) {
+          state.audit = null;
+          say('Đã kiểm kê: ' + r.thay + ' có mặt, ' + r.khong_thay + ' không thấy (' + r.vu_viec_moi + ' vụ việc mới).', 'ok');
+          if (dot) { taiMe(); moCongViec('kiemke'); state.cv.moDot = dot; return; }
+          return reload(true).then(taiMe);
+        })
         .catch(function (e) { say(e.message, 'err'); });
     };
     if (khong.length) hoi('Có ' + khong.length + ' mẫu không thấy: hệ thống sẽ mở vụ việc nghi mất và gửi thông báo cho chủ mẫu. Tiếp tục?', gui);
@@ -2055,15 +2066,19 @@
     api('GET', '/settings').then(function (r) {
       var err = h('div', { class: 'nhm-err' });
       var o = {};
-      var hang = Object.keys(r.han).map(function (k) {
-        var inp = h('input', { type: 'number', min: String(r.gioi_han[k][0]), max: String(r.gioi_han[k][1]), step: '1', 'aria-label': r.nhan[k] });
-        inp.value = r.han[k];
-        o[k] = inp;
-        return h('div', { class: 'nhm-field' }, [
-          h('span', { class: 'nhm-lbl' }, r.nhan[k]),
-          h('div', { class: 'nhm-han' }, [inp, h('span', {}, 'ngày'), h('span', { class: 'nhm-muted nhm-small' }, 'từ ' + r.gioi_han[k][0] + ' đến ' + r.gioi_han[k][1] + ' · mặc định ' + r.mac_dinh[k])]),
-        ]);
-      });
+      var dong = function (giaTri, gioiHan, nhan, macDinh) {
+        return Object.keys(giaTri).map(function (k) {
+          var inp = h('input', { type: 'number', min: String(gioiHan[k][0]), max: String(gioiHan[k][1]), step: '1', 'aria-label': nhan[k] });
+          inp.value = giaTri[k];
+          o[k] = inp;
+          return h('div', { class: 'nhm-field' }, [
+            h('span', { class: 'nhm-lbl' }, nhan[k]),
+            h('div', { class: 'nhm-han' }, [inp, h('span', {}, 'ngày'), h('span', { class: 'nhm-muted nhm-small' }, 'từ ' + gioiHan[k][0] + ' đến ' + gioiHan[k][1] + ' · mặc định ' + macDinh[k])]),
+          ]);
+        });
+      };
+      var hang = dong(r.han, r.gioi_han, r.nhan, r.mac_dinh);
+      var hangChuKy = dong(r.chu_ky, r.chu_ky_gioi_han, r.chu_ky_nhan, r.chu_ky_mac_dinh);
       var luu = function (giaTri) {
         api('PUT', '/settings', giaTri).then(function (x) { state.meta.han = x.han; say(x.changed ? 'Đã lưu các hạn.' : 'Không có gì thay đổi.', 'ok'); reopen(); }).catch(function (e) { err.textContent = e.message; });
       };
@@ -2071,10 +2086,13 @@
         h('strong', {}, 'Các hạn chờ'),
         h('p', { class: 'nhm-muted nhm-small' }, 'Hạn mới áp dụng cho yêu cầu và vụ việc tạo SAU khi lưu; yêu cầu và vụ việc đang chạy giữ hạn đã ghi. Riêng hạn bỏ mẫu chưa khai báo được tính lúc xem nên đổi là áp dụng ngay cho mọi mục đang chờ.'),
       ].concat(hang, [
+        h('strong', { class: 'nhm-cauhinh__nhom' }, 'Chu kỳ nhắc việc định kỳ'),
+        h('p', { class: 'nhm-muted nhm-small' }, 'Kiểm kê hộp, thử mycoplasma, xác thực STR, ghi nhiệt độ. Quá chu kỳ thì việc hiện ở «Việc cần xử lý» → «Đến hạn» và hệ thống gửi một thư nhắc gộp cho quản lý (và người tạo dòng / thiết bị). Áp dụng ngay khi lưu.'),
+      ], hangChuKy, [
         err,
         h('div', { class: 'nhm-card-act' }, [
           nutNho('Lưu', 'primary', function () { var g = {}; Object.keys(o).forEach(function (k) { g[k] = o[k].value; }); luu(g); }),
-          nutNho('Khôi phục mặc định', '', function () { luu(r.mac_dinh); }),
+          nutNho('Khôi phục mặc định', '', function () { luu(Object.assign({}, r.mac_dinh, r.chu_ky_mac_dinh)); }),
         ]),
       ])));
     }).catch(loiTrongSlot(body));
@@ -2182,7 +2200,7 @@
   /** Số việc chờ trên nút «Việc cần xử lý»: yêu cầu cần tôi xử lý + mẫu chưa khai báo + mẫu nghi mất đang mở. */
   function capNhatHuy() {
     var me = state.me;
-    var n = me ? me.yeuCau.inbox + me.phatHienMo + me.vuViecMo : 0;
+    var n = me ? me.yeuCau.inbox + me.phatHienMo + me.vuViecMo + (me.denHan || 0) : 0;
     var b = $('nhm-work-badge');
     if (b) {
       b.textContent = n ? String(n) : '';
@@ -2482,6 +2500,263 @@
     ]);
   }
 
+  // ═══ ĐẾN HẠN · KIỂM KÊ · NHIỆT ĐỘ THIẾT BỊ ═══════════════════════════════════════════════════════════
+  // Việc đến hạn (kiểm kê, QC mycoplasma / STR, nhiệt độ) từ GET /reminders; đợt kiểm kê từ /inventories;
+  // nhiệt độ từ /containers/:id/temperatures. Cách tính và chu kỳ: services/nganHangTeBaoKhangTheNhacViec.js.
+
+  var DEN_HAN_NHAN = { kiem_ke: 'Kiểm kê', myco: 'Mycoplasma', myco_duong_tinh: 'Mycoplasma dương tính', str: 'STR', nhiet_quen: 'Quên ghi nhiệt độ', nhiet_canh_bao: 'Cảnh báo nhiệt độ' };
+  var soVn = function (n) { return n == null ? '—' : String(n).replace('.', ','); };
+  var soGui = function (v) { return v == null ? '' : String(v).trim().replace(',', '.'); };
+
+  /** Mở trang chi tiết một thiết bị / vị trí lưu trữ (và bung cây tới đó). */
+  function moThietBi(id) {
+    var c = containerById(id);
+    if (!c) { say('Không còn thiết bị này.', 'err'); return; }
+    state.expanded[id] = true;
+    select('container', id);
+  }
+
+  function theDenHan(v) {
+    var l = v.loai, dt = v.doi_tuong, nut = [];
+    if (l === 'kiem_ke') nut.push(nutNho('Mở đợt kiểm kê', 'primary', function () { moDotKiemKe(dt.id); }));
+    if (l === 'myco' || l === 'str' || l === 'myco_duong_tinh') nut.push(nutNho('Mở hồ sơ dòng', 'primary', function () { moDongTeBao(dt.id); }));
+    if (l === 'nhiet_quen') nut.push(nutNho('Ghi số đo', 'primary', function () { soDoForm(dt.id); }));
+    if (l === 'nhiet_canh_bao') nut.push(nutNho('Ghi nhận xử lý', 'primary', function () { xuLyCanhBaoForm(v.canh_bao_id); }));
+    if (dt.loai === 'container') nut.push(nutNho('Xem thiết bị', '', function () { moThietBi(dt.id); }));
+    var khan = v.muc === 'do';
+    return h('div', { class: 'nhm-card ' + (khan ? 'nhm-card--do' : 'nhm-card--vang') }, [
+      h('div', { class: 'nhm-card-top' }, [h('strong', {}, v.tieu_de), h('span', { class: 'nhm-chip ' + (khan ? 'nhm-chip--no' : 'nhm-chip--warn') }, DEN_HAN_NHAN[l] || l)]),
+      h('div', { class: 'nhm-small' }, v.chi_tiet),
+      h('div', { class: 'nhm-card-act' }, nut),
+    ]);
+  }
+
+  // ----- đợt kiểm kê -----
+
+  /** Mở đợt kiểm kê cho cả thiết bị / ngăn / Rack: hệ thống liệt kê mọi hộp đang chứa mẫu để đối chiếu từng hộp. */
+  function moDotKiemKe(containerId) {
+    var c = containerById(containerId);
+    hoi('Mở đợt kiểm kê cho «' + (c ? c.name : 'vị trí này') + '»? Hệ thống liệt kê mọi hộp đang chứa mẫu bên trong để bạn đối chiếu từng hộp với thực tế.', function () {
+      api('POST', '/inventories', { container_id: containerId }).then(function (r) {
+        say('Đã mở đợt kiểm kê: ' + r.so_hop + ' hộp, ' + r.so_mau + ' mẫu.', 'ok');
+        moCongViec('kiemke');
+        state.cv.moDot = r.id;
+      }).catch(function (e) { say(e.message, 'err'); });
+    });
+  }
+
+  function taiDotKiemKe(c, id) {
+    c.chiTiet = c.chiTiet || {};
+    return api('GET', '/inventories/' + id).then(function (r) { c.chiTiet[id] = r; if (state.cv === c) renderDetail(); }).catch(function (e) { say(e.message, 'err'); });
+  }
+
+  /** Mở một hộp của đợt ở chế độ kiểm kê: bấm những mẫu KHÔNG thấy rồi «Hoàn tất» (ghi vào đợt thay vì kiểm kê lẻ). */
+  function kiemHopTrongDot(d, b) {
+    state.cv = null; state.search = null; state.dtb = null;
+    state.sel = { type: 'box', id: b.box_id };
+    state.box = null;
+    state.audit = { boxId: b.box_id, khong: {}, dot: d.id };
+    location.hash = 'box=' + b.box_id;
+    renderTree(); renderDetail(); cuonToiChiTiet();
+    api('GET', '/boxes/' + b.box_id).then(function (bx) { state.box = bx; renderTree(); renderDetail(); }).catch(function (e) { say(e.message, 'err'); });
+  }
+
+  function ketThucDot(d) {
+    openForm({
+      title: 'Kết thúc đợt kiểm kê: ' + d.ten,
+      fields: [{ name: 'ly_do', label: d.hop_xong < d.tong_hop ? 'Còn ' + (d.tong_hop - d.hop_xong) + ' hộp chưa kiểm: ghi lý do kết thúc sớm (bắt buộc)' : 'Ghi chú (không bắt buộc)', type: 'textarea', required: d.hop_xong < d.tong_hop }],
+      submitLabel: 'Kết thúc đợt',
+      onSubmit: function (f) { return api('POST', '/inventories/' + d.id + '/finish', { ly_do: f.ly_do }).then(function () { say('Đã kết thúc đợt kiểm kê.', 'ok'); return lamMoiCv(); }); },
+    });
+  }
+
+  function huyDot(d) {
+    openForm({
+      title: 'Hủy đợt kiểm kê: ' + d.ten,
+      fields: [{ name: 'ly_do', label: 'Lý do hủy đợt (kết quả các hộp đã kiểm vẫn được giữ)', type: 'textarea', required: true }],
+      submitLabel: 'Hủy đợt',
+      onSubmit: function (f) { return api('POST', '/inventories/' + d.id + '/cancel', { ly_do: f.ly_do }).then(function () { say('Đã hủy đợt kiểm kê.', 'ok'); return lamMoiCv(); }); },
+    });
+  }
+
+  function theKiemKe(c, d) {
+    var mo = d.trang_thai === 'dang_lam';
+    var dangMo = c.moDot === d.id;
+    var pt = d.tong_hop ? Math.round((100 * d.hop_xong) / d.tong_hop) : 0;
+    var nut = [nutNho(dangMo ? 'Thu gọn' : mo ? 'Mở danh sách hộp' : 'Xem chi tiết', mo && !dangMo ? 'primary' : '', function () {
+      c.moDot = dangMo ? null : d.id;
+      if (!dangMo) taiDotKiemKe(c, d.id);
+      renderDetail();
+    })];
+    if (mo) { nut.push(nutNho('Kết thúc đợt', '', function () { ketThucDot(d); })); nut.push(nutNho('Hủy đợt', 'danger', function () { huyDot(d); })); }
+    nut.push(h('a', { class: 'nhm-btn nhm-btn--sm', href: API + '/inventories/' + d.id + '/export.csv?nh=' + nganHang }, 'Biên bản CSV'));
+    var chiTiet = null;
+    if (dangMo) {
+      var ct = c.chiTiet && c.chiTiet[d.id];
+      if (!ct) chiTiet = h('div', { class: 'nhm-loading' }, 'Đang tải danh sách hộp…');
+      else chiTiet = h('ul', { class: 'nhm-kk-hop' }, ct.boxes.map(function (b) {
+        var xong = b.trang_thai === 'xong';
+        return h('li', { class: 'nhm-kk-hop__muc' + (xong ? ' nhm-kk-hop__muc--xong' : '') }, [
+          h('span', { class: 'nhm-kk-hop__ten' }, [h('strong', {}, b.name || b.code), h('span', { class: 'nhm-muted nhm-small' }, ' ' + b.duong_dan + ' · ' + b.so_mau + ' mẫu')]),
+          xong
+            ? h('span', { class: 'nhm-small' }, [b.so_thay + ' có mặt' + (b.so_khong_thay ? ' · ' : ''), b.so_khong_thay ? h('b', { class: 'nhm-kk-hop__thieu' }, b.so_khong_thay + ' không thấy') : null])
+            : (mo ? nutNho('Kiểm hộp này', 'primary', function () { kiemHopTrongDot(d, b); }) : h('span', { class: 'nhm-small nhm-muted' }, 'Chưa kiểm')),
+        ]);
+      }));
+    }
+    return h('div', { class: 'nhm-card' + (mo ? '' : ' nhm-card--xong') }, [
+      h('div', { class: 'nhm-card-top' }, [h('strong', {}, d.ten), h('span', { class: 'nhm-chip ' + (mo ? 'nhm-chip--warn' : d.trang_thai === 'huy' ? '' : 'nhm-chip--ok') }, { dang_lam: 'Đang làm', hoan_tat: 'Hoàn tất', huy: 'Đã hủy' }[d.trang_thai])]),
+      h('div', { class: 'nhm-small nhm-muted' }, d.duong_dan + ' · mở bởi ' + d.nguoi_tao_ten + ' lúc ' + gioDia(d.created_at)),
+      h('div', { class: 'nhm-tt-bar', role: 'img', 'aria-label': d.hop_xong + ' trên ' + d.tong_hop + ' hộp đã kiểm' }, h('span', { style: 'width:' + pt + '%' })),
+      h('div', { class: 'nhm-small' }, [d.hop_xong + '/' + d.tong_hop + ' hộp đã kiểm · ' + d.so_thay + ' mẫu có mặt · ', d.so_khong_thay ? h('b', { class: 'nhm-kk-hop__thieu' }, d.so_khong_thay + ' không thấy (' + d.so_vu_viec + ' vụ việc)') : '0 không thấy']),
+      !mo && d.ket_thuc_luc ? h('div', { class: 'nhm-small nhm-muted' }, (d.trang_thai === 'huy' ? 'Hủy' : 'Kết thúc') + ' bởi ' + (d.ket_thuc_ten || '—') + ' lúc ' + gioDia(d.ket_thuc_luc) + (d.ly_do ? ' — ' + d.ly_do : '')) : null,
+      chiTiet,
+      h('div', { class: 'nhm-card-act' }, nut),
+    ]);
+  }
+
+  function noiDungKiemKe(c) {
+    if (c.moDot && !(c.chiTiet && c.chiTiet[c.moDot]) && !c.dangTaiDot) { c.dangTaiDot = true; taiDotKiemKe(c, c.moDot).then(function () { c.dangTaiDot = false; }); }
+    return c.data.length
+      ? h('div', { class: 'nhm-cards' }, c.data.map(function (d) { return theKiemKe(c, d); }))
+      : h('p', { class: 'nhm-muted' }, 'Chưa có đợt kiểm kê nào. Mở thiết bị, ngăn hoặc Rack cần kiểm kê rồi bấm «Mở đợt kiểm kê»; hoặc bấm vào việc «Đến hạn kiểm kê».');
+  }
+
+  // ----- nhiệt độ thiết bị -----
+
+  function soDoForm(containerId, xong) {
+    var c = containerById(containerId);
+    var nito = !!c && trongBinhNito(c);
+    var fields = [{ name: 'nhiet_do', label: 'Nhiệt độ đang hiển thị trên thiết bị (°C)', type: 'text', required: true, placeholder: nito ? 'ví dụ -190' : 'ví dụ -82,5' }];
+    if (nito) fields.push({ name: 'muc_nito', label: 'Mức nitơ lỏng (đọc trên thước đo của bình, không bắt buộc)', type: 'text' });
+    fields.push({ name: 'ghi_chu', label: 'Ghi chú (không bắt buộc)', type: 'text' });
+    openForm({
+      title: 'Ghi số đo: ' + (c ? c.name : 'thiết bị'),
+      fields: fields,
+      submitLabel: 'Ghi số đo',
+      onSubmit: function (f) {
+        return api('POST', '/containers/' + containerId + '/temperatures', { nhiet_do: soGui(f.nhiet_do), muc_nito: soGui(f.muc_nito), ghi_chu: f.ghi_chu })
+          .then(function (r) {
+            if (r.ngoai_nguong) say('Số đo NGOÀI khoảng cho phép' + (r.canh_bao_id ? ': đã mở cảnh báo và báo quản lý.' : '.'), 'err');
+            else say('Đã ghi số đo.', 'ok');
+            return reload(true).then(taiMe).then(function () { if (xong) xong(); });
+          });
+      },
+    });
+  }
+
+  function xuLyCanhBaoForm(alarmId) {
+    openForm({
+      title: 'Ghi nhận đã xử lý cảnh báo nhiệt độ',
+      fields: [{ name: 'ly_do', label: 'Nguyên nhân và việc đã làm (có chuyển mẫu sang thiết bị khác không?)', type: 'textarea', required: true }],
+      submitLabel: 'Ghi nhận',
+      onSubmit: function (f) { return api('POST', '/alarms/' + alarmId + '/resolve', { ly_do: f.ly_do }).then(function () { say('Đã ghi nhận xử lý cảnh báo.', 'ok'); return reload(true).then(taiMe); }); },
+    });
+  }
+
+  function caiDatNhietForm(c, r) {
+    var gy = r.nguong.goi_y;
+    openForm({
+      title: 'Theo dõi nhiệt độ: ' + c.name,
+      fields: [
+        { name: 'theo_doi', label: 'Theo dõi nhiệt độ hằng ngày', type: 'select', options: [{ value: '1', label: 'Có — nhắc khi quên ghi, cảnh báo khi ra ngoài khoảng' }, { value: '0', label: 'Không' }], value: r.theo_doi ? '1' : '0' },
+        { name: 'nguong_duoi', label: 'Thấp nhất cho phép (°C)' + (gy ? ' — để trống = ' + soVn(gy[0]) : ''), type: 'text', value: r.nguong.tu_dat && r.nguong.duoi != null ? soVn(r.nguong.duoi) : '' },
+        { name: 'nguong_tren', label: 'Cao nhất cho phép (°C)' + (gy ? ' — để trống = ' + soVn(gy[1]) : ''), type: 'text', value: r.nguong.tu_dat && r.nguong.tren != null ? soVn(r.nguong.tren) : '' },
+      ],
+      submitLabel: 'Lưu',
+      onSubmit: function (f) {
+        return api('PUT', '/containers/' + c.id + '/monitoring', { theo_doi: f.theo_doi === '1', nguong_duoi: soGui(f.nguong_duoi), nguong_tren: soGui(f.nguong_tren) })
+          .then(function () { say('Đã lưu cài đặt theo dõi nhiệt độ.', 'ok'); return reload(true); });
+      },
+    });
+  }
+
+  /** Biểu đồ số đo trong cửa sổ ngày: dải khoảng cho phép (xám nhạt), đường mực, chấm đỏ cho số đo ngoài khoảng. null nếu chưa có số đo. */
+  function veBieuDoNhiet(r, ngay) {
+    var pts = r.so_do;
+    if (!pts.length) return null;
+    var ns = 'http://www.w3.org/2000/svg';
+    var W = 360, H = 150, L = 40, R = 12, T = 12, B = 24;
+    var se = function (tag, a) { var e = document.createElementNS(ns, tag); Object.keys(a || {}).forEach(function (k) { e.setAttribute(k, a[k]); }); return e; };
+    var ng = r.nguong;
+    var ms = function (p) { return Date.parse(String(p.ghi_luc).replace(' ', 'T') + 'Z'); };
+    var cuoi = Date.now(), dau = cuoi - ngay * 86400000;
+    var vals = pts.map(function (p) { return p.nhiet_do; }).concat([ng.duoi, ng.tren].filter(function (v) { return v != null; }));
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var pad = Math.max(1, (hi - lo) * 0.15); lo -= pad; hi += pad;
+    var X = function (t) { return Math.min(W - R, Math.max(L, L + ((t - dau) / (cuoi - dau)) * (W - L - R))); };
+    var Y = function (v) { return T + ((hi - v) / (hi - lo)) * (H - T - B); };
+    var tomTat = pts.length + ' số đo trong ' + ngay + ' ngày, gần nhất ' + soVn(pts[pts.length - 1].nhiet_do) + '°C' + (pts.some(function (p) { return p.ngoai_nguong; }) ? ', có số đo ngoài khoảng cho phép' : '');
+    var svg = se('svg', { viewBox: '0 0 ' + W + ' ' + H, class: 'nhm-nhiet__hinh', role: 'img', 'aria-label': tomTat, preserveAspectRatio: 'xMidYMid meet' });
+    if (ng.duoi != null && ng.tren != null) svg.appendChild(se('rect', { x: L, y: Y(ng.tren), width: W - L - R, height: Math.max(1, Y(ng.duoi) - Y(ng.tren)), class: 'nhm-nhiet__dai' }));
+    [ng.duoi, ng.tren].forEach(function (v) {
+      if (v == null) return;
+      svg.appendChild(se('line', { x1: L, x2: W - R, y1: Y(v), y2: Y(v), class: 'nhm-nhiet__bien' }));
+      var t = se('text', { x: L - 5, y: Y(v) + 3.5, 'text-anchor': 'end', class: 'nhm-nhiet__nhan' }); t.textContent = soVn(v); svg.appendChild(t);
+    });
+    svg.appendChild(se('polyline', { points: pts.map(function (p) { return X(ms(p)).toFixed(1) + ',' + Y(p.nhiet_do).toFixed(1); }).join(' '), class: 'nhm-nhiet__duong' }));
+    pts.forEach(function (p) {
+      var c = se('circle', { cx: X(ms(p)).toFixed(1), cy: Y(p.nhiet_do).toFixed(1), r: p.ngoai_nguong ? 4 : 2.6, class: 'nhm-nhiet__cham' + (p.ngoai_nguong ? ' nhm-nhiet__cham--ngoai' : '') });
+      var tt = se('title', {}); tt.textContent = soVn(p.nhiet_do) + '°C · ' + gioDia(p.ghi_luc) + (p.user_label ? ' · ' + p.user_label : ''); c.appendChild(tt);
+      svg.appendChild(c);
+    });
+    [[dau, 'start'], [cuoi, 'end']].forEach(function (m) {
+      var t = se('text', { x: m[1] === 'start' ? L : W - R, y: H - 7, 'text-anchor': m[1], class: 'nhm-nhiet__nhan' });
+      var dd = new Date(m[0]);
+      t.textContent = ('0' + dd.getDate()).slice(-2) + '/' + ('0' + (dd.getMonth() + 1)).slice(-2);
+      svg.appendChild(t);
+    });
+    return svg;
+  }
+
+  function veNhietDo(c, r, ngay) {
+    var nito = r.thiet_bi.la_binh_nito;
+    var cb = r.canh_bao;
+    var tt = cb ? h('span', { class: 'nhm-chip nhm-chip--no' }, 'Đang cảnh báo')
+      : r.theo_doi ? (r.qua_han_ghi ? h('span', { class: 'nhm-chip nhm-chip--warn' }, 'Quá ' + r.chu_ky_ghi_ngay + ' ngày chưa ghi') : h('span', { class: 'nhm-chip nhm-chip--ok' }, 'Đang theo dõi'))
+      : h('span', { class: 'nhm-chip' }, 'Chưa theo dõi');
+    var ng = r.nguong;
+    var khoang = ng.duoi != null || ng.tren != null ? 'Khoảng cho phép ' + soVn(ng.duoi) + ' đến ' + soVn(ng.tren) + '°C' + (ng.tu_dat ? '' : ' (gợi ý theo nhiệt độ chuẩn ' + soVn(r.thiet_bi.temperature_c) + '°C)') : 'Chưa có khoảng nhiệt độ cho phép.';
+    var m = r.moi_nhat;
+    var nut = [];
+    if (r.quyen_ghi) nut.push(nutNho('Ghi số đo', 'primary', function () { soDoForm(c.id); }));
+    if (r.quyen_cai_dat) nut.push(nutNho(r.theo_doi ? 'Cài đặt theo dõi' : 'Bật theo dõi nhiệt độ', '', function () { caiDatNhietForm(c, r); }));
+    var hinh = veBieuDoNhiet(r, ngay);
+    return [
+      h('div', { class: 'nhm-nhiet__dau' }, [h('h3', {}, 'Nhiệt độ thiết bị'), tt]),
+      cb ? h('div', { class: 'nhm-notice nhm-notice--canh', role: 'alert' }, h('div', { class: 'nhm-notice-row' }, [
+        h('span', {}, 'Số đo ' + soVn(cb.nhiet_do) + '°C ngày ' + gioDia(cb.created_at) + ' ra ngoài khoảng cho phép. Kiểm tra thiết bị, chuyển mẫu nếu cần rồi ghi nhận đã xử lý.'),
+        r.quyen_cai_dat ? h('span', { class: 'nhm-notice-act' }, nutNho('Ghi nhận xử lý', 'primary', function () { xuLyCanhBaoForm(cb.id); })) : null,
+      ])) : null,
+      h('p', { class: 'nhm-small' }, m
+        ? ['Gần nhất: ', h('b', { class: m.ngoai_nguong ? 'nhm-nhiet__xau' : '' }, soVn(m.nhiet_do) + '°C'), nito && m.muc_nito != null ? ' · nitơ ' + soVn(m.muc_nito) : '', ' · ' + gioDia(m.ghi_luc) + (m.user_label ? ' · ' + m.user_label : '')]
+        : 'Chưa có số đo nào.'),
+      h('p', { class: 'nhm-small nhm-muted' }, khoang),
+      hinh ? h('div', { class: 'nhm-nhiet__khung' }, hinh) : null,
+      nut.length ? h('div', { class: 'nhm-actions' }, nut) : null,
+      r.so_do.length ? h('details', { class: 'nhm-nhiet__nk' }, [
+        h('summary', {}, 'Nhật ký số đo (' + r.so_do.length + ' trong ' + ngay + ' ngày)'),
+        h('div', { class: 'nhm-bang-cuon' }, h('table', { class: 'nhm-hist' }, [
+          h('thead', {}, h('tr', {}, [h('th', {}, 'Lúc'), h('th', {}, '°C')].concat(nito ? [h('th', {}, 'Nitơ')] : [], [h('th', {}, 'Người ghi'), h('th', {}, 'Ghi chú')]))),
+          h('tbody', {}, r.so_do.slice().reverse().slice(0, 100).map(function (p) {
+            return h('tr', {}, [h('td', { 'data-l': 'Lúc' }, gioDia(p.ghi_luc)), h('td', { 'data-l': '°C', class: p.ngoai_nguong ? 'nhm-nhiet__xau' : '' }, soVn(p.nhiet_do))]
+              .concat(nito ? [h('td', { 'data-l': 'Nitơ' }, soVn(p.muc_nito))] : [], [h('td', { 'data-l': 'Người ghi' }, p.user_label || ''), h('td', { 'data-l': 'Ghi chú' }, p.ghi_chu || '')]));
+          })),
+        ])),
+      ]) : null,
+    ];
+  }
+
+  /** Khung «Nhiệt độ thiết bị» ở trang chi tiết thiết bị gốc; tải số đo rồi vẽ. */
+  function nhietDoPanel(c) {
+    var ngay = 30;
+    var vung = h('section', { class: 'nhm-nhiet', 'aria-label': 'Nhiệt độ thiết bị' }, h('div', { class: 'nhm-loading' }, 'Đang tải nhiệt độ…'));
+    api('GET', '/containers/' + c.id + '/temperatures?days=' + ngay)
+      .then(function (r) { put.apply(null, [vung].concat(veNhietDo(c, r, ngay))); })
+      .catch(function (e) { put(vung, h('p', { class: 'nhm-err' }, e.message)); });
+    return vung;
+  }
+
   // ----- bảng «Việc cần xử lý» -----
   function moCongViec(tab, gapSan) {
     state.search = null; state.sel = null; state.box = null; state.audit = null; state.dtb = null;
@@ -2494,13 +2769,13 @@
 
   function taiCv() {
     var c = state.cv; if (!c) return Promise.resolve();
-    var url = { inbox: '/requests?view=inbox', mine: '/requests?view=mine', done: '/requests?view=done', all: '/requests?view=all', saphet: '/volume/low', phathien: '/findings', nghimat: '/incidents', vipham: '/violations' }[c.tab];
+    var url = { inbox: '/requests?view=inbox', mine: '/requests?view=mine', done: '/requests?view=done', all: '/requests?view=all', saphet: '/volume/low', phathien: '/findings', nghimat: '/incidents', vipham: '/violations', denhan: '/reminders', kiemke: '/inventories' }[c.tab];
     // tab «Cần tôi xử lý» kèm lịch sử đã xử lý ở phía dưới (hai lần gọi độc lập; lịch sử lỗi thì chỉ không hiện)
     var ls = c.tab === 'inbox' ? api('GET', '/requests?view=done').then(function (x) { return x.requests || []; }, function () { return []; }) : Promise.resolve(null);
     return Promise.all([api('GET', url), ls]).then(function (kq) {
       var r = kq[0];
       if (state.cv !== c) return;
-      c.data = r.requests || r.findings || r.incidents || r.violations || r.sap_het || [];
+      c.data = r.requests || r.findings || r.incidents || r.violations || r.sap_het || r.viec || r.inventories || [];
       c.chuaGhi = r.chua_ghi || 0;
       c.lichSu = kq[1];
       renderDetail();
@@ -2510,6 +2785,8 @@
   function renderCongViec(root) {
     var c = state.cv, me = state.me || { yeuCau: { inbox: 0, mine: 0 }, phatHienMo: 0, vuViecMo: 0 };
     var tabs = [['inbox', 'Cần tôi xử lý', me.yeuCau.inbox], ['mine', 'Yêu cầu của tôi', me.yeuCau.mine], ['phathien', 'Mẫu chưa khai báo', me.phatHienMo], ['nghimat', 'Mẫu nghi mất', me.vuViecMo]];
+    if (state.meta.canManage || me.denHan) tabs.push(['denhan', 'Đến hạn', me.denHan || 0]);
+    if (state.meta.canManage || state.meta.laVienTruong) tabs.push(['kiemke', 'Kiểm kê', 0]);
     if (state.meta.canManage) tabs.push(['all', 'Tất cả yêu cầu', 0], ['vipham', 'Lấy không xin phép', 0]);
     if (state.meta.canManage && nganHang === 'khang_the') tabs.push(['saphet', 'Ống sắp hết', 0]);
     var bar = h('div', { class: 'nhm-tabs', role: 'tablist' }, tabs.map(function (t) {
@@ -2521,6 +2798,9 @@
     var theo = c.tab === 'inbox' && c.data ? c.data.filter(function (y) { return y.theo_doi; }) : [];
     var ds = c.tab === 'inbox' && c.data ? c.data.filter(function (y) { return !y.theo_doi; }) : c.data;
     if (!c.data) noiDung = h('div', { class: 'nhm-loading' }, 'Đang tải…');
+    else if (c.tab === 'denhan') {
+      noiDung = c.data.length ? h('div', { class: 'nhm-cards' }, c.data.map(theDenHan)) : h('p', { class: 'nhm-muted' }, 'Không có việc nào đến hạn: kiểm kê, mycoplasma, STR và nhiệt độ đều đang trong chu kỳ.');
+    } else if (c.tab === 'kiemke') noiDung = noiDungKiemKe(c);
     else if (c.tab === 'vipham') {
       noiDung = c.data.length ? h('div', { class: 'nhm-cards' }, c.data.map(function (x) {
         return h('div', { class: 'nhm-card' }, [h('div', { class: 'nhm-card-top' }, [h('strong', {}, x.ten), h('span', { class: 'nhm-chip nhm-chip--warn' }, x.so_lan + ' lần')]),
@@ -2687,7 +2967,8 @@
     }).then(function () {
       $('nhm-work').addEventListener('click', function () { moCongViec('inbox'); });
       renderTree(); renderDetail(); capNhatHuy();
-      if (location.hash === '#cong-viec') moCongViec('inbox', true);
+      if (location.hash === '#den-han') moCongViec('denhan');
+      else if (location.hash === '#cong-viec') moCongViec('inbox', true);
       else if (state.sel && state.sel.type === 'box') cuonToiChiTiet(); // mở thẳng một hộp: cuộn tới lưới hộp
     }).catch(function (e) {
       $('nhm-tree').textContent = '';

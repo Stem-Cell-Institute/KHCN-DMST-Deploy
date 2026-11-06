@@ -40,6 +40,7 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     const containers = db
       .prepare(
         `SELECT c.id, c.parent_id, c.type_id, c.code, c.name, c.temperature_c, c.location_note, c.sort_order, c.notes, c.quan_ly_boi, c.don_vi_id, c.vi_tri, c.rieng_user_id, c.created_by, c.mau_tb,
+                c.theo_doi_nhiet, (SELECT COUNT(*) FROM nhm_canh_bao_nhiet w WHERE w.container_id = c.id AND w.trang_thai = 'mo') AS canh_bao_nhiet,
                 t.name AS type_name
          FROM nhm_containers c JOIN nhm_container_types t ON t.id = c.type_id
          WHERE c.deleted_at IS NULL ORDER BY c.sort_order, c.name`

@@ -400,22 +400,24 @@ module.exports = function createPhatHienRouter(ctx) {
   });
 
   // ── Kiểm kê hộp: đối chiếu sổ với thực tế ──
-  router.post('/boxes/:id/audit', (req, res) => {
-    if (!canManage(req) && !ctx.laVienTruong(req)) return fail(res, 403, 'Chỉ Admin hoặc Quản lý module mới có quyền thao tác này.');
-    const id = toInt(req.params.id);
-    const box = id && db.prepare('SELECT id, code, container_id FROM nhm_boxes WHERE id = ? AND deleted_at IS NULL').get(id);
-    if (!box) return fail(res, 404, 'Không tìm thấy hộp.');
-    if (!ctx.quyenViTri(req, box.container_id)) return fail(res, 403, 'Chỉ Admin, Quản lý module hoặc chủ thiết bị riêng mới có quyền thao tác này.');
-    const body = req.body || {};
+  /** Quyền kiểm kê trên một vị trí lưu trữ: Admin / Quản lý module / Viện trưởng, và phải có quyền với thiết bị (không phải thiết bị riêng của người khác). */
+  const duocKiemKe = (req, containerId) => (canManage(req) || ctx.laVienTruong(req)) && ctx.quyenViTri(req, containerId);
+
+  /**
+   * Ghi kết quả kiểm kê MỘT hộp (dùng chung cho «Kiểm kê hộp» lẻ và đợt kiểm kê): mẫu thấy được ghi mốc «lần cuối thấy», mẫu không thấy mở
+   * vụ việc nghi mất; hộp được ghi mốc kiểm kê (nhm_boxes.kiem_ke_luc) để tính hạn kiểm kê kế tiếp.
+   * Trả {thay, khong_thay, vu_viec_moi} hoặc {loi: [status, message]}. `chay` (tùy chọn) chạy trong CÙNG giao dịch (đợt kiểm kê ghi tiến độ hộp).
+   */
+  function kiemKeHop(req, box, body, chay) {
     const ids = (a) => (Array.isArray(a) ? a.map(toInt) : null);
     const thay = ids(body.thay);
     const khongThay = ids(body.khong_thay);
-    if (!thay || !khongThay || thay.includes(null) || khongThay.includes(null)) return fail(res, 400, 'Danh sách mẫu thấy / không thấy không hợp lệ.');
-    if (thay.some((x) => khongThay.includes(x))) return fail(res, 400, 'Một mẫu không thể vừa thấy vừa không thấy.');
+    if (!thay || !khongThay || thay.includes(null) || khongThay.includes(null)) return { loi: [400, 'Danh sách mẫu thấy / không thấy không hợp lệ.'] };
+    if (thay.some((x) => khongThay.includes(x))) return { loi: [400, 'Một mẫu không thể vừa thấy vừa không thấy.'] };
     const trongHop = new Map(
-      db.prepare(`SELECT * FROM nhm_tubes WHERE box_id = ? AND deleted_at IS NULL AND status = 'in_storage'`).all(id).map((t) => [t.id, t])
+      db.prepare(`SELECT * FROM nhm_tubes WHERE box_id = ? AND deleted_at IS NULL AND status = 'in_storage'`).all(box.id).map((t) => [t.id, t])
     );
-    for (const x of thay.concat(khongThay)) if (!trongHop.has(x)) return fail(res, 400, `Mẫu id=${x} không phải mẫu đang lưu kho của hộp này.`);
+    for (const x of thay.concat(khongThay)) if (!trongHop.has(x)) return { loi: [400, `Mẫu id=${x} không phải mẫu đang lưu kho của hộp này.`] };
     const moVu = [];
     db.transaction(() => {
       for (const x of thay) {
@@ -431,10 +433,25 @@ module.exports = function createPhatHienRouter(ctx) {
         logMove(x, 'kiem_ke_khong_thay', t.box_id ? t : null, null, req.user.id, `Kiểm kê hộp ${box.code}: không thấy mẫu — vụ việc #${info.lastInsertRowid}${t.thay_luc ? '; lần cuối thấy ' + t.thay_luc + ' (UTC)' : ''}`);
         moVu.push({ vvId: Number(info.lastInsertRowid), tube: t });
       }
+      db.prepare("UPDATE nhm_boxes SET kiem_ke_luc = datetime('now') WHERE id = ?").run(box.id);
+      if (chay) chay({ thay: thay.length, khong_thay: khongThay.length, vu_viec_moi: moVu.length });
     })();
     audit(req, 'box_audit', `hộp ${box.code}: ${thay.length} có mặt, ${khongThay.length} không thấy`);
     for (const m of moVu) guiNen(thongBao.nghiMat({ vv: { nguon: 'kiem_ke', mo_ta: `Kiểm kê hộp ${box.code}` }, tube: m.tube, nguoiBao: nguoiDung(req.user.id), duongDan: moTaViTri(m.tube.box_id, m.tube.row_no, m.tube.col_no) }));
-    res.json({ ok: true, thay: thay.length, khong_thay: khongThay.length, vu_viec_moi: moVu.length });
+    return { thay: thay.length, khong_thay: khongThay.length, vu_viec_moi: moVu.length };
+  }
+  ctx.kiemKeHop = kiemKeHop;
+  ctx.duocKiemKe = duocKiemKe;
+
+  router.post('/boxes/:id/audit', (req, res) => {
+    if (!canManage(req) && !ctx.laVienTruong(req)) return fail(res, 403, 'Chỉ Admin hoặc Quản lý module mới có quyền thao tác này.');
+    const id = toInt(req.params.id);
+    const box = id && db.prepare('SELECT id, code, container_id FROM nhm_boxes WHERE id = ? AND deleted_at IS NULL').get(id);
+    if (!box) return fail(res, 404, 'Không tìm thấy hộp.');
+    if (!ctx.quyenViTri(req, box.container_id)) return fail(res, 403, 'Chỉ Admin, Quản lý module hoặc chủ thiết bị riêng mới có quyền thao tác này.');
+    const kq = kiemKeHop(req, box, req.body || {});
+    if (kq.loi) return fail(res, kq.loi[0], kq.loi[1]);
+    res.json({ ok: true, ...kq });
   });
 
   return router;

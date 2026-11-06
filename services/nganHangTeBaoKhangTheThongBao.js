@@ -221,6 +221,44 @@ function taoThongBao({ db, mailSend, baseUrl }) {
         `${tt(tube.box_id)} Có người nhận đã lấy mẫu: ${tube.name}`, thu);
     },
 
+    /** Thư nhắc việc đến hạn (kiểm kê, QC, nhiệt độ…) gộp theo người nhận. */
+    nhacViec({ nguoiNhan, viec, nganHang }) {
+      const doan = [{ text: `Có ${viec.length} việc đến hạn ở ${NGAN_HANG[nganHang] || 'ngân hàng'} cần bạn xem:` }]
+        .concat(viec.map((v) => ({ nhan: v.muc === 'do' ? 'KHẨN' : 'Đến hạn', text: `${v.tieu_de} — ${v.chi_tiet}` })))
+        .concat([{ text: 'Việc nào chưa làm sẽ được nhắc lại định kỳ. Xem đầy đủ ở «Việc cần xử lý» → «Đến hạn».' }]);
+      const thu = dungThu(doan, goc ? `${goc}${TRANG}?nh=${nganHang}#den-han` : '');
+      return guiDen(gop(null, [nguoiNhan]), `[${NGAN_HANG[nganHang]}] ${viec.some((v) => v.muc === 'do') ? 'KHẨN: ' : ''}${viec.length} việc đến hạn`, thu);
+    },
+
+    /** Số đo nhiệt độ ra ngoài khoảng cho phép → quản lý + người tạo thiết bị (không báo người vừa ghi). */
+    canhBaoNhiet({ tb, soDo, nguong, nguoiGhi, nguoiNhan }) {
+      const khoang = `${nguong.duoi != null ? nguong.duoi : '…'} đến ${nguong.tren != null ? nguong.tren : '…'}°C`;
+      const thu = dungThu(
+        [{ text: `Nhiệt độ của thiết bị dưới đây ra ngoài khoảng cho phép. Hãy kiểm tra thiết bị ngay; nếu cần, chuyển mẫu sang thiết bị khác rồi ghi nhận đã xử lý trong hệ thống.` },
+          { nhan: 'Thiết bị', text: tb.name },
+          { nhan: 'Số đo', text: `${String(soDo.nhiet_do).replace('.', ',')}°C` },
+          { nhan: 'Khoảng cho phép', text: khoang },
+          { nhan: 'Người ghi', text: ten(nguoiGhi) }]
+          .concat(soDo.ghi_chu ? [{ nhan: 'Ghi chú', text: soDo.ghi_chu }] : []),
+        goc ? `${goc}${TRANG}?nh=${tb.ngan_hang}#den-han` : ''
+      );
+      return guiDen(gop(nguoiGhi && nguoiGhi.id, nguoiNhan), `[${NGAN_HANG[tb.ngan_hang]}] CẢNH BÁO nhiệt độ: ${tb.name}`, thu);
+    },
+
+    /** Kết quả mycoplasma DƯƠNG TÍNH vừa được ghi → quản lý + người tạo dòng. */
+    mycoDuongTinh({ dong, qc, nguoiGhi, nguoiNhan, soOng }) {
+      const thu = dungThu(
+        [{ text: 'Dòng tế bào dưới đây vừa có kết quả mycoplasma DƯƠNG TÍNH. Cách ly dòng này khỏi các dòng khác, xử lý hoặc loại bỏ, và thử lại sau xử lý.' },
+          { nhan: 'Dòng', text: `${dong.ma} · ${dong.ten}` },
+          { nhan: 'Ngày thử', text: String(qc.ngay).split('-').reverse().join('/') },
+          qc.phuong_phap ? { nhan: 'Phương pháp', text: qc.phuong_phap } : null,
+          { nhan: 'Số ống đang lưu', text: String(soOng) },
+          { nhan: 'Người ghi', text: ten(nguoiGhi) }].filter(Boolean),
+        goc ? `${goc}${TRANG}?nh=te_bao#den-han` : ''
+      );
+      return guiDen(gop(nguoiGhi && nguoiGhi.id, nguoiNhan), `[${NGAN_HANG.te_bao}] KHẨN: mycoplasma dương tính — ${dong.ma}`, thu);
+    },
+
     /** Quản lý chốt thất lạc → chủ mẫu. */
     thatLac({ vv, tube, nguoiXuLy, duongDan }) {
       const thu = dungThu(

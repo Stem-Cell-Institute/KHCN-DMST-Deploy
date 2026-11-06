@@ -25,6 +25,9 @@ const createTheTichRouter = require('./theTich');
 const createUyQuyenRouter = require('./uyQuyen');
 const createDongTeBaoRouter = require('./dongTeBao');
 const createTepRouter = require('./tepDinhKem');
+const createKiemKeRouter = require('./kiemKe');
+const createGiamSatRouter = require('./giamSat');
+const createNhacViecRouter = require('./nhacViec');
 const khoiTao = require('../../services/nganHangTeBaoKhangTheKhoiTao');
 
 function createNganHangMauRouter(deps) {
@@ -44,20 +47,24 @@ function createNganHangMauRouter(deps) {
   router.use(createDonViRouter(ctx));
   router.use(createTimKiemRouter(ctx));
   router.use(createYeuCauRouter(ctx));
-  router.use(createPhatHienRouter(ctx));
+  router.use(createPhatHienRouter(ctx)); // đặt ctx.kiemKeHop (kiểm kê một hộp) cho đợt kiểm kê dùng lại
+  router.use(createKiemKeRouter(ctx)); // đợt kiểm kê cả thiết bị / ngăn / Rack
   router.use(createMauRouter(ctx));
   router.use(createTheTichRouter(ctx)); // thể tích (µL) ống kháng thể
   router.use(createUyQuyenRouter(ctx)); // ủy quyền duyệt (ngân hàng kháng thể)
   router.use(createDongTeBaoRouter(ctx)); // hồ sơ dòng tế bào, lô, QC, báo cáo GMO
   router.use(createTepRouter(ctx, deps)); // tệp đính kèm
+  router.use(createGiamSatRouter(ctx)); // nhật ký nhiệt độ thiết bị, cảnh báo
+  router.use(createNhacViecRouter(ctx)); // việc đến hạn + bộ quét thư nhắc
   // cho test và bộ hẹn giờ gọi trực tiếp
   router.quetQuaHan = ctx.quetQuaHan;
   router.quetSinhVien = ctx.quetSinhVien;
+  router.quetNhacViec = ctx.quetNhacViec;
   router.dinhTuyenLai = ctx.dinhTuyenLai;
   // Bộ hẹn giờ trong tiến trình: chuyển yêu cầu quá hạn lên quản lý (đa số máy chỉ chạy MỘT tiến trình; câu lệnh UPDATE
   // có điều kiện nên chạy chồng cũng không chuyển hai lần). Không giữ tiến trình sống (unref).
   if (deps.nhacTuDong) {
-    const quet = () => Promise.resolve().then(() => ctx.quetQuaHan()).then(() => ctx.quetSinhVien()).catch((e) => console.warn('[ngan-hang] quét quá hạn lỗi:', e && e.message));
+    const quet = () => Promise.resolve().then(() => ctx.quetQuaHan()).then(() => ctx.quetSinhVien()).then(() => ctx.quetNhacViec()).catch((e) => console.warn('[ngan-hang] quét quá hạn lỗi:', e && e.message));
     const dau = setTimeout(quet, 2 * 60 * 1000);
     const lap = setInterval(quet, ctx.CHU_KY_QUET_MS);
     for (const t of [dau, lap]) if (t.unref) t.unref();

@@ -12,9 +12,10 @@
 const express = require('express');
 const { toInt, toStr, chuanHoaTen, HOLDING } = require('../../services/nganHangTeBaoKhangThe');
 const DT = require('../../services/nganHangTeBaoKhangTheDongTeBao');
+const NhacViec = require('../../services/nganHangTeBaoKhangTheNhacViec');
 
 module.exports = function createDongTeBaoRouter(ctx) {
-  const { db, canManage, laVienTruong, audit, fail, nhanNguoi, moTaViTri, dkKhongAn, YeuCau } = ctx;
+  const { db, canManage, laVienTruong, audit, fail, nhanNguoi, moTaViTri, dkKhongAn, YeuCau, thongBao, guiNen } = ctx;
   const router = express.Router();
   const homNay = () => YeuCau.homNayVn();
 
@@ -127,7 +128,7 @@ module.exports = function createDongTeBaoRouter(ctx) {
       .map((t) => ({ id: t.id, name: t.name, status: t.status, lo_id: t.lo_id, lo_ma: t.lo_ma, box_id: t.box_id, vi_tri: moTaViTri(t.box_id, t.row_no, t.col_no) }));
     res.json({
       dong: dinhDangDong(req, d), lo, qc: qc.map((x) => ({ ...x, lo_ma: x.lo_id ? (lo.find((l) => l.id === x.lo_id) || {}).ma || null : null })), tep, ong,
-      mycoplasma: DT.trangThaiMyco(db, id, nay), han_myco_ngay: DT.HAN_MYCO_NGAY,
+      mycoplasma: DT.trangThaiMyco(db, id, nay), han_myco_ngay: NhacViec.layChuKy(db).MYCO_NGAY,
     });
   });
 
@@ -246,6 +247,11 @@ module.exports = function createDongTeBaoRouter(ctx) {
       .prepare('INSERT INTO nhm_qc (dong_id, lo_id, loai, ket_qua, ngay, phuong_phap, ghi_chu, user_id, user_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .run(id, loId, q.loai, q.ket_qua, q.ngay, q.phuong_phap, q.ghi_chu, req.user.id, nhanNguoi(req.user.id));
     audit(req, 'cell_qc_create', `id=${info.lastInsertRowid} dòng ${dong.ma}: ${q.loai} = ${q.ket_qua} (${q.ngay})`);
+    // mycoplasma DƯƠNG TÍNH: báo ngay quản lý và người tạo dòng (không chờ bộ quét định kỳ); thư chạy nền
+    if (q.loai === 'mycoplasma' && q.ket_qua === 'duong_tinh') {
+      const nhan = [...YeuCau.quanLyModule(db, 'te_bao'), YeuCau.nguoiConHoatDong(db, dong.created_by)].filter(Boolean);
+      guiNen(thongBao.mycoDuongTinh({ dong, qc: q, nguoiGhi: ctx.nguoiDung(req.user.id), nguoiNhan: nhan, soOng: demOngThat(id) }));
+    }
     res.status(201).json({ id: Number(info.lastInsertRowid) });
   });
 

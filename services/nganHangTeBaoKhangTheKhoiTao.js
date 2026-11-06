@@ -52,6 +52,10 @@ const COT_THEM_SAU = [
   ['nhm_yeu_cau', 'so_ul_yeu_cau', 'REAL'],
   ['nhm_yeu_cau', 'so_ul_giao', 'REAL'],
   ['nhm_yeu_cau', 'uy_quyen_id', 'INTEGER'],
+  ['nhm_boxes', 'kiem_ke_luc', 'TEXT'],
+  ['nhm_containers', 'theo_doi_nhiet', 'INTEGER NOT NULL DEFAULT 0 CHECK (theo_doi_nhiet IN (0,1))'],
+  ['nhm_containers', 'nguong_duoi', 'REAL'],
+  ['nhm_containers', 'nguong_tren', 'REAL'],
 ];
 
 function themCotNeuThieu(db) {

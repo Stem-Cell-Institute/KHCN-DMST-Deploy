@@ -10,14 +10,14 @@
 
 const { toStr, toInt, parseSo, parseNgay } = require('./nganHangTeBaoKhangThe');
 const { esc } = require('./baoCaoPhongThongBao');
+const { layChuKy } = require('./nganHangTeBaoKhangTheNhacViec');
 
 const DANG_NUOI_VN = { bam_dinh: 'Bám dính', huyen_phu: 'Huyền phù', khac: 'Khác' };
 const LOAI_DONG_VN = { dong_ban_dau: 'Dòng nguyên phát', dong_vo_han: 'Dòng bất tử hóa', ipsc: 'iPSC', khac: 'Khác' };
 const QC_LOAI_VN = { mycoplasma: 'Mycoplasma', str: 'Xác thực STR', song_sot: 'Tỉ lệ sống sót', vi_khuan_nam: 'Vi khuẩn / nấm', hinh_thai: 'Hình thái', khac: 'Khác' };
 const QC_KET_QUA_VN = { dat: 'Đạt', khong_dat: 'Không đạt', am_tinh: 'Âm tính', duong_tinh: 'Dương tính', khac: 'Khác' };
 
-/** Quá số ngày này kể từ lần thử mycoplasma gần nhất thì báo «quá hạn thử». */
-const HAN_MYCO_NGAY = 180;
+// «Quá hạn thử mycoplasma»: quá chu kỳ cấu hình (mặc định 180 ngày) kể từ lần thử gần nhất — xem layChuKy(db).MYCO_NGAY
 const BSL_VN = { 1: 'BSL-1', 2: 'BSL-2', 3: 'BSL-3', 4: 'BSL-4' };
 
 const CHUOI = {
@@ -113,7 +113,7 @@ function trangThaiMyco(db, dongId, homNay) {
   const r = db.prepare("SELECT ket_qua, ngay FROM nhm_qc WHERE dong_id = ? AND loai = 'mycoplasma' ORDER BY ngay DESC, id DESC LIMIT 1").get(dongId);
   if (!r) return { co: false, ket_qua: null, ngay: null, qua_han: true };
   const so = (Date.parse(homNay + 'T00:00:00Z') - Date.parse(r.ngay + 'T00:00:00Z')) / 86400000;
-  return { co: true, ket_qua: r.ket_qua, ngay: r.ngay, qua_han: so > HAN_MYCO_NGAY };
+  return { co: true, ket_qua: r.ket_qua, ngay: r.ngay, qua_han: so > layChuKy(db).MYCO_NGAY };
 }
 
 // ---------- tệp đính kèm: chỉ nhận loại an toàn, nhận dạng theo NỘI DUNG (không tin tên tệp / Content-Type do người dùng gửi) ----------
@@ -223,6 +223,6 @@ function dungBaoCaoGmo(d) {
 }
 
 module.exports = {
-  DANG_NUOI_VN, LOAI_DONG_VN, QC_LOAI_VN, QC_KET_QUA_VN, BSL_VN, HAN_MYCO_NGAY, TOI_DA_TEP, TOI_DA_TEP_MOI_DOI_TUONG, LOAI_TEP,
+  DANG_NUOI_VN, LOAI_DONG_VN, QC_LOAI_VN, QC_KET_QUA_VN, BSL_VN, TOI_DA_TEP, TOI_DA_TEP_MOI_DOI_TUONG, LOAI_TEP,
   docDong, docLo, docQc, trangThaiMyco, nhanDangTep, lamSachTen, oCsv, taoCsv, dungBaoCaoGmo,
 };

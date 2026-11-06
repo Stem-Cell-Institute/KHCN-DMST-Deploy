@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS nhm_containers (
   ngan_hang TEXT NOT NULL DEFAULT 'te_bao' CHECK (ngan_hang IN ('te_bao','khang_the')),
   -- Vị trí SỐ của giá (rack) trong bình nitơ lỏng (1–50); NULL = không đánh số
   vi_tri INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50),
+  -- Chỉ ở thiết bị GỐC: có theo dõi nhiệt độ hằng ngày không, và khoảng nhiệt độ cho phép (NULL = dùng gợi ý theo nhiệt độ chuẩn của thiết bị)
+  theo_doi_nhiet INTEGER NOT NULL DEFAULT 0 CHECK (theo_doi_nhiet IN (0,1)),
+  nguong_duoi REAL,
+  nguong_tren REAL,
   deleted_at TEXT,
   created_by INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -63,6 +67,8 @@ CREATE TABLE IF NOT EXISTS nhm_boxes (
   notes TEXT,
   -- Vị trí SỐ của hộp trong giá (rack) của bình nitơ lỏng (1–50), số 1 ở trên cùng, càng lớn càng sâu; NULL = không đánh số
   vi_tri INTEGER CHECK (vi_tri IS NULL OR vi_tri BETWEEN 1 AND 50),
+  -- Lần kiểm kê gần nhất (UTC); NULL = chưa kiểm kê lần nào (tính hạn từ ngày tạo hộp)
+  kiem_ke_luc TEXT,
   deleted_at TEXT,
   created_by INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -530,3 +536,82 @@ CREATE TABLE IF NOT EXISTS nhm_tep (
   xoa_boi INTEGER
 );
 CREATE INDEX IF NOT EXISTS ix_nhm_tep_dt ON nhm_tep(doi_tuong, doi_tuong_id);
+
+-- ═══ Đợt kiểm kê, nhật ký nhiệt độ thiết bị, cảnh báo, nhắc việc định kỳ ════════════════════════════════════════════════
+-- Đợt kiểm kê: đối chiếu sổ với thực tế cho CẢ một thiết bị / ngăn / Rack (mọi hộp bên trong), theo dõi tiến độ từng hộp.
+-- Mỗi hộp được kiểm bằng đúng thao tác «kiểm kê hộp» (POST /boxes/:id/audit): mẫu không thấy mở vụ việc nghi mất.
+-- Danh sách hộp chụp lại lúc mở đợt (hộp thêm sau không nằm trong đợt). Một vị trí chỉ có một đợt đang làm.
+CREATE TABLE IF NOT EXISTS nhm_kiem_ke (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ngan_hang TEXT NOT NULL DEFAULT 'te_bao' CHECK (ngan_hang IN ('te_bao','khang_the')),
+  container_id INTEGER NOT NULL REFERENCES nhm_containers(id),
+  ten TEXT NOT NULL,
+  trang_thai TEXT NOT NULL DEFAULT 'dang_lam' CHECK (trang_thai IN ('dang_lam','hoan_tat','huy')),
+  nguoi_tao_id INTEGER,
+  nguoi_tao_ten TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  ket_thuc_luc TEXT,
+  ket_thuc_boi INTEGER,
+  ket_thuc_ten TEXT,
+  ly_do TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_kiem_ke_mo ON nhm_kiem_ke(container_id) WHERE trang_thai = 'dang_lam';
+CREATE TRIGGER IF NOT EXISTS trg_nhm_kiem_ke_khong_xoa BEFORE DELETE ON nhm_kiem_ke BEGIN SELECT RAISE(ABORT, 'Đợt kiểm kê không được xóa'); END;
+
+CREATE TABLE IF NOT EXISTS nhm_kiem_ke_hop (
+  kiem_ke_id INTEGER NOT NULL REFERENCES nhm_kiem_ke(id),
+  box_id INTEGER NOT NULL REFERENCES nhm_boxes(id),
+  so_mau INTEGER NOT NULL DEFAULT 0,
+  trang_thai TEXT NOT NULL DEFAULT 'chua' CHECK (trang_thai IN ('chua','xong')),
+  so_thay INTEGER,
+  so_khong_thay INTEGER,
+  so_vu_viec INTEGER,
+  nguoi_id INTEGER,
+  nguoi_ten TEXT,
+  luc TEXT,
+  PRIMARY KEY (kiem_ke_id, box_id)
+);
+CREATE TRIGGER IF NOT EXISTS trg_nhm_kiem_ke_hop_khong_xoa BEFORE DELETE ON nhm_kiem_ke_hop BEGIN SELECT RAISE(ABORT, 'Kết quả kiểm kê hộp không được xóa'); END;
+
+-- Nhật ký nhiệt độ (và mức nitơ lỏng với bình LN) của thiết bị gốc. Chỉ thêm, không sửa / xóa.
+-- ngoai_nguong = 1: số đo nằm ngoài khoảng cho phép tại thời điểm ghi (khoảng có thể đổi sau, nên lưu lại kết luận lúc đó).
+CREATE TABLE IF NOT EXISTS nhm_nhiet_do (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  container_id INTEGER NOT NULL REFERENCES nhm_containers(id),
+  nhiet_do REAL NOT NULL,
+  muc_nito REAL,
+  ghi_chu TEXT,
+  ngoai_nguong INTEGER NOT NULL DEFAULT 0 CHECK (ngoai_nguong IN (0,1)),
+  user_id INTEGER,
+  user_label TEXT,
+  ghi_luc TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_nhm_nhiet_do_tb ON nhm_nhiet_do(container_id, ghi_luc DESC);
+CREATE TRIGGER IF NOT EXISTS trg_nhm_nhiet_do_khong_sua BEFORE UPDATE ON nhm_nhiet_do BEGIN SELECT RAISE(ABORT, 'Số đo nhiệt độ chỉ được thêm, không được sửa'); END;
+CREATE TRIGGER IF NOT EXISTS trg_nhm_nhiet_do_khong_xoa BEFORE DELETE ON nhm_nhiet_do BEGIN SELECT RAISE(ABORT, 'Số đo nhiệt độ chỉ được thêm, không được xóa'); END;
+
+-- Cảnh báo nhiệt độ: mở khi một số đo ra ngoài khoảng cho phép; chỉ đóng khi người có quyền ghi rõ đã làm gì (không tự đóng khi số đo trở lại bình thường).
+-- Mỗi thiết bị chỉ có một cảnh báo đang mở; số đo ngoài khoảng tiếp theo trong lúc đang mở chỉ được ghi vào nhật ký.
+CREATE TABLE IF NOT EXISTS nhm_canh_bao_nhiet (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  container_id INTEGER NOT NULL REFERENCES nhm_containers(id),
+  nhiet_do_id INTEGER REFERENCES nhm_nhiet_do(id),
+  nhiet_do REAL NOT NULL,
+  nguong_duoi REAL,
+  nguong_tren REAL,
+  trang_thai TEXT NOT NULL DEFAULT 'mo' CHECK (trang_thai IN ('mo','da_xu_ly')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  xu_ly_boi INTEGER,
+  xu_ly_ten TEXT,
+  xu_ly_luc TEXT,
+  ly_do_xu_ly TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_nhm_canh_bao_nhiet_mo ON nhm_canh_bao_nhiet(container_id) WHERE trang_thai = 'mo';
+CREATE TRIGGER IF NOT EXISTS trg_nhm_canh_bao_nhiet_khong_xoa BEFORE DELETE ON nhm_canh_bao_nhiet BEGIN SELECT RAISE(ABORT, 'Cảnh báo nhiệt độ không được xóa'); END;
+
+-- Thư nhắc việc định kỳ đã gửi (khóa ổn định cho từng việc) để không gửi lại mỗi lần quét.
+CREATE TABLE IF NOT EXISTS nhm_nhac_viec (
+  khoa TEXT PRIMARY KEY,
+  lan_cuoi TEXT NOT NULL,
+  so_lan INTEGER NOT NULL DEFAULT 1
+);

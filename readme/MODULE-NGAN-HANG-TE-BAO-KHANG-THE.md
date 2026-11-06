@@ -353,7 +353,7 @@ Sinh viên **không bao giờ** là người duyệt: người sắp ra trườn
 
 Phần mềm không ngăn được hành vi ngoài đời; nó giúp **phát hiện**, **cho đường nhận lỗi** và **ghi trách nhiệm**:
 
-- **Phát hiện:** chủ mẫu / trưởng nhóm / quản lý bấm «Báo không còn ở vị trí», hoặc quản lý **kiểm kê hộp** (bấm những mẫu không thấy; mẫu
+- **Phát hiện:** chủ mẫu / trưởng nhóm / quản lý bấm «Báo không còn ở vị trí», hoặc quản lý **kiểm kê hộp** / **đợt kiểm kê** cả thiết bị (xem «Vận hành hằng ngày»; bấm những mẫu không thấy; mẫu
   còn lại được ghi mốc `thay_luc` = «lần cuối thấy», lịch sử ghi `kiem_ke_thay` / `kiem_ke_khong_thay`).
 - Mẫu nghi mất mở một **vụ việc** (`nhm_vu_viec`): chủ mẫu, trưởng nhóm và quản lý nhận thư; mọi người thấy ở bảng «Mẫu nghi mất»;
   mẫu vẫn giữ ô, không yêu cầu lấy được.
@@ -363,10 +363,41 @@ Phần mềm không ngăn được hành vi ngoài đời; nó giúp **phát hi�
   yêu cầu liên quan); admin chốt sớm được, ghi rõ.
 - Mức xử lý người lấy không xin phép là chính sách của Viện — hệ thống chỉ giữ bằng chứng (số lần theo người, có nhóm).
 
+## Vận hành hằng ngày: đợt kiểm kê, việc đến hạn, nhiệt độ thiết bị
+
+Ba tính năng giúp quản lý **chủ động** giữ an toàn mẫu thay vì chờ có người báo. Code: `routes/nganHangTeBaoKhangThe/kiemKe.js` (6 endpoint), `giamSat.js` (5), `nhacViec.js` (1 + bộ quét); nghiệp vụ thuần ở `services/nganHangTeBaoKhangTheNhacViec.js` và `…NhietDo.js`; bảng `nhm_kiem_ke`, `nhm_kiem_ke_hop`, `nhm_nhiet_do`, `nhm_canh_bao_nhiet`, `nhm_nhac_viec`; cột `nhm_boxes.kiem_ke_luc`, `nhm_containers.theo_doi_nhiet / nguong_duoi / nguong_tren`. Test: `tests/nganHangTeBaoKhangThe.vanHanh.test.js`.
+
+**Đợt kiểm kê** (Admin / Quản lý module / Viện trưởng với thiết bị của mình)
+- Ở trang chi tiết thiết bị, ngăn hoặc Rack bấm **«Mở đợt kiểm kê»**: hệ thống chụp danh sách mọi hộp đang chứa mẫu lưu kho bên trong (hộp rỗng bỏ qua). Một vị trí chỉ có một đợt đang làm; đợt chồng lên vị trí cha / con bị 409.
+- Mỗi hộp được kiểm bằng đúng thao tác «Kiểm kê hộp» (bấm những mẫu KHÔNG thấy): mẫu không thấy mở **vụ việc nghi mất** như cũ, mẫu thấy được ghi «lần cuối thấy», hộp được ghi mốc `kiem_ke_luc`. Làm trong đợt thì có **tiến độ** (`n/N hộp`, số mẫu có mặt / không thấy). Một hộp chỉ kiểm một lần trong một đợt; sửa sai bằng «Kiểm kê hộp» riêng.
+- **Kết thúc đợt** khi còn hộp chưa kiểm phải ghi lý do (≥ 5 ký tự); **hủy đợt** cần lý do. Đợt không xóa được (trigger). **Biên bản CSV** (`GET /inventories/:id/export.csv`, có BOM, chống công thức Excel) để lưu hồ sơ.
+- Đợt kiểm kê ở thiết bị riêng của Viện trưởng chỉ chủ và admin thấy.
+
+**Việc đến hạn** (tab «Đến hạn» ở «Việc cần xử lý»; số việc cộng vào huy hiệu; liên kết `…#den-han` trong thư mở thẳng tab này)
+
+| Loại | Điều kiện | Chu kỳ mặc định |
+|---|---|---|
+| Kiểm kê | thiết bị có hộp (còn mẫu lưu kho) mà lần kiểm kê gần nhất (hoặc ngày tạo hộp nếu chưa kiểm lần nào) quá chu kỳ | 180 ngày |
+| Mycoplasma | dòng **còn ống đang lưu** chưa thử (dòng mới có 30 ngày ân hạn) hoặc lần thử gần nhất quá chu kỳ | 180 ngày |
+| Mycoplasma dương tính | lần thử gần nhất dương tính mà dòng còn ống đang lưu (việc khẩn) | — |
+| STR | dòng còn ống đang lưu chưa xác thực STR hoặc quá chu kỳ | 365 ngày |
+| Nhiệt độ quên ghi | thiết bị đang theo dõi mà quá số ngày này chưa có số đo (3 ngày bao được cuối tuần) | 3 ngày |
+| Cảnh báo nhiệt độ | cảnh báo đang mở chưa ghi nhận xử lý (việc khẩn) | — |
+
+- Người thấy: quản lý module thấy mọi việc của ngân hàng; việc ở **thiết bị riêng** chỉ chủ và admin thấy. QC dòng tế bào chỉ có ở ngân hàng tế bào, ống ở thiết bị riêng không tính.
+- **Thư nhắc** do bộ quét chạy cùng bộ hẹn giờ quá hạn (30 phút một lần): **một thư gộp cho mỗi người** (quản lý của ngân hàng, thêm người tạo dòng / thiết bị), mỗi việc nhắc lại sau «Việc vẫn chưa làm thì nhắc lại» ngày (mặc định 7). Việc xong thì bị xóa khỏi sổ nhắc để tái phát được nhắc ngay. SMTP hỏng không làm quét lỗi; việc vẫn hiện trong tab «Đến hạn».
+- Ghi QC mycoplasma **dương tính** gửi thư khẩn ngay (không chờ bộ quét) cho quản lý và người tạo dòng.
+
+**Nhiệt độ thiết bị** (chỉ thiết bị gốc; khung «Nhiệt độ thiết bị» ở trang chi tiết)
+- Quản lý thiết bị (quản lý module, chủ thiết bị riêng, người duyệt của đơn vị quản lý) bật **«Theo dõi nhiệt độ»** và đặt khoảng cho phép; để trống thì dùng **gợi ý theo nhiệt độ chuẩn** (-86°C → -96…-70; -20°C → -25…-15; 4°C → 2…8; 37°C → 35…39; ≤ -150°C → cảnh báo khi lên quá -150). Thiết bị chưa có nhiệt độ chuẩn phải tự đặt khoảng.
+- Ghi số đo (nhiệt độ hiển thị trên tủ; bình nitơ ghi thêm mức nitơ): quản lý, chủ thiết bị và — ở thiết bị **Public** — mọi người dùng module; thiết bị có đơn vị quản lý chỉ quản lý và người duyệt của đơn vị. Số đo ghi tên người và **không sửa / xóa được** (trigger).
+- Số đo ra ngoài khoảng ở thiết bị đang theo dõi **mở một cảnh báo** (tối đa một cảnh báo mở cho mỗi thiết bị) và gửi thư khẩn cho quản lý + người tạo thiết bị; thiết bị hiện nhãn «Cảnh báo» trên cây. Cảnh báo **không tự đóng** khi số đo trở lại bình thường: người quản lý phải ghi nguyên nhân và việc đã làm (≥ 5 ký tự) rồi bấm «Ghi nhận xử lý».
+- Biểu đồ 30 ngày: dải khoảng cho phép, đường số đo, chấm đỏ cho số đo ngoài khoảng; kèm nhật ký (tối đa 100 dòng mới nhất). Phần mềm **chưa nối cảm biến** — số đo do người ghi; cần cảnh báo thời gian thực khi mất điện thì phải gắn cảm biến / bộ ghi nhiệt riêng.
+
 ## Cấu hình các hạn
 
 Ba hạn chờ chỉnh được ở **Quản lý module → Cấu hình hạn** (admin và quản lý module; `GET/PUT /settings`, lưu ở bảng `nhm_cau_hinh`,
-đọc qua `layHan(db)`):
+đọc qua `layHan(db)`); cùng màn hình có thêm năm **chu kỳ nhắc việc định kỳ** (bảng dưới bảng này, đọc qua `layChuKy(db)`, áp dụng ngay khi lưu):
 
 | Hạn | Mặc định | Khoảng |
 |---|---|---|
@@ -377,6 +408,14 @@ Ba hạn chờ chỉnh được ở **Quản lý module → Cấu hình hạn** 
 Hạn mới áp dụng cho yêu cầu và vụ việc **tạo sau khi lưu** (yêu cầu / vụ việc đang chạy giữ hạn đã ghi); riêng hạn bỏ mẫu chưa khai
 báo được tính lúc xem nên đổi là áp dụng ngay cho mọi mục đang chờ. Mỗi lần đổi ghi nhật ký «cũ → mới». Giá trị hỏng hoặc ngoài
 khoảng trong CSDL bị bỏ qua, dùng mặc định. Email và thông báo lỗi luôn nói đúng số ngày đang áp dụng.
+
+| Chu kỳ nhắc việc | Mặc định | Khoảng |
+|---|---|---|
+| Kiểm kê hộp (`KIEM_KE_NGAY`) | 180 ngày | 30–730 |
+| Thử mycoplasma của dòng (`MYCO_NGAY`) | 180 ngày | 30–730 |
+| Xác thực STR của dòng (`STR_NGAY`) | 365 ngày | 90–1095 |
+| Quên ghi nhiệt độ (`NHIET_GHI_NGAY`) | 3 ngày | 1–14 |
+| Nhắc lại qua email (`NHAC_LAI_NGAY`) | 7 ngày | 1–30 |
 
 ## Điện thoại
 
