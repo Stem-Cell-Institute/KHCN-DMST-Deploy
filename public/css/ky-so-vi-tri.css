@@ -9,6 +9,8 @@ dialog.kyso-hop {
 }
 dialog.kyso-hop[open] { display: flex; flex-direction: column; }
 dialog.kyso-hop::backdrop { background: rgba(22, 35, 61, .55); }
+/* Các nút/khối có display riêng sẽ đè thuộc tính hidden: ép ẩn thật (vd. "‹ Báo cáo trước" ở tài liệu đầu tiên). */
+dialog.kyso-hop [hidden] { display: none !important; }
 .kyso-dau { padding: 14px 18px 4px; }
 .kyso-dau h2 { margin: 0; font-size: 19px; }
 .kyso-phu { margin: 2px 0 0; color: var(--chu-phu, #4a5873); font-size: 14px; overflow-wrap: anywhere; }
