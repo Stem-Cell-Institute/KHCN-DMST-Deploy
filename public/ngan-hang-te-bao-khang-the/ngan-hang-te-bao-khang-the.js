@@ -1001,12 +1001,13 @@
 
   function veChiTiet() {
     var box = $('nhm-detail');
+    box.style.removeProperty('--nhm-cols'); // số cột lưới hộp (đặt lại khi xem hộp) để cột trái vừa khít lưới
     var sel = state.sel;
     if (state.search) return renderSearch(box);
     if (state.cv) return renderCongViec(box);
     if (state.dtb) return renderDongTeBao(box);
     if (!sel) { put(box, h('p', { class: 'nhm-muted' }, 'Chọn một thiết bị, vị trí lưu trữ hoặc hộp ở bên trái.')); return; }
-    if (sel.type === 'box') { renderBox(box); ganBinh(box, state.box && state.box.box ? state.box.box.container_id : null, { hop: sel.id }); return; }
+    if (sel.type === 'box') { renderBox(box); if (state.box && state.box.box) box.style.setProperty('--nhm-cols', state.box.box.cols); ganBinh(box, state.box && state.box.box ? state.box.box.container_id : null, { hop: sel.id }); return; }
     var c = state.tree.containers.filter(function (x) { return x.id === sel.id; })[0];
     if (!c) { put(box, h('p', { class: 'nhm-muted' }, 'Không còn mục này.')); return; }
     var boxes = state.tree.boxes.filter(function (b) { return b.container_id === c.id; }).sort(function (a, b) { return (a.vi_tri || 999) - (b.vi_tri || 999); });
