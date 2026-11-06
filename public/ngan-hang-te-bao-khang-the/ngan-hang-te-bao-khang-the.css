@@ -417,7 +417,7 @@
 @media (min-width: 901px) {
   /* Cột trái rộng ĐÚNG bằng lưới hộp (26px nhãn hàng + số cột × (ô + 3px khe), số cột do JS đặt ở --nhm-cols), cột phải (sơ đồ + thông tin ống) nằm SÁT ngay cạnh
      và rộng tới 560px: không còn khoảng trống giữa hai cột. Màn hình chật thì cột trái co lại (lưới hộp tự cuộn ngang), cột phải giữ ít nhất 340px. */
-  .nhm-detail--ln { --nhm-trai: calc(26px + var(--nhm-cols, 9) * (var(--nhm-o, 64px) + 3px) + 6px); display: grid; grid-template-columns: minmax(min(var(--nhm-trai), max(240px, calc(100% - 402px))), var(--nhm-trai)) minmax(340px, 560px); justify-content: start; column-gap: 22px; align-items: start; }
+  .nhm-detail--ln { --nhm-trai: calc(26px + var(--nhm-cols, 9) * (var(--nhm-o, 64px) + 3px) + 6px); display: grid; grid-template-columns: minmax(min(var(--nhm-trai), max(240px, calc(100% - 402px))), var(--nhm-trai)) minmax(340px, 620px); justify-content: start; column-gap: 22px; align-items: start; }
   .nhm-detail--ln > * { grid-column: 1; }
   /* cột phải: sơ đồ + vùng dock (hộp thoại ống hiện ngay dưới sơ đồ); dính khi cuộn, tự cuộn riêng nếu cao hơn màn hình */
   .nhm-detail--ln > .nhm-cot-phai { grid-column: 2; grid-row: 1 / span 40; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
@@ -687,3 +687,29 @@
 .nhm-nhiet__nk > summary { cursor: pointer; color: var(--chu-phu); }
 .nhm-notice--canh { margin: 8px 0 10px; }
 @media (max-width: 600px) { .nhm-nhiet { margin-top: 22px; } .nhm-kk-hop__muc .nhm-btn { flex: 1 1 100%; } }
+
+/* ══ Màn hình rộng, đang xem thông tin một ống ở dock: sơ đồ thu nhỏ + thông tin ống gọn lại để cả hai nằm vừa cột phải, không phải cuộn.
+   Chỉ áp dụng khi dock đang mở; chưa chọn ống thì sơ đồ vẫn to như cũ. ═══════════════════════════════════════════════════════════════ */
+@media (min-width: 901px) {
+  .nhm-cot-phai:has(.nhm-dock > dialog[open]) .ln-svg,
+  .nhm-cot-phai:has(.nhm-dock > dialog[open]) .tb-svg { max-height: 120px; }
+  .nhm-cot-phai:has(.nhm-dock > dialog[open]) .ln-svg { max-height: 110px; }
+  .nhm-cot-phai:has(.nhm-dock > dialog[open]) .nhm-ln > summary { padding: 4px 10px; }
+  .nhm-cot-phai:has(.nhm-dock > dialog[open]) .nhm-ln > summary .nhm-btn { min-height: 24px; padding: 0 8px; font-size: 0.7rem; }
+  .nhm-cot-phai:has(.nhm-dock > dialog[open]) .ln-hop-bao { padding: 0 8px 6px; }
+  .nhm-detail--ln .nhm-dialog--dock { max-height: none; overflow: visible; margin-top: 8px; padding: 8px 12px 0; }
+  .nhm-dialog--dock h3 { margin: 0 0 4px; padding-bottom: 3px; font-size: 0.92rem; line-height: 1.25; }
+  .nhm-dialog--dock .nhm-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 12px; margin: 6px 0; }
+  .nhm-dialog--dock .nhm-fact { padding: 2px 0; font-size: 0.76rem; line-height: 1.25; }
+  .nhm-dialog--dock .nhm-fact b { display: inline; margin: 0 4px 0 0; font-size: 0.68rem; letter-spacing: 0.02em; }
+  .nhm-dialog--dock .nhm-dl { gap: 4px; font-size: 0.78rem; }
+  .nhm-dialog--dock .nhm-dl-tt { margin: 0; padding: 5px 8px; gap: 2px; line-height: 1.3; }
+  .nhm-dialog--dock .nhm-dl-moi { padding: 6px 8px; gap: 4px; }
+  .nhm-dialog--dock .nhm-chip { font-size: 0.66rem; padding: 0 6px; }
+  .nhm-dialog--dock strong { font-size: 0.78rem; }
+  .nhm-dialog--dock .nhm-hist { margin-top: 3px; font-size: 0.72rem; }
+  .nhm-dialog--dock .nhm-hist th, .nhm-dialog--dock .nhm-hist td { padding: 3px 6px 3px 0; }
+  .nhm-dialog--dock .nhm-btn { min-height: 24px; padding: 0 6px; font-size: 0.7rem; }
+  .nhm-dialog--dock .nhm-form-actions { justify-content: flex-start; gap: 3px; margin-top: 3px; padding: 4px 0 5px; }
+  .nhm-dialog--dock .nhm-dl-tt .nhm-btn { min-height: 22px; justify-self: start; }
+}
