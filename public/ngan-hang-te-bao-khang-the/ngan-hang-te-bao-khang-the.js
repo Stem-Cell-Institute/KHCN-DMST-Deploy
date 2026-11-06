@@ -63,6 +63,37 @@
   // ---------- hộp thoại biểu mẫu ----------
   function closeDialog() { var d = $('nhm-dialog'); if (d.open) d.close(); }
 
+  /**
+   * Mở hộp thoại. Màn hình rộng và đang xem một thiết bị có sơ đồ (có vùng .nhm-dock dưới sơ đồ): hộp thoại của ống (xem ống, nhập mẫu) hiện NGAY DƯỚI sơ đồ
+   * để vẫn thấy lưới hộp và vị trí ống trên sơ đồ khi thao tác; còn lại (điện thoại, hộp thoại quản lý, xác nhận) là popup như cũ.
+   * Đang mở rồi thì giữ nguyên chế độ (chỉ thay nội dung), nên từ hộp thoại ống bấm «Chỉnh sửa», «Lấy ra»… vẫn nằm ở dock.
+   */
+  function hienHopThoai(dockUuTien) {
+    var d = $('nhm-dialog');
+    if (d.open) return;
+    var dock = dockUuTien && !window.matchMedia('(max-width: 900px)').matches ? document.querySelector('.nhm-dock') : null;
+    if (dock) {
+      dock.appendChild(d);
+      d.classList.add('nhm-dialog--dock');
+      d.show();
+    } else {
+      if (d.parentNode !== document.body) document.body.appendChild(d);
+      d.classList.remove('nhm-dialog--dock');
+      d.showModal();
+    }
+  }
+
+  /** Sau khi vẽ lại chi tiết: hộp thoại dock đang mở được đưa sang dock mới; không còn dock (đã chuyển sang màn khác) thì đóng. */
+  function giuHopThoaiDock() {
+    var d = $('nhm-dialog');
+    if (!d || !d.classList.contains('nhm-dialog--dock')) return;
+    var dock = document.querySelector('.nhm-dock');
+    if (!d.open) { d.classList.remove('nhm-dialog--dock'); return; }
+    if (dock) { if (d.parentNode !== dock) dock.appendChild(d); }
+    else { d.close(); d.classList.remove('nhm-dialog--dock'); if (d.parentNode !== document.body) document.body.appendChild(d); }
+  }
+  document.addEventListener('keydown', function (e) { var d = $('nhm-dialog'); if (e.key === 'Escape' && d && d.open && d.classList.contains('nhm-dialog--dock')) d.close(); });
+
   /** fields: {name,label,type,options:[{value,label}],value,required,placeholder}; onSubmit(values) trả Promise. */
   function openForm(opts) {
     var d = $('nhm-dialog');
@@ -105,7 +136,7 @@
       opts.onSubmit(values).then(closeDialog).catch(function (e) { err.textContent = e.message; });
     });
     d.replaceChildren(form);
-    if (!d.open) d.showModal();
+    hienHopThoai(opts.dock);
     var first = form.querySelector('input,select,textarea');
     if (first) first.focus();
   }
@@ -144,7 +175,7 @@
     return new Promise(function (res, rej) { hoi(cauHoi, res, function () { rej(new Error('Đã hủy thao tác.')); }); });
   }
 
-  function openInfo(title, nodes, buttons) {
+  function openInfo(title, nodes, buttons, dock) {
     var d = $('nhm-dialog');
     d.replaceChildren(h('div', {}, [
       h('h3', {}, title),
@@ -153,7 +184,7 @@
         h('button', { type: 'button', class: 'nhm-btn', onclick: closeDialog }, 'Đóng'),
       ])),
     ]));
-    if (!d.open) d.showModal();
+    hienHopThoai(dock);
   }
 
   // ---------- tải dữ liệu ----------
@@ -862,16 +893,24 @@
     m.chon(sel || (r && r.id === c.id ? { gia: r.id } : null));
     var det = h('details', { class: 'nhm-ln' }, [h('summary', {}, [h('span', { class: 'nhm-ln__tit' }, 'Sơ đồ bình ' + tank.name), tom]), m.node]);
     det.open = !window.matchMedia('(max-width: 900px)').matches; // máy tính: mở sẵn; điện thoại: gập lại
+    var cot = h('div', { class: 'nhm-cot-phai' }, [det, h('div', { class: 'nhm-dock' })]); // dưới sơ đồ là vùng để hộp thoại ống hiện ra (màn hình rộng)
     root.classList.add('nhm-detail--ln');
     // Màn hình hẹp: khung đặt SAU phần thông tin vị trí (tiêu đề, cây vị trí, dòng nhắc) và trước lưới hộp, để thông tin không bị đứt quãng.
     // Màn hình rộng: CSS đưa khung sang cột phải nên vị trí trong DOM không ảnh hưởng.
     var cuoiThongTin = root.querySelectorAll('.nhm-title, .nhm-hint');
     var moc = cuoiThongTin.length ? cuoiThongTin[cuoiThongTin.length - 1] : null;
-    if (moc && moc.parentNode === root) root.insertBefore(det, moc.nextSibling);
-    else root.appendChild(det);
+    if (moc && moc.parentNode === root) root.insertBefore(cot, moc.nextSibling);
+    else root.appendChild(cot);
   }
 
   function renderDetail() {
+    var dlg = $('nhm-dialog');
+    if (dlg && dlg.classList.contains('nhm-dialog--dock') && dlg.parentNode !== document.body) document.body.appendChild(dlg); // cất tạm để không mất khi vẽ lại cột phải
+    veChiTiet();
+    giuHopThoaiDock();
+  }
+
+  function veChiTiet() {
     var box = $('nhm-detail');
     var sel = state.sel;
     if (state.search) return renderSearch(box);
@@ -1144,6 +1183,7 @@
     }
     openForm({
       title: tube ? 'Chỉnh sửa thông tin mẫu' : (claim ? 'Nhận và khai báo mẫu tại ' : 'Thêm mẫu tại ') + posLabel(r, c),
+      dock: true,
       fields: fields,
       extraButtons: !tube && !claim && quanLy ? [h('button', { type: 'button', class: 'nhm-btn', onclick: function () { phatHienForm(box, r, c); } }, 'Ô này có mẫu nhưng chưa khai báo')] : [],
       onSubmit: function (v) {
@@ -1404,7 +1444,7 @@
     if ((!laChu || cbKhoa) && !state.meta.canManage && !(state.box && state.box.duoc_don_vi) && t.status === 'in_storage' && !t.nghi_mat) buttons.unshift(btn('Yêu cầu lấy mẫu này', 'primary', function () { xinMauForm(t); }));
     if (t.nghi_mat) buttons.unshift(btn('Mẫu nghi mất — xem vụ việc', 'danger', function () { closeDialog(); moCongViec('nghimat'); }));
     if (state.meta.canManage) buttons.push(btn('Chuyển chủ', '', function () { transferForm(t); }));
-    openInfo(t.name, body, buttons);
+    openInfo(t.name, body, buttons, true);
     api('GET', '/tubes/' + t.id + '/history').then(function (r) {
       var slot = $('nhm-hist');
       if (!slot) return;

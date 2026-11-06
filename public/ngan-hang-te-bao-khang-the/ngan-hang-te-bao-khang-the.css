@@ -415,14 +415,15 @@
 .nhm-ln[open] .nhm-ln__tom { display: none; } /* mở rồi thì chấm đỏ đã nói đủ; gập lại mới cần dòng mô tả */
 
 @media (min-width: 901px) {
-  .nhm-detail--ln { display: grid; grid-template-columns: minmax(0, 1fr) 300px; column-gap: 22px; align-items: start; }
+  .nhm-detail--ln { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); column-gap: 22px; align-items: start; }
   .nhm-detail--ln > * { grid-column: 1; }
-  .nhm-detail--ln > .nhm-ln { grid-column: 2; grid-row: 1 / span 40; position: sticky; top: 12px; }
+  /* cột phải: sơ đồ + vùng dock (hộp thoại ống hiện ngay dưới sơ đồ); dính khi cuộn, tự cuộn riêng nếu cao hơn màn hình */
+  .nhm-detail--ln > .nhm-cot-phai { grid-column: 2; grid-row: 1 / span 40; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
 }
 @media (max-width: 900px) {
   .ln-svg { max-height: 250px; }
   .nhm-detail--ln { display: flex; flex-direction: column; }
-  .nhm-detail--ln > .nhm-ln { margin: 4px 0 14px; }
+  .nhm-detail--ln > .nhm-cot-phai { margin: 4px 0 14px; }
 }
 @media print { .nhm-ln { display: none; } }
 
@@ -588,3 +589,11 @@
 .nhm-dl-moi { display: grid; gap: 8px; padding: 10px 12px; border: 1px dashed var(--muc); border-radius: 2px; }
 .nhm-dl-moi.nhm-hide { display: none; }
 .nhm-canh { color: var(--son); font-weight: 600; } /* son đỏ chỉ là tín hiệu: GMO, mycoplasma dương tính, kết quả QC xấu */
+
+/* hộp thoại ống nằm dưới sơ đồ (màn hình rộng): không phải popup, nằm trong luồng của cột phải */
+.nhm-dock:empty, .nhm-dock > dialog:not([open]) { display: none; }
+.nhm-dialog--dock { position: static; inset: auto; display: block; width: auto; max-width: none; max-height: max(320px, calc(100vh - 410px)); margin: 12px 0 0; padding: 16px 16px 0; overflow: auto; box-shadow: none; }
+.nhm-dialog--dock:not([open]) { display: none; }
+.nhm-dialog--dock .nhm-form-actions { bottom: 0; margin-bottom: 0; }
+@media (min-width: 901px) { .nhm-detail--ln .ln-svg { max-height: 300px; } } /* sơ đồ gọn lại để dock có chỗ */
+.nhm-dialog--dock .nhm-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
