@@ -1063,7 +1063,13 @@
         return h('li', {}, h('button', { type: 'button', class: 'nhm-sub', onclick: function () { state.expanded[c.id] = true; state.expanded[x.id] = true; select('container', x.id); } },
           [icon('ngan'), h('span', { class: 'nhm-sub__name' }, x.name), h('span', { class: 'nhm-muted nhm-small' }, x.type_name)]));
       }))]) : null,
-      boxes.length || subs.length ? null : h('p', { class: 'nhm-muted' }, 'Chưa có hộp hay ngăn nào bên trong.')
+      // hộp nằm trực tiếp trong vị trí này (vd Rack): liệt kê để bấm vào xem lưới hộp, không để khung giữa trống
+      boxes.length ? h('div', { class: 'nhm-inside' }, [h('h3', {}, 'Hộp trong ' + c.name + ' (' + boxes.length + ')'), h('ul', {}, boxes.map(function (b) {
+        return h('li', {}, h('button', { type: 'button', class: 'nhm-sub', onclick: function () { state.expanded[c.id] = true; select('box', b.id); } },
+          [icon('hop'), h('span', { class: 'nhm-sub__name' }, (b.vi_tri ? b.vi_tri + ' · ' : '') + (b.name || b.code)),
+            h('span', { class: 'nhm-muted nhm-small' }, b.rows + '×' + b.cols + ' · ' + b.tube_count + '/' + b.rows * b.cols + ' mẫu')]));
+      }))]) : null,
+      boxes.length || subs.length ? null : h('p', { class: 'nhm-muted' }, 'Chưa có Hộp.' + (m ? ' Bấm «+ Hộp» để thêm.' : ''))
     );
     ganBinh(box, c.id, null);
     if (c.parent_id == null) box.appendChild(nhietDoPanel(c)); // nhiệt độ chỉ ghi cho thiết bị gốc (tủ, bình)
