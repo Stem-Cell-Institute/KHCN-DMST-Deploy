@@ -615,8 +615,31 @@
 .tb-ke--trong { fill: none; stroke: var(--ke-dam); stroke-dasharray: 2 3; }
 .tb-ke--san { fill: rgba(22, 35, 61, 0.03); stroke: var(--ke-dam); }
 .tb-ke.tb-on { fill: rgba(22, 35, 61, 0.16); stroke: var(--muc); stroke-width: 1.8; }
+.tb-vo--mat { fill: #dde4ef; }
+.tb-tuong { fill: #f3f6fb; stroke: var(--ke-dam); stroke-width: 0.6; pointer-events: none; }
+.tb-tuong--trai { fill: #e6ebf4; }
+.tb-san { fill: #d9e0ec; stroke: var(--ke-dam); stroke-width: 0.6; pointer-events: none; }
+.tb-ke--dau { fill: rgba(22, 35, 61, 0.18); }
+.tb-ten2 { font: 500 7.8px 'Be Vietnam Pro', sans-serif; fill: var(--chu-phu); }
+.tb-ke-g { outline: none; }
+.tb-ke-g--keo { touch-action: none; }
+.tb-ke-g:focus-visible .tb-ke { stroke: var(--muc); stroke-width: 1.8; }
+.tb-o { fill: none; stroke: none; }
+.tb-o.tb-ke--trong { fill: rgba(255, 255, 255, 0.35); stroke: var(--ke-dam); stroke-dasharray: 2 3; stroke-width: 0.9; pointer-events: none; }
+.tb-o--them { pointer-events: all !important; cursor: copy; }
+.tb-o--them:hover { fill: rgba(22, 35, 61, 0.1); stroke: var(--muc); }
+.tb-keo, .tb-keo .tb-ke-g { cursor: grabbing !important; }
+.tb-keo .tb-o--them { cursor: grabbing; }
+.tb-keo .tb-o.tb-ke--trong { stroke: var(--chu-phu); }
+.tb-o--dich { fill: rgba(22, 35, 61, 0.16) !important; stroke: var(--muc) !important; stroke-width: 1.8; stroke-dasharray: none !important; }
+.tb-dang-keo { opacity: 0.3; }
+.tb-ma { opacity: 0.8; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(22, 35, 61, 0.35)); }
+.tb-goiy { margin: 4px 0 0; }
 .tb-hop { fill: #8a97b3; stroke: #fff; stroke-width: 0.4; }
-.tb-hop.tb-on { fill: var(--muc); }
+.tb-hop--mat { fill: #6c7a99; }
+.tb-hopg.tb-on .tb-hop { fill: var(--muc); }
+.tb-hopg.tb-on .tb-hop--mat { fill: #0d1830; }
+.tb-vach { stroke: var(--ke-dam); stroke-width: 0.5; stroke-dasharray: 1.5 1.5; pointer-events: none; }
 .tb-vong { fill: rgba(183, 40, 30, 0.18); stroke: var(--son); stroke-width: 1.4; }
 .tb-diem { fill: var(--son); }
 .tb-cham .tb-vong { animation: ln-nhay 1.6s ease-out infinite; transform-box: fill-box; transform-origin: center; }

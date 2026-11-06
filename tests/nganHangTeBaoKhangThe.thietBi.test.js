@@ -53,6 +53,27 @@ test('tủ âm sâu -86°C đứng 2 ngăn: loại thiết bị theo mẫu, nhi�
   assert.equal((await rack(ngan[1].id, 1, 'Rack B1')).status, 201, 'ngăn khác có vị trí 1 riêng');
 });
 
+test('kéo Rack trên sơ đồ: chuyển sang ô trống, hoán đổi giữa hai ngăn bằng chuỗi PATCH (tạm bỏ số → đổi chỗ → đặt vào), người thường không kéo được', async () => {
+  const r = await tao({ name: 'Tủ kéo thả', mau_tb: 'tu-86-dung-2-ngan' });
+  const t0 = await cay();
+  const [tren, duoi] = con(t0, r.json.id);
+  const loai = t0.containers.find((c) => c.id === r.json.id).type_id;
+  const rack = async (cha, viTri, ten) => (await s.api('manager', 'POST', '/containers', { name: ten, type_id: loai, parent_id: cha, vi_tri: viTri })).json.id;
+  const a = await rack(tren.id, 1, 'Rack kéo A'), b = await rack(duoi.id, 2, 'Rack kéo B');
+  const patch = (id, body, user = 'manager') => s.api(user, 'PATCH', '/containers/' + id, body);
+  const vitri = async (id) => { const c = (await cay()).containers.find((x) => x.id === id); return [c.parent_id, c.vi_tri]; };
+  // ô trống: chuyển thẳng sang ngăn dưới, ô 5
+  assert.equal((await patch(a, { parent_id: duoi.id, vi_tri: 5 })).status, 200);
+  assert.deepEqual(await vitri(a), [duoi.id, 5]);
+  // ô đã có Rack khác: đặt thẳng bị 409, hoán đổi theo chuỗi thì được
+  assert.equal((await patch(a, { parent_id: duoi.id, vi_tri: 2 })).status, 409);
+  assert.equal((await patch(a, { vi_tri: null })).status, 200);
+  assert.equal((await patch(b, { parent_id: duoi.id, vi_tri: 5 })).status, 200);
+  assert.equal((await patch(a, { parent_id: duoi.id, vi_tri: 2 })).status, 200);
+  assert.deepEqual([await vitri(a), await vitri(b)], [[duoi.id, 2], [duoi.id, 5]]);
+  assert.equal((await patch(a, { vi_tri: 1 }, 'alice')).status, 403, 'người thường không đổi vị trí Rack');
+});
+
 test('tủ lạnh 2 ngăn: ngăn trên -20°C, ngăn dưới 4°C, thiết bị không có nhiệt độ chung', async () => {
   const r = await tao({ name: 'Tủ lạnh Panasonic 2 ngăn', mau_tb: 'tu-lanh-20-4' });
   assert.equal(r.status, 201);

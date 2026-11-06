@@ -922,15 +922,39 @@
     if (moc && moc.parentNode === root) root.insertBefore(cot, moc.nextSibling);
     else root.appendChild(cot);
   }
+  /**
+   * Kéo Rack trên sơ đồ sang ô (khoangId, so): ô trống thì chuyển sang đó; ô đã có Rack khác thì hoán đổi hai Rack
+   * (tạm bỏ số của Rack đang kéo → Rack kia về chỗ cũ → Rack đang kéo vào ô mới), vì máy chủ không cho hai Rack trùng số trong một ngăn.
+   */
+  function doiViTriKe(keId, khoangId, so) {
+    var r = containerById(keId);
+    if (!r || (r.parent_id === khoangId && r.vi_tri === so)) return Promise.resolve();
+    var khac = state.tree.containers.filter(function (x) { return x.parent_id === khoangId && x.vi_tri === so && x.id !== keId; })[0];
+    var patch = function (id, body) { return api('PATCH', '/containers/' + id, body); };
+    var chuoi;
+    if (!khac) chuoi = patch(keId, { parent_id: khoangId, vi_tri: so });
+    else {
+      var cu = { parent_id: r.parent_id, vi_tri: r.vi_tri || null };
+      chuoi = (r.vi_tri ? patch(keId, { vi_tri: null }) : Promise.resolve())
+        .then(function () { return patch(khac.id, cu); })
+        .then(function () { return patch(keId, { parent_id: khoangId, vi_tri: so }); });
+    }
+    return chuoi
+      .then(function () { say((r.name || 'Rack') + (khac ? ' đã hoán đổi chỗ với ' + (khac.name || 'Rack khác') : ' đã chuyển sang ô số ' + so) + '.'); return reload(true); })
+      .catch(function (e) { say(e.message, 'err'); return reload(true); });
+  }
   function ganThietBi(root, c, selHop) {
     var g = gocCua(c);
     if (!g || !window.NhmThietBi) return;
     var tom = h('span', { class: 'nhm-ln__tom' });
+    var quanLy = !!(state.meta.canManage || g.quan_ly_duoc); // kéo Rack / thêm Rack vào ô trống chỉ cho người quản lý thiết bị
     var m = window.NhmThietBi.tao(duLieuThietBi(g), {
       khiChon: function (t) { tom.textContent = t; },
       chonKhoang: function (id) { state.expanded[g.id] = true; select('container', id); },
       chonKe: function (id) { state.expanded[g.id] = true; select('container', id); },
       chonHop: function (id) { state.expanded[g.id] = true; select('box', id); },
+      keoKe: quanLy ? doiViTriKe : null,
+      themKe: quanLy ? function (khoangId, so) { containerForm(null, khoangId, so); } : null,
     });
     state.ln = m;
     m.chon(selHop || chonThietBi(c, g));
@@ -1134,7 +1158,7 @@
   }
 
   // ---------- biểu mẫu nghiệp vụ ----------
-  function containerForm(c, parentId) {
+  function containerForm(c, parentId, viTriGoiY) {
     var typeOpts = state.meta.containerTypes.map(function (t) { return { value: t.id, label: t.name }; });
     var chonMau = !c && !parentId ? chonMauThietBi() : null; // thiết bị gốc mới: chọn mẫu (tạo kèm các ngăn, vẽ sơ đồ)
     openForm({
@@ -1146,7 +1170,7 @@
         { name: 'temperature_c', label: 'Nhiệt độ (°C)', type: 'number', value: c && c.temperature_c },
         { name: 'location_note', label: 'Vị trí đặt (phòng…)', value: c && c.location_note },
         { name: 'notes', label: 'Ghi chú', type: 'textarea', value: c && c.notes },
-      ]).concat(viTriGiaField(c, parentId)).concat(!parentId && (!c || c.parent_id == null) && !state.meta.khongPublic ? [
+      ]).concat(viTriGiaField(c, parentId, viTriGoiY)).concat(!parentId && (!c || c.parent_id == null) && !state.meta.khongPublic ? [
         // chỉ thiết bị gốc; ngăn, giá bên trong thừa hưởng
         { name: 'don_vi_id', label: 'Ai quản lý thiết bị này', type: 'select', value: c && c.rieng ? 'rieng' : c && c.don_vi_id ? String(c.don_vi_id) : '',
           options: [{ value: '', label: 'Public — ai cũng thêm mẫu vào ô trống' }].concat(state.meta.laVienTruong ? [{ value: 'rieng', label: 'Riêng tư — không hiện với người khác' }] : []).concat((state.meta.donVi || []).map(function (d) {
@@ -1172,14 +1196,14 @@
   }
 
   /** Ô «vị trí số» cho giá trong bình nitơ (thêm giá con trực tiếp của bình, hoặc sửa một giá); khác thì không có ô. */
-  function viTriGiaField(c, parentId) {
+  function viTriGiaField(c, parentId, goiY) {
     var cha = parentId != null ? containerById(parentId) : c ? containerById(c.parent_id) : null;
     // Rack / giỏ / kệ nằm trong NGĂN của tủ (không phải bình nitơ lỏng): vị trí số trong ngăn (không bắt buộc) để vẽ đúng chỗ trên sơ đồ
     if (cha && cha.parent_id != null && containerById(cha.parent_id) && containerById(cha.parent_id).parent_id == null && !trongBinhNito(cha)) {
       var goc = containerById(cha.parent_id), mau = mauCua(goc), km = mau && mau.khoang[(cha.vi_tri || 1) - 1];
       var dung = state.tree.containers.filter(function (x) { return x.parent_id === cha.id && (!c || x.id !== c.id) && x.vi_tri; }).map(function (x) { return x.vi_tri; });
       var ten = km ? km.loai_ke.toLowerCase() : 'Rack';
-      return [{ name: 'vi_tri', label: 'Vị trí ' + ten + ' trong ngăn (số 1–' + (km ? Math.max(km.so_ke, 12) : 12) + ', ' + (kieuCua(goc) === 'tu_nam' ? '1 ở bên trái' : '1 ở trên cùng') + '; để trống nếu chưa rõ)', type: 'number', value: c && c.vi_tri ? c.vi_tri : (dung.length ? Math.max.apply(null, dung) + 1 : 1) }];
+      return [{ name: 'vi_tri', label: 'Vị trí ' + ten + ' trong ngăn (số 1–' + (km ? Math.max(km.so_ke, 12) : 12) + ', ' + (kieuCua(goc) === 'tu_nam' ? '1 ở bên trái' : '1 ở trên cùng') + '; để trống nếu chưa rõ)', type: 'number', value: c && c.vi_tri ? c.vi_tri : goiY || (dung.length ? Math.max.apply(null, dung) + 1 : 1) }];
     }
     if (!cha || cha.parent_id != null || !trongBinhNito(cha)) return [];
     var da = state.tree.containers.filter(function (x) { return x.parent_id === cha.id && (!c || x.id !== c.id) && x.vi_tri; }).map(function (x) { return x.vi_tri; });
