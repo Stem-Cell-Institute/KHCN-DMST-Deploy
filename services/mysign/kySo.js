@@ -61,6 +61,17 @@ const CAU_LENH = [
     trang_thai TEXT NOT NULL DEFAULT 'cho' CHECK (trang_thai IN ('cho','da_ky','huy')),
     ky_luc TEXT
   )`,
+  // Vị trí khung chữ ký người ký đặt LẦN GẦN NHẤT (theo từng nguồn): lần sau khung mở sẵn ở đó. x, y, w, h là tỉ lệ so với khổ trang.
+  // trang_cuoi = 1 nghĩa là khung đặt ở trang CUỐI (báo cáo khác số trang thì vẫn rơi vào trang cuối).
+  `CREATE TABLE IF NOT EXISTS mysign_vi_tri (
+    user_id INTEGER NOT NULL,
+    nguon TEXT NOT NULL,
+    trang INTEGER NOT NULL,
+    trang_cuoi INTEGER NOT NULL DEFAULT 0,
+    x REAL NOT NULL, y REAL NOT NULL, w REAL NOT NULL, h REAL NOT NULL,
+    cap_nhat_luc TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, nguon)
+  )`,
   'CREATE INDEX IF NOT EXISTS ix_mysign_tai_lieu_nguon ON mysign_tai_lieu(nguon, nguon_id)',
   'CREATE INDEX IF NOT EXISTS ix_mysign_tai_lieu_gd ON mysign_tai_lieu(giao_dich_id)',
 ];
@@ -104,6 +115,20 @@ function taoKySo({ db, mysign, thuMuc }) {
   function huyLienKet(userId) {
     if (dangChoCuaNguoi(userId)) throw new LoiMySign('Đang có yêu cầu ký chờ xác nhận. Hãy xác nhận hoặc từ chối trên MySign trước.');
     db.prepare('DELETE FROM mysign_tai_khoan WHERE user_id = ?').run(userId);
+  }
+
+  /** Vị trí khung chữ ký lần gần nhất của người này cho một nguồn, hoặc null. */
+  function viTriGanNhat(userId, tenNguon) {
+    const r = db.prepare('SELECT trang, trang_cuoi, x, y, w, h FROM mysign_vi_tri WHERE user_id = ? AND nguon = ?').get(userId, tenNguon);
+    return r ? { trang: r.trang, trang_cuoi: !!r.trang_cuoi, x: r.x, y: r.y, w: r.w, h: r.h } : null;
+  }
+
+  function luuViTri(userId, tenNguon, v) {
+    db.prepare(
+      `INSERT INTO mysign_vi_tri (user_id, nguon, trang, trang_cuoi, x, y, w, h, cap_nhat_luc) VALUES (?,?,?,?,?,?,?,?,datetime('now'))
+       ON CONFLICT(user_id, nguon) DO UPDATE SET trang = excluded.trang, trang_cuoi = excluded.trang_cuoi, x = excluded.x, y = excluded.y,
+         w = excluded.w, h = excluded.h, cap_nhat_luc = excluded.cap_nhat_luc`
+    ).run(userId, tenNguon, v.trang, v.trang_cuoi ? 1 : 0, v.x, v.y, v.w, v.h);
   }
 
   function dangKyNguon(ten, xuLy) {
@@ -300,7 +325,7 @@ function taoKySo({ db, mysign, thuMuc }) {
     };
   }
 
-  return { mysign, taiKhoan, lienKet, huyLienKet, dangKyNguon, dangCho, dangChoCuaNguoi, banDaKy, docTep, batDau, capNhat, giaoDich };
+  return { mysign, taiKhoan, lienKet, huyLienKet, viTriGanNhat, luuViTri, dangKyNguon, dangCho, dangChoCuaNguoi, banDaKy, docTep, batDau, capNhat, giaoDich };
 }
 
 module.exports = { taoKySo, CHO_TOI_DA_MS };
