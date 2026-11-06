@@ -235,6 +235,28 @@ in_storage ──checkout──▶ checked_out ──checkin──▶ in_storage
 - Route tĩnh (`/tubes/search`, `/tubes/bulk`, `/tubes/export.csv`) đứng **trước** các route `/tubes/:id...` — xem
   «Thứ tự đăng ký route» trong `KIEN-TRUC-VA-CAM-BAY.md`.
 
+### Nhập dữ liệu từ Cellseeker (dòng lệnh, một lần khi chuyển hệ thống)
+
+Dữ liệu xuất từ Cellseeker (thư mục giải nén của `cellseeker-export-….zip`) được nhập bằng `scripts/nhap-cellseeker.js`; logic ở
+`services/nganHangTeBaoKhangTheNhapCellseeker.js`, test ở `tests/nganHangTeBaoKhangThe.nhapCellseeker.test.js`. **Chưa có màn hình nhập tệp trong
+giao diện** (giao diện chỉ có «Xuất CSV», thêm mẫu hàng loạt cùng lô và nhập danh sách sinh viên).
+
+```
+node scripts/nhap-cellseeker.js <thư-mục-giải-nén> [--db data/sci-ace.db] [--nguoi-nhap <email|id>] [--uploads <thư mục>] [--ghi]
+```
+
+- **Mặc định chỉ chạy thử**: làm mọi bước trong một giao dịch rồi hủy, in số lượng mới / đã có / bỏ qua và cảnh báo mà không đổi gì. Thêm `--ghi` để ghi thật;
+  trước khi ghi tự sao lưu CSDL thành `<tệp>.truoc-cellseeker-<thời gian>.bak`. Nên chạy lúc ít người dùng. **Phải chạy trên máy chủ thật** (CSDL không nằm trong git).
+- **Nhập lại được**: không tạo trùng, không sửa hay xóa dữ liệu có sẵn (dòng nhận ra qua nhãn `[Cellseeker #id]` ở ghi chú, lô theo (dòng, mã lô), thiết bị theo tên, Rack / hộp theo vị trí số, ống theo ô).
+- Ánh xạ: `inventory.csv` → thiết bị **Bình nitơ lỏng** do **Cellbank** quản lý (ngân hàng tế bào) → **Rack** (vị trí số = nhãn Rack) → **hộp** (vị trí số = «Box position», cỡ hàng × cột theo tệp);
+  `cells.csv` → hồ sơ dòng (mã = tên trước dấu «(», GMO / BSL / nuôi cấy / nhà cung cấp / bổ sung môi trường); `stocks.csv` → lô (mã lô, passage, ngày đông lạnh, số tế bào mỗi ống = «Aliquot»,
+  loại lô MCB / WCB, lô gốc, người làm, các ngày thử mycoplasma / vô trùng ghi ở ghi chú); `vials.csv` → từng ống ở đúng ô, người tạo là tài khoản nhập, lịch sử mẫu có dòng «Nhập từ Cellseeker»;
+  `stock-attachments/` → tệp đính kèm của lô (tên «stock_lot_id-<mã lô>[-<hậu tố>].jpg»).
+- **Giả định phải kiểm với dữ liệu thật**: «Position» của ống đếm **theo hàng** từ trái sang phải, trên xuống dưới (hộp 5 cột: ô 1 = A1, ô 6 = B1). Hộp 1 cột × 5 hàng không phụ thuộc cách đếm.
+- Không nhập: `cell-images/` (tên «cell_id-<số>-<số>» không suy ra được dòng nào), `str_profiles.csv` (không có giá trị lặp nào), `vectors.csv` (rỗng); kết quả mycoplasma / vô trùng của lô
+  (Cellseeker chỉ ghi ngày, không ghi kết quả) nên **không** tạo bản ghi QC — dòng sẽ hiện «Chưa thử mycoplasma» và vào «Đến hạn» sau 30 ngày ân hạn cho đến khi ghi QC.
+- Dòng GMO không có mô tả vector nên được ghi «CẦN BỔ SUNG» ở mô tả GMO; lô trùng mã khác hoa thường được thêm hậu tố « (2)».
+
 ## Danh mục
 
 Loại vị trí lưu trữ, mẫu hộp, loại mẫu do **quản lý** thêm / sửa / xóa (nút «Quản lý danh mục»). Quy tắc:
