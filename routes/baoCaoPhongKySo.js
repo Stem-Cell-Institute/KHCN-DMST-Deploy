@@ -6,7 +6,11 @@
  *                                  Dựng PDF từng báo cáo (có ô chữ ký số ở cột Viện trưởng) rồi gửi MỘT yêu cầu ký sang MySign:
  *                                  Viện trưởng xác nhận một lần trên điện thoại cho cả nhóm. Trả giao dịch để giao diện hỏi tiến độ
  *                                  qua GET /api/mysign/giao-dich/:id.
+ *   GET  /bao-cao/:id/ky-so/xem-truoc  PDF xem trước (chưa có khung) + thông tin trang (header X-Ky-So-Meta) để Viện trưởng kéo khung chữ ký.
  *   GET  /bao-cao/:id/ban-ky-so    tải PDF đã ký số của bản nộp hiện tại (ai xem được báo cáo thì tải được).
+ *
+ * Vị trí khung chữ ký: mỗi báo cáo trong yêu cầu ký có thể kèm vi_tri {trang, x, y, w, h} (tỉ lệ 0..1 so với khổ trang, gốc trên-trái, trang từ 0).
+ * Không kèm thì khung ở vị trí mặc định của biểu mẫu. Vị trí lần gần nhất được nhớ theo người ký để lần sau mở sẵn ở đó.
  *
  * Quy tắc (mỗi dòng đều có test):
  *   - "Duyệt" chỉ được ghi khi chữ ký về thành công: từ chối / hết hạn / lỗi trên MySign thì báo cáo giữ nguyên như chưa ký.
@@ -20,10 +24,10 @@ const express = require('express');
 const Xuat = require('../services/baoCaoPhongXuat');
 const { contentDisposition } = require('../lib/filenames');
 const { LoiMySign } = require('../services/mysign/client');
+const { kiemViTri } = require('../services/mysign/viTri');
 
 const NGUON = 'bao_cao_phong';
 const TOI_DA_MOT_LAN = 50;
-
 /** Ngày giờ theo giờ Việt Nam, dạng 02/11/2026 09:05. */
 function gioVietNam(d) {
   const t = new Date(d.getTime() + 7 * 3600 * 1000);
@@ -100,6 +104,7 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
       if (!db.prepare('SELECT 1 AS ok FROM bcp_trinh_lan WHERE dot_id = ?').get(dotId)) return loi(res, 409, 'Đợt này chưa được người quản lý module trình Viện trưởng.');
 
       const chon = [];
+      const viTriTheoId = new Map();
       const daThay = new Set();
       for (const x of ds) {
         const id = docId(x && x.id);
@@ -112,6 +117,11 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
         if (typeof x.nop_luc !== 'string' || x.nop_luc !== b.nop_luc) {
           return loi(res, 409, `Báo cáo của ${b.phong_ten} vừa được nộp lại hoặc thay đổi. Hãy tải lại trang để đọc bản mới trước khi ký.`);
         }
+        if (x.vi_tri !== undefined) {
+          const kq = kiemViTri(x.vi_tri);
+          if (kq.loi) return loi(res, 400, kq.loi);
+          viTriTheoId.set(id, kq.vi_tri);
+        }
         const ky = kyCuaBaoCao(id, b.nop_luc);
         if (ky && ky.trang_thai === 'da_ky') return loi(res, 409, `Báo cáo của ${b.phong_ten} đã được ký số.`);
         if (ky && ky.trang_thai === 'dang_cho') return loi(res, 409, `Báo cáo của ${b.phong_ten} đang có yêu cầu ký chờ xác nhận trên MySign.`);
@@ -121,6 +131,7 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
       const truong = parseJson(dot.truong_json, []);
       const nguoiKy = (db.prepare('SELECT fullname FROM users WHERE id = ?').get(req.user.id) || {}).fullname || req.user.fullname || req.user.email || '';
       const luc = new Date();
+      const metaTrang = new Map(); // id báo cáo → số trang thật (để nhớ "trang cuối")
       const taiLieu = chon.map((b) => {
         const r = db
           .prepare(
@@ -134,8 +145,8 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
           nguonId: b.id,
           ten: 'Bao cao ' + r.phong_ten,
           meta: { nop_luc: b.nop_luc, dot_id: dotId, ghi_chu: ghiChu },
-          taoPdfCho: () =>
-            Xuat.taoPdf(
+          taoPdfCho: async () => {
+            const kq = await Xuat.taoPdfChiTiet(
               [
                 Xuat.dungMoHinh({
                   dot,
@@ -145,18 +156,72 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
                   kySo: { ten: nguoiKy, dong: ['ĐÃ KÝ SỐ', 'Người ký: ' + nguoiKy, 'Thời gian: ' + gioVietNam(luc), 'Qua MySign — Viettel-CA'] },
                 }),
               ],
-              { choKy: { ten: nguoiKy, lyDo: 'Phê duyệt báo cáo', noiKy: Xuat.CO_QUAN.noi_viet, luc } }
-            ),
+              { choKy: { ten: nguoiKy, lyDo: 'Phê duyệt báo cáo', noiKy: Xuat.CO_QUAN.noi_viet, luc, viTri: viTriTheoId.get(b.id) } }
+            );
+            metaTrang.set(b.id, kq.meta.so_trang);
+            return kq.pdf;
+          },
         };
       });
 
       try {
         const g = await kySo.batDau({ userId: req.user.id, nguon: NGUON, moTa: 'Duyet ' + (chon.length === 1 ? taiLieu[0].ten : chon.length + ' bao cao') + ' - ' + dot.tieu_de, taiLieu });
+        // Nhớ vị trí khung của báo cáo cuối trong nhóm cho lần sau (chỉ khi người ký tự đặt).
+        const cuoi = [...chon].reverse().find((b) => viTriTheoId.has(b.id));
+        if (cuoi) {
+          const v = viTriTheoId.get(cuoi.id);
+          kySo.luuViTri(req.user.id, NGUON, { ...v, trang_cuoi: v.trang === (metaTrang.get(cuoi.id) || 0) - 1 });
+        }
         res.json({ ok: true, giao_dich: g });
       } catch (e) {
+        if (e && e.maLoi === 'vi_tri') return loi(res, 400, e.message);
         if (!(e instanceof LoiMySign)) throw e;
         loi(res, e.ma === 'chua_lien_ket' ? 409 : 502, e.nguoiDung, { ma: e.ma || 'mysign' });
       }
+    })
+  );
+
+  router.get(
+    '/bao-cao/:id/ky-so/xem-truoc',
+    bao(async (req, res) => {
+      if (!req.bcp.laVienTruong) return loi(res, 403, 'Chỉ Viện trưởng mới ký số duyệt báo cáo.');
+      if (!batKySo()) return loi(res, 409, 'Hệ thống chưa được cấu hình chữ ký số MySign.');
+      const id = docId(req.params.id);
+      if (!id) return loi(res, 400, 'ID không hợp lệ.');
+      const n = nap(req, id);
+      if (!n) return loi(res, 404, 'Không tìm thấy báo cáo.');
+      const b = n.b;
+      if (!db.prepare('SELECT 1 AS ok FROM bcp_trinh_lan WHERE dot_id = ?').get(b.dot_id)) return loi(res, 409, 'Đợt này chưa được người quản lý module trình Viện trưởng.');
+      if (b.trang_thai !== 'da_nop' && b.trang_thai !== 'da_duyet') return loi(res, 409, 'Báo cáo chưa nộp hoặc đang chỉnh sửa nên chưa ký được.');
+      const dot = db
+        .prepare('SELECT d.id, d.tieu_de, d.loai, d.ky, d.trang_thai, v.truong_json FROM bcp_dot d JOIN bcp_mau_phien_ban v ON v.id = d.mau_phien_ban_id WHERE d.id = ?')
+        .get(b.dot_id);
+      const r = db
+        .prepare(
+          `SELECT CASE WHEN uc.fullname IS NULL THEN p.ten ELSE p.ten || ' — ' || uc.fullname END AS phong_ten, u.fullname AS nguoi_nop
+             FROM bcp_bao_cao b JOIN bcp_phong p ON p.id = b.phong_id
+             LEFT JOIN users u ON u.id = b.nguoi_nop_id LEFT JOIN users uc ON uc.id = b.chu_id WHERE b.id = ?`
+        )
+        .get(id);
+      const nguoiKy = (db.prepare('SELECT fullname FROM users WHERE id = ?').get(req.user.id) || {}).fullname || req.user.fullname || '';
+      const kq = await Xuat.taoPdfChiTiet(
+        [
+          Xuat.dungMoHinh({
+            dot, truong: parseJson(dot.truong_json, []),
+            baoCao: { phong_ten: r.phong_ten, nguoi_nop: r.nguoi_nop || '', du_lieu: parseJson(b.du_lieu_json, {}) },
+            ngayXuat: new Date(),
+            kySo: { ten: nguoiKy, dong: ['ĐÃ KÝ SỐ', 'Người ký: ' + nguoiKy, 'Thời gian: (lúc ký)', 'Qua MySign — Viettel-CA'] },
+          }),
+        ],
+        { xemTruocKy: true }
+      );
+      const meta = { nop_luc: b.nop_luc, ten: r.phong_ten, ...kq.meta, gan_nhat: kySo.viTriGanNhat(req.user.id, NGUON) };
+      res.setHeader('Content-Type', 'application/pdf');
+      // Tiêu đề HTTP chỉ nhận ASCII: JSON được escape các ký tự có dấu.
+      res.setHeader('X-Ky-So-Meta', JSON.stringify(meta).replace(/[\u007f-\uffff]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')));
+      res.setHeader('Content-Length', kq.pdf.length);
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(kq.pdf);
     })
   );
 

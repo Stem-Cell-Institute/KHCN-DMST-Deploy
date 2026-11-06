@@ -485,19 +485,31 @@
             'Duyệt và ký số: ' + ds.map(function (b) { return b.phong_ten; }).join('; ') + '. Sau khi gửi, mở ứng dụng MySign để xác nhận MỘT lần cho cả nhóm. Bản đã ký số không đổi quyết định được nữa.',
             'Gửi yêu cầu ký')
           : Promise.resolve(true);
+        // Viện trưởng tự đặt khung chữ ký trên bản xem trước PDF (kéo để dời, kéo góc để co giãn) rồi mới gửi yêu cầu ký.
+        // Một báo cáo thì hộp đặt khung chính là bước xác nhận cuối; nhiều báo cáo thì đặt lần lượt từng báo cáo.
         hoiTruoc
           .then(function (ok) {
             if (!ok) return false;
             return taiKhoanMySign().then(function (tk) { return tk ? true : lienKetMySign(); });
           })
-          .then(function (ok) { if (ok) guiKySo(ds, true); })
+          .then(function (ok) { return ok ? datKhung(ds) : null; })
+          .then(function (viTri) { if (viTri) guiKySo(ds, true, viTri); })
           .catch(function (e) { thongBao(e.message, 'loi'); });
       }
 
-      function guiKySo(ds, thuLienKet) {
+      /** Mở hộp đặt khung. Không mở được bản xem trước (vd. thiếu pdf.js) thì hỏi có ký với vị trí mặc định của biểu mẫu không. */
+      function datKhung(ds) {
+        if (!window.KySoViTri) return Promise.resolve(ds.map(function () { return undefined; }));
+        return window.KySoViTri.dat({
+          tieuDe: 'Đặt khung chữ ký số',
+          tai: ds.map(function (b) { return { ten: b.phong_ten, tai: window.KySoViTri.taiTuUrl('/api/bao-cao-phong/bao-cao/' + b.id + '/ky-so/xem-truoc') }; }),
+        });
+      }
+
+      function guiKySo(ds, thuLienKet, viTri) {
         S.dangGui = true;
         veThanh();
-        api('/dot/' + dotId + '/ky-so', { method: 'POST', body: { bao_cao: ds.map(function (b) { return { id: b.id, nop_luc: b.nop_luc }; }) } })
+        api('/dot/' + dotId + '/ky-so', { method: 'POST', body: { bao_cao: ds.map(function (b, i) { return { id: b.id, nop_luc: b.nop_luc, vi_tri: viTri && viTri[i] ? viTri[i] : undefined }; }) } })
           .then(function (r) {
             S.dangGui = false;
             batDauCho(r.giao_dich);
@@ -507,7 +519,7 @@
             veThanh();
             if (e.status === 409 && e.data && e.data.ma === 'chua_lien_ket' && thuLienKet) {
               S.mysign = null;
-              return lienKetMySign().then(function (ok) { if (ok) guiKySo(ds, false); });
+              return lienKetMySign().then(function (ok) { if (ok) guiKySo(ds, false, viTri); });
             }
             thongBao(e.message, 'loi');
             if (e.status === 409) return taiLai(cur().id);

@@ -16899,6 +16899,9 @@ app.get('/public/vendor/chart.umd.js', (req, res) => {
   }
 });
 
+/** pdf.js phục vụ nội bộ (CSP chỉ cho script-src 'self'): chỉ hai tệp dùng để xem trước PDF khi đặt khung chữ ký số (public/js/kysoViTri.js). */
+app.get('/public/vendor/pdfjs/:tep', (req, res) => (['pdf.min.mjs', 'pdf.worker.min.mjs'].includes(req.params.tep) ? res.type('application/javascript').sendFile(path.join(__dirname, 'node_modules', 'pdfjs-dist', 'build', req.params.tep)) : res.status(404).end()));
+
 // Admin UI bridge:
 // - If built bundle exists, serve React app at /admin
 // - Otherwise fallback to legacy HTML workflow page from backend
