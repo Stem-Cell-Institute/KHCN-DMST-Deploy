@@ -876,10 +876,106 @@
   }
 
   /** Gắn mô hình bình vào bảng chi tiết nếu mục đang xem nằm trong bình nitơ; sel = {gia}|{hop}|null. */
+  // ---------- sơ đồ thiết bị không phải bình nitơ lỏng (thiet-bi.js): tủ đứng, tủ nằm ngang, tủ lạnh nhiều ngăn ----------
+  /** Mẫu thiết bị (danh mục trong /meta) của thiết bị gốc g; null nếu thiết bị tự khai. */
+  function mauCua(g) { var ma = g && g.mau_tb; return ma ? (state.meta.mauThietBi || []).filter(function (m) { return m.ma === ma; })[0] || null : null; }
+  /** Kiểu vẽ: theo mẫu; thiết bị tự khai thì đoán theo tên loại («nằm ngang», «2 ngăn»), còn lại là tủ đứng. */
+  function kieuCua(g) {
+    var m = mauCua(g);
+    if (m) return m.kieu;
+    var t = boDau(g.type_name);
+    return t.indexOf('nam ngang') >= 0 ? 'tu_nam' : t.indexOf('2 ngan') >= 0 ? 'tu_lanh' : 'tu_dung';
+  }
+  function theoViTri(a, b) { return (a.vi_tri || 999) - (b.vi_tri || 999) || a.id - b.id; }
+  function hopCua(containerId) {
+    return state.tree.boxes.filter(function (b) { return b.container_id === containerId; }).sort(theoViTri)
+      .map(function (b) { return { id: b.id, vi_tri: b.vi_tri, rows: b.rows, cols: b.cols, name: b.name, code: b.code }; });
+  }
+  /** Dữ liệu vẽ: ngăn (con của thiết bị) → Rack / giỏ / kệ (con của ngăn) → hộp; hộp đặt thẳng trong ngăn hoặc trong thiết bị vẫn được vẽ. */
+  function duLieuThietBi(g) {
+    var mau = mauCua(g);
+    var ngan = state.tree.containers.filter(function (x) { return x.parent_id === g.id; }).sort(theoViTri);
+    var khoang = ngan.map(function (n, i) {
+      var km = mau && mau.khoang[(n.vi_tri || i + 1) - 1] || null;
+      var ke = state.tree.containers.filter(function (x) { return x.parent_id === n.id; }).sort(theoViTri)
+        .map(function (r) { return { id: r.id, name: r.name, vi_tri: r.vi_tri, boxes: hopCua(r.id) }; });
+      return { id: n.id, ten: n.name, nhiet_do: n.temperature_c, so_ke: km ? km.so_ke : 0, loai_ke: km ? km.loai_ke : 'Rack', ke: ke, hop: hopCua(n.id) };
+    });
+    var hopGoc = hopCua(g.id);
+    if (hopGoc.length) khoang.push({ id: g.id, ten: 'Trong thiết bị', nhiet_do: null, so_ke: 0, loai_ke: 'Rack', ke: [], hop: hopGoc });
+    return { kieu: kieuCua(g), ten: g.name, mauTen: mau ? mau.ten : g.type_name, khoang: khoang };
+  }
+  /** Mục đang xem của vật chứa c trong thiết bị g: ngăn → {khoang}, Rack / giỏ (con của ngăn, kể cả vật chứa nằm sâu hơn) → {gia}. */
+  function chonThietBi(c, g) {
+    if (!c || c === g) return null;
+    if (c.parent_id === g.id) return { khoang: c.id };
+    var r = c;
+    for (var i = 0; r && i < 50; i++) { var p = containerById(r.parent_id); if (p && p.parent_id === g.id) return { gia: r.id }; r = p; }
+    return null;
+  }
+  /** Đặt khung sơ đồ (kèm vùng dock) vào cột phải của chi tiết; màn hình hẹp thì sau phần thông tin vị trí, trước lưới hộp. */
+  function datCotPhai(root, det) {
+    var cot = h('div', { class: 'nhm-cot-phai' }, [det, h('div', { class: 'nhm-dock' })]); // dưới sơ đồ là vùng để hộp thoại ống hiện ra (màn hình rộng)
+    root.classList.add('nhm-detail--ln');
+    var cuoiThongTin = root.querySelectorAll('.nhm-title, .nhm-hint');
+    var moc = cuoiThongTin.length ? cuoiThongTin[cuoiThongTin.length - 1] : null;
+    if (moc && moc.parentNode === root) root.insertBefore(cot, moc.nextSibling);
+    else root.appendChild(cot);
+  }
+  function ganThietBi(root, c, selHop) {
+    var g = gocCua(c);
+    if (!g || !window.NhmThietBi) return;
+    var tom = h('span', { class: 'nhm-ln__tom' });
+    var m = window.NhmThietBi.tao(duLieuThietBi(g), {
+      khiChon: function (t) { tom.textContent = t; },
+      chonKhoang: function (id) { state.expanded[g.id] = true; select('container', id); },
+      chonKe: function (id) { state.expanded[g.id] = true; select('container', id); },
+      chonHop: function (id) { state.expanded[g.id] = true; select('box', id); },
+    });
+    state.ln = m;
+    m.chon(selHop || chonThietBi(c, g));
+    var det = h('details', { class: 'nhm-ln' }, [h('summary', {}, [h('span', { class: 'nhm-ln__tit' }, 'Sơ đồ ' + g.name), tom]), m.node]);
+    det.open = !window.matchMedia('(max-width: 900px)').matches; // máy tính: mở sẵn; điện thoại: gập lại
+    datCotPhai(root, det);
+  }
+
+  /**
+   * Ô «Mẫu thiết bị» ở đầu form thêm thiết bị gốc: chọn mẫu (bình nitơ lỏng, tủ âm sâu -86°C 2 ngăn, tủ -20°C nằm ngang 2 cánh, tủ lạnh -20°C / 4°C…)
+   * thì loại và nhiệt độ theo mẫu, các ngăn được tạo kèm; có xem trước sơ đồ. «Thiết bị khác» thì tự khai loại và nhiệt độ như trước.
+   */
+  function chonMauThietBi() {
+    var ds = state.meta.mauThietBi || [];
+    var nhom = state.meta.nhomThietBi || {};
+    var sel = h('select', { 'aria-label': 'Mẫu thiết bị' }, [h('option', { value: '' }, 'Thiết bị khác (tự khai loại và nhiệt độ)')].concat(Object.keys(nhom).map(function (k) {
+      return h('optgroup', { label: nhom[k] }, ds.filter(function (m) { return m.nhom === k; }).map(function (m) { return h('option', { value: m.ma }, m.ten); }));
+    })));
+    var xem = h('div', { class: 'nhm-mau-xem' });
+    var tuDat = null;
+    sel.addEventListener('change', function () {
+      var m = ds.filter(function (x) { return x.ma === sel.value; })[0];
+      var form = $('nhm-dialog');
+      var loai = form.querySelector('[name="type_id"]');
+      var nhiet = form.querySelector('[name="temperature_c"]');
+      if (loai) loai.disabled = !!m; // loại theo mẫu (máy chủ bỏ qua loại gửi lên khi có mẫu)
+      if (!m) { put(xem); if (nhiet && nhiet.value === tuDat) nhiet.value = ''; tuDat = null; return; }
+      var t = (state.meta.containerTypes || []).filter(function (x) { return x.name === m.loai_goc; })[0];
+      if (loai && t) loai.value = String(t.id);
+      if (nhiet && (!nhiet.value || nhiet.value === tuDat)) { nhiet.value = m.nhiet_do != null ? m.nhiet_do : ''; tuDat = nhiet.value; }
+      var hinh = m.kieu === 'binh_ln' ? (window.NhmBinhLn ? window.NhmBinhLn.tao({ tank: { name: '' }, racks: [] }, {}).node : null) : window.NhmThietBi ? window.NhmThietBi.xemTruoc(m) : null;
+      put(xem,
+        hinh,
+        h('p', { class: 'nhm-small' }, m.mo_ta),
+        m.hang ? h('p', { class: 'nhm-small nhm-muted' }, 'Dòng máy tham khảo: ' + m.hang + '. Số ngăn, số kệ thực tế tùy model: thêm hoặc xóa Rack / giỏ sau khi tạo.') : null,
+        m.khoang.length ? h('p', { class: 'nhm-small nhm-muted' }, 'Tạo kèm ' + m.khoang.length + ' ngăn: ' + m.khoang.map(function (k) { return k.ten + (k.nhiet_do != null ? ' (' + k.nhiet_do + '°C)' : ''); }).join(', ') + '. Thêm ' + m.khoang[0].loai_ke + ' rồi hộp vào từng ngăn sau.') : h('p', { class: 'nhm-small nhm-muted' }, 'Thêm Rack rồi thêm hộp vào Rack sau khi tạo.'));
+    });
+    return { node: h('div', {}, [sel, xem]), get: function () { return sel.value; } };
+  }
+
   function ganBinh(root, containerId, sel) {
     root.classList.remove('nhm-detail--ln');
     state.ln = null;
     var c = containerById(containerId);
+    if (c && !trongBinhNito(c)) return ganThietBi(root, c, sel); // tủ đứng, tủ nằm ngang, tủ lạnh nhiều ngăn…
     if (!c || !trongBinhNito(c) || !window.NhmBinhLn) return;
     var tank = gocCua(c);
     var tom = h('span', { class: 'nhm-ln__tom' });
@@ -893,14 +989,7 @@
     m.chon(sel || (r && r.id === c.id ? { gia: r.id } : null));
     var det = h('details', { class: 'nhm-ln' }, [h('summary', {}, [h('span', { class: 'nhm-ln__tit' }, 'Sơ đồ bình ' + tank.name), tom]), m.node]);
     det.open = !window.matchMedia('(max-width: 900px)').matches; // máy tính: mở sẵn; điện thoại: gập lại
-    var cot = h('div', { class: 'nhm-cot-phai' }, [det, h('div', { class: 'nhm-dock' })]); // dưới sơ đồ là vùng để hộp thoại ống hiện ra (màn hình rộng)
-    root.classList.add('nhm-detail--ln');
-    // Màn hình hẹp: khung đặt SAU phần thông tin vị trí (tiêu đề, cây vị trí, dòng nhắc) và trước lưới hộp, để thông tin không bị đứt quãng.
-    // Màn hình rộng: CSS đưa khung sang cột phải nên vị trí trong DOM không ảnh hưởng.
-    var cuoiThongTin = root.querySelectorAll('.nhm-title, .nhm-hint');
-    var moc = cuoiThongTin.length ? cuoiThongTin[cuoiThongTin.length - 1] : null;
-    if (moc && moc.parentNode === root) root.insertBefore(cot, moc.nextSibling);
-    else root.appendChild(cot);
+    datCotPhai(root, det);
   }
 
   function renderDetail() {
@@ -1046,16 +1135,17 @@
   // ---------- biểu mẫu nghiệp vụ ----------
   function containerForm(c, parentId) {
     var typeOpts = state.meta.containerTypes.map(function (t) { return { value: t.id, label: t.name }; });
+    var chonMau = !c && !parentId ? chonMauThietBi() : null; // thiết bị gốc mới: chọn mẫu (tạo kèm các ngăn, vẽ sơ đồ)
     openForm({
       title: c ? 'Chỉnh sửa vị trí lưu trữ' : parentId ? 'Thêm vị trí lưu trữ con' : 'Thêm thiết bị lưu trữ',
-      fields: [
+      fields: (chonMau ? [{ name: 'mau', label: 'Mẫu thiết bị', type: 'custom', widget: chonMau }] : []).concat([
         { name: 'name', label: 'Tên', required: true, value: c && c.name },
         { name: 'type_id', label: 'Loại', type: 'select', options: typeOpts, value: c ? c.type_id : typeOpts[0] && typeOpts[0].value },
         { name: 'code', label: 'Mã (để trống để tự sinh)', value: c && c.code },
         { name: 'temperature_c', label: 'Nhiệt độ (°C)', type: 'number', value: c && c.temperature_c },
         { name: 'location_note', label: 'Vị trí đặt (phòng…)', value: c && c.location_note },
         { name: 'notes', label: 'Ghi chú', type: 'textarea', value: c && c.notes },
-      ].concat(viTriGiaField(c, parentId)).concat(!parentId && (!c || c.parent_id == null) && !state.meta.khongPublic ? [
+      ]).concat(viTriGiaField(c, parentId)).concat(!parentId && (!c || c.parent_id == null) && !state.meta.khongPublic ? [
         // chỉ thiết bị gốc; ngăn, giá bên trong thừa hưởng
         { name: 'don_vi_id', label: 'Ai quản lý thiết bị này', type: 'select', value: c && c.rieng ? 'rieng' : c && c.don_vi_id ? String(c.don_vi_id) : '',
           options: [{ value: '', label: 'Public — ai cũng thêm mẫu vào ô trống' }].concat(state.meta.laVienTruong ? [{ value: 'rieng', label: 'Riêng tư — không hiện với người khác' }] : []).concat((state.meta.donVi || []).map(function (d) {
@@ -1065,6 +1155,7 @@
       onSubmit: function (v) {
         var body = { name: v.name, type_id: Number(v.type_id), code: v.code || undefined, temperature_c: v.temperature_c, location_note: v.location_note, notes: v.notes };
         if ('vi_tri' in v) body.vi_tri = v.vi_tri === '' || v.vi_tri == null ? null : Number(v.vi_tri);
+        if (v.mau) body.mau_tb = v.mau;
         if ('don_vi_id' in v) {
           if (v.don_vi_id === 'rieng') { body.rieng = true; body.don_vi_id = null; }
           else {
@@ -1082,6 +1173,13 @@
   /** Ô «vị trí số» cho giá trong bình nitơ (thêm giá con trực tiếp của bình, hoặc sửa một giá); khác thì không có ô. */
   function viTriGiaField(c, parentId) {
     var cha = parentId != null ? containerById(parentId) : c ? containerById(c.parent_id) : null;
+    // Rack / giỏ / kệ nằm trong NGĂN của tủ (không phải bình nitơ lỏng): vị trí số trong ngăn (không bắt buộc) để vẽ đúng chỗ trên sơ đồ
+    if (cha && cha.parent_id != null && containerById(cha.parent_id) && containerById(cha.parent_id).parent_id == null && !trongBinhNito(cha)) {
+      var goc = containerById(cha.parent_id), mau = mauCua(goc), km = mau && mau.khoang[(cha.vi_tri || 1) - 1];
+      var dung = state.tree.containers.filter(function (x) { return x.parent_id === cha.id && (!c || x.id !== c.id) && x.vi_tri; }).map(function (x) { return x.vi_tri; });
+      var ten = km ? km.loai_ke.toLowerCase() : 'Rack';
+      return [{ name: 'vi_tri', label: 'Vị trí ' + ten + ' trong ngăn (số 1–' + (km ? Math.max(km.so_ke, 12) : 12) + ', ' + (kieuCua(goc) === 'tu_nam' ? '1 ở bên trái' : '1 ở trên cùng') + '; để trống nếu chưa rõ)', type: 'number', value: c && c.vi_tri ? c.vi_tri : (dung.length ? Math.max.apply(null, dung) + 1 : 1) }];
+    }
     if (!cha || cha.parent_id != null || !trongBinhNito(cha)) return [];
     var da = state.tree.containers.filter(function (x) { return x.parent_id === cha.id && (!c || x.id !== c.id) && x.vi_tri; }).map(function (x) { return x.vi_tri; });
     return [{ name: 'vi_tri', label: 'Vị trí Rack trong bình (số 1–50)', type: 'number', required: true, value: c && c.vi_tri ? c.vi_tri : (da.length ? Math.max.apply(null, da) + 1 : 1) }];
@@ -1097,10 +1195,11 @@
         { name: 'template_id', label: 'Mẫu hộp', type: 'select', options: tpl },
         { name: 'name', label: 'Tên hộp (hoặc tên gốc nếu tạo nhiều)' },
         { name: 'count', label: 'Số lượng hộp (1–50)', type: 'number', value: 1 },
+        { name: 'vi_tri', label: 'Vị trí hộp trong Rack / giỏ (số 1–50, 1 ở trên cùng hoặc bên trái; để trống nếu chưa rõ; chỉ khi thêm một hộp)', type: 'number' },
         { name: 'notes', label: 'Ghi chú', type: 'textarea' },
       ],
       onSubmit: function (v) {
-        return api('POST', '/boxes', { container_id: containerId, template_id: Number(v.template_id), name: v.name, count: Number(v.count) || 1, notes: v.notes })
+        return api('POST', '/boxes', { container_id: containerId, template_id: Number(v.template_id), name: v.name, count: Number(v.count) || 1, notes: v.notes, vi_tri: v.vi_tri === '' || v.vi_tri == null ? undefined : Number(v.vi_tri) })
           .then(function (r) { state.expanded[containerId] = true; say('Đã tạo ' + r.ids.length + ' hộp.', 'ok'); return reload(true); });
       },
     });

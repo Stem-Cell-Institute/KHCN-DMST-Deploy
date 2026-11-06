@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS nhm_container_types (
 -- Cây vật chứa; parent_id NULL = tủ/bình gốc, độ sâu tùy ý
 CREATE TABLE IF NOT EXISTS nhm_containers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- Chỉ ở thiết bị GỐC: mã mẫu thiết bị đã chọn khi tạo (services/nganHangTeBaoKhangTheThietBi.js), quyết định cách vẽ sơ đồ; NULL = thiết bị tự khai
+  mau_tb TEXT,
   parent_id INTEGER REFERENCES nhm_containers(id),
   type_id INTEGER NOT NULL REFERENCES nhm_container_types(id),
   code TEXT NOT NULL,

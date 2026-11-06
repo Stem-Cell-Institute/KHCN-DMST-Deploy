@@ -6,6 +6,7 @@
  */
 
 const express = require('express');
+const TB = require('../../services/nganHangTeBaoKhangTheThietBi');
 const {
   HOLDING, NGAN_HANG, LOAI_CHU_VN, toInt, toStr, parseSo, placeholders, isUniqueError, layThayDoi, moTaThayDoi,
 } = require('../../services/nganHangTeBaoKhangThe');
@@ -30,13 +31,15 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       donVi: db.prepare("SELECT id, ten FROM nhm_don_vi WHERE ngan_hang = ? ORDER BY (ma IN ('cellbank','antibodybank')) DESC, ten").all(req.nganHang), // đơn vị quản lý thiết bị của ngân hàng này (chỉ tên)
       khongPublic: req.nganHang === 'khang_the', // ngân hàng kháng thể: mọi thiết bị thuộc AntibodyBank, không có Public / thiết bị riêng
       sampleTypes: db.prepare('SELECT * FROM nhm_sample_types ORDER BY name').all(),
+      mauThietBi: TB.MAU_THIET_BI, // danh mục mẫu thiết bị (bình nitơ lỏng, tủ âm sâu, tủ nằm ngang, tủ lạnh 2 ngăn…), dùng ở form thêm thiết bị và để vẽ sơ đồ
+      nhomThietBi: TB.NHOM,
     });
   });
 
   router.get('/tree', (req, res) => {
     const containers = db
       .prepare(
-        `SELECT c.id, c.parent_id, c.type_id, c.code, c.name, c.temperature_c, c.location_note, c.sort_order, c.notes, c.quan_ly_boi, c.don_vi_id, c.vi_tri, c.rieng_user_id, c.created_by,
+        `SELECT c.id, c.parent_id, c.type_id, c.code, c.name, c.temperature_c, c.location_note, c.sort_order, c.notes, c.quan_ly_boi, c.don_vi_id, c.vi_tri, c.rieng_user_id, c.created_by, c.mau_tb,
                 t.name AS type_name
          FROM nhm_containers c JOIN nhm_container_types t ON t.id = c.type_id
          WHERE c.deleted_at IS NULL ORDER BY c.sort_order, c.name`
@@ -142,6 +145,13 @@ module.exports = function createKhoLuuTruRouter(ctx) {
   const donViKhangThe = () => (db.prepare("SELECT id FROM nhm_don_vi WHERE ngan_hang = 'khang_the' ORDER BY (ma = 'antibodybank') DESC, id LIMIT 1").get() || {}).id || null;
   const LOI_KHONG_PUBLIC = 'Ngân hàng kháng thể không có Public hay thiết bị riêng: mọi thiết bị thuộc AntibodyBank.';
 
+  /** Id loại vật chứa theo tên; chưa có thì tạo (mẫu thiết bị cần các loại «Tủ âm sâu -86°C», «Giỏ», «Kệ»…). */
+  function layHoacTaoLoai(ten, nhietDo) {
+    const r = db.prepare('SELECT id FROM nhm_container_types WHERE name = ?').get(ten);
+    if (r) return r.id;
+    return Number(db.prepare('INSERT INTO nhm_container_types (name, default_temp_c, sort_order) VALUES (?, ?, ?)').run(ten, nhietDo, 50 + db.prepare('SELECT COUNT(*) AS c FROM nhm_container_types').get().c).lastInsertRowid);
+  }
+
   const LOI_QUYEN = 'Chỉ Admin, Quản lý module hoặc chủ thiết bị riêng mới có quyền thao tác này.';
   const khongCoQuyen = (req) => !canManage(req) && !laVienTruong(req);
 
@@ -175,8 +185,17 @@ module.exports = function createKhoLuuTruRouter(ctx) {
       const dv = db.prepare('SELECT ngan_hang FROM nhm_don_vi WHERE id = ?').get(b.don_vi_id);
       if (!dv || dv.ngan_hang !== b.ngan_hang) return fail(res, 400, 'Đơn vị quản lý không thuộc ngân hàng này.');
     }
+    // chọn MẪU THIẾT BỊ (chỉ thiết bị gốc): loại thiết bị và nhiệt độ theo mẫu; các ngăn của mẫu được tạo kèm (người dùng thêm Rack / giỏ / hộp vào sau)
+    let mau = null;
+    if (body.mau_tb != null && body.mau_tb !== '') {
+      if (b.parent_id != null) return fail(res, 400, 'Chỉ thiết bị gốc mới chọn được mẫu thiết bị.');
+      mau = TB.layMau(body.mau_tb);
+      if (!mau) return fail(res, 400, 'Mẫu thiết bị không hợp lệ.');
+      b.type_id = null; // loại thiết bị của mẫu được lấy / tạo trong transaction bên dưới (không tạo loại rác khi yêu cầu bị từ chối)
+      if (!('temperature_c' in body)) b.temperature_c = mau.nhiet_do;
+    }
     if (!b.name) return fail(res, 400, 'Thiếu tên vị trí lưu trữ.');
-    if (b.type_id == null || !db.prepare('SELECT 1 FROM nhm_container_types WHERE id = ?').get(b.type_id)) {
+    if (!mau && (b.type_id == null || !db.prepare('SELECT 1 FROM nhm_container_types WHERE id = ?').get(b.type_id))) {
       return fail(res, 400, 'Loại vị trí lưu trữ không hợp lệ.');
     }
     if (b.parent_id != null && !db.prepare('SELECT 1 FROM nhm_containers WHERE id = ? AND deleted_at IS NULL').get(b.parent_id)) {
@@ -186,14 +205,29 @@ module.exports = function createKhoLuuTruRouter(ctx) {
     if (trungViTriGia(b.parent_id ?? null, b.vi_tri ?? null)) return fail(res, 409, `Vị trí số ${b.vi_tri} đã có Rack khác trong vị trí này.`);
     try {
       const code = b.code || nextCode('nhm_containers', 'VC-');
-      const info = db
+      const ghiGoc = db
         .prepare(
-          `INSERT INTO nhm_containers (parent_id, type_id, code, name, temperature_c, location_note, sort_order, notes, quan_ly_boi, don_vi_id, vi_tri, rieng_user_id, ngan_hang, created_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        )
-        .run(b.parent_id ?? null, b.type_id, code, b.name, b.temperature_c ?? null, b.location_note ?? null, b.sort_order || 0, b.notes ?? null, b.quan_ly_boi || 'cong_khai', b.don_vi_id ?? null, b.vi_tri ?? null, b.rieng_user_id ?? null, b.ngan_hang, req.user.id);
-      audit(req, 'container_create', `id=${info.lastInsertRowid} ${b.name}`);
-      res.status(201).json({ id: Number(info.lastInsertRowid), code });
+          `INSERT INTO nhm_containers (parent_id, type_id, code, name, temperature_c, location_note, sort_order, notes, quan_ly_boi, don_vi_id, vi_tri, rieng_user_id, ngan_hang, created_by, mau_tb)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        );
+      let soNgan = 0;
+      const info = db.transaction(() => {
+        const typeId = mau ? layHoacTaoLoai(mau.loai_goc, mau.nhiet_do) : b.type_id;
+        const i = ghiGoc.run(b.parent_id ?? null, typeId, code, b.name, b.temperature_c ?? null, b.location_note ?? null, b.sort_order || 0, b.notes ?? null, b.quan_ly_boi || 'cong_khai', b.don_vi_id ?? null, b.vi_tri ?? null, b.rieng_user_id ?? null, b.ngan_hang, req.user.id, mau ? mau.ma : null);
+        // các ngăn (khoang) của mẫu: loại «Ngăn», đánh số vị trí 1.. theo thứ tự trong mẫu, nhiệt độ riêng của ngăn nếu mẫu khai
+        if (mau && mau.khoang.length) {
+          const loaiNgan = layHoacTaoLoai('Ngăn', null);
+          const ghiNgan = db.prepare(`INSERT INTO nhm_containers (parent_id, type_id, code, name, temperature_c, sort_order, quan_ly_boi, vi_tri, ngan_hang, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+          mau.khoang.forEach((k, idx) => {
+            layHoacTaoLoai(k.loai_ke, null); // loại của Rack / giỏ / ngăn kéo / kệ có sẵn để chọn khi thêm vào ngăn
+            ghiNgan.run(i.lastInsertRowid, loaiNgan, nextCode('nhm_containers', 'VC-'), k.ten, k.nhiet_do != null ? k.nhiet_do : b.temperature_c ?? null, idx + 1, b.quan_ly_boi || 'cong_khai', idx + 1, b.ngan_hang, req.user.id);
+            soNgan++;
+          });
+        }
+        return i;
+      })();
+      audit(req, 'container_create', `id=${info.lastInsertRowid} ${b.name}${mau ? ' — mẫu ' + mau.ma + ', ' + soNgan + ' ngăn' : ''}`);
+      res.status(201).json({ id: Number(info.lastInsertRowid), code, so_ngan: soNgan });
     } catch (e) {
       if (isUniqueError(e)) return fail(res, 409, 'Mã vị trí lưu trữ đã tồn tại.');
       throw e;
