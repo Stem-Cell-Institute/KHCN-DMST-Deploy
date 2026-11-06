@@ -692,11 +692,15 @@
    Chỉ áp dụng khi dock đang mở; chưa chọn ống thì sơ đồ vẫn to như cũ. ═══════════════════════════════════════════════════════════════ */
 @media (min-width: 901px) {
   .nhm-cot-phai:has(.nhm-dock > dialog[open]) .ln-svg,
-  .nhm-cot-phai:has(.nhm-dock > dialog[open]) .tb-svg { max-height: 120px; }
-  .nhm-cot-phai:has(.nhm-dock > dialog[open]) .ln-svg { max-height: 110px; }
+  .nhm-cot-phai:has(.nhm-dock > dialog[open]) .tb-svg { max-height: 190px; }
+  .nhm-cot-phai:has(.nhm-dock > dialog[open]) .ln-svg { max-height: 180px; }
   .nhm-cot-phai:has(.nhm-dock > dialog[open]) .nhm-ln > summary { padding: 4px 10px; }
   .nhm-cot-phai:has(.nhm-dock > dialog[open]) .nhm-ln > summary .nhm-btn { min-height: 24px; padding: 0 8px; font-size: 0.7rem; }
   .nhm-cot-phai:has(.nhm-dock > dialog[open]) .ln-hop-bao { padding: 0 8px 6px; }
+  /* sơ đồ đứng yên ở trên; chỉ phần thông tin ống bên dưới tự cuộn khi cao hơn chỗ còn lại (không cuộn chung với sơ đồ) */
+  .nhm-detail--ln > .nhm-cot-phai { display: flex; flex-direction: column; overflow: hidden; }
+  .nhm-detail--ln > .nhm-cot-phai > .nhm-ln, .nhm-detail--ln > .nhm-cot-phai > :first-child { flex: 0 0 auto; }
+  .nhm-detail--ln > .nhm-cot-phai > .nhm-dock { flex: 1 1 auto; min-height: 140px; overflow-y: auto; overscroll-behavior: contain; }
   .nhm-detail--ln .nhm-dialog--dock { max-height: none; overflow: visible; margin-top: 8px; padding: 8px 12px 0; }
   .nhm-dialog--dock h3 { margin: 0 0 4px; padding-bottom: 3px; font-size: 0.92rem; line-height: 1.25; }
   .nhm-dialog--dock .nhm-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 12px; margin: 6px 0; }
