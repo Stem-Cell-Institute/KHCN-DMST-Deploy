@@ -140,6 +140,7 @@ const ROUTES = [
   ['GET', '/alarms', 'auth'],
   ['POST', '/alarms/:id/resolve', 'owner'],
   ['GET', '/reminders', 'auth'],
+  ['POST', '/import/cellseeker', 'admin'],
   ['GET', '/settings', 'auth'],
   ['PUT', '/settings', 'manage'],
   ['GET', '/students', 'manage'],

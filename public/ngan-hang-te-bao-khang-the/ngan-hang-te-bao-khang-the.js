@@ -175,12 +175,13 @@
     return new Promise(function (res, rej) { hoi(cauHoi, res, function () { rej(new Error('Đã hủy thao tác.')); }); });
   }
 
-  function openInfo(title, nodes, buttons, dock) {
+  /** gon: nhiều nút (hộp thoại ống) thì nút nhỏ, xếp sát nhau từ bên trái thay vì to và dàn sang phải. */
+  function openInfo(title, nodes, buttons, dock, gon) {
     var d = $('nhm-dialog');
     d.replaceChildren(h('div', {}, [
       h('h3', {}, title),
       nodes,
-      h('div', { class: 'nhm-form-actions' }, [].concat(buttons || [], [
+      h('div', { class: 'nhm-form-actions' + (gon ? ' nhm-form-actions--gon' : '') }, [].concat(buttons || [], [
         h('button', { type: 'button', class: 'nhm-btn', onclick: closeDialog }, 'Đóng'),
       ])),
     ]));
@@ -1585,7 +1586,7 @@
     if ((!laChu || cbKhoa) && !state.meta.canManage && !(state.box && state.box.duoc_don_vi) && t.status === 'in_storage' && !t.nghi_mat) buttons.unshift(btn('Yêu cầu lấy mẫu này', 'primary', function () { xinMauForm(t); }));
     if (t.nghi_mat) buttons.unshift(btn('Mẫu nghi mất — xem vụ việc', 'danger', function () { closeDialog(); moCongViec('nghimat'); }));
     if (state.meta.canManage) buttons.push(btn('Chuyển chủ', '', function () { transferForm(t); }));
-    openInfo(t.name, body, buttons, true);
+    openInfo(t.name, body, buttons, true, true);
     api('GET', '/tubes/' + t.id + '/history').then(function (r) {
       var slot = $('nhm-hist');
       if (!slot) return;
@@ -2098,6 +2099,78 @@
     }).catch(loiTrongSlot(body));
   }
 
+  // ----- nhập dữ liệu từ tệp xuất Cellseeker (chỉ Admin, ngân hàng tế bào) -----
+
+  /** Chọn tệp .zip → «Kiểm tra» (chưa ghi gì, đúng số liệu như khi ghi) → «Nhập vào hệ thống». Chỉ thêm, không sửa / xóa; nhập lại không bị trùng. */
+  function tabNhapDuLieu(body) {
+    var tep = h('input', { type: 'file', accept: '.zip,application/zip', 'aria-label': 'Tệp .zip xuất từ Cellseeker' });
+    var kieu = h('select', { 'aria-label': 'Cách đếm ô trong hộp' }, [
+      h('option', { value: 'hang' }, 'Theo hàng: A1, A2 … A5, rồi B1'),
+      h('option', { value: 'cot' }, 'Theo cột: A1, B1 … E1, rồi A2'),
+    ]);
+    var ketQua = h('div', { class: 'nhm-nhap__kq', 'aria-live': 'polite' });
+    var nutKiemTra = h('button', { type: 'button', class: 'nhm-btn nhm-btn--primary' }, 'Kiểm tra');
+    var nutGhi = h('button', { type: 'button', class: 'nhm-btn nhm-hide' }, 'Nhập vào hệ thống');
+    var dangChay = false;
+    var batDau = function (ghi) {
+      if (dangChay) return;
+      if (!tep.files[0]) { put(ketQua, h('p', { class: 'nhm-err' }, 'Hãy chọn tệp .zip xuất từ Cellseeker.')); return; }
+      dangChay = true; nutKiemTra.disabled = true; nutGhi.disabled = true;
+      put(ketQua, h('p', { class: 'nhm-loading' }, ghi ? 'Đang nhập, đừng đóng cửa sổ…' : 'Đang kiểm tra…'));
+      var fd = new FormData();
+      fd.append('tep', tep.files[0]); fd.append('kieu_dem', kieu.value); fd.append('ghi', ghi ? '1' : '0');
+      apiTep('/import/cellseeker?nh=te_bao', fd).then(function (r) {
+        dangChay = false; nutKiemTra.disabled = false; nutGhi.disabled = false;
+        put(ketQua, veKetQuaNhap(r));
+        nutGhi.classList.toggle('nhm-hide', r.da_ghi);
+        if (r.da_ghi) { say('Đã nhập dữ liệu Cellseeker.', 'ok'); reload(true).then(taiMe); }
+      }).catch(function (e) {
+        dangChay = false; nutKiemTra.disabled = false; nutGhi.disabled = false;
+        put(ketQua, h('p', { class: 'nhm-err' }, e.message));
+      });
+    };
+    tep.addEventListener('change', function () { nutGhi.classList.add('nhm-hide'); put(ketQua); });
+    kieu.addEventListener('change', function () { nutGhi.classList.add('nhm-hide'); put(ketQua); });
+    nutKiemTra.addEventListener('click', function () { batDau(false); });
+    nutGhi.addEventListener('click', function () {
+      hoi('Nhập dữ liệu vào hệ thống? Chỉ thêm mới, không sửa hay xóa dữ liệu đang có. Việc này đổi vị trí ống thật nên hãy chắc cách đếm ô đã đúng.', function () { batDau(true); });
+    });
+    put(body, h('div', { class: 'nhm-nhap' }, [
+      h('strong', {}, 'Nhập dữ liệu từ Cellseeker'),
+      h('p', { class: 'nhm-muted nhm-small' }, 'Chọn tệp .zip tải về từ Cellseeker (cellseeker-export-….zip). «Kiểm tra» chỉ xem trước, chưa ghi gì. Nhập lại tệp đó lần nữa không bị trùng.'),
+      h('div', { class: 'nhm-field' }, [h('span', { class: 'nhm-lbl' }, 'Tệp .zip'), tep]),
+      h('div', { class: 'nhm-field' }, [h('span', { class: 'nhm-lbl' }, 'Cách Cellseeker đếm số ô trong hộp'), kieu]),
+      h('div', { class: 'nhm-card-act' }, [nutKiemTra, nutGhi]),
+      ketQua,
+    ]));
+  }
+
+  function veKetQuaNhap(r) {
+    var k = r.ket_qua;
+    var dong = function (ten, x, tong) {
+      return h('tr', {}, [h('td', { 'data-l': 'Mục' }, ten), h('td', { 'data-l': 'Trong tệp' }, tong == null ? '' : String(tong)), h('td', { 'data-l': 'Thêm mới' }, String(x.moi)), h('td', { 'data-l': 'Đã có' }, String(x.coSan)), h('td', { 'data-l': 'Bỏ qua' }, x.boQua ? String(x.boQua) : '')]);
+    };
+    var t = r.trong_tep;
+    return h('div', {}, [
+      h('p', { class: r.da_ghi ? 'nhm-ok' : 'nhm-hint', role: 'status' }, r.da_ghi
+        ? 'Đã ghi xong.' + (r.sao_luu ? ' Sao lưu trước khi nhập: ' + r.sao_luu + '.' : ' Không tạo được bản sao lưu trước khi nhập.')
+        : 'Đây là kết quả kiểm tra, chưa có gì được ghi.'),
+      h('table', { class: 'nhm-hist' }, [
+        h('tr', {}, ['Mục', 'Trong tệp', 'Thêm mới', 'Đã có', 'Bỏ qua'].map(function (x) { return h('th', {}, x); })),
+        dong('Thiết bị', k.thietBi, t.thiet_bi), dong('Rack', k.rack, t.rack), dong('Hộp', k.hop, t.hop), dong('Dòng tế bào', k.dong, t.dong), dong('Lô', k.lo, t.lo), dong('Ống', k.ong, t.ong), dong('Tệp của lô', k.tep, t.tep),
+      ]),
+      r.vi_du && r.vi_du.length ? h('div', { class: 'nhm-nhap__vd' }, [
+        h('strong', {}, 'Đối chiếu cách đếm ô'),
+        h('p', { class: 'nhm-muted nhm-small' }, 'Mở các ống này trong Cellseeker; nếu ô khác với bảng dưới thì đổi «cách đếm» ở trên rồi kiểm tra lại.'),
+        h('ul', {}, r.vi_du.map(function (x) { return h('li', {}, 'Ô số ' + x.vi_tri + ' của hộp ' + x.rows + '×' + x.cols + ' (' + x.tank + ', Rack ' + x.rack + ', hộp ' + x.hop + ') → ô ' + x.o + ' · ' + x.mau); })),
+      ]) : null,
+      k.canhBao && k.canhBao.length ? h('details', { class: 'nhm-nhap__cb', open: k.canhBao.length <= 6 }, [
+        h('summary', {}, 'Lưu ý (' + k.canhBao.length + ')'),
+        h('ul', {}, k.canhBao.slice(0, 80).map(function (c) { return h('li', {}, c); })),
+      ]) : null,
+    ]);
+  }
+
   // ----- đơn vị quản lý thiết bị: thiết bị gắn đơn vị thì yêu cầu lấy mẫu do người duyệt của đơn vị quyết định -----
   function tabDonVi(body, reopen) {
     var laAdmin = !!(state.me && state.me.laAdmin);
@@ -2164,6 +2237,7 @@
     tab = tab || 'danhmuc';
     var tabs = [['danhmuc', 'Danh mục', tabDanhMuc], ['nhom', 'Nhóm nghiên cứu', tabNhom], ['thanhvien', 'Thành viên', tabThanhVien], ['sinhvien', 'Sinh viên', tabSinhVien], ['donvi', 'Đơn vị quản lý', tabDonVi], ['cauhinh', 'Cấu hình hạn', tabCauHinh]];
     if (state.me && state.me.laAdmin) tabs.push(['vaitro', 'Vai trò', tabVaiTro]);
+    if (state.me && state.me.laAdmin && nganHang === 'te_bao') tabs.push(['nhapdl', 'Nhập dữ liệu', tabNhapDuLieu]);
     var body = h('div', { class: 'nhm-tabbody' }, h('div', { class: 'nhm-loading' }, 'Đang tải…'));
     var bar = h('div', { class: 'nhm-tabs', role: 'tablist' }, tabs.map(function (t) {
       return h('button', { type: 'button', role: 'tab', class: 'nhm-tab' + (t[0] === tab ? ' nhm-tab--on' : ''), 'aria-selected': String(t[0] === tab), onclick: function () { quanTriDialog(t[0]); } }, t[1]);

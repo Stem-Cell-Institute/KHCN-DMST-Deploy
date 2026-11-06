@@ -4,7 +4,7 @@
 /**
  * scripts/nhap-cellseeker.js — nhập dữ liệu xuất từ Cellseeker vào Ngân hàng Tế bào.
  *
- *   node scripts/nhap-cellseeker.js <thư-mục-giải-nén> [--db data/sci-ace.db] [--nguoi-nhap <email|id>] [--uploads <thư-mục>] [--ghi]
+ *   node scripts/nhap-cellseeker.js <thư-mục-giải-nén> [--db data/sci-ace.db] [--nguoi-nhap <email|id>] [--uploads <thư-mục>] [--kieu-dem hang|cot] [--ghi]
  *
  * Mặc định CHỈ CHẠY THỬ: làm hết các bước trong một giao dịch rồi hủy, in báo cáo (số lượng mới / đã có / bỏ qua, cảnh báo) mà không đổi gì.
  * Thêm --ghi để ghi thật; trước khi ghi, tự sao lưu CSDL thành «<tên>.truoc-cellseeker-<thời gian>.bak» cạnh tệp CSDL.
@@ -35,14 +35,14 @@ function doiSo(argv) {
 function main() {
   const a = doiSo(process.argv.slice(2));
   if (!a._[0]) {
-    console.error('Cách dùng: node scripts/nhap-cellseeker.js <thư-mục-giải-nén> [--db data/sci-ace.db] [--nguoi-nhap <email|id>] [--uploads <thư-mục>] [--ghi]');
+    console.error('Cách dùng: node scripts/nhap-cellseeker.js <thư-mục-giải-nén> [--db data/sci-ace.db] [--nguoi-nhap <email|id>] [--uploads <thư-mục>] [--kieu-dem hang|cot] [--ghi]');
     process.exit(2);
   }
   const duongDb = path.resolve(a.db || path.join(__dirname, '..', 'data', 'sci-ace.db'));
   if (!fs.existsSync(duongDb)) { console.error('Không thấy tệp CSDL: ' + duongDb); process.exit(2); }
 
   const du = NhapCs.docThuMuc(a._[0]);
-  const ke = NhapCs.lapKeHoach(du);
+  const ke = NhapCs.lapKeHoach(du, { kieuDem: a['kieu-dem'] === 'cot' ? 'cot' : 'hang' });
   console.log(`Đọc từ: ${du.goc}`);
   console.log(`Kế hoạch: ${ke.thietBi.length} thiết bị, ${ke.thietBi.reduce((n, t) => n + t.rack.length, 0)} Rack, ${ke.thietBi.reduce((n, t) => n + t.rack.reduce((m, r) => m + r.hop.length, 0), 0)} hộp, ${ke.dong.length} dòng, ${ke.lo.length} lô, ${ke.ong.length} ống, ${ke.tepLo.length} tệp.`);
 

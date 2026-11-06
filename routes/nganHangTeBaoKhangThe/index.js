@@ -28,6 +28,7 @@ const createTepRouter = require('./tepDinhKem');
 const createKiemKeRouter = require('./kiemKe');
 const createGiamSatRouter = require('./giamSat');
 const createNhacViecRouter = require('./nhacViec');
+const createNhapDuLieuRouter = require('./nhapDuLieu');
 const khoiTao = require('../../services/nganHangTeBaoKhangTheKhoiTao');
 
 function createNganHangMauRouter(deps) {
@@ -54,6 +55,7 @@ function createNganHangMauRouter(deps) {
   router.use(createUyQuyenRouter(ctx)); // ủy quyền duyệt (ngân hàng kháng thể)
   router.use(createDongTeBaoRouter(ctx)); // hồ sơ dòng tế bào, lô, QC, báo cáo GMO
   router.use(createTepRouter(ctx, deps)); // tệp đính kèm
+  router.use(createNhapDuLieuRouter(ctx, deps)); // nhập dữ liệu từ tệp xuất Cellseeker (Admin)
   router.use(createGiamSatRouter(ctx)); // nhật ký nhiệt độ thiết bị, cảnh báo
   router.use(createNhacViecRouter(ctx)); // việc đến hạn + bộ quét thư nhắc
   // cho test và bộ hẹn giờ gọi trực tiếp

@@ -186,3 +186,102 @@ test('lỗi rõ ràng: thiếu thư mục xuất, người nhập không tồn t
   assert.throws(() => Nhap.thucThi(d3, ke, { nguoiId: 1, ghi: false }), /đơn vị quản lý «Cellbank»/);
   d3.close();
 });
+
+// ═══ Nhập qua giao diện (POST /import/cellseeker, chỉ Admin) ═══
+
+const PizZip = require('pizzip');
+const { dungServer } = require('./helpers/nganHangServer');
+
+/** Nén thư mục xuất giả thành .zip như tệp tải từ Cellseeker (có thư mục gốc, có tệp rác .DS_Store). */
+function nenZip(dir, them = {}) {
+  const z = new PizZip();
+  const goc = path.basename(dir) + '/';
+  z.file(goc + '.DS_Store', Buffer.from('rac'));
+  for (const f of fs.readdirSync(dir)) {
+    const p = path.join(dir, f);
+    if (fs.statSync(p).isDirectory()) for (const g of fs.readdirSync(p)) z.file(goc + f + '/' + g, fs.readFileSync(path.join(p, g)));
+    else z.file(goc + f, fs.readFileSync(p));
+  }
+  for (const [ten, nd] of Object.entries(them)) z.file(ten, nd);
+  return z.generate({ type: 'nodebuffer' });
+}
+
+test('đổi cách đếm ô sang theo cột: ô số 8 của hộp 5×5 là C2 thay vì B3', () => {
+  const d = Nhap.docThuMuc(thuMuc);
+  d.vials[1].Position = '8';
+  const o = (kieu) => Nhap.lapKeHoach(d, { kieuDem: kieu }).ong.find((x) => x.vi_tri === 8);
+  assert.deepEqual([o('hang').row, o('hang').col], [2, 3]);
+  assert.deepEqual([o('cot').row, o('cot').col], [3, 2]);
+  assert.equal(Nhap.lapKeHoach(d, { kieuDem: 'cot' }).kieuDem, 'cot');
+  assert.ok(Nhap.lapKeHoach(Nhap.docThuMuc(thuMuc)).viDu.some((v) => v.vi_tri === 7 && v.o === 'B2'), 'có ví dụ để người dùng đối chiếu');
+});
+
+test('giải nén .zip an toàn: chỉ lấy CSV và tệp của lô, bỏ qua rác, chặn zip nén quá mức, chặn đi vòng ra ngoài thư mục tạm', () => {
+  assert.throws(() => Nhap.giaiNenZip(Buffer.from('khong phai zip')), /không phải tệp \.zip/);
+  assert.throws(() => Nhap.giaiNenZip(Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('hong')])), /Không mở được/);
+  const zip = nenZip(thuMuc, { '../../thoat-cells.csv': 'x', '__MACOSX/._cells.csv': 'x' });
+  assert.throws(() => Nhap.giaiNenZip(zip, { toiDaTong: 10 }), /quá lớn/);
+  assert.throws(() => Nhap.giaiNenZip(zip, { toiDaMuc: 2 }), /quá nhiều mục/);
+  const g = Nhap.giaiNenZip(zip);
+  try {
+    const co = fs.readdirSync(g.dir).sort();
+    assert.ok(co.includes('stock-attachments') && co.some((f) => f.endsWith('-vials.csv')));
+    assert.ok(!co.includes('.DS_Store'));
+    assert.equal(fs.readdirSync(path.join(g.dir, 'stock-attachments')).length, 3);
+    assert.equal(fs.existsSync(path.join(g.dir, '..', 'thoat-cells.csv')), false, 'không ghi ra ngoài thư mục tạm');
+    assert.equal(Nhap.lapKeHoach(Nhap.docThuMuc(g.dir)).ong.length, 6);
+  } finally {
+    g.don();
+  }
+  assert.equal(fs.existsSync(g.dir), false, 'thư mục tạm được xóa');
+});
+
+test('POST /import/cellseeker: chỉ Admin; kiểm tra không ghi gì; ghi thật một lần, nhập lại không trùng; lỗi tệp báo rõ', async () => {
+  const s = await dungServer();
+  try {
+    const gui = async (user, tep, extra = {}, nganHang) => {
+      const f = new FormData();
+      if (tep) f.append('tep', new Blob([tep]), 'cellseeker-export.zip');
+      for (const [k, v] of Object.entries(extra)) f.append(k, v);
+      const res = await fetch(s.base + '/import/cellseeker', { method: 'POST', headers: { 'x-test-user': user, ...(nganHang ? { 'x-ngan-hang': nganHang } : {}) }, body: f });
+      let json = null;
+      try { json = await res.json(); } catch (_) { /* không phải JSON */ }
+      return { status: res.status, json };
+    };
+    const zip = nenZip(thuMuc);
+    assert.equal((await gui('manager', zip, { ghi: '1' })).status, 403, 'quản lý module cũng không nhập được');
+    assert.equal((await gui('alice', zip)).status, 403);
+    assert.equal((await fetch(s.base + '/import/cellseeker', { method: 'POST' })).status, 401);
+    assert.equal((await gui('admin', null)).status, 400);
+    assert.match((await gui('admin', Buffer.from('chữ thường'))).json.message, /không phải tệp \.zip/);
+    assert.match((await gui('admin', nenZip(thuMuc).subarray(0, 40))).json.message, /Không mở được|Thiếu tệp|Không thấy/);
+    const trong = new PizZip(); trong.file('a/ghi-chu.txt', 'x');
+    assert.match((await gui('admin', trong.generate({ type: 'nodebuffer' }))).json.message, /Không thấy tệp \*-cells\.csv/);
+    assert.equal((await gui('admin', zip, {}, 'khang_the')).status, 400, 'chỉ ngân hàng tế bào');
+
+    const dem = (b) => s.db.prepare(`SELECT COUNT(*) AS c FROM ${b}`).get().c;
+    const truoc = ['nhm_containers', 'nhm_tubes', 'nhm_dong_te_bao', 'nhm_lo', 'nhm_tep'].map(dem);
+    const kt = await gui('admin', zip, { kieu_dem: 'hang' });
+    assert.equal(kt.status, 200);
+    assert.equal(kt.json.da_ghi, false);
+    assert.deepEqual([kt.json.ket_qua.ong.moi, kt.json.ket_qua.dong.moi, kt.json.ket_qua.lo.moi, kt.json.trong_tep.ong, kt.json.trong_tep.hop], [6, 4, 4, 6, 4]);
+    assert.ok(kt.json.vi_du.length >= 1);
+    assert.deepEqual(['nhm_containers', 'nhm_tubes', 'nhm_dong_te_bao', 'nhm_lo', 'nhm_tep'].map(dem), truoc, 'kiểm tra không đổi gì');
+    assert.equal(s.auditLog.some((a) => a.action === 'nhm_import_cellseeker'), false);
+
+    const ghi = await gui('admin', zip, { ghi: '1', kieu_dem: 'hang' });
+    assert.equal(ghi.status, 200);
+    assert.deepEqual([ghi.json.da_ghi, ghi.json.ket_qua.ong.moi, ghi.json.ket_qua.tep.moi], [true, 6, 1]);
+    assert.equal(dem('nhm_tubes'), 6);
+    assert.equal(s.db.prepare("SELECT owner_user_id FROM nhm_tubes LIMIT 1").get().owner_user_id, 1, 'người tạo là Admin đang nhập');
+    assert.ok(s.auditLog.some((a) => a.action === 'nhm_import_cellseeker' && /4 dòng, 4 lô, 6 ống/.test(a.detail)));
+    const tree = (await s.api('admin', 'GET', '/tree')).json;
+    assert.ok(tree.containers.some((c) => c.name === 'BINH-A' && c.quan_ly_boi === 'cellbank'));
+    const lai = await gui('admin', zip, { ghi: '1' });
+    assert.deepEqual([lai.json.ket_qua.ong.moi, lai.json.ket_qua.ong.coSan, lai.json.ket_qua.dong.moi, lai.json.ket_qua.tep.coSan], [0, 6, 0, 1], 'nhập lại không trùng');
+    assert.equal(dem('nhm_tubes'), 6);
+    assert.equal(fs.readdirSync(os.tmpdir()).filter((f) => f.startsWith('nhm-cellseeker-')).length, 0, 'không để lại thư mục tạm');
+  } finally {
+    await s.dong();
+  }
+});

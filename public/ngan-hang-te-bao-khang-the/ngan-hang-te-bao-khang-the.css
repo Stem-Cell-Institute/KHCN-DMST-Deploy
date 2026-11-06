@@ -713,3 +713,18 @@
   .nhm-dialog--dock .nhm-form-actions { justify-content: flex-start; gap: 3px; margin-top: 3px; padding: 4px 0 5px; }
   .nhm-dialog--dock .nhm-dl-tt .nhm-btn { min-height: 22px; justify-self: start; }
 }
+
+/* nhập dữ liệu Cellseeker */
+.nhm-nhap { max-width: 640px; }
+.nhm-nhap input[type=file], .nhm-nhap select { max-width: 100%; font: inherit; }
+.nhm-nhap__kq { margin-top: 14px; }
+.nhm-nhap__kq .nhm-hist th:not(:first-child), .nhm-nhap__kq .nhm-hist td:not(:first-child) { text-align: right; }
+.nhm-nhap__vd, .nhm-nhap__cb { margin-top: 12px; font-size: 0.84rem; }
+.nhm-nhap__vd ul, .nhm-nhap__cb ul { margin: 6px 0 0; padding-left: 18px; }
+.nhm-nhap__cb > summary { cursor: pointer; font-weight: 600; color: var(--chu-phu); }
+.nhm-ok { margin: 0 0 8px; padding: 8px 12px; font-size: 0.86rem; color: #1e6b3a; background: #eaf5ee; border-left: 2px solid #1e6b3a; }
+
+/* hộp thoại thông tin ống: dãy nút nhỏ gọn, xếp sát nhau từ bên trái (dock đã có kiểu riêng gọn hơn ở trên) */
+.nhm-dialog:not(.nhm-dialog--dock) .nhm-form-actions--gon { justify-content: flex-start; gap: 5px; }
+.nhm-dialog:not(.nhm-dialog--dock) .nhm-form-actions--gon .nhm-btn { min-height: 28px; padding: 0 9px; font-size: 0.76rem; }
+@media (max-width: 600px) { .nhm-dialog .nhm-form-actions--gon .nhm-btn { min-height: 38px; padding: 0 10px; font-size: 0.8rem; flex: 0 1 auto; } }

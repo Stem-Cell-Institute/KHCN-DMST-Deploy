@@ -235,14 +235,20 @@ in_storage ──checkout──▶ checked_out ──checkin──▶ in_storage
 - Route tĩnh (`/tubes/search`, `/tubes/bulk`, `/tubes/export.csv`) đứng **trước** các route `/tubes/:id...` — xem
   «Thứ tự đăng ký route» trong `KIEN-TRUC-VA-CAM-BAY.md`.
 
-### Nhập dữ liệu từ Cellseeker (dòng lệnh, một lần khi chuyển hệ thống)
+### Nhập dữ liệu từ Cellseeker (một lần khi chuyển hệ thống)
 
-Dữ liệu xuất từ Cellseeker (thư mục giải nén của `cellseeker-export-….zip`) được nhập bằng `scripts/nhap-cellseeker.js`; logic ở
-`services/nganHangTeBaoKhangTheNhapCellseeker.js`, test ở `tests/nganHangTeBaoKhangThe.nhapCellseeker.test.js`. **Chưa có màn hình nhập tệp trong
-giao diện** (giao diện chỉ có «Xuất CSV», thêm mẫu hàng loạt cùng lô và nhập danh sách sinh viên).
+**Trên giao diện (không cần quyền máy chủ):** Admin vào **Quản lý module → Nhập dữ liệu** (chỉ ngân hàng tế bào), chọn tệp `.zip` tải về từ Cellseeker, chọn **cách Cellseeker đếm số ô trong hộp**
+(theo hàng hay theo cột; bảng «Đối chiếu cách đếm ô» cho biết ô số N sẽ thành ô nào, so với Cellseeker rồi đổi nếu lệch), bấm **«Kiểm tra»** (xem trước đúng số liệu, chưa ghi gì) rồi **«Nhập vào hệ thống»**.
+Route `POST /import/cellseeker` (`routes/nganHangTeBaoKhangThe/nhapDuLieu.js`, chỉ Admin, tệp ≤ 80 MB): giải nén `.zip` vào thư mục tạm (chỉ lấy `*.csv` và `stock-attachments/`, tên tệp lấy phần cuối, chặn zip nén quá mức), ghi trong **một giao dịch**
+(lỗi thì không có gì được ghi), sao lưu CSDL vào `data/backups/` trước khi ghi nếu làm được, ghi nhật ký hoạt động. Mỗi lúc chỉ một lần nhập chạy.
+
+Cùng logic có **bản dòng lệnh** `scripts/nhap-cellseeker.js` cho người có quyền máy chủ. Logic ở `services/nganHangTeBaoKhangTheNhapCellseeker.js`, test ở
+`tests/nganHangTeBaoKhangThe.nhapCellseeker.test.js`. Giao diện chỉ có thêm màn hình nhập này; ngoài ra vẫn chỉ có «Xuất CSV», thêm mẫu hàng loạt cùng lô và nhập danh sách sinh viên.
+
+Bản dòng lệnh:
 
 ```
-node scripts/nhap-cellseeker.js <thư-mục-giải-nén> [--db data/sci-ace.db] [--nguoi-nhap <email|id>] [--uploads <thư mục>] [--ghi]
+node scripts/nhap-cellseeker.js <thư-mục-giải-nén> [--db data/sci-ace.db] [--nguoi-nhap <email|id>] [--uploads <thư mục>] [--kieu-dem hang|cot] [--ghi]
 ```
 
 - **Mặc định chỉ chạy thử**: làm mọi bước trong một giao dịch rồi hủy, in số lượng mới / đã có / bỏ qua và cảnh báo mà không đổi gì. Thêm `--ghi` để ghi thật;
@@ -252,7 +258,7 @@ node scripts/nhap-cellseeker.js <thư-mục-giải-nén> [--db data/sci-ace.db] 
   `cells.csv` → hồ sơ dòng (mã = tên trước dấu «(», GMO / BSL / nuôi cấy / nhà cung cấp / bổ sung môi trường); `stocks.csv` → lô (mã lô, passage, ngày đông lạnh, số tế bào mỗi ống = «Aliquot»,
   loại lô MCB / WCB, lô gốc, người làm, các ngày thử mycoplasma / vô trùng ghi ở ghi chú); `vials.csv` → từng ống ở đúng ô, người tạo là tài khoản nhập, lịch sử mẫu có dòng «Nhập từ Cellseeker»;
   `stock-attachments/` → tệp đính kèm của lô (tên «stock_lot_id-<mã lô>[-<hậu tố>].jpg»).
-- **Giả định phải kiểm với dữ liệu thật**: «Position» của ống đếm **theo hàng** từ trái sang phải, trên xuống dưới (hộp 5 cột: ô 1 = A1, ô 6 = B1). Hộp 1 cột × 5 hàng không phụ thuộc cách đếm.
+- **Cách đếm ô** (mặc định **theo hàng** từ trái sang phải, trên xuống dưới: hộp 5 cột, ô 1 = A1, ô 6 = B1): phải đối chiếu với Cellseeker; chọn «theo cột» (ô 2 = B1) nếu lệch. Hộp 1 cột × 5 hàng không phụ thuộc cách đếm. Dòng lệnh: `--kieu-dem hang|cot`.
 - Không nhập: `cell-images/` (tên «cell_id-<số>-<số>» không suy ra được dòng nào), `str_profiles.csv` (không có giá trị lặp nào), `vectors.csv` (rỗng); kết quả mycoplasma / vô trùng của lô
   (Cellseeker chỉ ghi ngày, không ghi kết quả) nên **không** tạo bản ghi QC — dòng sẽ hiện «Chưa thử mycoplasma» và vào «Đến hạn» sau 30 ngày ân hạn cho đến khi ghi QC.
 - Dòng GMO không có mô tả vector nên được ghi «CẦN BỔ SUNG» ở mô tả GMO; lô trùng mã khác hoa thường được thêm hậu tố « (2)».
