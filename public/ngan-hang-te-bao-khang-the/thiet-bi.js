@@ -6,10 +6,10 @@
  *   tu_dung  tủ đứng — nhìn NGHIÊNG 3D từ phía trước-trái-trên: mỗi ngăn là một khoang mở, Rack là tấm dài chạy từ ngoài vào SÂU bên trong
  *            (Rack số 1 ở trên cùng), các hộp xếp nối nhau dọc theo chiều dài Rack nên thấy được vị trí từng hộp
  *   tu_lanh  như tu_dung nhưng ngăn đá phía trên thấp hơn ngăn mát phía dưới
- *   tu_nam   tủ nằm ngang nhìn từ TRÊN: các cánh (nắp) xếp cạnh nhau, mỗi cánh có các giỏ ĐỨNG (giỏ số 1 bên trái); kèm hình cắt ngang cánh mở lên
+ *   tu_nam   tủ nằm ngang nhìn từ TRÊN xuống: các cánh (nắp) xếp cạnh nhau, mỗi cánh có các giỏ ĐỨNG (giỏ số 1 bên trái)
  *
  * Kéo thả (khi module chính truyền opts.keoKe): giữ chuột / ngón tay trên một Rack rồi kéo sang ô khác trong cùng thiết bị — ô trống thì chuyển Rack sang đó,
- * ô đã có Rack khác thì hoán đổi. Bàn phím: Alt + mũi tên trên một Rack. Bấm vào ô trống (nét đứt) để thêm Rack vào đúng vị trí (opts.themKe).
+ * ô đã có Rack khác thì hoán đổi (module chính hỏi xác nhận trước khi lưu). Cảm ứng phải bật «chế độ sắp xếp» trước và chỉ kéo được một lần, để vuốt trang không kéo nhầm. Bàn phím: Alt + mũi tên trên một Rack. Bấm vào ô trống (nét đứt) để thêm Rack vào đúng vị trí (opts.themKe).
  * Không phụ thuộc thư viện nào; module chính dùng qua window.NhmThietBi.tao(...) và window.NhmThietBi.xemTruoc(mau).
  */
 (function () {
@@ -55,7 +55,7 @@
     opts = opts || {};
     var nam = du.kieu === 'tu_nam';
     var khoang = du.khoang && du.khoang.length ? du.khoang : [{ id: null, ten: 'Chưa có ngăn', nhiet_do: null, so_ke: 3, loai_ke: 'Rack', ke: [], hop: [] }];
-    var svg = el('svg', { viewBox: '0 0 300 330', class: 'tb-svg', role: 'img', 'aria-label': 'Sơ đồ ' + (du.mauTen || 'thiết bị') + ' ' + (du.ten || '') + ': ' + khoang.length + ' ngăn' });
+    var svg = el('svg', { viewBox: nam ? '0 0 300 242' : '0 0 300 330', class: 'tb-svg', role: 'img', 'aria-label': 'Sơ đồ ' + (du.mauTen || 'thiết bị') + ' ' + (du.ten || '') + ': ' + khoang.length + ' ngăn' });
     var keoDuoc = typeof opts.keoKe === 'function';
     var themDuoc = typeof opts.themKe === 'function';
 
@@ -275,20 +275,8 @@
       svg.appendChild(g);
     });
 
-    // mặt trước tủ nằm ngang: thân tủ và các nắp (cánh) xếp cạnh nhau, mỗi nắp có tay nắm (trang trí, cho biết đây là tủ nằm ngang)
-    if (nam) {
-      svg.appendChild(chu(150, 15, 'Nhìn từ trên (các cánh mở lên)', 'tb-nhan'));
-      svg.appendChild(el('rect', { x: 52, y: 280, width: 196, height: 28, rx: 4, class: 'tb-vo' }));
-      var nNap = khoang.length, wNap = (196 - 4 * (nNap - 1)) / nNap;
-      khoang.forEach(function (k, i) {
-        var xn = 52 + i * (wNap + 4);
-        svg.appendChild(el('rect', { x: xn, y: 266, width: wNap, height: 14, rx: 3, class: 'tb-khoang' }));
-        svg.appendChild(el('rect', { x: xn + wNap / 2 - 12, y: 270, width: 24, height: 4, rx: 2, class: 'tb-tay' }));
-      });
-      svg.appendChild(el('rect', { x: 62, y: 308, width: 22, height: 6, rx: 2, class: 'tb-chan' }));
-      svg.appendChild(el('rect', { x: 216, y: 308, width: 22, height: 6, rx: 2, class: 'tb-chan' }));
-      svg.appendChild(chu(150, 326, 'Nhìn thẳng (các cánh đóng)', 'tb-nhan'));
-    }
+    // tủ nằm ngang: chỉ vẽ nhìn từ trên xuống (không cần mặt cắt)
+    if (nam) svg.appendChild(chu(150, 17, 'Nhìn từ trên (các cánh mở lên)', 'tb-nhan'));
     // chấm đỏ + nhãn đang chọn
     var cham = el('g', { class: 'tb-cham', style: 'display:none', 'aria-hidden': 'true' }, [el('circle', { r: 8, class: 'tb-vong' }), el('circle', { r: 3.4, class: 'tb-diem' })]);
     svg.appendChild(cham);
@@ -317,8 +305,30 @@
     }
     function oCuaKe(rm) { for (var i = 0; i < oCho.length; i++) if (oCho[i].khoang === rm.khoang && oCho[i].so === rm.oSo) return oCho[i]; return null; }
 
+    // Chuột kéo ngay được; cảm ứng (điện thoại, máy tính bảng) phải bật «chế độ sắp xếp» trước, để vuốt cuộn trang không kéo nhầm Rack
+    var sapXep = false;
+    function datSapXep(bat) {
+      sapXep = bat;
+      svg.classList.toggle('tb-sapxep', bat);
+      if (nutSapXep) {
+        nutSapXep.setAttribute('aria-pressed', bat ? 'true' : 'false');
+        nutSapXep.textContent = bat ? 'Tắt chế độ sắp xếp' : 'Bật chế độ sắp xếp Rack';
+      }
+      if (goiY) goiY.textContent = noiGoiY();
+    }
+    var nutSapXep = null, goiY = null;
+    function canNutSapXep() { return keoDuoc && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 900); }
+    function noiGoiY() {
+      var loai = nam ? 'giỏ' : 'Rack';
+      var s = '';
+      if (keoDuoc) s += canNutSapXep() && !sapXep ? 'Để tránh kéo nhầm khi vuốt màn hình, bấm «Bật chế độ sắp xếp Rack» trước khi kéo. ' : 'Kéo ' + loai + ' sang ô khác để đổi vị trí (thả lên ' + loai + ' khác để hoán đổi, sẽ hỏi xác nhận). ';
+      if (themDuoc) s += 'Bấm ô nét đứt để thêm vào đúng chỗ đó.';
+      return s;
+    }
+
     function batDauKeo(e, rm) {
       if (e.button != null && e.button !== 0) return;
+      if (e.pointerType && e.pointerType !== 'mouse' && !sapXep) return; // cảm ứng khi chưa bật chế độ sắp xếp: chỉ là vuốt / bấm
       var x0 = e.clientX, y0 = e.clientY, goc = sangToaDo(x0, y0), dangKeo = false, ma = null, dich = null, nguon = oCuaKe(rm);
       function dichuyen(ev) {
         if (!dangKeo) {
@@ -350,6 +360,7 @@
         if (ma && ma.parentNode) ma.parentNode.removeChild(ma);
         if (dich) dich.el.classList.remove('tb-o--dich');
         vuaKeo = true; setTimeout(function () { vuaKeo = false; }, 0);
+        if (sapXep) datSapXep(false); // mỗi lần bật chỉ kéo một Rack: thả xong tự tắt để khỏi kéo nhầm lần sau
         if (ev.type === 'pointerup' && dich && dich.khoang.id != null) opts.keoKe(rm.id, dich.khoang.id, dich.so);
       }
       window.addEventListener('pointermove', dichuyen, { passive: false });
@@ -405,10 +416,17 @@
     node.className = 'ln-hop-bao tb-bao';
     node.appendChild(svg);
     if (keoDuoc || themDuoc) {
-      var goiY = document.createElement('p');
+      if (canNutSapXep()) {
+        nutSapXep = document.createElement('button');
+        nutSapXep.type = 'button';
+        nutSapXep.className = 'nhm-btn tb-nut-sapxep';
+        nutSapXep.addEventListener('click', function () { datSapXep(!sapXep); });
+        node.appendChild(nutSapXep);
+      }
+      goiY = document.createElement('p');
       goiY.className = 'nhm-small nhm-muted tb-goiy';
-      goiY.textContent = (keoDuoc ? 'Kéo ' + (nam ? 'giỏ' : 'Rack') + ' sang ô khác để đổi vị trí (thả lên ' + (nam ? 'giỏ' : 'Rack') + ' khác để hoán đổi). ' : '') + (themDuoc ? 'Bấm ô nét đứt để thêm vào đúng chỗ đó.' : '');
       node.appendChild(goiY);
+      datSapXep(false);
     }
     node.appendChild(chuThich);
     return { node: node, chon: chon };

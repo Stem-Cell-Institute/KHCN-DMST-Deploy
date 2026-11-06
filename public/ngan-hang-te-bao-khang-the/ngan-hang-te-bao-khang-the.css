@@ -622,7 +622,10 @@
 .tb-ke--dau { fill: rgba(22, 35, 61, 0.18); }
 .tb-ten2 { font: 500 7.8px 'Be Vietnam Pro', sans-serif; fill: var(--chu-phu); }
 .tb-ke-g { outline: none; }
-.tb-ke-g--keo { touch-action: none; }
+.tb-sapxep .tb-ke-g--keo { touch-action: none; }
+.tb-sapxep { outline: 2px solid var(--muc); outline-offset: 2px; border-radius: 6px; }
+.tb-nut-sapxep { margin-top: 6px; width: 100%; }
+.tb-nut-sapxep[aria-pressed="true"] { background: var(--muc); color: #fff; border-color: var(--muc); }
 .tb-ke-g:focus-visible .tb-ke { stroke: var(--muc); stroke-width: 1.8; }
 .tb-o { fill: none; stroke: none; }
 .tb-o.tb-ke--trong { fill: rgba(255, 255, 255, 0.35); stroke: var(--ke-dam); stroke-dasharray: 2 3; stroke-width: 0.9; pointer-events: none; }

@@ -928,8 +928,14 @@
    */
   function doiViTriKe(keId, khoangId, so) {
     var r = containerById(keId);
-    if (!r || (r.parent_id === khoangId && r.vi_tri === so)) return Promise.resolve();
+    if (!r || (r.parent_id === khoangId && r.vi_tri === so)) return;
     var khac = state.tree.containers.filter(function (x) { return x.parent_id === khoangId && x.vi_tri === so && x.id !== keId; })[0];
+    var ngan = containerById(khoangId);
+    // hỏi xác nhận trước khi lưu: người có quyền chỉnh sửa rất dễ kéo / thả nhầm, nhất là trên điện thoại
+    hoi('Chuyển «' + (r.name || 'Rack') + '» sang ô số ' + so + (ngan ? ' của «' + ngan.name + '»' : '') + (khac ? ', hoán đổi chỗ với «' + (khac.name || 'Rack khác') + '»' : '') + '?', function () { thucHienDoiViTri(r, khac, khoangId, so); });
+  }
+  function thucHienDoiViTri(r, khac, khoangId, so) {
+    var keId = r.id;
     var patch = function (id, body) { return api('PATCH', '/containers/' + id, body); };
     var chuoi;
     if (!khac) chuoi = patch(keId, { parent_id: khoangId, vi_tri: so });
