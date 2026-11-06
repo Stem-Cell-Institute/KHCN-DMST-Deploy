@@ -314,17 +314,9 @@
         nutSapXep.setAttribute('aria-pressed', bat ? 'true' : 'false');
         nutSapXep.textContent = bat ? 'Tắt chế độ sắp xếp' : 'Bật chế độ sắp xếp Rack';
       }
-      if (goiY) goiY.textContent = noiGoiY();
     }
-    var nutSapXep = null, goiY = null;
+    var nutSapXep = null;
     function canNutSapXep() { return keoDuoc && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 900); }
-    function noiGoiY() {
-      var loai = nam ? 'giỏ' : 'Rack';
-      var s = '';
-      if (keoDuoc) s += canNutSapXep() && !sapXep ? 'Để tránh kéo nhầm khi vuốt màn hình, bấm «Bật chế độ sắp xếp Rack» trước khi kéo. ' : 'Kéo ' + loai + ' sang ô khác để đổi vị trí (thả lên ' + loai + ' khác để hoán đổi, sẽ hỏi xác nhận). ';
-      if (themDuoc) s += 'Bấm ô nét đứt để thêm vào đúng chỗ đó.';
-      return s;
-    }
 
     function batDauKeo(e, rm) {
       if (e.button != null && e.button !== 0) return;
@@ -415,7 +407,7 @@
     var node = document.createElement('div');
     node.className = 'ln-hop-bao tb-bao';
     node.appendChild(svg);
-    if (keoDuoc || themDuoc) {
+    if (keoDuoc) {
       if (canNutSapXep()) {
         nutSapXep = document.createElement('button');
         nutSapXep.type = 'button';
@@ -423,9 +415,6 @@
         nutSapXep.addEventListener('click', function () { datSapXep(!sapXep); });
         node.appendChild(nutSapXep);
       }
-      goiY = document.createElement('p');
-      goiY.className = 'nhm-small nhm-muted tb-goiy';
-      node.appendChild(goiY);
       datSapXep(false);
     }
     node.appendChild(chuThich);
