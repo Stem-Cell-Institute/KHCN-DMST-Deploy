@@ -77,21 +77,21 @@ main .duyet-bai-ten[tabindex='-1']:focus, main .duyet-bai-ten[tabindex='-1']:foc
 /* ── Thanh thao tác dính ────────────────────────────────────────────────────── */
 .duyet-thao-tac {
   position: sticky; bottom: 0; z-index: 20; margin: 22px -20px 0;
-  padding: 10px 20px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding: 5px 20px calc(5px + env(safe-area-inset-bottom, 0px));
   background: var(--trang); border-top: 2px solid var(--muc);
 }
 .duyet-hang { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .duyet-dh { display: flex; align-items: center; gap: 6px; }
-.duyet-dh-nut { min-width: 44px; padding: 0 12px; font-size: 22px; line-height: 1; }
+/* Màn hình rộng: thanh thấp (nút 36px) để chừa chỗ đọc báo cáo; điện thoại giữ nút 48px dễ chạm (xem @media bên dưới). */
+.duyet-dh-nut { min-width: 40px; min-height: 36px; padding: 0 12px; font-size: 20px; line-height: 1; }
 .duyet-vi-tri { min-width: 52px; text-align: center; font-weight: 600; }
 .duyet-nut { display: flex; flex-wrap: wrap; gap: 8px; }
-.duyet-qd { gap: 8px; min-height: 48px; padding: 0 16px; }
+.duyet-qd { gap: 8px; min-height: 36px; padding: 0 14px; }
 .duyet-glyph { font-size: 17px; line-height: 1; }
 .duyet-phim {
   display: inline-block; min-width: 20px; padding: 0 5px; font: inherit; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
   color: currentColor; border: 1px solid currentColor; border-radius: 2px; opacity: .7;
 }
-.duyet-phim-goi-y { margin: 8px 0 0; font-size: 13px; }
 /* Nút Duyệt: mực đặc. Không duyệt: viền son. Hai nút còn lại: nút phụ. Đã chọn thì đặc/đảo màu và có viền trong trắng. */
 .duyet-qd-duyet[aria-pressed='true'] { box-shadow: inset 0 0 0 3px #fff; background: var(--muc-sang); }
 .duyet-qd-khong, .duyet-qd-y-kien, .duyet-qd-sua { background: var(--trang); }
@@ -114,7 +114,7 @@ main .duyet-bai-ten[tabindex='-1']:focus, main .duyet-bai-ten[tabindex='-1']:foc
 .duyet-goi-y { margin-left: auto; }
 
 /* Thông báo nổi không được che thanh thao tác */
-body.co-thanh-duyet .thong-bao { bottom: 110px; }
+body.co-thanh-duyet .thong-bao { bottom: 64px; }
 
 /* ── Màn hình hẹp / điện thoại ──────────────────────────────────────────────── */
 @media (max-width: 899px) {
@@ -122,7 +122,7 @@ body.co-thanh-duyet .thong-bao { bottom: 110px; }
   .duyet-chon { display: flex; }
   .duyet-ds { display: none; position: static; max-height: calc(100vh - 290px); min-height: 160px; margin-bottom: 14px; }
   .duyet-ds.mo { display: block; }
-  .duyet-phim, .duyet-phim-goi-y { display: none; }
+  .duyet-phim { display: none; }
 }
 @media (max-width: 640px) {
   /* Thu gọn đầu trang để báo cáo lên được màn hình đầu tiên trên điện thoại */

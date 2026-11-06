@@ -137,6 +137,22 @@ Quyết định của Viện trưởng (từng báo cáo đã nộp):  Chờ duy
 - **Phòng và quản lý thấy**: trạng thái và lý do của Viện trưởng hiện trong báo cáo (khung "Viện trưởng đã duyệt / không duyệt / đề nghị chỉnh sửa"), trong "Báo cáo của tôi" và cột "Viện trưởng" của bảng tiến độ đợt; mọi quyết định nằm trong lịch sử báo cáo.
 - **Chỉ thấy báo cáo đã nộp**: bản nháp của phòng chưa nộp không bao giờ về tới Viện trưởng (`du_lieu` = null).
 
+## Duyệt và ký số qua MySign (Viettel-CA)
+
+Bật khi server có `MYSIGN_CLIENT_ID`, `MYSIGN_CLIENT_SECRET`, `MYSIGN_PROFILE_ID` (Viettel cấp khi ký hợp đồng tích hợp; xem `.env.example`).
+Chưa cấu hình thì mọi thứ như cũ: nút "Duyệt" thường. Hạ tầng ký nằm ở `services/mysign/` + `routes/mysign.js`, dùng chung cho module khác.
+
+- **Liên kết tài khoản (mỗi người một lần)**: `PUT /api/mysign/tai-khoan {mysign_user_id}`. Hệ thống gọi MySign lấy chứng thư số; tài khoản không có chứng thư còn hiệu lực thì không lưu. **Không có mật khẩu nào đi qua hệ thống**: mỗi lần ký, người ký xác nhận bằng sinh trắc học trên app MySign.
+- **Ký**: `POST /dot/:id/ky-so {bao_cao: [{id, nop_luc}], ghi_chu}` (chỉ Viện trưởng). Server dựng PDF từng báo cáo (ô chữ ký số ở cột "VIỆN TRƯỞNG (Phê duyệt)"), gửi **một** yêu cầu ký nhiều mã băm sang MySign (bất đồng bộ, `async = 2`). Giao diện hỏi `GET /api/mysign/giao-dich/:id` vài giây một lần.
+- **"Duyệt" chỉ được ghi khi chữ ký về**: thành công → ghi `vt_duyet` + `vt_ky_so` vào lịch sử, lưu PDF đã ký (`<uploads>/mysign/<giao dịch>/`). Từ chối / hết hạn / lỗi → báo cáo giữ nguyên, ký lại được.
+- **Đúng bản đã đọc**: phòng nộp lại trong lúc chờ ký thì chữ ký không gán cho bản mới (tài liệu đánh dấu `huy`).
+- **Không rút lại**: bản đã ký số (hoặc đang chờ ký) không đổi quyết định được (409). Muốn khác thì phòng nộp bản mới.
+- **PDF**: chữ ký PAdES-B-B (`ETSI.CAdES.detached`, SHA-256, RSA, kèm chuỗi chứng thư và `signingCertificateV2`), tự dựng bằng `services/mysign/pades.js` — không thêm thư viện. Chữ ký MySign trả về được kiểm bằng khóa công khai của chứng thư **trước** khi ghi vào PDF. Tải: `GET /bao-cao/:id/ban-ky-so` (ai đọc được báo cáo thì tải được).
+- **Vị trí khung chữ ký**: Viện trưởng tự đặt khung trên bản xem trước PDF thật (`GET /bao-cao/:id/ky-so/xem-truoc`, trả PDF chưa có khung và header `X-Ky-So-Meta` gồm số trang, khổ giấy, vị trí mặc định, vị trí lần trước). Kéo để dời, kéo bốn góc để co giãn, đổi trang bằng nút ‹ ›. Ký nhiều báo cáo thì đặt lần lượt từng báo cáo, mỗi báo cáo một vị trí. Vị trí gửi lên là `vi_tri: {trang, x, y, w, h}` (trang tính từ 0; x, y, w, h là tỉ lệ 0–1 so với trang, gốc ở góc trên trái), kiểm ở `services/mysign/viTri.js` (khung phải nằm trong trang, tối thiểu 10% × 4%); không gửi thì dùng vị trí mặc định của biểu mẫu. Vị trí của báo cáo cuối được nhớ cho lần sau (bảng `mysign_vi_tri`). Bản xem trước và bản ký cùng một bố cục, nên khung thấy ở đâu thì ký ở đó. Trình duyệt hiển thị PDF bằng `pdfjs-dist` đặt tại `/public/vendor/pdfjs/` (phục vụ nội bộ, vì CSP chỉ cho script cùng nguồn; `server.js` chỉ mở đúng hai tệp). Không mở được bản xem trước thì hỏi có ký với vị trí mặc định không.
+- **Trang thử ký số (chỉ quản trị viên)**: `/ky-so-thu.html` ký một PDF **mẫu** bằng tài khoản MySign của chính quản trị viên, để thử chữ ký mà không cần vai trò Viện trưởng hay dữ liệu báo cáo. API: `/api/mysign/thu/xem-truoc`, `/thu/ky`, `/thu/ban-ky/:id`, `/thu/kiem-tra/:id`; kiểm quyền ở máy chủ (403 nếu không phải quản trị viên). Trang không có liên kết trong menu. Lưu ý: tài khoản MySign liên kết ở đây cũng chính là tài khoản dùng khi duyệt báo cáo của cùng người dùng đó.
+- **Bảng**: `mysign_tai_khoan`, `mysign_giao_dich`, `mysign_tai_lieu`, `mysign_vi_tri` (tạo tự động, `CREATE TABLE IF NOT EXISTS`; không đụng dữ liệu cũ, không cần di trú).
+- **Chưa có**: dấu thời gian (TSA) và thông tin thu hồi (OCSP/CRL) nhúng trong PDF — chữ ký là PAdES-B-B, chưa phải B-LT.
+
 ## Biểu mẫu tùy chỉnh
 
 Người quản lý dựng ở mục **Biểu mẫu**. Các loại ô: `text`, `textarea`, `number` (min/max), `date`,

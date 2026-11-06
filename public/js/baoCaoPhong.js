@@ -69,6 +69,7 @@
     vt_duyet: 'Viện trưởng duyệt',
     vt_khong_duyet: 'Viện trưởng không duyệt',
     vt_de_nghi_chinh_sua: 'Viện trưởng đề nghị chỉnh sửa',
+    vt_ky_so: 'Viện trưởng ký số (MySign)',
   };
   // Trạng thái của báo cáo trong con mắt của Viện trưởng (khớp trangThaiVienTruong() ở services/baoCaoPhongVienTruong.js).
   // Khác TT_BAO_CAO: đó là XÁC NHẬN của người quản lý module; đây là QUYẾT ĐỊNH của Viện trưởng. Hai việc độc lập nhau.
@@ -170,7 +171,8 @@
     opt = opt || {};
     var headers = {};
     if (opt.body !== undefined) headers['Content-Type'] = 'application/json';
-    return fetch(API + path, {
+    // Đường dẫn bắt đầu bằng /api/ là API của module khác (vd. /api/mysign); còn lại thuộc module này.
+    return fetch(path.indexOf('/api/') === 0 ? path : API + path, {
       method: opt.method || 'GET',
       headers: headers,
       body: opt.body === undefined ? undefined : JSON.stringify(opt.body),
@@ -240,6 +242,16 @@
 
   function xacNhan(tieuDe, noiDung, nutChinh, nguy) {
     return moHop({ tieuDe: tieuDe, than: h('p', { text: noiDung }), nutChinh: nutChinh, nguy: !!nguy });
+  }
+
+  /** Dòng "đã ký số" + liên kết tải PDF Viện trưởng đã ký số (MySign) của bản nộp hiện tại. */
+  function nutBanKySo(baoCaoId, ky) {
+    return h('p', { class: 'ky-so' },
+      h('span', { 'aria-hidden': 'true', text: '✓ ' }),
+      'Đã ký số qua MySign' + (ky.nguoi_ky ? ' — ' + ky.nguoi_ky : '') + (ky.luc ? ' · ' + fmtGio(ky.luc) : '') + ' · ',
+      h('a', { href: API + '/bao-cao/' + baoCaoId + '/ban-ky-so?xem=1', target: '_blank', rel: 'noopener' }, 'Xem PDF đã ký số'),
+      ' · ',
+      h('a', { href: API + '/bao-cao/' + baoCaoId + '/ban-ky-so', download: '' }, 'Tải về'));
   }
 
   // ── Biểu mẫu nhập: dựng ô theo định nghĩa do người quản lý cấu hình ─────────
@@ -772,6 +784,7 @@
         node.push(h('div', { class: 'luu-y' + (duyetRoi ? '' : ' luu-y-do'), role: 'status' },
           h('p', null, h('strong', { text: duyetRoi ? 'Viện trưởng đã duyệt báo cáo này' : 'Viện trưởng không duyệt báo cáo này' }), ' — ' + (vt.nguoi || 'Viện trưởng') + ' · ' + fmtGio(vt.luc)),
           vt.ghi_chu ? h('p', { text: (duyetRoi ? 'Ghi chú: ' : 'Lý do: ') + vt.ghi_chu }) : null,
+          duyetRoi && d.ky_so && d.ky_so.trang_thai === 'da_ky' ? nutBanKySo(d.id, d.ky_so) : null,
           duyetRoi ? null : h('p', { class: 'mo', text: 'Báo cáo vẫn giữ nguyên trạng thái đã nộp. Trao đổi với người quản lý module nếu cần giải trình.' })));
       }
       if (d.tu_duyet) {
@@ -1792,7 +1805,7 @@
   BCP = window.BCP = {
     h: h, api: api, thongBao: thongBao, fmtNgay: fmtNgay, fmtGio: fmtGio, conLaiNgay: conLaiNgay, nhan: nhan, nhanTreHan: nhanTreHan,
     TT_BAO_CAO: TT_BAO_CAO, TT_VT: TT_VT, TT_DOT: TT_DOT, CHUC_DANH: CHUC_DANH, LOAI_DOT: LOAI_DOT, HANH_DONG: HANH_DONG, donVi: donVi,
-    dungXemLai: dungXemLai, xacNhan: xacNhan, main: main, live: live,
+    dungXemLai: dungXemLai, xacNhan: xacNhan, moHop: moHop, nutBanKySo: nutBanKySo, main: main, live: live,
     me: function () { return me; },
     route: function () { return route(); },
     lamMoiTongQuan: function () { return lamMoiTongQuan(); },

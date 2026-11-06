@@ -21,6 +21,9 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const express = require(path.join(ROOT, 'node_modules', 'express'));
 const Database = require(path.join(ROOT, 'node_modules', 'better-sqlite3'));
 const createBaoCaoPhongRouter = require(path.join(ROOT, 'routes', 'baoCaoPhong'));
+const createMySignRouter = require(path.join(ROOT, 'routes', 'mysign'));
+const { taoKySo } = require(path.join(ROOT, 'services', 'mysign', 'kySo'));
+const { taoMySign } = require(path.join(ROOT, 'services', 'mysign', 'client'));
 
 /** Người dùng tổng hợp. role là vai trò CHUNG của hệ thống (users.role), không phải vai trò trong module. */
 const NGUOI_DUNG = [
@@ -56,29 +59,31 @@ async function dungUngDung(tuyChon = {}) {
     return { ok: true };
   };
 
-  const router = createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, baseUrl: 'https://eoffice.test' });
+  // tuyChon.mysign: cấu hình MySign (thường trỏ tới MySign giả lập — tests/helpers/mysignGiaLap.js). Không có thì ký số tắt.
+  if (tuyChon.mysign) {
+    ung.kySo = taoKySo({ db, mysign: taoMySign({ cauHinh: tuyChon.mysign }), thuMuc: path.join(uploadsRoot, 'mysign') });
+  }
+  const router = createBaoCaoPhongRouter({ db, mailSend, uploadsRoot, baseUrl: 'https://eoffice.test', kySo: ung.kySo });
   ung.nhacHan = router.nhacHan; // bộ nhắc hạn: test gọi chayMotLan(thờiGian) trực tiếp, không bật hẹn giờ
 
+  const xacThucGia = (req, res, next) => {
+    const u = ung.nguoi.find((x) => x.id === Number(req.headers['x-nguoi-dung']));
+    if (!u) return res.status(401).json({ message: 'Chưa đăng nhập' });
+    req.user = { id: u.id, email: u.email, fullname: u.fullname, role: u.role };
+    next();
+  };
   const app = express();
   app.use(express.json({ limit: '1mb' }));
-  app.use(
-    '/api/bao-cao-phong',
-    (req, res, next) => {
-      const u = ung.nguoi.find((x) => x.id === Number(req.headers['x-nguoi-dung']));
-      if (!u) return res.status(401).json({ message: 'Chưa đăng nhập' });
-      req.user = { id: u.id, email: u.email, fullname: u.fullname, role: u.role };
-      next();
-    },
-    router
-  );
+  app.use('/api/bao-cao-phong', xacThucGia, router);
+  if (ung.kySo) app.use('/api/mysign', xacThucGia, createMySignRouter({ db, kySo: ung.kySo }));
 
   const server = http.createServer(app);
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   ung.base = 'http://127.0.0.1:' + server.address().port;
 
-  /** Gọi API với tư cách người dùng `uid`. Trả Response gốc của fetch. */
+  /** Gọi API với tư cách người dùng `uid`. Trả Response gốc của fetch. Đường dẫn bắt đầu bằng /api/ là API khác (vd. /api/mysign). */
   ung.goi = (uid, metodo, duong, body) =>
-    fetch(ung.base + '/api/bao-cao-phong' + duong, {
+    fetch(ung.base + (duong.startsWith('/api/') ? '' : '/api/bao-cao-phong') + duong, {
       method: metodo,
       headers: { ...(uid ? { 'x-nguoi-dung': String(uid) } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
       body: body === undefined ? undefined : JSON.stringify(body),

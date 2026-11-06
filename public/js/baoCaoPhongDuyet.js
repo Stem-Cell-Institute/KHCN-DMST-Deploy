@@ -11,6 +11,8 @@
  *   - Quyết định xong tự nhảy sang báo cáo kế tiếp chưa xử lý.
  *   - Phím tắt: J/K đổi báo cáo · N tới báo cáo chưa xử lý kế tiếp · D duyệt · X không duyệt · Y ý kiến · E đề nghị chỉnh sửa · Esc đóng ô nhập.
  *   - Phòng chưa nộp vẫn có mặt trong danh sách với nhãn "Chưa nộp" (không có nội dung, không bấm quyết định được).
+ *   - Hệ thống đã cấu hình MySign: "Duyệt" thành "Duyệt & ký số" (ký từng báo cáo, hoặc cả nhóm đang chờ bằng một lần xác nhận
+ *     trên điện thoại). Bản đã ký số không đổi quyết định được. Xem routes/baoCaoPhongKySo.js.
  *
  * Mọi nội dung động dựng bằng DOM + textContent (hàm h), không dùng innerHTML. Nội dung nháp của phòng chưa nộp không bao giờ về tới đây:
  * máy chủ chỉ trả nội dung của báo cáo ĐÃ NỘP.
@@ -94,7 +96,8 @@
   // ══ Màn hình đọc và duyệt một đợt ═════════════════════════════════════════
   function viewDoc(dotId, chonId) {
     return api('/dot/' + dotId + '/vien-truong').then(function (data) {
-      var S = { data: data, idx: 0, loc: 'tat_ca', moDs: false, soan: null, dangGui: false };
+      // choKy: yêu cầu ký số MySign đang chờ xác nhận trên điện thoại {id, so, dung}; mysign: tài khoản MySign đã liên kết.
+      var S = { data: data, idx: 0, loc: 'tat_ca', moDs: false, soan: null, dangGui: false, choKy: null, mysign: null };
       var khung = h('div', { class: 'duyet' });
       var dau = h('div', { class: 'duyet-dau' });
       var ds = h('nav', { class: 'duyet-ds', id: 'duyet-ds', 'aria-label': 'Danh sách báo cáo của các phòng' });
@@ -104,7 +107,13 @@
 
       function cur() { return S.data.bao_cao[S.idx]; }
       function quyenQuyetDinh() { return !!S.data.co_the.quyet_dinh; }
-      function duocQuyetDinh(b) { return quyenQuyetDinh() && (b.trang_thai === 'da_nop' || b.trang_thai === 'da_duyet'); }
+      // Ký số (MySign): bản đã ký không đổi quyết định được nữa; đang chờ ký thì cũng chưa quyết định kiểu khác được.
+      function kySoBat() { return !!(S.data.co_the.ky_so && window.MySign); }
+      function daKySo(b) { return !!(b.ky_so && b.ky_so.trang_thai === 'da_ky'); }
+      function choKySo(b) { return !!(b.ky_so && b.ky_so.trang_thai === 'dang_cho'); }
+      function duocQuyetDinh(b) { return quyenQuyetDinh() && (b.trang_thai === 'da_nop' || b.trang_thai === 'da_duyet') && !daKySo(b) && !choKySo(b); }
+      /** Báo cáo ký được trong lần ký hàng loạt: đã nộp, đang chờ Viện trưởng quyết định, chưa ký, không chờ ký. */
+      function kyDuoc(b) { return duocQuyetDinh(b) && b.vt_trang_thai === 'cho_quyet_dinh'; }
       function duocYKien(b) { return !!S.data.co_the.y_kien && b.trang_thai !== 'chua_nop'; }
 
       function locOk(b) {
@@ -166,6 +175,14 @@
         } else {
           nodes = [quayLai, h('h2', { text: 'Duyệt báo cáo: ' + d.tieu_de }), thongTin];
         }
+        // Ký số hàng loạt: một lần xác nhận trên MySign cho mọi báo cáo đang chờ duyệt.
+        var kyHet = kySoBat() ? S.data.bao_cao.filter(kyDuoc) : [];
+        if (kyHet.length > 1) {
+          nodes.push(h('div', { class: 'nhom-nut duyet-ky-het' },
+            h('button', { type: 'button', class: 'btn', disabled: !!S.choKy || S.dangGui, onclick: function () { kyHangLoat(kyHet); } },
+              'Duyệt & ký số ' + kyHet.length + ' báo cáo đang chờ'),
+            h('span', { class: 'mo', text: 'Xác nhận một lần trên ứng dụng MySign cho cả nhóm.' })));
+        }
         var tong = xuLy + cho;
         var nutTiep = h('button', { type: 'button', class: 'btn btn-phu btn-nho', disabled: tiepChoXuLy() < 0, onclick: function () { var i = tiepChoXuLy(); if (i >= 0) chon(i, true); } }, (heP ? 'Chờ duyệt kế tiếp ›' : 'Báo cáo chờ duyệt kế tiếp ›'));
         nodes.push(h('div', { class: 'duyet-tien-do' },
@@ -217,10 +234,15 @@
 
       function bangQuyetDinh(b) {
         var q = b.vien_truong;
+        if (choKySo(b)) {
+          return h('div', { class: 'luu-y', role: 'status' }, h('p', null, h('strong', { text: 'Đang chờ ký số trên MySign' })),
+            h('p', { class: 'mo', text: 'Báo cáo được ghi "Đã duyệt" khi bạn xác nhận yêu cầu ký trên ứng dụng MySign. Từ chối hoặc để hết hạn thì báo cáo giữ nguyên.' }));
+        }
         if (!q) return null;
         var ten = 'Viện trưởng' + (q.nguoi ? ' ' + q.nguoi : '');
         if (q.quyet_dinh === 'duyet') {
-          return h('div', { class: 'luu-y', role: 'status' }, h('p', null, h('strong', { text: ten + ' đã duyệt báo cáo này' }), ' · ' + fmtGio(q.luc)), q.ghi_chu ? h('p', { text: 'Ghi chú: ' + q.ghi_chu }) : null);
+          return h('div', { class: 'luu-y', role: 'status' }, h('p', null, h('strong', { text: ten + ' đã duyệt báo cáo này' }), ' · ' + fmtGio(q.luc)), q.ghi_chu ? h('p', { text: 'Ghi chú: ' + q.ghi_chu }) : null,
+            daKySo(b) ? [B.nutBanKySo(b.id, b.ky_so), h('p', { class: 'mo', text: 'Bản đã ký số không đổi quyết định được nữa.' })] : null);
         }
         if (q.quyet_dinh === 'khong_duyet') {
           return h('div', { class: 'luu-y luu-y-do', role: 'status' }, h('p', null, h('strong', { text: ten + ' không duyệt báo cáo này' }), ' · ' + fmtGio(q.luc)), h('p', { text: 'Lý do: ' + q.ghi_chu }),
@@ -314,6 +336,11 @@
         var n = S.data.bao_cao.length;
         var nodes = [];
         thanh.classList.toggle('co-soan', !!(S.soan && coQuyen));
+        if (S.choKy) {
+          nodes.push(h('div', { class: 'luu-y duyet-cho-ky', role: 'status', 'aria-live': 'polite' },
+            h('p', null, h('strong', { text: 'Mở ứng dụng MySign trên điện thoại để xác nhận ký' }), ' — ' + S.choKy.so + ' báo cáo, một lần xác nhận.'),
+            h('p', { class: 'mo', text: S.choKy.thongDiep || 'Xác nhận bằng vân tay hoặc khuôn mặt. Màn hình này tự cập nhật khi có kết quả.' })));
+        }
         if (S.soan && coQuyen) nodes.push(veSoan(b));
         var dieuHuong = h('div', { class: 'duyet-dh' },
           h('button', { type: 'button', class: 'btn btn-phu duyet-dh-nut', 'aria-label': 'Báo cáo trước (phím K)', title: 'Báo cáo trước (K)', onclick: function () { buoc(-1); } }, '‹'),
@@ -321,15 +348,16 @@
           h('button', { type: 'button', class: 'btn btn-phu duyet-dh-nut', 'aria-label': 'Báo cáo sau (phím J)', title: 'Báo cáo sau (J)', onclick: function () { buoc(1); } }, '›'));
         var hang = [dieuHuong];
         if (coQuyen) {
-          var bat = duocQuyetDinh(b);
+          var bat = duocQuyetDinh(b) && !S.choKy;
           hang.push(h('div', { class: 'duyet-nut' },
-            nutQD('duyet', 'Duyệt', '✓', 'd', 'duyet-qd-duyet', bat, qd === 'duyet', function () { guiQuyetDinh('duyet', ''); }),
+            kySoBat()
+              ? nutQD('duyet', 'Duyệt & ký số', '✓', 'd', 'duyet-qd-duyet', bat, qd === 'duyet' || daKySo(b), function () { kyHangLoat([b]); })
+              : nutQD('duyet', 'Duyệt', '✓', 'd', 'duyet-qd-duyet', bat, qd === 'duyet', function () { guiQuyetDinh('duyet', ''); }),
             nutQD('khong_duyet', 'Không duyệt', '✕', 'x', 'duyet-qd-khong', bat, qd === 'khong_duyet' || (S.soan && S.soan.loai === 'khong_duyet'), function () { moSoan('khong_duyet'); }),
             nutQD('y_kien', 'Ý kiến', '✎', 'y', 'duyet-qd-y-kien', duocYKien(b), !!(S.soan && S.soan.loai === 'y_kien'), function () { moSoan('y_kien'); }),
             nutQD('de_nghi_chinh_sua', 'Đề nghị chỉnh sửa', '↺', 'e', 'duyet-qd-sua', bat, qd === 'de_nghi_chinh_sua' || (S.soan && S.soan.loai === 'de_nghi_chinh_sua'), function () { moSoan('de_nghi_chinh_sua'); })));
         }
         nodes.push(h('div', { class: 'duyet-hang' }, hang));
-        if (coQuyen) nodes.push(h('p', { class: 'mo duyet-phim-goi-y', text: 'Phím tắt: J sau · K trước · N báo cáo chờ kế tiếp · D duyệt · X không duyệt · Y ý kiến · E đề nghị chỉnh sửa' }));
         ghi(thanh, nodes);
       }
 
@@ -421,6 +449,112 @@
           .then(function () { S.dangGui = false; veThanh(); });
       }
 
+      // ── Ký số MySign ────────────────────────────────────────────────────────
+      // "Duyệt & ký số": máy chủ dựng PDF từng báo cáo, gửi MỘT yêu cầu ký sang MySign; Viện trưởng xác nhận trên điện thoại,
+      // trang này hỏi tiến độ vài giây một lần. "Đã duyệt" chỉ được ghi khi chữ ký về thành công.
+      function taiKhoanMySign() {
+        if (S.mysign) return Promise.resolve(S.mysign.tai_khoan);
+        return MySign.taiKhoan().then(function (r) { S.mysign = r; return r.tai_khoan; });
+      }
+
+      /** Hộp liên kết tài khoản MySign (lần đầu ký). Trả Promise<boolean> đã liên kết. */
+      function lienKetMySign() {
+        var o = h('input', { type: 'text', id: 'mysign-ma', maxlength: 50, autocomplete: 'off', spellcheck: 'false' });
+        return B.moHop({
+          tieuDe: 'Liên kết tài khoản MySign',
+          than: h('div', null,
+            h('p', { text: 'Nhập mã tài khoản MySign mà Viettel đã cấp cho bạn. Chỉ cần làm một lần.' }),
+            h('p', { class: 'mo', text: 'Hệ thống không hỏi mật khẩu: mỗi lần ký, bạn xác nhận bằng vân tay hoặc khuôn mặt trên ứng dụng MySign trong điện thoại.' }),
+            h('div', { class: 'truong' }, h('label', { for: 'mysign-ma', text: 'Mã tài khoản MySign' }), o)),
+          nutChinh: 'Liên kết',
+          khiGui: function () {
+            var ma = o.value.trim();
+            if (!ma) throw new Error('Hãy nhập mã tài khoản MySign.');
+            return MySign.lienKet(ma).then(function (r) {
+              S.mysign = { da_cau_hinh: true, tai_khoan: r.tai_khoan };
+              thongBao('Đã liên kết tài khoản MySign' + (r.tai_khoan.chu_the ? ' — ' + r.tai_khoan.chu_the : '') + '.');
+            });
+          },
+        });
+      }
+
+      function kyHangLoat(ds) {
+        if (S.dangGui || S.choKy || !ds.length) return;
+        var hoiTruoc = ds.length > 1
+          ? B.xacNhan('Duyệt & ký số ' + ds.length + ' báo cáo',
+            'Duyệt và ký số: ' + ds.map(function (b) { return b.phong_ten; }).join('; ') + '. Sau khi gửi, mở ứng dụng MySign để xác nhận MỘT lần cho cả nhóm. Bản đã ký số không đổi quyết định được nữa.',
+            'Gửi yêu cầu ký')
+          : Promise.resolve(true);
+        // Viện trưởng tự đặt khung chữ ký trên bản xem trước PDF (kéo để dời, kéo góc để co giãn) rồi mới gửi yêu cầu ký.
+        // Một báo cáo thì hộp đặt khung chính là bước xác nhận cuối; nhiều báo cáo thì đặt lần lượt từng báo cáo.
+        hoiTruoc
+          .then(function (ok) {
+            if (!ok) return false;
+            return taiKhoanMySign().then(function (tk) { return tk ? true : lienKetMySign(); });
+          })
+          .then(function (ok) { return ok ? datKhung(ds) : null; })
+          .then(function (viTri) { if (viTri) guiKySo(ds, true, viTri); })
+          .catch(function (e) { thongBao(e.message, 'loi'); });
+      }
+
+      /** Mở hộp đặt khung. Không mở được bản xem trước (vd. thiếu pdf.js) thì hỏi có ký với vị trí mặc định của biểu mẫu không. */
+      function datKhung(ds) {
+        if (!window.KySoViTri) return Promise.resolve(ds.map(function () { return undefined; }));
+        return window.KySoViTri.dat({
+          tieuDe: 'Đặt khung chữ ký số',
+          tai: ds.map(function (b) { return { ten: b.phong_ten, tai: window.KySoViTri.taiTuUrl('/api/bao-cao-phong/bao-cao/' + b.id + '/ky-so/xem-truoc') }; }),
+        });
+      }
+
+      function guiKySo(ds, thuLienKet, viTri) {
+        S.dangGui = true;
+        veThanh();
+        api('/dot/' + dotId + '/ky-so', { method: 'POST', body: { bao_cao: ds.map(function (b, i) { return { id: b.id, nop_luc: b.nop_luc, vi_tri: viTri && viTri[i] ? viTri[i] : undefined }; }) } })
+          .then(function (r) {
+            S.dangGui = false;
+            batDauCho(r.giao_dich);
+          })
+          .catch(function (e) {
+            S.dangGui = false;
+            veThanh();
+            if (e.status === 409 && e.data && e.data.ma === 'chua_lien_ket' && thuLienKet) {
+              S.mysign = null;
+              return lienKetMySign().then(function (ok) { if (ok) guiKySo(ds, false, viTri); });
+            }
+            thongBao(e.message, 'loi');
+            if (e.status === 409) return taiLai(cur().id);
+          });
+      }
+
+      function batDauCho(g) {
+        var ids = g.tai_lieu.map(function (t) { return t.nguon_id; });
+        S.data.bao_cao.forEach(function (b) { if (ids.indexOf(b.id) >= 0) b.ky_so = { trang_thai: 'dang_cho', giao_dich_id: g.id }; });
+        S.choKy = { id: g.id, so: ids.length, thongDiep: null };
+        S.choKy.dung = MySign.theoDoi(g.id, function (x) {
+          if (!S.choKy) return;
+          S.choKy.thongDiep = x.loi_tam || null;
+          veThanh();
+        }, ketThucCho);
+        docLive('Đã gửi yêu cầu ký tới MySign. Mở ứng dụng MySign trên điện thoại để xác nhận.');
+        veDau();
+        veDanhSach();
+        veBai();
+        veThanh();
+      }
+
+      function ketThucCho(g) {
+        S.choKy = null;
+        var tong = (g.tai_lieu || []).length;
+        var daKy = (g.tai_lieu || []).filter(function (t) { return t.trang_thai === 'da_ky'; }).length;
+        if (g.trang_thai === 'thanh_cong') {
+          var kq = daKy ? 'Đã duyệt và ký số ' + daKy + ' báo cáo.' : 'Chữ ký đã về nhưng các báo cáo đã thay đổi trong lúc chờ, nên chưa được ghi duyệt.';
+          if (daKy && daKy < tong) kq += ' ' + (tong - daKy) + ' báo cáo đã được phòng nộp lại trong lúc chờ nên không được ghi duyệt.';
+          thongBao(kq, daKy ? '' : 'loi');
+        } else thongBao(g.thong_diep || 'Yêu cầu ký không thành công.', 'loi');
+        B.lamMoiTongQuan();
+        taiLai(cur().id);
+      }
+
       /** Báo cáo đã đổi phía máy chủ (vd. phòng vừa nộp lại): tải lại cả đợt và giữ nguyên báo cáo đang đọc. */
       function taiLai(giuId) {
         return api('/dot/' + dotId + '/vien-truong').then(function (data) {
@@ -464,7 +598,10 @@
           case 'j': buoc(1); break;
           case 'k': buoc(-1); break;
           case 'n': { var i = tiepChoXuLy(); if (i >= 0) chon(i, true); break; }
-          case 'd': if (quyenQuyetDinh() && duocQuyetDinh(b)) guiQuyetDinh('duyet', ''); else return; break;
+          case 'd':
+            if (!quyenQuyetDinh() || !duocQuyetDinh(b) || S.choKy) return;
+            if (kySoBat()) kyHangLoat([b]); else guiQuyetDinh('duyet', '');
+            break;
           case 'x': if (quyenQuyetDinh()) moSoan('khong_duyet'); else return; break;
           case 'y': if (quyenQuyetDinh()) moSoan('y_kien'); else return; break;
           case 'e': if (quyenQuyetDinh()) moSoan('de_nghi_chinh_sua'); else return; break;
@@ -478,6 +615,8 @@
       B.khiRoiTrang(function () {
         document.removeEventListener('keydown', phim);
         document.body.classList.remove('co-thanh-duyet');
+        if (S.choKy && S.choKy.dung) S.choKy.dung();
+        S.choKy = null;
       });
 
       // Báo cáo mở đầu: theo liên kết nếu có, không thì báo cáo đầu tiên đang chờ duyệt, không thì báo cáo đầu tiên.
@@ -495,6 +634,16 @@
       veBai();
       veThanh();
       B.datHash('#/duyet/' + dotId + '/' + cur().id);
+
+      // Có yêu cầu ký bị bỏ dở (đóng trang khi đang chờ): theo dõi tiếp để kết quả được ghi và hiện ra.
+      if (kySoBat()) {
+        var dangCho = data.bao_cao.filter(choKySo);
+        if (dangCho.length && !S.choKy) {
+          var gdId = dangCho[0].ky_so.giao_dich_id;
+          batDauCho({ id: gdId, tai_lieu: dangCho.filter(function (b) { return b.ky_so.giao_dich_id === gdId; }).map(function (b) { return { nguon_id: b.id }; }) });
+        }
+        taiKhoanMySign().catch(function () { /* hỏi lại khi bấm ký */ });
+      }
     });
   }
 
