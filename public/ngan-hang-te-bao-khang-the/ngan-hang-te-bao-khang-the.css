@@ -581,3 +581,10 @@
 .nhm-bang th, .nhm-bang td { padding: 6px 8px; border-bottom: 1px solid var(--ke); text-align: left; vertical-align: top; }
 .nhm-bang th { font-weight: 600; color: var(--muc-nhat, #4a5873); }
 .nhm-bang-cuon { overflow-x: auto; }
+
+/* liên kết dòng tế bào ↔ lô ↔ ống: ô chọn ở đầu form nhập mẫu và thẻ trong hộp thoại ống */
+.nhm-dl { display: grid; gap: 8px; }
+.nhm-dl-tt, .nhm-dl .nhm-dl-tt { margin: 2px 0 4px; padding: 10px 12px; border: 1px solid var(--ke); border-left: 3px solid var(--muc); border-radius: 2px; background: var(--giay-trang, #fff); display: grid; gap: 4px; }
+.nhm-dl-moi { display: grid; gap: 8px; padding: 10px 12px; border: 1px dashed var(--muc); border-radius: 2px; }
+.nhm-dl-moi.nhm-hide { display: none; }
+.nhm-canh { color: var(--son); font-weight: 600; } /* son đỏ chỉ là tín hiệu: GMO, mycoplasma dương tính, kết quả QC xấu */
