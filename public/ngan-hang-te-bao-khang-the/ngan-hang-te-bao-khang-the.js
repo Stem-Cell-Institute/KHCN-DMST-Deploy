@@ -1052,6 +1052,7 @@
       h('button', { class: 'nhm-btn nhm-btn--primary', type: 'button', onclick: function () { containerForm(null, c.id); } }, '+ Ngăn / Rack bên trong'),
       h('button', { class: 'nhm-btn nhm-btn--primary', type: 'button', onclick: function () { boxForm(c.id); } }, '+ Hộp'),
       h('button', { class: 'nhm-btn', type: 'button', onclick: function () { moDotKiemKe(c.id); } }, 'Mở đợt kiểm kê'),
+      c.parent_id == null && state.meta.canManage ? h('button', { class: 'nhm-btn', type: 'button', onclick: function () { taiTepXuong('/containers/' + c.id + '/export.xlsx'); } }, 'Xuất Excel') : null,
       h('button', { class: 'nhm-btn', type: 'button', onclick: function () { containerForm(c); } }, 'Chỉnh sửa'),
       h('button', { class: 'nhm-btn nhm-btn--danger', type: 'button', onclick: function () { deleteContainer(c); } }, 'Xóa'),
     ]) : null;
@@ -2106,11 +2107,29 @@
     }).catch(loiTrongSlot(body));
   }
 
-  // ----- nhập dữ liệu từ tệp xuất Cellseeker (chỉ Admin, ngân hàng tế bào) -----
+  /** Tải một tệp (Excel) từ API có đăng nhập; lỗi hiện thành thông báo ở đầu trang. */
+  function taiTepXuong(url) {
+    say('Đang tạo tệp…');
+    return fetch(API + url, { credentials: 'same-origin', headers: nganHang ? { 'X-Ngan-Hang': nganHang } : {} }).then(function (res) {
+      if (res.status === 401) { location.href = '/dang-nhap.html?returnUrl=' + encodeURIComponent(location.pathname); return new Promise(function () {}); }
+      if (!res.ok) return res.json().catch(function () { return {}; }).then(function (j) { throw new Error(j.message || 'Lỗi ' + res.status); });
+      var ten = /filename\*=UTF-8''([^;]+)/.exec(res.headers.get('Content-Disposition') || '');
+      return res.blob().then(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = ten ? decodeURIComponent(ten[1]) : 'ngan-hang.xlsx';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+        say('Đã tải tệp ' + a.download + '.', 'ok');
+      });
+    }).catch(function (e) { say(e.message, 'err'); });
+  }
+
+  // ----- nhập dữ liệu từ tệp xuất Cellseeker (.zip) hoặc tệp Excel của hệ thống (chỉ Admin, ngân hàng tế bào) -----
 
   /** Chọn tệp .zip → «Kiểm tra» (chưa ghi gì, đúng số liệu như khi ghi) → «Nhập vào hệ thống». Chỉ thêm, không sửa / xóa; nhập lại không bị trùng. */
   function tabNhapDuLieu(body) {
-    var tep = h('input', { type: 'file', accept: '.zip,application/zip', 'aria-label': 'Tệp .zip xuất từ Cellseeker' });
+    var tep = h('input', { type: 'file', accept: '.zip,.xlsx', 'aria-label': 'Tệp .zip từ Cellseeker hoặc tệp .xlsx từ hệ thống' });
     var kieu = h('select', { 'aria-label': 'Cách đếm ô trong hộp' }, [
       h('option', { value: 'hang' }, 'Theo hàng: A1, A2 … A5, rồi B1'),
       h('option', { value: 'cot' }, 'Theo cột: A1, B1 … E1, rồi A2'),
@@ -2121,12 +2140,14 @@
     var dangChay = false;
     var batDau = function (ghi) {
       if (dangChay) return;
-      if (!tep.files[0]) { put(ketQua, h('p', { class: 'nhm-err' }, 'Hãy chọn tệp .zip xuất từ Cellseeker.')); return; }
+      if (!tep.files[0]) { put(ketQua, h('p', { class: 'nhm-err' }, 'Hãy chọn tệp .zip từ Cellseeker hoặc tệp .xlsx do hệ thống xuất ra.')); return; }
+      var laExcel = /[.]xlsx$/i.test(tep.files[0].name);
+      if (!laExcel && !/[.]zip$/i.test(tep.files[0].name)) { put(ketQua, h('p', { class: 'nhm-err' }, 'Chỉ nhận tệp .zip (Cellseeker) hoặc .xlsx (xuất từ hệ thống).')); return; }
       dangChay = true; nutKiemTra.disabled = true; nutGhi.disabled = true;
       put(ketQua, h('p', { class: 'nhm-loading' }, ghi ? 'Đang nhập, đừng đóng cửa sổ…' : 'Đang kiểm tra…'));
       var fd = new FormData();
       fd.append('tep', tep.files[0]); fd.append('kieu_dem', kieu.value); fd.append('ghi', ghi ? '1' : '0');
-      apiTep('/import/cellseeker?nh=te_bao', fd).then(function (r) {
+      apiTep((laExcel ? '/import/excel' : '/import/cellseeker') + '?nh=te_bao', fd).then(function (r) {
         dangChay = false; nutKiemTra.disabled = false; nutGhi.disabled = false;
         put(ketQua, veKetQuaNhap(r));
         nutGhi.classList.toggle('nhm-hide', r.da_ghi);
@@ -2136,7 +2157,11 @@
         put(ketQua, h('p', { class: 'nhm-err' }, e.message));
       });
     };
-    tep.addEventListener('change', function () { nutGhi.classList.add('nhm-hide'); put(ketQua); });
+    var hangKieu = h('div', { class: 'nhm-field' }, [h('span', { class: 'nhm-lbl' }, 'Cách Cellseeker đếm số ô trong hộp'), kieu]);
+    tep.addEventListener('change', function () {
+      nutGhi.classList.add('nhm-hide'); put(ketQua);
+      hangKieu.classList.toggle('nhm-hide', !!tep.files[0] && /[.]xlsx$/i.test(tep.files[0].name)); // tệp Excel đã có sẵn hàng / cột, không cần chọn cách đếm
+    });
     kieu.addEventListener('change', function () { nutGhi.classList.add('nhm-hide'); put(ketQua); });
     nutKiemTra.addEventListener('click', function () { batDau(false); });
     nutGhi.addEventListener('click', function () {
@@ -2144,9 +2169,9 @@
     });
     put(body, h('div', { class: 'nhm-nhap' }, [
       h('strong', {}, 'Nhập dữ liệu từ Cellseeker'),
-      h('p', { class: 'nhm-muted nhm-small' }, 'Chọn tệp .zip tải về từ Cellseeker (cellseeker-export-….zip). «Kiểm tra» chỉ xem trước, chưa ghi gì. Nhập lại tệp đó lần nữa không bị trùng.'),
-      h('div', { class: 'nhm-field' }, [h('span', { class: 'nhm-lbl' }, 'Tệp .zip'), tep]),
-      h('div', { class: 'nhm-field' }, [h('span', { class: 'nhm-lbl' }, 'Cách Cellseeker đếm số ô trong hộp'), kieu]),
+      h('p', { class: 'nhm-muted nhm-small' }, 'Chọn tệp .zip tải về từ Cellseeker, hoặc tệp .xlsx do nút «Xuất Excel» ở trang thiết bị tạo ra. «Kiểm tra» chỉ xem trước, chưa ghi gì. Chỉ thêm mới; nhập lại cùng tệp không bị trùng.'),
+      h('div', { class: 'nhm-field' }, [h('span', { class: 'nhm-lbl' }, 'Tệp (.zip hoặc .xlsx)'), tep]),
+      hangKieu,
       h('div', { class: 'nhm-card-act' }, [nutKiemTra, nutGhi]),
       ketQua,
     ]));
@@ -2164,7 +2189,7 @@
         : 'Đây là kết quả kiểm tra, chưa có gì được ghi.'),
       h('table', { class: 'nhm-hist' }, [
         h('tr', {}, ['Mục', 'Trong tệp', 'Thêm mới', 'Đã có', 'Bỏ qua'].map(function (x) { return h('th', {}, x); })),
-        dong('Thiết bị', k.thietBi, t.thiet_bi), dong('Rack', k.rack, t.rack), dong('Hộp', k.hop, t.hop), dong('Dòng tế bào', k.dong, t.dong), dong('Lô', k.lo, t.lo), dong('Ống', k.ong, t.ong), dong('Tệp của lô', k.tep, t.tep),
+        dong('Thiết bị', k.thietBi, t.thiet_bi), dong('Rack', k.rack, t.rack), dong('Hộp', k.hop, t.hop), dong('Dòng tế bào', k.dong, t.dong), dong('Lô', k.lo, t.lo), dong('Ống', k.ong, t.ong), k.qc && (k.qc.moi || k.qc.coSan || t.qc) ? dong('Kết quả QC', k.qc, t.qc) : null, dong('Tệp của lô', k.tep, t.tep),
       ]),
       r.vi_du && r.vi_du.length ? h('div', { class: 'nhm-nhap__vd' }, [
         h('strong', {}, 'Đối chiếu cách đếm ô'),

@@ -235,6 +235,15 @@ in_storage ──checkout──▶ checked_out ──checkin──▶ in_storage
 - Route tĩnh (`/tubes/search`, `/tubes/bulk`, `/tubes/export.csv`) đứng **trước** các route `/tubes/:id...` — xem
   «Thứ tự đăng ký route» trong `KIEN-TRUC-VA-CAM-BAY.md`.
 
+### Xuất / nhập Excel một thiết bị (chuyển dữ liệu giữa hai hệ thống, sao lưu đọc được)
+
+- **Xuất:** ở trang một thiết bị gốc (quản lý module) bấm **«Xuất Excel»** → tải tệp `.xlsx` (`GET /containers/:id/export.xlsx`; code `services/nganHangTeBaoKhangTheExcel.js`). Gồm các trang: «Hướng dẫn», «Thiết bị», «Rack», «Hộp», «Dòng tế bào», «Lô», «Ống», «QC», «Lịch sử (chỉ đọc)».
+  Chỉ xuất ống đang giữ (đang lưu kho, đã lấy ra tạm); không có tệp đính kèm, mẫu đã rã đông / hủy, tài khoản. **Hiện chỉ xuất được thiết bị dạng bình nitơ**: thiết bị → Rack (đánh số vị trí) → hộp (đánh số vị trí); tủ có ngăn nhiều cấp thì báo rõ lý do.
+- **Nhập:** **Quản lý module → Nhập dữ liệu** (Admin), chọn tệp `.xlsx` đó (hệ thống nhận cả `.zip` Cellseeker lẫn `.xlsx`, theo đuôi tệp), «Kiểm tra» rồi «Nhập vào hệ thống» (`POST /import/excel`). Cùng cơ chế với nhập Cellseeker:
+  một giao dịch, chỉ thêm mới, không ghi đè, nhập lại không trùng, có sao lưu `data/backups/`. Khớp theo: thiết bị theo tên; Rack / hộp theo vị trí số; **dòng theo mã dòng**; lô theo (dòng, mã lô); ống theo ô; QC theo (dòng, loại, kết quả, ngày).
+- Giữ nguyên tên trang và tiêu đề cột khi sửa tệp. Dòng sai (ô ngoài hộp, trùng ô, thiếu mã…) bị bỏ qua kèm cảnh báo, không làm hỏng cả lần nhập. Chủ mẫu ghi bằng **email**: email chưa có tài khoản ở máy nhập thì người nhập làm chủ mẫu (có cảnh báo); nhóm nghiên cứu khớp theo tên nhóm (không có thì bỏ trống).
+- Dữ liệu từ Excel được ghi lịch sử mẫu là «Nhập từ Excel». Test: `tests/nganHangTeBaoKhangThe.excel.test.js`.
+
 ### Nhập dữ liệu từ Cellseeker (một lần khi chuyển hệ thống)
 
 **Trên giao diện (không cần quyền máy chủ):** Admin vào **Quản lý module → Nhập dữ liệu** (chỉ ngân hàng tế bào), chọn tệp `.zip` tải về từ Cellseeker, chọn **cách Cellseeker đếm số ô trong hộp**

@@ -141,6 +141,8 @@ const ROUTES = [
   ['POST', '/alarms/:id/resolve', 'owner'],
   ['GET', '/reminders', 'auth'],
   ['POST', '/import/cellseeker', 'admin'],
+  ['POST', '/import/excel', 'admin'],
+  ['GET', '/containers/:id/export.xlsx', 'manage'],
   ['GET', '/settings', 'auth'],
   ['PUT', '/settings', 'manage'],
   ['GET', '/students', 'manage'],
