@@ -206,6 +206,7 @@
   }
 
   function select(type, id) {
+    state.oChon = null;
     state.search = null;
     state.dtb = null;
     state.cv = null;
@@ -1139,11 +1140,23 @@
     else gui();
   }
 
+  /** Ô đang mở thông tin / biểu mẫu thì tô nổi trên lưới (nhớ ở state.oChon để vẽ lại lưới vẫn giữ); đóng hộp thoại thì bỏ. */
+  function datOChon(boxId, r, c) {
+    state.oChon = { box: boxId, r: r, c: c };
+    [].forEach.call(document.querySelectorAll('.nhm-grid .nhm-cell--chon'), function (x) { x.classList.remove('nhm-cell--chon'); });
+    var el = document.querySelector('.nhm-grid .nhm-cell[data-r="' + r + '"][data-c="' + c + '"]');
+    if (el) el.classList.add('nhm-cell--chon');
+  }
+  function boChonO() {
+    state.oChon = null;
+    [].forEach.call(document.querySelectorAll('.nhm-grid .nhm-cell--chon'), function (x) { x.classList.remove('nhm-cell--chon'); });
+  }
+
   function cell(box, r, c, t, info) {
     var ph = t && t.phat_hien;
     if (ph) t = null;
     var kk = state.audit && state.audit.boxId === box.id;
-    var cls = 'nhm-cell' + (t ? ' nhm-cell--full' + (t.status === 'checked_out' ? ' nhm-cell--out' : '') + (t.nghi_mat ? ' nhm-cell--mat' : '') : '') + (ph ? ' nhm-cell--ph' : '');
+    var cls = 'nhm-cell' + (!kk && state.oChon && state.oChon.box === box.id && state.oChon.r === r && state.oChon.c === c ? ' nhm-cell--chon' : '') + (t ? ' nhm-cell--full' + (t.status === 'checked_out' ? ' nhm-cell--out' : '') + (t.nghi_mat ? ' nhm-cell--mat' : '') : '') + (ph ? ' nhm-cell--ph' : '');
     var nhan = posLabel(r, c) + (ph ? ', mẫu chưa khai báo: ' + ph.mo_ta : t ? ', ' + t.name + ', ' + (STATUS_VN[t.status] || t.status) + (t.nghi_mat ? ', nghi mất' : '') : ', trống, thêm mẫu');
     var el = h('div', { class: cls, role: 'button', tabindex: '0', title: nhan, 'aria-label': nhan, 'data-r': r, 'data-c': c }, ph ? '?' : t ? t.name : '');
     var open;
@@ -1153,10 +1166,11 @@
         if (state.audit.khong[t.id]) el.classList.add('nhm-cell--kk-khong');
         open = function () { if (state.audit.khong[t.id]) delete state.audit.khong[t.id]; else state.audit.khong[t.id] = true; renderDetail(); };
       } else open = function () {};
-    } else if (ph) open = function () { phatHienDialog(box, ph.id); };
-    else if (t) open = function () { tubeDialog(box, t); };
+    } else if (ph) open = function () { datOChon(box.id, r, c); phatHienDialog(box, ph.id); };
+    else if (t) open = function () { datOChon(box.id, r, c); tubeDialog(box, t); };
     else open = function () {
       if (info && info.quan_ly_boi === 'cellbank' && !state.meta.canManage && !info.duoc_don_vi) { say('Thiết bị này do ' + (info.don_vi_ten || 'đơn vị quản lý') + ' quản lý: chỉ quản lý module mới thêm mẫu. Bạn có thể gửi yêu cầu cho mẫu đã có.', 'err'); return; }
+      datOChon(box.id, r, c);
       tubeForm(box, r, c);
     };
     el.addEventListener('click', open);
@@ -3029,6 +3043,7 @@
   function init() {
     if (!nganHang) { moManHinhChon(); return; }
     $('nhm-nh-ten').textContent = NH_VN[nganHang];
+    $('nhm-dialog').addEventListener('close', boChonO); // đóng hộp thoại ống / biểu mẫu thì ô trên lưới hết tô nổi
     $('nhm-nh-doi').href = location.pathname; // về màn hình chọn
     document.title = NH_VN[nganHang] + ' — STIMS';
     api('GET', '/meta').then(function (meta) {

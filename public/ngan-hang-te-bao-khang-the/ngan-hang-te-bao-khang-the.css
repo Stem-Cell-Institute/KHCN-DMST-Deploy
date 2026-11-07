@@ -738,3 +738,12 @@
 .nhm-dl-phang > strong { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--chu-phu); }
 .nhm-dl-phang .nhm-dl-tt { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; gap: 2px; }
 .nhm-dl-phang__mo { justify-self: start; padding: 0; font-size: 0.8rem; }
+
+/* ô trên lưới hộp: rê chuột đổi màu rõ ràng; ô đang xem thông tin được tô nổi (mực xanh đen, chữ trắng) */
+.nhm-cell { transition: background-color 0.12s, border-color 0.12s, box-shadow 0.12s; }
+.nhm-grid .nhm-cell:hover, .nhm-grid .nhm-cell:focus-visible { background: #dbe1ee; border-color: var(--muc); }
+.nhm-grid .nhm-cell--full:hover, .nhm-grid .nhm-cell--full:focus-visible { background: #c2cce3; }
+.nhm-grid .nhm-cell--out:hover, .nhm-grid .nhm-cell--out:focus-visible { background: #f6d4d0; }
+.nhm-grid .nhm-cell--mat:hover, .nhm-grid .nhm-cell--ph:hover { filter: brightness(0.94); }
+.nhm-grid .nhm-cell--chon, .nhm-grid .nhm-cell--chon:hover, .nhm-grid .nhm-cell--chon:focus-visible { background: var(--muc); border-color: var(--muc); color: #fff; box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--muc); position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .nhm-cell { transition: none; } }
