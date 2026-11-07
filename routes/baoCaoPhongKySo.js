@@ -22,6 +22,7 @@
  */
 
 const express = require('express');
+const Pades = require('../services/mysign/pades');
 const Xuat = require('../services/baoCaoPhongXuat');
 const { contentDisposition } = require('../lib/filenames');
 const { LoiMySign } = require('../services/mysign/client');
@@ -70,8 +71,7 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
           const hienTai = vt.quyetDinhMotBaoCao(b.id);
           const ghiChu = t.meta.ghi_chu || '';
           if (!hienTai || hienTai.quyet_dinh !== 'duyet' || (hienTai.ghi_chu || '') !== ghiChu) ghiLichSu(b.id, 'vt_duyet', giaoDich.user_id, ghiChu);
-          ghiLichSu(b.id, 'vt_ky_so', giaoDich.user_id, 'Ký số qua MySign' + (giaoDich.chu_the ? ' — ' + tenTrongChungThu(giaoDich.chu_the) : ''));
-        }
+          ghiLichSu(b.id, 'vt_ky_so', giaoDich.user_id, 'Ký số qua MySign' + (giaoDich.chu_the ? ' — ' + tenTrongChungThu(giaoDich.chu_the) : ''));        }
         // Xử lý xong báo cáo cuối cùng đang chờ → MỘT thư tổng kết cho người quản lý (như quyết định thường).
         for (const dotId of dotIds) {
           const sau = vt.tienDoDot(dotId);
@@ -240,6 +240,45 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
     })
   );
 
+  /**
+   * Bản đã ký của BẢN NỘP hiện tại, kèm kiểm nguyên vẹn: đối chiếu SHA-256 của tệp trên đĩa với mã đã ghi lúc ký.
+   * @returns {{buf:Buffer, da:object}|{loi:{s:number, m:string}}}
+   */
+  function docBanKy(baoCaoId, nopLuc) {
+    const da = kySo && kySo.banDaKy(NGUON, baoCaoId);
+    if (!da || parseJson(da.meta_json, {}).nop_luc !== nopLuc) return { loi: { s: 404, m: 'Bản nộp hiện tại của báo cáo này chưa được ký số.' } };
+    let buf;
+    try {
+      buf = kySo.docTep(da.tep_da_ky);
+    } catch (_) {
+      console.error('[bao-cao-phong] Thiếu tệp đã ký:', da.tep_da_ky);
+      return { loi: { s: 404, m: 'Không tìm thấy tệp đã ký trên máy chủ. Vui lòng báo quản trị viên.' } };
+    }
+    if (da.sha256 && Pades.sha256(buf).toString('hex') !== da.sha256) {
+      console.error('[bao-cao-phong] Tệp đã ký không khớp SHA-256 lúc ký:', da.tep_da_ky);
+      return { loi: { s: 409, m: 'Tệp đã ký trên máy chủ không còn nguyên vẹn so với lúc ký nên hệ thống không cho tải. Vui lòng báo quản trị viên.' } };
+    }
+    return { buf, da };
+  }
+
+  router.get(
+    '/bao-cao/:id/ban-ky-so/kiem-tra',
+    bao((req, res) => {
+      const id = docId(req.params.id);
+      if (!id) return loi(res, 400, 'ID không hợp lệ.');
+      const n = nap(req, id);
+      if (!n) return loi(res, 404, 'Không tìm thấy báo cáo.');
+      const d = docBanKy(id, n.b.nop_luc);
+      if (d.loi && d.loi.s === 409) return res.json({ hop_le: false, toan_ven: false, ly_do: d.loi.m });
+      if (d.loi) return loi(res, d.loi.s, d.loi.m);
+      let kt;
+      try { kt = Pades.kiemTra(d.buf); } catch (_) { kt = { hopLe: false, ly_do: 'Không đọc được chữ ký trong tệp.' }; }
+      const tt = KhungKy.thongTinTuDn(kt.chu_the, kt.so_seri);
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({ hop_le: !!kt.hopLe, toan_ven: true, ly_do: kt.hopLe ? null : kt.ly_do || 'Chữ ký không hợp lệ.', nguoi_ky: tt.cn, to_chuc: tt.to_chuc, so_seri: tt.so_seri, ky_luc: d.da.ky_luc });
+    })
+  );
+
   router.get(
     '/bao-cao/:id/ban-ky-so',
     bao((req, res) => {
@@ -247,9 +286,9 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
       if (!id) return loi(res, 400, 'ID không hợp lệ.');
       const n = nap(req, id);
       if (!n) return loi(res, 404, 'Không tìm thấy báo cáo.');
-      const da = kySo && kySo.banDaKy(NGUON, id);
-      if (!da || parseJson(da.meta_json, {}).nop_luc !== n.b.nop_luc) return loi(res, 404, 'Bản nộp hiện tại của báo cáo này chưa được ký số.');
-      const buf = kySo.docTep(da.tep_da_ky);
+      const d = docBanKy(id, n.b.nop_luc);
+      if (d.loi) return loi(res, d.loi.s, d.loi.m);
+      const buf = d.buf;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', contentDisposition(`Báo cáo ${n.b.phong_ten} - đã ký số.pdf`, { inline: req.query.xem === '1' }));
       res.setHeader('Content-Length', buf.length);
@@ -258,5 +297,5 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
     })
   );
 
-  return { router, kyCuaBaoCao, batKySo };
+  return { router, kyCuaBaoCao, batKySo, docBanKy };
 };

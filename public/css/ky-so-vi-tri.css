@@ -57,6 +57,11 @@ dialog.kyso-hop [hidden] { display: none !important; }
 .kyso-anh-nho { height: 24px; max-width: 80px; object-fit: contain; border: 1px solid var(--ke, #d8dce5); background: #fff; }
 .kyso-noidung .btn-nho { padding: 2px 9px; font-size: 12px; min-height: 26px; }
 
+/* Dòng trạng thái chữ ký của bản đã ký số (public/js/baoCaoPhong.js, nutBanKySo). */
+.ky-so-kiem-tra { margin: 2px 0 0; font-size: 13px; }
+.ky-so-kiem-tra[data-kq='ok'] { color: #1a6b3a; }
+.ky-so-kiem-tra[data-kq='loi'] { color: var(--son-dam, #8e1f17); font-weight: 600; }
+
 /* Nhiều chỗ ký: thanh chọn chỗ ký trên thanh công cụ + ô mờ cho các chỗ khác trên trang đang xem. */
 .kyso-cho { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .kyso-cho-nhan { font-size: 13px; font-weight: 600; margin-right: 2px; }
