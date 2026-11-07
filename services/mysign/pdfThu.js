@@ -2,19 +2,23 @@
  * PDF MẪU để THỬ ký số MySign bằng tài khoản của chính người thử (trang ky-so-thu.html, chỉ quản trị viên).
  * Không dính dữ liệu nghiệp vụ nào: nội dung cố định vài trang, để xem khung chữ ký đặt/kéo ở đâu cũng được.
  *
- *   taoPdfThu({ ten, viTri, xemTruoc, luc }) → Promise<{pdf:Buffer, meta}>
+ *   taoPdfThu({ ten, viTri, xemTruoc, luc, dongKhung, hinh }) → Promise<{pdf:Buffer, meta}>
  *     viTri    — {trang, x, y, w, h} tỉ lệ 0..1 (gốc trên-trái, trang từ 0); không có thì góc dưới-phải trang cuối.
+ *     dongKhung — các dòng chữ trong khung (KhungKy.dungDong); hinh — Buffer ảnh chữ ký tay (tùy chọn).
  *     xemTruoc — true: bản xem trước, không vẽ khung và không chừa chữ ký (số trang, bố cục y hệt bản ký).
  */
 
 const path = require('path');
 const { datChoKy } = require('./pades');
+const { veKhung } = require('./khungKy');
 
 const DIR_FONT = path.join(__dirname, '..', 'fonts');
 const SO_TRANG = 3;
 const MAC_DINH = { x: 0.5, y: 0.82, w: 0.42, h: 0.1 };
+const LY_DO_THU = 'Thử ký số';
+const NOI_KY_THU = 'STIMS';
 
-function taoPdfThu({ ten, viTri, xemTruoc, luc } = {}) {
+function taoPdfThu({ ten, viTri, xemTruoc, luc, dongKhung, hinh } = {}) {
   const PDFDocument = require('pdfkit');
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margins: { top: 57, bottom: 57, left: 70, right: 57 }, bufferPages: true, info: { Title: 'Tài liệu thử ký số MySign', Author: 'STIMS — Viện Tế bào gốc' } });
@@ -50,20 +54,24 @@ function taoPdfThu({ ten, viTri, xemTruoc, luc } = {}) {
       return;
     }
 
-    const v = viTri || { trang: SO_TRANG - 1, ...MAC_DINH };
-    if (!Number.isInteger(v.trang) || v.trang < 0 || v.trang >= SO_TRANG) {
-      reject(Object.assign(new Error('Trang đặt khung chữ ký không có trong tài liệu (tài liệu có ' + SO_TRANG + ' trang).'), { maLoi: 'vi_tri' }));
+    // Một hoặc nhiều chỗ ký: mọi chỗ đều vẽ khung nhìn thấy; ô chữ ký số thật (widget) ở chỗ đầu tiên.
+    const ds = viTri ? [].concat(viTri) : [{ trang: SO_TRANG - 1, ...MAC_DINH }];
+    for (const v of ds) {
+      if (!Number.isInteger(v.trang) || v.trang < 0 || v.trang >= SO_TRANG) {
+        reject(Object.assign(new Error('Trang đặt khung chữ ký không có trong tài liệu (tài liệu có ' + SO_TRANG + ' trang).'), { maLoi: 'vi_tri' }));
+        return;
+      }
+    }
+    const dong = dongKhung || ['ĐÃ KÝ SỐ (THỬ)', 'Người ký: ' + (ten || ''), 'Qua MySign — Viettel-CA'];
+    try {
+      for (const v of ds) veKhung(doc, [v.x * W, v.y * H, v.w * W, v.h * H], { dong, hinh, trang: v.trang });
+    } catch (e) {
+      reject(e);
       return;
     }
-    const rect = [v.x * W, v.y * H, v.w * W, v.h * H];
-    const dong = ['ĐÃ KÝ SỐ (THỬ)', 'Người ký: ' + (ten || ''), 'Qua MySign — Viettel-CA'];
-    doc.switchToPage(v.trang);
-    const co = Math.max(5, Math.min(8.5, (rect[3] - 8) / (dong.length * 1.4)));
-    doc.save().lineWidth(0.8).rect(...rect).stroke('#1f4e79').restore();
-    doc.fillColor('#1f4e79');
-    dong.forEach((d, j) => doc.font(j === 0 ? 'B' : 'R').fontSize(co).text(d, rect[0] + 4, rect[1] + 4 + j * co * 1.4, { width: rect[2] - 8, lineBreak: false, ellipsis: true }));
-    doc.fillColor('#000000');
-    datChoKy(doc, { rect, ten: ten || '', lyDo: 'Thử ký số', noiKy: 'STIMS', luc: luc || new Date() });
+    const v0 = ds[0];
+    doc.switchToPage(v0.trang);
+    datChoKy(doc, { rect: [v0.x * W, v0.y * H, v0.w * W, v0.h * H], ten: ten || '', lyDo: LY_DO_THU, noiKy: NOI_KY_THU, luc: luc || new Date() });
     doc.end();
   });
 }

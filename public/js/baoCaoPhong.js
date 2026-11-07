@@ -246,12 +246,29 @@
 
   /** Dòng "đã ký số" + liên kết tải PDF Viện trưởng đã ký số (MySign) của bản nộp hiện tại. */
   function nutBanKySo(baoCaoId, ky) {
-    return h('p', { class: 'ky-so' },
-      h('span', { 'aria-hidden': 'true', text: '✓ ' }),
-      'Đã ký số qua MySign' + (ky.nguoi_ky ? ' — ' + ky.nguoi_ky : '') + (ky.luc ? ' · ' + fmtGio(ky.luc) : '') + ' · ',
-      h('a', { href: API + '/bao-cao/' + baoCaoId + '/ban-ky-so?xem=1', target: '_blank', rel: 'noopener' }, 'Xem PDF đã ký số'),
-      ' · ',
-      h('a', { href: API + '/bao-cao/' + baoCaoId + '/ban-ky-so', download: '' }, 'Tải về'));
+    // Dòng trạng thái chữ ký: máy chủ kiểm chữ ký thật trong tệp (và tệp còn nguyên vẹn) rồi báo về; người dùng khỏi phải mở Adobe Reader.
+    var kiemTra = h('p', { class: 'ky-so-kiem-tra mo', role: 'status', 'data-kq': 'cho', text: 'Đang kiểm chữ ký…' });
+    api('/bao-cao/' + baoCaoId + '/ban-ky-so/kiem-tra').then(function (k) {
+      if (k.hop_le) {
+        kiemTra.dataset.kq = 'ok';
+        kiemTra.replaceChildren(h('strong', { text: '✓ Chữ ký hợp lệ' }), ' — nội dung chưa bị thay đổi sau khi ký.' +
+          (k.nguoi_ky ? ' Người ký: ' + k.nguoi_ky + '.' : '') + (k.so_seri ? ' Số chứng thư: ' + k.so_seri + '.' : ''));
+      } else {
+        kiemTra.dataset.kq = 'loi';
+        kiemTra.replaceChildren(h('strong', { text: '✕ Chữ ký KHÔNG hợp lệ' }), ': ' + (k.ly_do || 'tệp đã bị thay đổi sau khi ký.') + ' Không dùng bản này, hãy báo quản trị viên.');
+      }
+    }).catch(function () {
+      kiemTra.dataset.kq = 'cho';
+      kiemTra.textContent = 'Chưa kiểm được chữ ký lúc này. Mở bản PDF bằng Adobe Reader để xem bảng chữ ký.';
+    });
+    return h('div', { class: 'ky-so-khoi' },
+      h('p', { class: 'ky-so' },
+        h('span', { 'aria-hidden': 'true', text: '✓ ' }),
+        'Đã ký số qua MySign' + (ky.nguoi_ky ? ' — ' + ky.nguoi_ky : '') + (ky.luc ? ' · ' + fmtGio(ky.luc) : '') + ' · ',
+        h('a', { href: API + '/bao-cao/' + baoCaoId + '/ban-ky-so?xem=1', target: '_blank', rel: 'noopener' }, 'Xem PDF đã ký số'),
+        ' · ',
+        h('a', { href: API + '/bao-cao/' + baoCaoId + '/ban-ky-so', download: '' }, 'Tải về')),
+      kiemTra);
   }
 
   // ── Biểu mẫu nhập: dựng ô theo định nghĩa do người quản lý cấu hình ─────────
@@ -1163,7 +1180,7 @@
     if (!coXuat) return [bang];
     return [bang, h('div', { class: 'xuat-bar' },
       h('span', { class: 'xuat-nhan', text: 'Kết xuất các báo cáo đã chọn:' }), aWord, aPdf, aXem, dem,
-      h('p', { class: 'mo' }, 'Chọn một hoặc nhiều báo cáo. Nhiều báo cáo được gộp vào một tệp, mỗi báo cáo là một văn bản riêng bắt đầu ở trang mới. Chỉ báo cáo đã nộp hoặc đã xác nhận mới kết xuất được.'))];
+      h('p', { class: 'mo' }, 'Chọn một hoặc nhiều báo cáo. Nhiều báo cáo được gộp vào một tệp, mỗi báo cáo là một văn bản riêng bắt đầu ở trang mới. Chỉ báo cáo đã nộp hoặc đã xác nhận mới kết xuất được. Báo cáo đã được Viện trưởng ký số: chọn riêng báo cáo đó rồi tải PDF để nhận đúng bản có chữ ký số (chọn nhiều báo cáo gộp một tệp thì không có chữ ký).'))];
   }
 
   function viewDot(id) {

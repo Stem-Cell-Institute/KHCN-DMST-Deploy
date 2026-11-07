@@ -47,8 +47,13 @@ function datChoKy(doc, { rect, ten, lyDo, noiKy, luc }) {
     Reason: new String(lyDo || ''),
     Location: new String(noiKy || ''),
     M: luc || new Date(),
+    // CHỨNG NHẬN tài liệu (DocMDP, mức P = 2): chỉ cho điền biểu mẫu và ký thêm. Thêm chú thích, sửa nội dung, thêm trang… sau khi ký
+    // đều bị trình đọc PDF (Adobe Reader…) cảnh báo là vi phạm chứng nhận. Mức 2 (không phải 1) để sau này người ký thứ hai vẫn ký được.
+    Reference: [{ Type: 'SigRef', TransformMethod: 'DocMDP', TransformParams: { Type: 'TransformParams', P: 2, V: '1.2' } }],
   });
   sig.end();
+  // Từ điển Perms của Catalog trỏ tới chữ ký chứng nhận (bắt buộc để trình đọc PDF coi đây là chữ ký chứng nhận).
+  doc._root.data.Perms = { DocMDP: sig };
   const oKy = doc.ref({
     Type: 'Annot',
     Subtype: 'Widget',

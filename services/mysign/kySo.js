@@ -17,6 +17,7 @@ const fs = require('fs');
 const path = require('path');
 const Pades = require('./pades');
 const { LoiMySign } = require('./client');
+const KhungKy = require('./khungKy');
 
 /** Quá thời gian này mà MySign vẫn báo "đang chờ" thì coi như hết hạn (MySign thường tự hết hạn sớm hơn nhiều). */
 const CHO_TOI_DA_MS = 30 * 60 * 1000;
@@ -72,6 +73,14 @@ const CAU_LENH = [
     cap_nhat_luc TEXT DEFAULT (datetime('now')),
     PRIMARY KEY (user_id, nguon)
   )`,
+  // Nội dung nhìn thấy của khung chữ ký (dòng nào bật) và hình chữ ký tay của từng người ký. Hình nằm trên đĩa (<thuMuc>/hinh/), CSDL chỉ giữ tên tệp.
+  `CREATE TABLE IF NOT EXISTS mysign_khung_ky (
+    user_id INTEGER PRIMARY KEY,
+    tuy_chon_json TEXT,
+    hinh_tep TEXT,
+    hinh_mime TEXT,
+    cap_nhat_luc TEXT DEFAULT (datetime('now'))
+  )`,
   'CREATE INDEX IF NOT EXISTS ix_mysign_tai_lieu_nguon ON mysign_tai_lieu(nguon, nguon_id)',
   'CREATE INDEX IF NOT EXISTS ix_mysign_tai_lieu_gd ON mysign_tai_lieu(giao_dich_id)',
 ];
@@ -81,6 +90,14 @@ const CAU_LENH = [
  */
 function taoKySo({ db, mysign, thuMuc }) {
   for (const sql of CAU_LENH) db.exec(sql);
+  // Cột số seri chứng thư (thêm sau): CSDL đã có dữ liệu thì thêm cột, để trống đến lần liên kết/ký kế tiếp. Chạy lại nhiều lần không sao.
+  if (!db.prepare('PRAGMA table_info(mysign_tai_khoan)').all().some((c) => c.name === 'so_seri')) {
+    db.exec('ALTER TABLE mysign_tai_khoan ADD COLUMN so_seri TEXT');
+  }
+  // Các chỗ ký thứ 2 trở đi của lần ký gần nhất (JSON); chỗ đầu nằm trong các cột trang/x/y/w/h như trước.
+  if (!db.prepare('PRAGMA table_info(mysign_vi_tri)').all().some((c) => c.name === 'them_json')) {
+    db.exec('ALTER TABLE mysign_vi_tri ADD COLUMN them_json TEXT');
+  }
   const nguon = new Map();
   const dangXuLy = new Set(); // id giao dịch đang được hoàn tất trong tiến trình này
 
@@ -94,11 +111,21 @@ function taoKySo({ db, mysign, thuMuc }) {
 
   function luuChungThu(userId, mysignUserId, ct) {
     db.prepare(
-      `INSERT INTO mysign_tai_khoan (user_id, mysign_user_id, credential_id, chu_the, het_han, so_dien_thoai, cap_nhat_luc)
-       VALUES (?,?,?,?,?,?,datetime('now'))
+      `INSERT INTO mysign_tai_khoan (user_id, mysign_user_id, credential_id, chu_the, het_han, so_dien_thoai, so_seri, cap_nhat_luc)
+       VALUES (?,?,?,?,?,?,?,datetime('now'))
        ON CONFLICT(user_id) DO UPDATE SET mysign_user_id = excluded.mysign_user_id, credential_id = excluded.credential_id,
-         chu_the = excluded.chu_the, het_han = excluded.het_han, so_dien_thoai = excluded.so_dien_thoai, cap_nhat_luc = excluded.cap_nhat_luc`
-    ).run(userId, mysignUserId, ct.credential_id, ct.chu_the, ct.het_han, ct.so_dien_thoai);
+         chu_the = excluded.chu_the, het_han = excluded.het_han, so_dien_thoai = excluded.so_dien_thoai, so_seri = excluded.so_seri,
+         cap_nhat_luc = excluded.cap_nhat_luc`
+    ).run(userId, mysignUserId, ct.credential_id, ct.chu_the, ct.het_han, ct.so_dien_thoai, serialCuaChungThu(ct));
+  }
+
+  /** Số seri chứng thư (hex) của chứng thư người ký; không đọc được thì null. */
+  function serialCuaChungThu(ct) {
+    try {
+      return ct.chuoi && ct.chuoi[0] ? KhungKy.thongTinChungThu(ct.chuoi[0]).so_seri || null : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   /** Liên kết (hoặc đổi) tài khoản MySign. Chỉ lưu khi MySign xác nhận tài khoản có chứng thư số dùng được. */
@@ -117,18 +144,108 @@ function taoKySo({ db, mysign, thuMuc }) {
     db.prepare('DELETE FROM mysign_tai_khoan WHERE user_id = ?').run(userId);
   }
 
-  /** Vị trí khung chữ ký lần gần nhất của người này cho một nguồn, hoặc null. */
+  /**
+   * Vị trí khung chữ ký lần gần nhất của người này cho một nguồn, hoặc null. Chỗ ký đầu ở các trường chính; `them` là các chỗ ký sau
+   * (mảng, có thể rỗng), mỗi phần tử cùng dạng {trang, trang_cuoi, x, y, w, h}.
+   */
   function viTriGanNhat(userId, tenNguon) {
-    const r = db.prepare('SELECT trang, trang_cuoi, x, y, w, h FROM mysign_vi_tri WHERE user_id = ? AND nguon = ?').get(userId, tenNguon);
-    return r ? { trang: r.trang, trang_cuoi: !!r.trang_cuoi, x: r.x, y: r.y, w: r.w, h: r.h } : null;
+    const r = db.prepare('SELECT trang, trang_cuoi, x, y, w, h, them_json FROM mysign_vi_tri WHERE user_id = ? AND nguon = ?').get(userId, tenNguon);
+    if (!r) return null;
+    let them = [];
+    try { them = r.them_json ? JSON.parse(r.them_json) : []; } catch (_) { them = []; }
+    return { trang: r.trang, trang_cuoi: !!r.trang_cuoi, x: r.x, y: r.y, w: r.w, h: r.h, them: Array.isArray(them) ? them : [] };
   }
 
-  function luuViTri(userId, tenNguon, v) {
+  /** @param {object} v chỗ ký đầu {trang, trang_cuoi, x, y, w, h};  @param {object[]} [them] các chỗ ký sau, cùng dạng */
+  function luuViTri(userId, tenNguon, v, them) {
     db.prepare(
-      `INSERT INTO mysign_vi_tri (user_id, nguon, trang, trang_cuoi, x, y, w, h, cap_nhat_luc) VALUES (?,?,?,?,?,?,?,?,datetime('now'))
+      `INSERT INTO mysign_vi_tri (user_id, nguon, trang, trang_cuoi, x, y, w, h, them_json, cap_nhat_luc) VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))
        ON CONFLICT(user_id, nguon) DO UPDATE SET trang = excluded.trang, trang_cuoi = excluded.trang_cuoi, x = excluded.x, y = excluded.y,
-         w = excluded.w, h = excluded.h, cap_nhat_luc = excluded.cap_nhat_luc`
-    ).run(userId, tenNguon, v.trang, v.trang_cuoi ? 1 : 0, v.x, v.y, v.w, v.h);
+         w = excluded.w, h = excluded.h, them_json = excluded.them_json, cap_nhat_luc = excluded.cap_nhat_luc`
+    ).run(userId, tenNguon, v.trang, v.trang_cuoi ? 1 : 0, v.x, v.y, v.w, v.h, JSON.stringify(Array.isArray(them) ? them : []));
+  }
+
+  // ── Nội dung khung chữ ký và hình chữ ký tay (mỗi người một bộ) ──────────────
+  const DUOI_HINH = { 'image/png': 'png', 'image/jpeg': 'jpg' };
+
+  /** Lựa chọn dòng thông tin đã lưu của người này (đã bổ sung mặc định). */
+  function tuyChonKhung(userId) {
+    const r = db.prepare('SELECT tuy_chon_json FROM mysign_khung_ky WHERE user_id = ?').get(userId);
+    let luu = null;
+    try { luu = r && r.tuy_chon_json ? JSON.parse(r.tuy_chon_json) : null; } catch (_) { luu = null; }
+    return KhungKy.kiemTuyChon(luu || undefined).tuy_chon;
+  }
+
+  function luuTuyChonKhung(userId, tuyChon) {
+    db.prepare(
+      `INSERT INTO mysign_khung_ky (user_id, tuy_chon_json, cap_nhat_luc) VALUES (?,?,datetime('now'))
+       ON CONFLICT(user_id) DO UPDATE SET tuy_chon_json = excluded.tuy_chon_json, cap_nhat_luc = excluded.cap_nhat_luc`
+    ).run(userId, JSON.stringify(tuyChon));
+  }
+
+  /** Hình chữ ký của người này: {buf, mime} hoặc null (không có / tệp mất). */
+  function docHinh(userId) {
+    const r = db.prepare('SELECT hinh_tep, hinh_mime FROM mysign_khung_ky WHERE user_id = ?').get(userId);
+    if (!r || !r.hinh_tep) return null;
+    try {
+      return { buf: fs.readFileSync(tep(r.hinh_tep)), mime: r.hinh_mime };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /** Lưu hình chữ ký (đã qua KhungKy.kiemHinh). Thay hình cũ nếu có. */
+  function luuHinh(userId, buf, mime) {
+    const duoi = DUOI_HINH[mime];
+    if (!duoi) throw new Error('Loại ảnh không hỗ trợ: ' + mime);
+    const cu = db.prepare('SELECT hinh_tep FROM mysign_khung_ky WHERE user_id = ?').get(userId);
+    const rel = `hinh/${Number(userId)}.${duoi}`;
+    ghiTep(rel, buf);
+    if (cu && cu.hinh_tep && cu.hinh_tep !== rel) fs.rmSync(tep(cu.hinh_tep), { force: true });
+    db.prepare(
+      `INSERT INTO mysign_khung_ky (user_id, hinh_tep, hinh_mime, cap_nhat_luc) VALUES (?,?,?,datetime('now'))
+       ON CONFLICT(user_id) DO UPDATE SET hinh_tep = excluded.hinh_tep, hinh_mime = excluded.hinh_mime, cap_nhat_luc = excluded.cap_nhat_luc`
+    ).run(userId, rel, mime);
+  }
+
+  function xoaHinh(userId) {
+    const cu = db.prepare('SELECT hinh_tep FROM mysign_khung_ky WHERE user_id = ?').get(userId);
+    if (cu && cu.hinh_tep) fs.rmSync(tep(cu.hinh_tep), { force: true });
+    db.prepare('UPDATE mysign_khung_ky SET hinh_tep = NULL, hinh_mime = NULL WHERE user_id = ?').run(userId);
+  }
+
+  /**
+   * Thông tin chứng thư để HIỆN TRƯỚC khi ký (cho bản xem trước khung). Thiếu số seri (tài khoản liên kết từ trước khi có cột này)
+   * thì hỏi MySign một lần và lưu lại; hỏi không được thì để trống, chữ ký vẫn ký bình thường.
+   */
+  async function thongTinNguoiKy(userId) {
+    let tk = taiKhoan(userId);
+    if (!tk) return null;
+    if (!tk.so_seri && mysign.daCauHinh()) {
+      try {
+        luuChungThu(userId, tk.mysign_user_id, await mysign.chungThu(tk.mysign_user_id));
+        tk = taiKhoan(userId);
+      } catch (_) {
+        /* không hỏi được: xem trước thiếu số seri */
+      }
+    }
+    return KhungKy.thongTinTuDn(tk.chu_the, tk.so_seri);
+  }
+
+  /**
+   * Phần "khung" của header X-Ky-So-Meta: giao diện dựng bản xem trước nội dung khung từ đây.
+   * @param {{lyDo?:string, noiKy?:string, tenMacDinh?:string}} p
+   */
+  async function khungCuaNguoi(userId, { lyDo, noiKy, tenMacDinh, tieuDe } = {}) {
+    const tt = (await thongTinNguoiKy(userId)) || {};
+    return {
+      tuy_chon: tuyChonKhung(userId),
+      co_hinh: !!docHinh(userId),
+      thong_tin: { ho_ten: tt.cn || tenMacDinh || '', to_chuc: tt.to_chuc || '', so_seri: tt.so_seri || '', ly_do: lyDo || '', noi_ky: noiKy || '' },
+      truong: KhungKy.TRUONG,
+      tieu_de: tieuDe || KhungKy.TIEU_DE,
+      dong_cuoi: KhungKy.DONG_CUOI,
+    };
   }
 
   function dangKyNguon(ten, xuLy) {
@@ -181,7 +298,10 @@ function taoKySo({ db, mysign, thuMuc }) {
 
     const chuanBi = [];
     for (const t of taiLieu) {
-      const { pdf, noiDung } = Pades.chuanBi(await t.taoPdfCho());
+      // Cho tài liệu biết người ký là ai theo CHỨNG THƯ (tên, tổ chức, số seri) để in vào khung nhìn thấy.
+      let thongTinCt = null;
+      try { thongTinCt = KhungKy.thongTinChungThu(ct.chuoi[0]); } catch (_) { /* không đọc được: khung dùng tên trong hệ thống */ }
+      const { pdf, noiDung } = Pades.chuanBi(await t.taoPdfCho({ chungThu: thongTinCt }));
       const tt = Pades.thuocTinhKy({ noiDung, chungThu: ct.chuoi[0] });
       chuanBi.push({ ...t, pdf, tt });
     }
@@ -325,7 +445,7 @@ function taoKySo({ db, mysign, thuMuc }) {
     };
   }
 
-  return { mysign, taiKhoan, lienKet, huyLienKet, viTriGanNhat, luuViTri, dangKyNguon, dangCho, dangChoCuaNguoi, banDaKy, docTep, batDau, capNhat, giaoDich };
+  return { mysign, taiKhoan, lienKet, huyLienKet, viTriGanNhat, luuViTri, tuyChonKhung, luuTuyChonKhung, docHinh, luuHinh, xoaHinh, thongTinNguoiKy, khungCuaNguoi, dangKyNguon, dangCho, dangChoCuaNguoi, banDaKy, docTep, batDau, capNhat, giaoDich };
 }
 
 module.exports = { taoKySo, CHO_TOI_DA_MS };
