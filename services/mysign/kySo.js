@@ -94,6 +94,10 @@ function taoKySo({ db, mysign, thuMuc }) {
   if (!db.prepare('PRAGMA table_info(mysign_tai_khoan)').all().some((c) => c.name === 'so_seri')) {
     db.exec('ALTER TABLE mysign_tai_khoan ADD COLUMN so_seri TEXT');
   }
+  // Các chỗ ký thứ 2 trở đi của lần ký gần nhất (JSON); chỗ đầu nằm trong các cột trang/x/y/w/h như trước.
+  if (!db.prepare('PRAGMA table_info(mysign_vi_tri)').all().some((c) => c.name === 'them_json')) {
+    db.exec('ALTER TABLE mysign_vi_tri ADD COLUMN them_json TEXT');
+  }
   const nguon = new Map();
   const dangXuLy = new Set(); // id giao dịch đang được hoàn tất trong tiến trình này
 
@@ -140,18 +144,25 @@ function taoKySo({ db, mysign, thuMuc }) {
     db.prepare('DELETE FROM mysign_tai_khoan WHERE user_id = ?').run(userId);
   }
 
-  /** Vị trí khung chữ ký lần gần nhất của người này cho một nguồn, hoặc null. */
+  /**
+   * Vị trí khung chữ ký lần gần nhất của người này cho một nguồn, hoặc null. Chỗ ký đầu ở các trường chính; `them` là các chỗ ký sau
+   * (mảng, có thể rỗng), mỗi phần tử cùng dạng {trang, trang_cuoi, x, y, w, h}.
+   */
   function viTriGanNhat(userId, tenNguon) {
-    const r = db.prepare('SELECT trang, trang_cuoi, x, y, w, h FROM mysign_vi_tri WHERE user_id = ? AND nguon = ?').get(userId, tenNguon);
-    return r ? { trang: r.trang, trang_cuoi: !!r.trang_cuoi, x: r.x, y: r.y, w: r.w, h: r.h } : null;
+    const r = db.prepare('SELECT trang, trang_cuoi, x, y, w, h, them_json FROM mysign_vi_tri WHERE user_id = ? AND nguon = ?').get(userId, tenNguon);
+    if (!r) return null;
+    let them = [];
+    try { them = r.them_json ? JSON.parse(r.them_json) : []; } catch (_) { them = []; }
+    return { trang: r.trang, trang_cuoi: !!r.trang_cuoi, x: r.x, y: r.y, w: r.w, h: r.h, them: Array.isArray(them) ? them : [] };
   }
 
-  function luuViTri(userId, tenNguon, v) {
+  /** @param {object} v chỗ ký đầu {trang, trang_cuoi, x, y, w, h};  @param {object[]} [them] các chỗ ký sau, cùng dạng */
+  function luuViTri(userId, tenNguon, v, them) {
     db.prepare(
-      `INSERT INTO mysign_vi_tri (user_id, nguon, trang, trang_cuoi, x, y, w, h, cap_nhat_luc) VALUES (?,?,?,?,?,?,?,?,datetime('now'))
+      `INSERT INTO mysign_vi_tri (user_id, nguon, trang, trang_cuoi, x, y, w, h, them_json, cap_nhat_luc) VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))
        ON CONFLICT(user_id, nguon) DO UPDATE SET trang = excluded.trang, trang_cuoi = excluded.trang_cuoi, x = excluded.x, y = excluded.y,
-         w = excluded.w, h = excluded.h, cap_nhat_luc = excluded.cap_nhat_luc`
-    ).run(userId, tenNguon, v.trang, v.trang_cuoi ? 1 : 0, v.x, v.y, v.w, v.h);
+         w = excluded.w, h = excluded.h, them_json = excluded.them_json, cap_nhat_luc = excluded.cap_nhat_luc`
+    ).run(userId, tenNguon, v.trang, v.trang_cuoi ? 1 : 0, v.x, v.y, v.w, v.h, JSON.stringify(Array.isArray(them) ? them : []));
   }
 
   // ── Nội dung khung chữ ký và hình chữ ký tay (mỗi người một bộ) ──────────────

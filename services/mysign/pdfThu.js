@@ -54,20 +54,24 @@ function taoPdfThu({ ten, viTri, xemTruoc, luc, dongKhung, hinh } = {}) {
       return;
     }
 
-    const v = viTri || { trang: SO_TRANG - 1, ...MAC_DINH };
-    if (!Number.isInteger(v.trang) || v.trang < 0 || v.trang >= SO_TRANG) {
-      reject(Object.assign(new Error('Trang đặt khung chữ ký không có trong tài liệu (tài liệu có ' + SO_TRANG + ' trang).'), { maLoi: 'vi_tri' }));
-      return;
+    // Một hoặc nhiều chỗ ký: mọi chỗ đều vẽ khung nhìn thấy; ô chữ ký số thật (widget) ở chỗ đầu tiên.
+    const ds = viTri ? [].concat(viTri) : [{ trang: SO_TRANG - 1, ...MAC_DINH }];
+    for (const v of ds) {
+      if (!Number.isInteger(v.trang) || v.trang < 0 || v.trang >= SO_TRANG) {
+        reject(Object.assign(new Error('Trang đặt khung chữ ký không có trong tài liệu (tài liệu có ' + SO_TRANG + ' trang).'), { maLoi: 'vi_tri' }));
+        return;
+      }
     }
-    const rect = [v.x * W, v.y * H, v.w * W, v.h * H];
     const dong = dongKhung || ['ĐÃ KÝ SỐ (THỬ)', 'Người ký: ' + (ten || ''), 'Qua MySign — Viettel-CA'];
     try {
-      veKhung(doc, rect, { dong, hinh, trang: v.trang });
+      for (const v of ds) veKhung(doc, [v.x * W, v.y * H, v.w * W, v.h * H], { dong, hinh, trang: v.trang });
     } catch (e) {
       reject(e);
       return;
     }
-    datChoKy(doc, { rect, ten: ten || '', lyDo: LY_DO_THU, noiKy: NOI_KY_THU, luc: luc || new Date() });
+    const v0 = ds[0];
+    doc.switchToPage(v0.trang);
+    datChoKy(doc, { rect: [v0.x * W, v0.y * H, v0.w * W, v0.h * H], ten: ten || '', lyDo: LY_DO_THU, noiKy: NOI_KY_THU, luc: luc || new Date() });
     doc.end();
   });
 }

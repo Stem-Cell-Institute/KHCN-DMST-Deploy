@@ -369,3 +369,126 @@ test('trang thử: khung theo chứng thư cùng quy tắc; tiêu đề (THỬ);
   const kt = await ung.json(ADMIN, 'GET', '/api/mysign/thu/kiem-tra/' + g.id);
   assert.equal(kt.d.hopLe, true, JSON.stringify(kt.d));
 });
+
+// ── Nhiều chỗ ký trong một văn bản (một người ký, một lần xác nhận) ─────────────
+
+const { kiemDanhSachViTri, TOI_DA_CHO_KY } = require('../services/mysign/viTri');
+
+/** Các ô chữ ký (/FT /Sig) của PDF: [{rect:[x1,y1,x2,y2]}]. */
+function oChuKy(pdf) {
+  const s = pdf.toString('latin1');
+  const kq = [];
+  for (const m of s.matchAll(/<<[^<>]*?\/FT \/Sig[^<>]*?>>/g)) {
+    const r = /\/Rect \[\s*([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*\]/.exec(m[0]);
+    if (r) kq.push({ rect: r.slice(1).map(Number) });
+  }
+  return kq;
+}
+
+/** Bắt các lần vẽ khung (rect + trang) trong lúc chạy fn. */
+async function batKhung(fn) {
+  const goc = KhungKy.veKhung;
+  const lan = [];
+  KhungKy.veKhung = (doc, rect, p) => {
+    lan.push({ rect: [...rect], trang: p.trang });
+    return goc(doc, rect, p);
+  };
+  try {
+    await fn();
+  } finally {
+    KhungKy.veKhung = goc;
+  }
+  return lan;
+}
+
+test('kiemDanhSachViTri: nhận một vị trí hoặc mảng 1..4; rỗng, quá nhiều hoặc có phần tử bậy thì từ chối', () => {
+  const v = { trang: 0, x: 0.1, y: 0.1, w: 0.4, h: 0.1 };
+  assert.deepEqual(kiemDanhSachViTri(v).vi_tri_ds, [v], 'vị trí đơn (bản cũ) vẫn nhận');
+  assert.equal(kiemDanhSachViTri([v, { ...v, y: 0.5 }]).vi_tri_ds.length, 2);
+  assert.equal(TOI_DA_CHO_KY, 4);
+  assert.equal(kiemDanhSachViTri(new Array(4).fill(v)).vi_tri_ds.length, 4);
+  for (const xau of [[], new Array(5).fill(v), [v, null], [v, { ...v, w: 0.01 }], [v, { ...v, x: 0.9 }], null, 'x']) {
+    assert.ok(kiemDanhSachViTri(xau).loi, JSON.stringify(xau));
+  }
+});
+
+test('ký với 2 chỗ: vẽ khung ở cả hai chỗ, ô chữ ký số thật ở chỗ đầu, chỉ MỘT chữ ký, MỘT lần xác nhận, chữ ký hợp lệ', async () => {
+  const bc = await taoBaoCao('Đợt hai chỗ ký');
+  const x = await xemTruoc(bc);
+  const cuoi = x.so_trang - 1;
+  const cho1 = { trang: cuoi, x: 0.5, y: 0.8, w: 0.4, h: 0.09 };
+  const cho2 = { trang: 0, x: 0.1, y: 0.06, w: 0.4, h: 0.09 };
+  const truoc = gl.yeuCau.length;
+  let pdf;
+  const lan = await batKhung(async () => { pdf = await kyXong(bc, { vi_tri: [cho1, cho2] }); });
+  assert.equal(gl.yeuCau.length - truoc, 1, 'một yêu cầu ký → một lần xác nhận trên điện thoại');
+  assert.equal(gl.yeuCau[gl.yeuCau.length - 1].documents.length, 1, 'một mã băm cho văn bản');
+  assert.equal(lan.length, 2, 'vẽ đủ hai khung nhìn thấy');
+  const [W, H] = x.kho;
+  assert.deepEqual(lan.map((l) => l.trang), [cho1.trang, cho2.trang]);
+  [cho1, cho2].forEach((c, i) => [c.x * W, c.y * H, c.w * W, c.h * H].forEach((v, k) => assert.ok(Math.abs(v - lan[i].rect[k]) < 0.01)));
+  const kt = Pades.kiemTra(pdf);
+  assert.equal(kt.hopLe, true, JSON.stringify(kt));
+  const o = oChuKy(pdf);
+  assert.equal(o.length, 1, 'chỉ một ô chữ ký số thật');
+  const mong = [cho1.x * W, H - (cho1.y + cho1.h) * H, (cho1.x + cho1.w) * W, H - cho1.y * H];
+  o[0].rect.forEach((v, i) => assert.ok(Math.abs(v - mong[i]) < 0.6, `Rect[${i}] = ${v}, mong ${mong[i]}`));
+});
+
+test('nhớ các chỗ ký: lần sau xem trước trả đủ chỗ đầu + các chỗ sau; đặt ở trang cuối ghi nhớ là "trang cuối"', async () => {
+  const bc = await taoBaoCao('Đợt nhớ nhiều chỗ');
+  const x = await xemTruoc(bc);
+  const cuoi = x.so_trang - 1;
+  const cho = [{ trang: cuoi, x: 0.5, y: 0.8, w: 0.4, h: 0.09 }, { trang: 0, x: 0.1, y: 0.06, w: 0.4, h: 0.09 }, { trang: cuoi, x: 0.1, y: 0.7, w: 0.3, h: 0.09 }];
+  await kyXong(bc, { vi_tri: cho });
+  const bc2 = await taoBaoCao('Đợt xem trước sau khi nhớ');
+  const gn = (await xemTruoc(bc2)).gan_nhat;
+  assert.equal(gn.trang, cuoi);
+  assert.equal(gn.trang_cuoi, true);
+  assert.equal(gn.them.length, 2);
+  assert.deepEqual(gn.them.map((t) => t.x), [0.1, 0.1]);
+  assert.equal(gn.them[1].trang_cuoi, true, 'chỗ sau ở trang cuối cũng nhớ là trang cuối');
+  assert.deepEqual(ung.kySo.viTriGanNhat(VIEN_TRUONG, 'bao_cao_phong').them.map((t) => t.y), [0.06, 0.7]);
+  // Ký lại với MỘT chỗ thì danh sách "các chỗ sau" được thay bằng rỗng (không còn dính lần trước).
+  await kyXong(bc2, { vi_tri: cho[0] });
+  const bc3 = await taoBaoCao('Đợt sau nữa');
+  assert.deepEqual((await xemTruoc(bc3)).gan_nhat.them, []);
+});
+
+test('nhiều chỗ ký bậy: quá 4 chỗ, mảng rỗng, chỗ thứ hai ngoài trang / ở trang không có / quá thấp → 400, không gửi MySign', async () => {
+  const bc = await taoBaoCao('Đợt nhiều chỗ bậy');
+  const x = await xemTruoc(bc);
+  const v = { trang: x.so_trang - 1, x: 0.1, y: 0.5, w: 0.5, h: 0.09 };
+  gl.cheDo = 'cho';
+  const truoc = gl.yeuCau.length;
+  const thu = async (vi_tri, khung) => ky(bc, { vi_tri, khung });
+  assert.equal((await thu(new Array(5).fill(v))).s, 400, 'quá 4 chỗ');
+  assert.equal((await thu([])).s, 400, 'mảng rỗng');
+  assert.equal((await thu([v, { ...v, x: 0.9 }])).s, 400, 'chỗ 2 nằm ngoài trang');
+  const trangKhong = await thu([v, { ...v, trang: 99 }]);
+  assert.equal(trangKhong.s, 400, 'chỗ 2 ở trang không có');
+  assert.match(trangKhong.d.message, /không có/);
+  const batHet = { ho_ten: true, to_chuc: true, so_seri: true, thoi_gian: true, ly_do: true, noi_ky: true, hinh: false };
+  const thap = await thu([v, { ...v, h: 0.04 }], batHet);
+  assert.equal(thap.s, 400, 'chỗ 2 quá thấp để chứa các dòng đã chọn');
+  assert.match(thap.d.message, /quá thấp/);
+  assert.equal(gl.yeuCau.length, truoc, 'không có yêu cầu nào tới MySign');
+});
+
+test('trang thử: 2 chỗ ký — vẽ cả hai, một ô chữ ký số, chữ ký hợp lệ; quá 4 chỗ bị từ chối', async () => {
+  gl.nguoiDung.add('ADMIN_MYSIGN_2CHO');
+  assert.equal((await ung.json(ADMIN, 'PUT', '/api/mysign/tai-khoan', { mysign_user_id: 'ADMIN_MYSIGN_2CHO' })).s, 200);
+  const v = { trang: 2, x: 0.5, y: 0.8, w: 0.4, h: 0.09 };
+  gl.cheDo = 'cho';
+  assert.equal((await ung.json(ADMIN, 'POST', '/api/mysign/thu/ky', { vi_tri: new Array(5).fill(v) })).s, 400);
+  const r = await ung.json(ADMIN, 'POST', '/api/mysign/thu/ky', { vi_tri: [v, { trang: 0, x: 0.1, y: 0.1, w: 0.4, h: 0.09 }] });
+  assert.equal(r.s, 200, JSON.stringify(r.d));
+  gl.cheDo = 'dong_y';
+  const xong = await ung.json(ADMIN, 'GET', '/api/mysign/giao-dich/' + r.d.giao_dich.id);
+  assert.equal(xong.d.trang_thai, 'thanh_cong', JSON.stringify(xong.d));
+  const res = await ung.goi(ADMIN, 'GET', '/api/mysign/thu/ban-ky/' + r.d.giao_dich.id);
+  const pdf = Buffer.from(await res.arrayBuffer());
+  assert.equal(Pades.kiemTra(pdf).hopLe, true);
+  assert.equal(oChuKy(pdf).length, 1);
+  assert.equal(ung.kySo.viTriGanNhat(ADMIN, 'thu_nghiem').them.length, 1);
+});

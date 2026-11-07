@@ -25,8 +25,8 @@ const express = require('express');
 const { kySoChung } = require('../services/mysign');
 const { LoiMySign } = require('../services/mysign/client');
 const Pades = require('../services/mysign/pades');
-const { taoPdfThu } = require('../services/mysign/pdfThu');
-const { kiemViTri } = require('../services/mysign/viTri');
+const { taoPdfThu, SO_TRANG: SO_TRANG_THU } = require('../services/mysign/pdfThu');
+const { kiemDanhSachViTri } = require('../services/mysign/viTri');
 const KhungKy = require('../services/mysign/khungKy');
 
 const MA_TAI_KHOAN = /^[A-Za-z0-9_.@-]{1,50}$/;
@@ -115,11 +115,11 @@ module.exports = function createMySignRouter({ db, uploadsRoot, kySo }) {
     '/thu/ky',
     chiAdmin,
     bao(async (req, res) => {
-      let viTri;
+      let viTri; // danh sách chỗ ký (1..4) hoặc undefined = vị trí mặc định
       if (req.body && req.body.vi_tri !== undefined) {
-        const kq = kiemViTri(req.body.vi_tri);
+        const kq = kiemDanhSachViTri(req.body.vi_tri);
         if (kq.loi) return loi(res, 400, kq.loi);
-        viTri = kq.vi_tri;
+        viTri = kq.vi_tri_ds;
       }
       const tc = KhungKy.kiemTuyChon(req.body && req.body.khung, ks.tuyChonKhung(req.user.id));
       if (tc.loi) return loi(res, 400, tc.loi);
@@ -148,7 +148,10 @@ module.exports = function createMySignRouter({ db, uploadsRoot, kySo }) {
           }],
         });
         if (req.body && req.body.khung !== undefined) ks.luuTuyChonKhung(req.user.id, tc.tuy_chon);
-        if (viTri) ks.luuViTri(req.user.id, NGUON_THU, { ...viTri, trang_cuoi: viTri.trang === 2 });
+        if (viTri) {
+          const ds = viTri.map((v) => ({ ...v, trang_cuoi: v.trang === SO_TRANG_THU - 1 }));
+          ks.luuViTri(req.user.id, NGUON_THU, ds[0], ds.slice(1));
+        }
         res.json({ ok: true, giao_dich: g });
       } catch (e) {
         if (e && e.maLoi === 'vi_tri') return loi(res, 400, e.message);

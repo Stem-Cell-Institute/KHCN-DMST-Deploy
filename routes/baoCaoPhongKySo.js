@@ -9,8 +9,9 @@
  *   GET  /bao-cao/:id/ky-so/xem-truoc  PDF xem trước (chưa có khung) + thông tin trang (header X-Ky-So-Meta) để Viện trưởng kéo khung chữ ký.
  *   GET  /bao-cao/:id/ban-ky-so    tải PDF đã ký số của bản nộp hiện tại (ai xem được báo cáo thì tải được).
  *
- * Vị trí khung chữ ký: mỗi báo cáo trong yêu cầu ký có thể kèm vi_tri {trang, x, y, w, h} (tỉ lệ 0..1 so với khổ trang, gốc trên-trái, trang từ 0).
- * Không kèm thì khung ở vị trí mặc định của biểu mẫu. Vị trí lần gần nhất được nhớ theo người ký để lần sau mở sẵn ở đó.
+ * Vị trí khung chữ ký: mỗi báo cáo trong yêu cầu ký có thể kèm vi_tri {trang, x, y, w, h} (tỉ lệ 0..1 so với khổ trang, gốc trên-trái, trang từ 0)
+ * hoặc MẢNG tối đa 4 vị trí khi văn bản cần ký ở nhiều chỗ: chữ ký số thật nằm ở chỗ đầu, các chỗ sau là khung lặp lại cùng nội dung
+ * (một người ký, một lần xác nhận). Không kèm thì khung ở vị trí mặc định của biểu mẫu. Các chỗ ký lần gần nhất được nhớ theo người ký.
  *
  * Quy tắc (mỗi dòng đều có test):
  *   - "Duyệt" chỉ được ghi khi chữ ký về thành công: từ chối / hết hạn / lỗi trên MySign thì báo cáo giữ nguyên như chưa ký.
@@ -24,7 +25,7 @@ const express = require('express');
 const Xuat = require('../services/baoCaoPhongXuat');
 const { contentDisposition } = require('../lib/filenames');
 const { LoiMySign } = require('../services/mysign/client');
-const { kiemViTri } = require('../services/mysign/viTri');
+const { kiemDanhSachViTri } = require('../services/mysign/viTri');
 const KhungKy = require('../services/mysign/khungKy');
 
 const NGUON = 'bao_cao_phong';
@@ -120,9 +121,10 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
           return loi(res, 409, `Báo cáo của ${b.phong_ten} vừa được nộp lại hoặc thay đổi. Hãy tải lại trang để đọc bản mới trước khi ký.`);
         }
         if (x.vi_tri !== undefined) {
-          const kq = kiemViTri(x.vi_tri);
+          // Một vị trí (bản cũ) hoặc danh sách nhiều chỗ ký trong cùng báo cáo.
+          const kq = kiemDanhSachViTri(x.vi_tri);
           if (kq.loi) return loi(res, 400, kq.loi);
-          viTriTheoId.set(id, kq.vi_tri);
+          viTriTheoId.set(id, kq.vi_tri_ds);
         }
         const ky = kyCuaBaoCao(id, b.nop_luc);
         if (ky && ky.trang_thai === 'da_ky') return loi(res, 409, `Báo cáo của ${b.phong_ten} đã được ký số.`);
@@ -177,11 +179,12 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
         const g = await kySo.batDau({ userId: req.user.id, nguon: NGUON, moTa: 'Duyet ' + (chon.length === 1 ? taiLieu[0].ten : chon.length + ' bao cao') + ' - ' + dot.tieu_de, taiLieu });
         // Nhớ lựa chọn dòng thông tin cho lần sau (chỉ khi người ký tự chọn).
         if (body.khung !== undefined) kySo.luuTuyChonKhung(req.user.id, tuyChonKhung);
-        // Nhớ vị trí khung của báo cáo cuối trong nhóm cho lần sau (chỉ khi người ký tự đặt).
+        // Nhớ các chỗ ký của báo cáo cuối trong nhóm cho lần sau (chỉ khi người ký tự đặt).
         const cuoi = [...chon].reverse().find((b) => viTriTheoId.has(b.id));
         if (cuoi) {
-          const v = viTriTheoId.get(cuoi.id);
-          kySo.luuViTri(req.user.id, NGUON, { ...v, trang_cuoi: v.trang === (metaTrang.get(cuoi.id) || 0) - 1 });
+          const soTrangCuoi = (metaTrang.get(cuoi.id) || 0) - 1;
+          const ds = viTriTheoId.get(cuoi.id).map((v) => ({ ...v, trang_cuoi: v.trang === soTrangCuoi }));
+          kySo.luuViTri(req.user.id, NGUON, ds[0], ds.slice(1));
         }
         res.json({ ok: true, giao_dich: g });
       } catch (e) {

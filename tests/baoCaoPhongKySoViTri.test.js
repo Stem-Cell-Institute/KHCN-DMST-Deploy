@@ -178,10 +178,10 @@ test('nhớ vị trí lần trước: lần sau khung mở sẵn ở đó; đặ
   gl.cheDo = 'tu_choi'; // dù bị từ chối trên điện thoại, vị trí người ký đã chọn vẫn được nhớ cho lần thử lại
   await hoi(VIEN_TRUONG, r.d.giao_dich.id);
   const x1 = await xemTruoc(VIEN_TRUONG, d.a);
-  assert.deepEqual({ ...x1.meta.gan_nhat }, { trang: cuoi, trang_cuoi: true, x: 0.55, y: 0.7, w: 0.3, h: 0.08 });
+  assert.deepEqual({ ...x1.meta.gan_nhat }, { trang: cuoi, trang_cuoi: true, x: 0.55, y: 0.7, w: 0.3, h: 0.08, them: [] });
   // Người khác (admin cũng không xem trước được) không thấy vị trí này: vị trí lưu theo từng người ký.
   assert.equal(ung.kySo.viTriGanNhat(ADMIN, 'bao_cao_phong'), null);
-  assert.deepEqual(ung.kySo.viTriGanNhat(VIEN_TRUONG, 'bao_cao_phong'), { trang: cuoi, trang_cuoi: true, x: 0.55, y: 0.7, w: 0.3, h: 0.08 });
+  assert.deepEqual(ung.kySo.viTriGanNhat(VIEN_TRUONG, 'bao_cao_phong'), { trang: cuoi, trang_cuoi: true, x: 0.55, y: 0.7, w: 0.3, h: 0.08, them: [] });
 });
 
 test('không gửi vi_tri thì khung ở vị trí mặc định của biểu mẫu như trước, và không đổi vị trí đã nhớ', async () => {
@@ -273,7 +273,7 @@ test('trang thử: quản trị viên ký PDF mẫu bằng tài khoản MySign c
   assert.match(kt.d.chu_the, /PHAM VIEN TRUONG/);
   // lần sau khung mở sẵn ở vị trí này
   const x2 = JSON.parse((await ung.goi(ADMIN, 'GET', '/api/mysign/thu/xem-truoc')).headers.get('x-ky-so-meta'));
-  assert.deepEqual({ ...x2.gan_nhat }, { trang: 1, trang_cuoi: false, x: 0.2, y: 0.3, w: 0.4, h: 0.1 });
+  assert.deepEqual({ ...x2.gan_nhat }, { trang: 1, trang_cuoi: false, x: 0.2, y: 0.3, w: 0.4, h: 0.1, them: [] });
   // giao dịch không tồn tại / id sai
   assert.equal((await ung.goi(ADMIN, 'GET', '/api/mysign/thu/ban-ky/999999')).status, 404);
   assert.equal((await ung.goi(ADMIN, 'GET', '/api/mysign/thu/kiem-tra/abc')).status, 404);

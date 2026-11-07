@@ -57,6 +57,17 @@ dialog.kyso-hop [hidden] { display: none !important; }
 .kyso-anh-nho { height: 24px; max-width: 80px; object-fit: contain; border: 1px solid var(--ke, #d8dce5); background: #fff; }
 .kyso-noidung .btn-nho { padding: 2px 9px; font-size: 12px; min-height: 26px; }
 
+/* Nhiều chỗ ký: thanh chọn chỗ ký trên thanh công cụ + ô mờ cho các chỗ khác trên trang đang xem. */
+.kyso-cho { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.kyso-cho-nhan { font-size: 13px; font-weight: 600; margin-right: 2px; }
+.kyso-cho-so { min-width: 30px; }
+.kyso-cho-so[aria-pressed='true'] { background: var(--muc, #16233d); color: #fff; border-color: var(--muc, #16233d); }
+.kyso-khung-phu {
+  position: absolute; box-sizing: border-box; padding: 0; cursor: pointer; border: 1px dashed var(--son, #b7281e); background: rgba(183, 40, 30, .06);
+  color: var(--son-dam, #8e1f17); font-size: 11px; font-weight: 700; font-family: inherit; display: flex; align-items: center; justify-content: center;
+}
+.kyso-khung-phu:hover { background: rgba(183, 40, 30, .16); }
+
 .kyso-goc {
   position: absolute; width: 22px; height: 22px; background: var(--son, #b7281e); border: 2px solid #fff; border-radius: 50%;
   /* vùng chạm lớn hơn nhìn thấy: viền trong suốt cộng thêm */
