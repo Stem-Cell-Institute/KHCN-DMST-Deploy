@@ -25,15 +25,12 @@ const Xuat = require('../services/baoCaoPhongXuat');
 const { contentDisposition } = require('../lib/filenames');
 const { LoiMySign } = require('../services/mysign/client');
 const { kiemViTri } = require('../services/mysign/viTri');
+const KhungKy = require('../services/mysign/khungKy');
 
 const NGUON = 'bao_cao_phong';
 const TOI_DA_MOT_LAN = 50;
-/** Ngày giờ theo giờ Việt Nam, dạng 02/11/2026 09:05. */
-function gioVietNam(d) {
-  const t = new Date(d.getTime() + 7 * 3600 * 1000);
-  const p = (n) => String(n).padStart(2, '0');
-  return `${p(t.getUTCDate())}/${p(t.getUTCMonth() + 1)}/${t.getUTCFullYear()} ${p(t.getUTCHours())}:${p(t.getUTCMinutes())}`;
-}
+const LY_DO_KY = 'Phê duyệt báo cáo';
+const { gioVietNam } = KhungKy;
 
 /** Tên người trong DN chứng thư (CN=...), để ghi vào lịch sử. */
 const tenTrongChungThu = (dn) => (String(dn || '').match(/CN=([^,\n]+)/) || [])[1] || '';
@@ -96,6 +93,11 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
       if (!ds.length || ds.length > TOI_DA_MOT_LAN) return loi(res, 400, `Chọn từ 1 đến ${TOI_DA_MOT_LAN} báo cáo để ký.`);
       const ghiChu = typeof body.ghi_chu === 'string' ? body.ghi_chu.trim() : '';
       if (ghiChu.length > 2000) return loi(res, 400, 'Nội dung tối đa 2000 ký tự.');
+      // Dòng thông tin trong khung chữ ký: người ký chọn; không gửi thì dùng lựa chọn đã lưu lần trước.
+      const tcKhung = KhungKy.kiemTuyChon(body.khung, kySo.tuyChonKhung(req.user.id));
+      if (tcKhung.loi) return loi(res, 400, tcKhung.loi);
+      const tuyChonKhung = tcKhung.tuy_chon;
+      const hinh = tuyChonKhung.hinh ? kySo.docHinh(req.user.id) : null;
 
       const dot = db
         .prepare('SELECT d.id, d.tieu_de, d.loai, d.ky, d.trang_thai, v.truong_json FROM bcp_dot d JOIN bcp_mau_phien_ban v ON v.id = d.mau_phien_ban_id WHERE d.id = ?')
@@ -145,7 +147,14 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
           nguonId: b.id,
           ten: 'Bao cao ' + r.phong_ten,
           meta: { nop_luc: b.nop_luc, dot_id: dotId, ghi_chu: ghiChu },
-          taoPdfCho: async () => {
+          taoPdfCho: async ({ chungThu } = {}) => {
+            // Tên hiển thị theo chứng thư (đúng người đứng tên chứng thư số); không đọc được thì dùng tên trong hệ thống.
+            const hoTen = (chungThu && chungThu.cn) || nguoiKy;
+            const dong = KhungKy.dungDong({
+              tuyChon: tuyChonKhung,
+              thongTin: { ho_ten: hoTen, to_chuc: chungThu && chungThu.to_chuc, so_seri: chungThu && chungThu.so_seri, ly_do: LY_DO_KY, noi_ky: Xuat.CO_QUAN.noi_viet },
+              thoiGian: gioVietNam(luc),
+            });
             const kq = await Xuat.taoPdfChiTiet(
               [
                 Xuat.dungMoHinh({
@@ -153,10 +162,10 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
                   truong,
                   baoCao: { phong_ten: r.phong_ten, nguoi_nop: r.nguoi_nop || '', du_lieu: parseJson(b.du_lieu_json, {}) },
                   ngayXuat: luc,
-                  kySo: { ten: nguoiKy, dong: ['ĐÃ KÝ SỐ', 'Người ký: ' + nguoiKy, 'Thời gian: ' + gioVietNam(luc), 'Qua MySign — Viettel-CA'] },
+                  kySo: { ten: hoTen, dong },
                 }),
               ],
-              { choKy: { ten: nguoiKy, lyDo: 'Phê duyệt báo cáo', noiKy: Xuat.CO_QUAN.noi_viet, luc, viTri: viTriTheoId.get(b.id) } }
+              { choKy: { ten: hoTen, lyDo: LY_DO_KY, noiKy: Xuat.CO_QUAN.noi_viet, luc, viTri: viTriTheoId.get(b.id), hinh: hinh && hinh.buf } }
             );
             metaTrang.set(b.id, kq.meta.so_trang);
             return kq.pdf;
@@ -166,6 +175,8 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
 
       try {
         const g = await kySo.batDau({ userId: req.user.id, nguon: NGUON, moTa: 'Duyet ' + (chon.length === 1 ? taiLieu[0].ten : chon.length + ' bao cao') + ' - ' + dot.tieu_de, taiLieu });
+        // Nhớ lựa chọn dòng thông tin cho lần sau (chỉ khi người ký tự chọn).
+        if (body.khung !== undefined) kySo.luuTuyChonKhung(req.user.id, tuyChonKhung);
         // Nhớ vị trí khung của báo cáo cuối trong nhóm cho lần sau (chỉ khi người ký tự đặt).
         const cuoi = [...chon].reverse().find((b) => viTriTheoId.has(b.id));
         if (cuoi) {
@@ -215,7 +226,8 @@ module.exports = function createKySoRouter({ db, kySo, vt, thongBao, guiNen, loi
         ],
         { xemTruocKy: true }
       );
-      const meta = { nop_luc: b.nop_luc, ten: r.phong_ten, ...kq.meta, gan_nhat: kySo.viTriGanNhat(req.user.id, NGUON) };
+      const khung = await kySo.khungCuaNguoi(req.user.id, { lyDo: LY_DO_KY, noiKy: Xuat.CO_QUAN.noi_viet, tenMacDinh: nguoiKy });
+      const meta = { nop_luc: b.nop_luc, ten: r.phong_ten, ...kq.meta, gan_nhat: kySo.viTriGanNhat(req.user.id, NGUON), khung };
       res.setHeader('Content-Type', 'application/pdf');
       // Tiêu đề HTTP chỉ nhận ASCII: JSON được escape các ký tự có dấu.
       res.setHeader('X-Ky-So-Meta', JSON.stringify(meta).replace(/[\u007f-\uffff]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')));

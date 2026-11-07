@@ -21,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const { tinhTongHop } = require('./baoCaoPhongMau');
 const { datChoKy } = require('./mysign/pades');
+const KhungKy = require('./mysign/khungKy');
 
 // ── Thông tin cơ quan: hằng số của Viện, in ở đầu mọi văn bản ───────────────
 const CO_QUAN = {
@@ -352,7 +353,8 @@ const DIR_FONT = path.join(__dirname, 'fonts');
 
 /**
  * @param {object[]} moHinhs
- * @param {{choKy?:{ten:string, lyDo?:string, noiKy?:string, luc?:Date, viTri?:object}, xemTruocKy?:boolean}} [tuyChon]
+ * @param {{choKy?:{ten:string, lyDo?:string, noiKy?:string, luc?:Date, viTri?:object, hinh?:Buffer}, xemTruocKy?:boolean}} [tuyChon]
+ *   choKy.hinh — ảnh chữ ký tay (PNG/JPEG) chèn bên trái khung; các dòng chữ trong khung lấy từ kySo.dong của dungMoHinh.
  *   choKy — chừa chỗ chữ ký số PAdES tại ô chữ ký số của mô hình (dựng bằng dungMoHinh({kySo})); xem services/mysign/pades.js.
  *   choKy.viTri — {trang, x, y, w, h}: người ký tự đặt khung. trang tính từ 0; x, y, w, h là TỈ LỆ (0..1) so với khổ trang, gốc ở góc trên-trái.
  *     Có viTri thì ô chữ ký trong luồng văn bản được chừa trống và khung được vẽ đúng chỗ đã chọn (cả ô chữ ký trong PDF lẫn khung nhìn thấy).
@@ -400,18 +402,10 @@ function taoPdfChiTiet(moHinhs, tuyChon) {
     let oKySo = null; // {trang, rect, dong} của ô chữ ký số mặc định, nếu mô hình có
     const viTriKy = tuyChon && tuyChon.choKy && tuyChon.choKy.viTri ? tuyChon.choKy.viTri : null;
     const xemTruocKy = !!(tuyChon && tuyChon.xemTruocKy);
-    // Khung nhìn thấy của ô chữ ký số: viền + các dòng thông tin người ký. Cỡ chữ thu theo chiều cao khung (khung nhỏ vẫn chứa đủ dòng).
+    // Khung nhìn thấy của ô chữ ký số (viền, hình chữ ký tay bên trái, các dòng thông tin bên phải): xem services/mysign/khungKy.js.
+    const hinhKy = tuyChon && tuyChon.choKy && tuyChon.choKy.hinh ? tuyChon.choKy.hinh : null;
     function veOKy(rect, dong, trang) {
-      const [x, y, w, h] = rect;
-      if (trang !== undefined) doc.switchToPage(trang);
-      const co = Math.max(5, Math.min(8.5, (h - 8) / (dong.length * 1.4)));
-      const dan = co * 1.4;
-      doc.save().lineWidth(0.8).rect(x, y, w, h).stroke('#1f4e79').restore();
-      doc.fillColor('#1f4e79');
-      dong.forEach((d, j) => {
-        doc.font(j === 0 ? 'B' : 'R').fontSize(co).text(d, x + 4, y + 4 + j * dan, { width: w - 8, align: 'left', lineBreak: false, ellipsis: true });
-      });
-      doc.fillColor('#000000');
+      KhungKy.veKhung(doc, rect, { dong, hinh: hinhKy, trang });
     }
 
     function canGiuaDong(dong, font, co) {
@@ -575,14 +569,7 @@ function taoPdfChiTiet(moHinhs, tuyChon) {
           const yo = doc.y + 4;
           const o = [x + 4, yo, w - 8, 58];
           // Người ký tự đặt khung (hoặc đang xem trước để đặt): vùng này để trống, khung vẽ sau ở chỗ đã chọn.
-          if (!viTriKy && !xemTruocKy) {
-            doc.save().lineWidth(0.8).rect(...o).stroke('#1f4e79').restore();
-            doc.fillColor('#1f4e79');
-            c.ky_so.forEach((dong, j) => {
-              doc.font(j === 0 ? 'B' : 'R').fontSize(8.5).text(dong, o[0] + 4, yo + 4 + j * 12, { width: o[2] - 8, align: 'left', lineBreak: false, ellipsis: true });
-            });
-            doc.fillColor('#000000');
-          }
+          if (!viTriKy && !xemTruocKy) veOKy(o, c.ky_so);
           oKySo = { trang: doc.bufferedPageRange().start + doc.bufferedPageRange().count - 1, rect: o, dong: c.ky_so };
         } else doc.font('I').fontSize(CO - 2).text('(Ký, ghi rõ họ tên)', x, doc.y, { width: w, align: 'center' });
         if (c.ten) doc.font('B').fontSize(CO).text(c.ten, x, y0 + 80, { width: w, align: 'center' });

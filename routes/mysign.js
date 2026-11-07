@@ -6,6 +6,11 @@
  *   DELETE /tai-khoan        bỏ liên kết (không được khi đang có yêu cầu ký chờ xác nhận)
  *   GET    /giao-dich/:id    trạng thái một yêu cầu ký của chính mình; hỏi MySign và hoàn tất nếu đã có kết quả
  *
+ * Hình chữ ký tay (của chính mình; PNG hoặc JPEG ≤ 1 MB, gửi nguyên tệp trong thân yêu cầu với Content-Type image/png|image/jpeg):
+ *   GET    /hinh-ky          xem hình đã tải lên (404 nếu chưa có)
+ *   POST   /hinh-ky          tải / thay hình
+ *   DELETE /hinh-ky          xóa hình
+ *
  * TRANG THỬ (chỉ quản trị viên; trang ky-so-thu.html): ký một PDF MẪU bằng tài khoản MySign của chính mình để thử chữ ký số mà không cần
  * vai trò Viện trưởng hay dữ liệu nghiệp vụ.
  *   GET    /thu/xem-truoc            PDF mẫu chưa có khung + thông tin trang (header X-Ky-So-Meta) để kéo khung
@@ -22,8 +27,12 @@ const { LoiMySign } = require('../services/mysign/client');
 const Pades = require('../services/mysign/pades');
 const { taoPdfThu } = require('../services/mysign/pdfThu');
 const { kiemViTri } = require('../services/mysign/viTri');
+const KhungKy = require('../services/mysign/khungKy');
 
 const MA_TAI_KHOAN = /^[A-Za-z0-9_.@-]{1,50}$/;
+const LY_DO_THU = 'Thử ký số';
+const NOI_KY_THU = 'STIMS';
+const TIEU_DE_THU = 'ĐÃ KÝ SỐ (THỬ)';
 
 /** @param {{db:object, uploadsRoot?:string, kySo?:object}} deps  kySo: chỉ test truyền vào (MySign giả lập) */
 module.exports = function createMySignRouter({ db, uploadsRoot, kySo }) {
@@ -42,6 +51,45 @@ module.exports = function createMySignRouter({ db, uploadsRoot, kySo }) {
 
   router.use((req, res, next) => (req.user && req.user.id ? next() : loi(res, 401, 'Chưa đăng nhập')));
 
+  // ── Hình chữ ký tay của chính người dùng (chèn vào khung chữ ký khi ký) ─────────
+  const nhanAnh = (req, res, next) =>
+    express.raw({ type: ['image/png', 'image/jpeg'], limit: '1mb' })(req, res, (err) => {
+      if (err) return loi(res, err.status === 413 ? 413 : 400, err.status === 413 ? 'Ảnh quá lớn. Tối đa 1 MB.' : 'Không đọc được ảnh gửi lên.');
+      next();
+    });
+
+  router.get(
+    '/hinh-ky',
+    bao((req, res) => {
+      const h = ks.docHinh(req.user.id);
+      if (!h) return loi(res, 404, 'Chưa có hình chữ ký.');
+      res.setHeader('Content-Type', h.mime);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(h.buf);
+    })
+  );
+
+  router.post(
+    '/hinh-ky',
+    nhanAnh,
+    bao((req, res) => {
+      if (!Buffer.isBuffer(req.body) || !req.body.length) return loi(res, 400, 'Hãy gửi ảnh PNG hoặc JPEG.');
+      const kq = KhungKy.kiemHinh(req.body);
+      if (kq.loi) return loi(res, 400, kq.loi);
+      ks.luuHinh(req.user.id, req.body, kq.mime);
+      res.json({ ok: true, rong: kq.rong, cao: kq.cao });
+    })
+  );
+
+  router.delete(
+    '/hinh-ky',
+    bao((req, res) => {
+      ks.xoaHinh(req.user.id);
+      res.json({ ok: true });
+    })
+  );
+
   // ── Trang thử ký số (PDF mẫu) ──────────────────────────────────────────────
   const NGUON_THU = 'thu_nghiem';
   ks.dangKyNguon(NGUON_THU, { khiThanhCong: () => [] }); // không có nghiệp vụ đi kèm: ký xong là xong
@@ -54,8 +102,9 @@ module.exports = function createMySignRouter({ db, uploadsRoot, kySo }) {
     chiAdmin,
     bao(async (req, res) => {
       const kq = await taoPdfThu({ ten: tenNguoiKy(req), xemTruoc: true });
+      const khung = await ks.khungCuaNguoi(req.user.id, { lyDo: LY_DO_THU, noiKy: NOI_KY_THU, tenMacDinh: tenNguoiKy(req), tieuDe: TIEU_DE_THU });
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('X-Ky-So-Meta', asciiJson({ ...kq.meta, gan_nhat: ks.viTriGanNhat(req.user.id, NGUON_THU) }));
+      res.setHeader('X-Ky-So-Meta', asciiJson({ ...kq.meta, gan_nhat: ks.viTriGanNhat(req.user.id, NGUON_THU), khung }));
       res.setHeader('Content-Length', kq.pdf.length);
       res.setHeader('Cache-Control', 'no-store');
       res.end(kq.pdf);
@@ -72,14 +121,33 @@ module.exports = function createMySignRouter({ db, uploadsRoot, kySo }) {
         if (kq.loi) return loi(res, 400, kq.loi);
         viTri = kq.vi_tri;
       }
-      const ten = tenNguoiKy(req);
+      const tc = KhungKy.kiemTuyChon(req.body && req.body.khung, ks.tuyChonKhung(req.user.id));
+      if (tc.loi) return loi(res, 400, tc.loi);
+      const hinh = tc.tuy_chon.hinh ? ks.docHinh(req.user.id) : null;
+      const tenHeThong = tenNguoiKy(req);
+      const luc = new Date();
       try {
         const g = await ks.batDau({
           userId: req.user.id,
           nguon: NGUON_THU,
           moTa: 'Thu ky so MySign',
-          taiLieu: [{ nguonId: req.user.id, ten: 'Tai lieu thu ky so', meta: {}, taoPdfCho: () => taoPdfThu({ ten, viTri }).then((r) => r.pdf) }],
+          taiLieu: [{
+            nguonId: req.user.id,
+            ten: 'Tai lieu thu ky so',
+            meta: {},
+            taoPdfCho: ({ chungThu } = {}) => {
+              const ten = (chungThu && chungThu.cn) || tenHeThong;
+              const dongKhung = KhungKy.dungDong({
+                tuyChon: tc.tuy_chon,
+                tieuDe: TIEU_DE_THU,
+                thongTin: { ho_ten: ten, to_chuc: chungThu && chungThu.to_chuc, so_seri: chungThu && chungThu.so_seri, ly_do: LY_DO_THU, noi_ky: NOI_KY_THU },
+                thoiGian: KhungKy.gioVietNam(luc),
+              });
+              return taoPdfThu({ ten, viTri, luc, dongKhung, hinh: hinh && hinh.buf }).then((r) => r.pdf);
+            },
+          }],
         });
+        if (req.body && req.body.khung !== undefined) ks.luuTuyChonKhung(req.user.id, tc.tuy_chon);
         if (viTri) ks.luuViTri(req.user.id, NGUON_THU, { ...viTri, trang_cuoi: viTri.trang === 2 });
         res.json({ ok: true, giao_dich: g });
       } catch (e) {
