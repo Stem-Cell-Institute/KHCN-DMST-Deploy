@@ -119,10 +119,12 @@
       var vung = h('div', { class: 'kyso-vung' }, trang);
       var dangTai = h('p', { class: 'kyso-tai', role: 'status', text: 'Đang tải bản xem trước…' });
       var nutHuy = h('button', { type: 'button', class: 'btn btn-phu' }, 'Hủy');
+      // Nút × ở góc trên: luôn thấy dù màn hình thấp và thanh nút phía dưới bị đẩy khuất.
+      var nutDong = h('button', { type: 'button', class: 'kyso-nut-dong', 'aria-label': 'Đóng, không ký', title: 'Đóng (Esc)' }, '×');
       var nutLui = h('button', { type: 'button', class: 'btn btn-phu' }, '‹ Báo cáo trước');
       var nutTiep = h('button', { type: 'button', class: 'btn' }, 'Tiếp tục');
       var hop = h('dialog', { class: 'kyso-hop', 'aria-labelledby': 'kyso-tieu-de' },
-        h('div', { class: 'kyso-dau' }, tieuDe, phuDe),
+        h('div', { class: 'kyso-dau' }, tieuDe, phuDe, nutDong),
         h('div', { class: 'kyso-thanh' },
           h('div', { class: 'kyso-chuyen' }, nutTruoc, nhanTrang, nutSau), nutMacDinh,
           h('span', { class: 'kyso-goi-y', text: 'Kéo khung để dời; kéo bốn góc để co giãn.' })),
@@ -137,6 +139,7 @@
       }
       hop.addEventListener('cancel', function (e) { e.preventDefault(); dong(null); });
       nutHuy.addEventListener('click', function () { dong(null); });
+      nutDong.addEventListener('click', function () { dong(null); });
 
       var chuKhung = khung.querySelector('.kyso-khung-chu');
 
@@ -368,15 +371,15 @@
             .catch(baoLoi)
             .then(function () { nutXoaAnh.disabled = false; });
         });
+        nutAnh.title = 'Ảnh PNG nền trong suốt cho đẹp nhất, tối đa 1 MB. Ảnh chỉ của riêng bạn và dùng cho mọi lần ký.';
         bangNoiDung.replaceChildren(
-          h('summary', null, 'Nội dung trong khung chữ ký ', tomTat),
+          h('summary', { title: 'Chọn thông tin hiện trong khung chữ ký. Khung tự cao thêm khi bật thêm dòng.' }, 'Nội dung khung chữ ký ', tomTat),
+          // Một hàng gọn: các ô chọn + hình chữ ký nằm cùng dòng, tự xuống dòng khi hết chỗ.
           h('div', { class: 'kyso-noidung-than' },
-            h('p', { class: 'kyso-chu-thich', text: 'Chọn thông tin hiện trong khung chữ ký trên trang PDF. Khung tự cao thêm khi bạn bật thêm dòng.' }),
             luoiTruong,
             h('div', { class: 'kyso-hinh-hang' },
-              h('label', { class: 'kyso-chon', for: 'kyso-hinh-bat' }, oHinh, ' Chèn hình chữ ký'),
-              anhNho, nutAnh, nutXoaAnh, oChonAnh),
-            h('p', { class: 'kyso-chu-thich', text: 'Ảnh PNG nền trong suốt cho đẹp nhất (tối đa 1 MB). Ảnh chỉ của riêng bạn và dùng cho mọi lần ký.' })));
+              h('label', { class: 'kyso-chon', for: 'kyso-hinh-bat' }, oHinh, ' Hình chữ ký'),
+              anhNho, nutAnh, nutXoaAnh, oChonAnh)));
         bangNoiDung.hidden = false;
         capNhatHinh();
       }

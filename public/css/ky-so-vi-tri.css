@@ -11,7 +11,13 @@ dialog.kyso-hop[open] { display: flex; flex-direction: column; }
 dialog.kyso-hop::backdrop { background: rgba(22, 35, 61, .55); }
 /* Các nút/khối có display riêng sẽ đè thuộc tính hidden: ép ẩn thật (vd. "‹ Báo cáo trước" ở tài liệu đầu tiên). */
 dialog.kyso-hop [hidden] { display: none !important; }
-.kyso-dau { padding: 14px 18px 4px; }
+.kyso-dau { position: relative; padding: 14px 56px 4px 18px; flex: 0 0 auto; }
+.kyso-nut-dong {
+  position: absolute; top: 6px; right: 8px; width: 40px; height: 40px; border: 0; border-radius: 6px; background: transparent;
+  font-size: 28px; line-height: 1; color: var(--muc, #16233d); cursor: pointer;
+}
+.kyso-nut-dong:hover { background: var(--nen-nhat, #f1f3f7); }
+.kyso-thanh, .kyso-noidung, .kyso-chan { flex: 0 0 auto; }
 .kyso-dau h2 { margin: 0; font-size: 19px; }
 .kyso-phu { margin: 2px 0 0; color: var(--chu-phu, #4a5873); font-size: 14px; overflow-wrap: anywhere; }
 .kyso-thanh { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 18px; border-bottom: 1px solid var(--ke, #d8dce5); }
@@ -20,7 +26,8 @@ dialog.kyso-hop [hidden] { display: none !important; }
 .kyso-goi-y { margin-left: auto; font-size: 13px; color: var(--chu-mo, #5a6783); }
 .kyso-tai { margin: 0; padding: 40px 18px; text-align: center; color: var(--chu-phu, #4a5873); }
 
-.kyso-vung { flex: 1 1 auto; min-height: 220px; overflow: auto; padding: 14px 10px; background: var(--nen-nhat, #f1f3f7); text-align: center; }
+/* Vùng PDF co lại trước tiên khi màn hình thấp (min-height nhỏ), để thanh nút phía dưới luôn nằm trong màn hình. */
+.kyso-vung { flex: 1 1 auto; min-height: 120px; overflow: auto; padding: 14px 10px; background: var(--nen-nhat, #f1f3f7); text-align: center; }
 .kyso-trang { position: relative; display: inline-block; margin: 0 auto; background: #fff; border: 1px solid var(--ke-dam, #b9c0cf); touch-action: pan-y; }
 .kyso-canvas { display: block; width: 100%; height: 100%; }
 
@@ -40,17 +47,15 @@ dialog.kyso-hop [hidden] { display: none !important; }
 .kyso-khung:has(.kyso-xem:not([hidden])) { background: rgba(255, 255, 255, .72); }
 
 .kyso-noidung { border-bottom: 1px solid var(--ke, #d8dce5); padding: 0 18px; }
-.kyso-noidung > summary { cursor: pointer; padding: 10px 0; font-weight: 600; font-size: 14px; min-height: 24px; }
+.kyso-noidung > summary { cursor: pointer; padding: 6px 0; font-weight: 600; font-size: 13px; line-height: 1.3; }
 .kyso-noidung-tom { font-weight: 400; color: var(--chu-phu, #4a5873); }
-/* Bảng mở ra không được đẩy nút "Gửi yêu cầu ký" khỏi màn hình: giới hạn chiều cao và cuộn bên trong. */
-.kyso-noidung-than { padding: 0 0 12px; max-height: 26vh; max-height: 26dvh; overflow-y: auto; }
-@media (min-height: 900px) { .kyso-noidung-than { max-height: 34dvh; } }
-.kyso-chu-thich { margin: 6px 0; font-size: 13px; color: var(--chu-mo, #5a6783); }
-.kyso-truong { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; margin: 8px 0; }
-.kyso-chon { display: flex; align-items: center; gap: 6px; font-size: 14px; min-height: 32px; cursor: pointer; }
-.kyso-chon input { width: 18px; height: 18px; flex: 0 0 auto; }
-.kyso-hinh-hang { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 6px 0; }
-.kyso-anh-nho { height: 40px; max-width: 120px; object-fit: contain; border: 1px solid var(--ke, #d8dce5); background: #fff; }
+/* Gọn: mọi lựa chọn (các dòng + hình chữ ký) nằm chung MỘT hàng tự xuống dòng, chữ nhỏ, để dành chỗ cho trang PDF. */
+.kyso-noidung-than { display: flex; flex-wrap: wrap; align-items: center; gap: 0 14px; padding: 0 0 6px; max-height: 18vh; max-height: 18dvh; overflow-y: auto; }
+.kyso-truong, .kyso-hinh-hang { display: contents; }
+.kyso-chon { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; min-height: 28px; cursor: pointer; white-space: nowrap; }
+.kyso-chon input { width: 15px; height: 15px; margin: 0; flex: 0 0 auto; }
+.kyso-anh-nho { height: 24px; max-width: 80px; object-fit: contain; border: 1px solid var(--ke, #d8dce5); background: #fff; }
+.kyso-noidung .btn-nho { padding: 2px 9px; font-size: 12px; min-height: 26px; }
 
 .kyso-goc {
   position: absolute; width: 22px; height: 22px; background: var(--son, #b7281e); border: 2px solid #fff; border-radius: 50%;
