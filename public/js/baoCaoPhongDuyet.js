@@ -493,23 +493,25 @@
             return taiKhoanMySign().then(function (tk) { return tk ? true : lienKetMySign(); });
           })
           .then(function (ok) { return ok ? datKhung(ds) : null; })
-          .then(function (viTri) { if (viTri) guiKySo(ds, true, viTri); })
+          .then(function (kq) { if (kq) guiKySo(ds, true, kq); })
           .catch(function (e) { thongBao(e.message, 'loi'); });
       }
 
       /** Mở hộp đặt khung. Không mở được bản xem trước (vd. thiếu pdf.js) thì hỏi có ký với vị trí mặc định của biểu mẫu không. */
       function datKhung(ds) {
-        if (!window.KySoViTri) return Promise.resolve(ds.map(function () { return undefined; }));
+        if (!window.KySoViTri) return Promise.resolve({ viTri: ds.map(function () { return undefined; }), khung: null });
         return window.KySoViTri.dat({
           tieuDe: 'Đặt khung chữ ký số',
           tai: ds.map(function (b) { return { ten: b.phong_ten, tai: window.KySoViTri.taiTuUrl('/api/bao-cao-phong/bao-cao/' + b.id + '/ky-so/xem-truoc') }; }),
         });
       }
 
-      function guiKySo(ds, thuLienKet, viTri) {
+      /** @param {{viTri:object[], khung:object|null}} kq  kết quả hộp đặt khung: vị trí từng báo cáo + dòng thông tin / hình đã chọn */
+      function guiKySo(ds, thuLienKet, kq) {
         S.dangGui = true;
         veThanh();
-        api('/dot/' + dotId + '/ky-so', { method: 'POST', body: { bao_cao: ds.map(function (b, i) { return { id: b.id, nop_luc: b.nop_luc, vi_tri: viTri && viTri[i] ? viTri[i] : undefined }; }) } })
+        var viTri = kq && kq.viTri;
+        api('/dot/' + dotId + '/ky-so', { method: 'POST', body: { bao_cao: ds.map(function (b, i) { return { id: b.id, nop_luc: b.nop_luc, vi_tri: viTri && viTri[i] ? viTri[i] : undefined }; }), khung: kq && kq.khung ? kq.khung : undefined } })
           .then(function (r) {
             S.dangGui = false;
             batDauCho(r.giao_dich);
@@ -519,7 +521,7 @@
             veThanh();
             if (e.status === 409 && e.data && e.data.ma === 'chua_lien_ket' && thuLienKet) {
               S.mysign = null;
-              return lienKetMySign().then(function (ok) { if (ok) guiKySo(ds, false, viTri); });
+              return lienKetMySign().then(function (ok) { if (ok) guiKySo(ds, false, kq); });
             }
             thongBao(e.message, 'loi');
             if (e.status === 409) return taiLai(cur().id);

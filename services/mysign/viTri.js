@@ -18,4 +18,23 @@ function kiemViTri(v) {
   return { vi_tri: { trang, x, y, w, h } };
 }
 
-module.exports = { kiemViTri, RONG_TOI_THIEU, CAO_TOI_THIEU };
+/** Một văn bản có tối đa bấy nhiêu chỗ ký (khung nhìn thấy); chỗ đầu mang chữ ký số thật, các chỗ sau là khung lặp lại. */
+const TOI_DA_CHO_KY = 4;
+
+/**
+ * Danh sách chỗ ký của MỘT văn bản. Nhận một vị trí đơn (tương thích bản cũ) hoặc mảng 1..TOI_DA_CHO_KY vị trí.
+ * @returns {{vi_tri_ds:object[]}|{loi:string}}
+ */
+function kiemDanhSachViTri(x) {
+  const ds = Array.isArray(x) ? x : [x];
+  if (!ds.length || ds.length > TOI_DA_CHO_KY) return { loi: `Mỗi văn bản có từ 1 đến ${TOI_DA_CHO_KY} chỗ ký.` };
+  const kq = [];
+  for (const v of ds) {
+    const k = kiemViTri(v);
+    if (k.loi) return k;
+    kq.push(k.vi_tri);
+  }
+  return { vi_tri_ds: kq };
+}
+
+module.exports = { kiemViTri, kiemDanhSachViTri, RONG_TOI_THIEU, CAO_TOI_THIEU, TOI_DA_CHO_KY };

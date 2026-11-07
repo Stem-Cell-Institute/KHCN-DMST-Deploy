@@ -96,11 +96,11 @@
   function chonVaKy() {
     if (dangKy) return;
     window.KySoViTri.dat({ tieuDe: 'Đặt khung chữ ký số', tai: [{ ten: 'Tài liệu mẫu để thử ký số', tai: window.KySoViTri.taiTuUrl('/api/mysign/thu/xem-truoc') }] })
-      .then(function (vt) {
-        if (!vt) return null;
+      .then(function (kq) {
+        if (!kq) return null;
         dangKy = true;
         ve();
-        return api('/thu/ky', { method: 'POST', body: { vi_tri: vt[0] } }).then(function (r) { theoDoi(r.giao_dich); });
+        return api('/thu/ky', { method: 'POST', body: { vi_tri: kq.viTri[0], khung: kq.khung || undefined } }).then(function (r) { theoDoi(r.giao_dich); });
       })
       .catch(function (e) {
         dangKy = false;

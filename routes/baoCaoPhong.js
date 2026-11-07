@@ -1496,7 +1496,7 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
 
       const rows = db
         .prepare(
-          `SELECT b.id, b.phong_id, b.trang_thai, b.du_lieu_json,
+          `SELECT b.id, b.phong_id, b.trang_thai, b.du_lieu_json, b.nop_luc,
                   CASE WHEN uc.fullname IS NULL THEN p.ten ELSE p.ten || ' — ' || uc.fullname END AS phong_ten,
                   u.fullname AS nguoi_nop
              FROM bcp_bao_cao b
@@ -1531,6 +1531,22 @@ module.exports = function createBaoCaoPhongRouter({ db, mailSend, baseUrl, nhacT
         }
       }
       if (!chon.length) return loi(res, 409, 'Đợt này chưa có báo cáo nào đã nộp để xuất.');
+
+      // PDF của MỘT báo cáo mà bản nộp hiện tại đã được Viện trưởng ký số: trả đúng BẢN ĐÃ KÝ SỐ thay cho bản dựng lại chưa có chữ ký
+      // (tải về / xem lại ở đâu cũng là bản có chữ ký). Nhiều báo cáo gộp một tệp thì không ghép được bản đã ký nên vẫn dựng như cũ.
+      if (dd === 'pdf' && chon.length === 1) {
+        const ky = kySoBc.docBanKy(chon[0].id, chon[0].nop_luc);
+        if (ky.loi && ky.loi.s === 409) return loi(res, 409, ky.loi.m);
+        if (ky.buf) {
+          db.prepare('INSERT INTO bcp_dot_lich_su (dot_id, hanh_dong, nguoi_id, ghi_chu) VALUES (?,?,?,?)').run(id, 'xuat', req.user.id, 'PDF đã ký số: ' + chon[0].phong_ten);
+          const gocKy = /^báo cáo/i.test(dot.tieu_de) ? dot.tieu_de : 'Báo cáo ' + dot.tieu_de;
+          res.setHeader('Content-Type', MIME_XUAT.pdf);
+          res.setHeader('Content-Disposition', contentDisposition(`${gocKy} - ${chon[0].phong_ten} - đã ký số.pdf`, { inline: req.query.xem === '1' }));
+          res.setHeader('Content-Length', ky.buf.length);
+          res.setHeader('Cache-Control', 'no-store');
+          return res.end(ky.buf);
+        }
+      }
 
       const truong = parseJson(dot.truong_json, []);
       const moHinhs = chon.map((r) =>
