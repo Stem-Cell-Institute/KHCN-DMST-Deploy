@@ -44,7 +44,9 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 | └ 2.1 | đăng ký công khai + phần người dùng thường (state, đặt/sửa/hủy lịch, chat, khiếu nại) — **2 router** | 10 | 🔵 Chờ review (PR 2.1) · −296 dòng | `refactor/routes-crd-1` |
 | └ 2.2 | snapshot, thông báo phòng lab, thiết bị (admin) + kiểm duyệt tin, email-notif, khiếu nại (admin) — **2 router** | 14 | 🔵 Chờ review (PR 2.2) · −281 dòng | `refactor/routes-crd-2` |
 | └ 2.3 | hồ sơ CRD, tài khoản, vai trò, lịch (quản trị) | 12 | 🔵 Chờ review (PR 2.3) · −282 dòng | `refactor/routes-crd-3` |
-| 3 | `submissions` + `publications` — 36 route = 21 hồ sơ (20 `/api/submissions*` + `/api/users/council`) + 15 công bố (14 `/api/publications*` + `/api/researchers/list-for-disambiguation`). **Chỉ ~26 route thật sự nằm trong `server.js`**: 10 route công bố đã là router riêng `sci-khcn-publications/src/routes/publications.js` | 36 | 🟡 **Lưới test đã dựng, CHƯA tách route nào** (xem "Lưới an toàn theo miền"); chờ review lưới rồi mới bắt đầu tách | `test/luoi-publications`, `test/luoi-submissions-publications` |
+| 3 | `submissions` + `publications` — 36 route = 21 hồ sơ (20 `/api/submissions*` + `/api/users/council`) + 15 công bố (14 `/api/publications*` + `/api/researchers/list-for-disambiguation`). **Chỉ ~26 route thật sự nằm trong `server.js`**: 10 route công bố đã là router riêng `sci-khcn-publications/src/routes/publications.js` | 36 | 🟡 **Đang làm** (lưới test đã đưa lên nền `main`; xong 3.1) | `refactor/routes-submissions-1` |
+| └ 3.0 | Lưới test `tests/submissions.test.js` + `tests/publications.test.js` | 0 | 🔵 Chờ review/gộp (đã đưa lên nhánh 3.1) | `test/luoi-submissions-publications` |
+| └ 3.1 | Hồ sơ SCI-ACE cơ bản (nộp, danh sách, hội đồng, chi tiết) | 4 | 🔵 Chờ review · −209 dòng | `refactor/routes-submissions-1` |
 | 4 | `cap-vien` | 47 | ⬜ Chưa bắt đầu | — |
 | 5 | `cooperation` + `htqt` + `events` | 84 | ⬜ Chưa bắt đầu | — |
 | 6 | `admin` | 79 | ⬜ Chưa bắt đầu | — |
@@ -306,6 +308,15 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-11-18 · refactor/routes-submissions-1 · Đợt 3.1 — hồ sơ SCI-ACE cơ bản (4 route)
+
+- **Đã xong:** đưa 2 commit lưới test Đợt 3 (`tests/publications.test.js`, `tests/submissions.test.js`) từ `test/luoi-submissions-publications` lên nền `main` mới nhất (`c42af52`), rồi tách 4 route đầu của khối hồ sơ SCI-ACE (`POST /api/submissions`, `GET /api/submissions`, `GET /api/users/council`, `GET /api/submissions/:id`) sang [routes/submissions/hoSoCoBan.js](routes/submissions/hoSoCoBan.js). `server.js` 17.647 → **17.438** (−209 dòng); đã hạ trần `.github/server-js-max-lines` xuống 17438.
+- **Bằng chứng:** `route-inventory.js` trước/sau (664 route, cùng thứ tự) → diff **rỗng**; `route:compare` (1.135 yêu cầu) → **GIỐNG NHAU** (0 đổi mã, 0 đổi nội dung); `npm test` **381/381 xanh** (bao gồm 21 test `submissions.test.js` và 17 test `publications.test.js`).
+- **Đang dở:** 17 route còn lại của khối `/api/submissions` (GĐ3–GĐ7, `server.js:5642–6349`) và 5 route công bố khoa học.
+- **Cạm bẫy phát hiện:** khối `/api/submissions` trong `server.js` không xếp theo thứ tự GĐ3→GĐ7 mà xen kẽ (cơ bản → GĐ6 có điều kiện/họp/quyết định → GĐ7 báo cáo → tải file → GĐ3 review/resubmit → GĐ4 phân công/reset → GĐ5 phản biện → download/xóa). Tách theo từng đoạn liền kề để giữ `route-inventory` cùng thứ tự 100%.
+- **Phiên sau làm:** Đợt 3.2 tách đoạn liền kề tiếp theo (7 route GĐ6–GĐ7: `conditional-*`, `meeting-result`, `issue-decision`, `report-*`, ~318 dòng) sang `routes/submissions/nghiemThuVaQuyetDinh.js`; sau đó Đợt 3.3 tách 10 route còn lại (~375 dòng) sang `routes/submissions/kiemTraPhanBien.js` và Đợt 3.4 tách 5 route công bố sang `routes/publications/`.
+- **Nợ kỹ thuật thêm:** không.
 
 ### 2026-10-31 · test/luoi-publications + test/luoi-submissions-publications · Đợt 3 (chuẩn bị — chưa tách route nào)
 
