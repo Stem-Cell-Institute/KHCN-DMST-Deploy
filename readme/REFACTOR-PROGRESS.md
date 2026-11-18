@@ -44,9 +44,12 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 | └ 2.1 | đăng ký công khai + phần người dùng thường (state, đặt/sửa/hủy lịch, chat, khiếu nại) — **2 router** | 10 | 🔵 Chờ review (PR 2.1) · −296 dòng | `refactor/routes-crd-1` |
 | └ 2.2 | snapshot, thông báo phòng lab, thiết bị (admin) + kiểm duyệt tin, email-notif, khiếu nại (admin) — **2 router** | 14 | 🔵 Chờ review (PR 2.2) · −281 dòng | `refactor/routes-crd-2` |
 | └ 2.3 | hồ sơ CRD, tài khoản, vai trò, lịch (quản trị) | 12 | 🔵 Chờ review (PR 2.3) · −282 dòng | `refactor/routes-crd-3` |
-| 3 | `submissions` + `publications` — 36 route = 21 hồ sơ (20 `/api/submissions*` + `/api/users/council`) + 15 công bố (14 `/api/publications*` + `/api/researchers/list-for-disambiguation`). **Chỉ ~26 route thật sự nằm trong `server.js`**: 10 route công bố đã là router riêng `sci-khcn-publications/src/routes/publications.js` | 36 | 🟡 **Đang làm** (lưới test đã đưa lên nền `main`; xong 3.1) | `refactor/routes-submissions-1` |
-| └ 3.0 | Lưới test `tests/submissions.test.js` + `tests/publications.test.js` | 0 | 🔵 Chờ review/gộp (đã đưa lên nhánh 3.1) | `test/luoi-submissions-publications` |
+| 3 | `submissions` + `publications` — 36 route = 21 hồ sơ (20 `/api/submissions*` + `/api/users/council`) + 15 công bố (14 `/api/publications*` + `/api/researchers/list-for-disambiguation`). **26 route nằm trong `server.js`** (10 route công bố đã là router riêng `sci-khcn-publications/src/routes/publications.js`) | 36 | 🔵 **Tách xong — `server.js` hết `/api/submissions` & 5 route công bố** (chờ review/merge rồi deploy, theo dõi 48 giờ) | `refactor/routes-submissions-1` |
+| └ 3.0 | Lưới test `tests/submissions.test.js` + `tests/publications.test.js` | 0 | 🔵 Đã đưa lên nhánh Đợt 3 | `test/luoi-submissions-publications` |
 | └ 3.1 | Hồ sơ SCI-ACE cơ bản (nộp, danh sách, hội đồng, chi tiết) | 4 | 🔵 Chờ review · −209 dòng | `refactor/routes-submissions-1` |
+| └ 3.2 | Hồ sơ SCI-ACE GĐ6–GĐ7 (chấp thuận có điều kiện, họp, cấp QĐ, báo cáo) | 7 | 🔵 Chờ review · −303 dòng | `refactor/routes-submissions-1` |
+| └ 3.3 | Hồ sơ SCI-ACE GĐ3–GĐ5 + tải file + xóa | 10 | 🔵 Chờ review · −357 dòng | `refactor/routes-submissions-1` |
+| └ 3.4 | Công bố khoa học (5 endpoint bổ sung trong `server.js`) | 5 | 🔵 Chờ review · −101 dòng | `refactor/routes-submissions-1` |
 | 4 | `cap-vien` | 47 | ⬜ Chưa bắt đầu | — |
 | 5 | `cooperation` + `htqt` + `events` | 84 | ⬜ Chưa bắt đầu | — |
 | 6 | `admin` | 79 | ⬜ Chưa bắt đầu | — |
@@ -66,10 +69,9 @@ routes/crd/kiemDuyetThongBao.js  DELETE /crd/admin/chats/:id, /crd/email-notif, 
 
 Thứ tự **giữa** các router CRD không ảnh hưởng (đường dẫn không va chạm), nhưng thứ tự **trong** `quanTriThietBi.js` thì có — đã ghi ở đầu file và có test canh.
 
-**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → **17.647** (đo bằng `wc -l` như CI, sau Đợt 2) → *mục tiêu < 300*. Route khai báo thẳng trong `server.js`: 360 → **284** (đúng bằng 360 − 40 `missions` − 36 CRD).
+**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → 17.647 (sau Đợt 2) → **16.677** (sau Đợt 3) → *mục tiêu < 300*. Route khai báo thẳng trong `server.js`: 360 → 284 → **258** (284 − 21 hồ sơ − 5 công bố).
 
-Đã cắt **1.285 dòng** (6,6% chặng đường). Trần hiện tại nằm ở `.github/server-js-max-lines`, CI đỏ
-nếu file dài ra. Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
+Đã cắt **2.255 dòng** qua các đợt refactor (trần hiện tại ở `.github/server-js-max-lines` là `16677`, CI đỏ nếu file dài ra). Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
 
 ---
 
@@ -308,6 +310,18 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-11-18 · refactor/routes-submissions-1 · Đợt 3.2–3.4 — hoàn tất Đợt 3 (`submissions` + `publications`) · **Đợt 3 khép**
+
+- **Đã xong:** tách nốt 17 route `/api/submissions*` và 5 route công bố khoa học ra khỏi `server.js`:
+  - Đợt 3.2: 7 route GĐ6–GĐ7 (`conditional-*`, `meeting-result`, `issue-decision`, `report-*`) sang [routes/submissions/nghiemThuVaQuyetDinh.js](routes/submissions/nghiemThuVaQuyetDinh.js) (−303 dòng).
+  - Đợt 3.3: 10 route tải file, GĐ3–GĐ5 (`review`, `resubmit`, `assign-reviewers`, `reset-gd4`, `review-files`, `review-file`, `review-upload`, `download`, `delete`) sang [routes/submissions/kiemTraPhanBien.js](routes/submissions/kiemTraPhanBien.js) (−357 dòng).
+  - Đợt 3.4: 5 route công bố khoa học (`export/excel`, `export/report`, `refresh-external-metrics`, `list-for-disambiguation`, `clear-all`) sang [routes/publications/boSung.js](routes/publications/boSung.js) (−101 dòng), mount ngay trước `pubMod.publicationsRouter`.
+  - **Tổng cả Đợt 3:** `server.js` 17.647 → **16.677** (**−970 dòng**); 26 route trong `server.js` chuyển sang 4 file router; hạ trần `.github/server-js-max-lines` xuống `16677`.
+- **Bằng chứng toàn Đợt 3 (so với mốc trước 3.1):** `route-inventory.js` (664 route, cùng thứ tự) → diff **rỗng**; `route:compare` (1.135 yêu cầu) → **GIỐNG NHAU** (0 đổi mã, 0 đổi nội dung); `npm test` **381/381 xanh**.
+- **Cạm bẫy phát hiện:** `routes/publications/boSung.js` bắt buộc mount **trước** `app.use('/api/publications', pubMod.publicationsRouter)` để không bị `:id` nuốt các đường dẫn tĩnh.
+- **Phiên sau làm:** (1) Review/merge nhánh `refactor/routes-submissions-1` vào `main`, deploy và theo dõi 48 giờ. (2) Chuẩn bị **Đợt 4 (`cap-vien`, 47–49 route, dùng DB riêng `de-tai-cap-vien.db`)**: dựng lưới test `tests/capVien.test.js` trước khi tách route.
+- **Nợ kỹ thuật thêm:** không.
 
 ### 2026-11-18 · refactor/routes-submissions-1 · Đợt 3.1 — hồ sơ SCI-ACE cơ bản (4 route)
 
