@@ -79,7 +79,7 @@ function dungThu(lienKet) {
  * @param {{db:object, mailSend:null|((o:{to:string,subject:string,text:string,html:string})=>Promise<any>), baseUrl:string, bcrypt:object, now?:()=>number}} deps
  *   mailSend = null khi SMTP chưa cấu hình.
  */
-function taoXacMinhEmail({ db, mailSend, baseUrl, bcrypt, now = Date.now }) {
+function taoXacMinhEmail({ db, mailSend, baseUrl, bcrypt, now = Date.now, vaiTroMacDinh = () => 'researcher' }) {
   const goc = String(baseUrl || '').replace(/\/+$/, '');
   const iso = (ms) => new Date(ms).toISOString();
 
@@ -161,8 +161,9 @@ function taoXacMinhEmail({ db, mailSend, baseUrl, bcrypt, now = Date.now }) {
 
       const u = db.prepare('SELECT id, email, fullname, role, password, COALESCE(is_banned, 0) AS is_banned FROM users WHERE email = ?').get(row.email);
       if (!u) {
-        const ins = db.prepare('INSERT INTO users (email, password, fullname, role) VALUES (?, ?, ?, ?)').run(row.email, hash, row.fullname, 'researcher');
-        return { user: { id: Number(ins.lastInsertRowid), email: row.email, fullname: row.fullname, role: 'researcher' }, kichHoat: false };
+        const vaiTro = vaiTroMacDinh(row.email);
+        const ins = db.prepare('INSERT INTO users (email, password, fullname, role) VALUES (?, ?, ?, ?)').run(row.email, hash, row.fullname, vaiTro);
+        return { user: { id: Number(ins.lastInsertRowid), email: row.email, fullname: row.fullname, role: vaiTro }, kichHoat: false };
       }
       if (Number(u.is_banned) === 1) return { loi: loi(403, 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.') };
       if (coMatKhau(u.password)) return { loi: loi(409, 'Email này đã có tài khoản. Vui lòng đăng nhập hoặc dùng "Quên mật khẩu".') };

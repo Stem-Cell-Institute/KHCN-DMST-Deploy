@@ -13,7 +13,7 @@ const { taoBang, taoXacMinhEmail } = require('../services/xacMinhEmail');
 const rateLimit = rateLimitLib.rateLimit || rateLimitLib;
 
 const THONG_BAO_DA_GUI =
-  'Nếu email hợp lệ, hệ thống đã gửi thư xác minh tới hộp thư đó (hiệu lực 2 giờ). Hãy mở thư và nhấn vào liên kết để đặt mật khẩu. ' +
+  'Nếu email hợp lệ (đuôi @sci.edu.vn, hoặc email sinh viên đã được Viện đăng ký trước), hệ thống đã gửi thư xác minh tới hộp thư đó (hiệu lực 2 giờ). Hãy mở thư và nhấn vào liên kết để đặt mật khẩu. ' +
   'Nếu bạn đã có tài khoản, hãy đăng nhập hoặc dùng "Quên mật khẩu".';
 
 /**
@@ -24,7 +24,8 @@ const THONG_BAO_DA_GUI =
 function createDangKyRouter(deps) {
   const { db, jwt, JWT_SECRET, setAuthCookie, userEmailIsMasterAdmin, isSafeEmailFormat, allowedDomain } = deps;
   taoBang(db);
-  const xm = taoXacMinhEmail({ db, mailSend: deps.mailSend, baseUrl: deps.baseUrl, bcrypt: deps.bcrypt });
+  // tài khoản MỚI: email @sci.edu.vn là cán bộ (researcher); email ngoài Viện chỉ qua được cổng khi nằm trong danh sách sinh viên
+  const xm = taoXacMinhEmail({ db, mailSend: deps.mailSend, baseUrl: deps.baseUrl, bcrypt: deps.bcrypt, vaiTroMacDinh: (em) => (String(em).endsWith(allowedDomain) ? 'researcher' : 'sinh_vien') });
   const router = express.Router();
 
   const gh = deps.gioiHanGuiThu || { windowMs: 3600 * 1000, max: 20 };
@@ -49,7 +50,10 @@ function createDangKyRouter(deps) {
     // Cố ý bỏ qua `password` nếu trình duyệt cũ còn gửi: mật khẩu chỉ được đặt SAU khi xác minh.
     if (!em || !fn) return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
     if (!isSafeEmailFormat(em)) return res.status(400).json({ message: 'Email không hợp lệ.' });
-    if (!em.endsWith(allowedDomain)) return res.status(400).json({ message: 'Chỉ chấp nhận email có đuôi ' + allowedDomain });
+    if (!em.endsWith(allowedDomain) && !(deps.emailDuocPhep && deps.emailDuocPhep(em))) {
+      // Email ngoài Viện không có trong danh sách sinh viên: trả CÙNG thông báo như khi hợp lệ (không gửi thư) để không ai dò được danh sách.
+      return res.status(202).json({ message: THONG_BAO_DA_GUI, daGuiThu: true });
+    }
     if (fn.length < 2) return res.status(400).json({ message: 'Vui lòng nhập họ và tên (ít nhất 2 ký tự).' });
     if (fn.length > 150) return res.status(400).json({ message: 'Họ và tên quá dài (tối đa 150 ký tự).' });
     try {

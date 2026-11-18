@@ -1,0 +1,472 @@
+# Module Ngân hàng Tế bào & Kháng thể
+
+Trang: `public/ngan-hang-te-bao-khang-the/index.html` (địa chỉ ngắn `/ngan-hang-te-bao-khang-the`) ·
+API: `/api/ngan-hang-te-bao-khang-the/*` (110 route)
+
+Mã nguồn: `routes/nganHangTeBaoKhangThe/` (`index.js`, `boiCanh.js`, `khoLuuTru.js`, `danhMuc.js`, `thanhVien.js`, `sinhVien.js`,
+`timKiem.js`, `yeuCau.js`, `phatHien.js`, `mau.js`), `services/nganHangTeBaoKhangThe.js` (hàm thuần), `services/nganHangTeBaoKhangTheKhoiTao.js` (tạo bảng,
+chuyển hướng, số liệu trang chủ), `services/nganHangTeBaoKhangTheYeuCau.js` (đường duyệt, các hạn), `services/nganHangTeBaoKhangTheThongBao.js` (email), `db/ngan_hang_te_bao_khang_the_schema.sql`, `public/ngan-hang-te-bao-khang-the/*`.
+Test: `tests/nganHangTeBaoKhangThe*.test.js` + `tests/helpers/nganHangServer.js`.
+
+## Để làm gì
+
+Quản lý vị trí từng mẫu sinh học của Viện (dòng tế bào, tế bào gốc, huyết thanh, DNA/RNA, kháng thể, hóa chất / sinh
+phẩm): mẫu nằm ở **ô nào của hộp nào, trong giá/ngăn/tủ nào**, ai là người sở hữu, đã lấy ra / rã đông / hủy chưa, và
+**lịch sử mọi lần thay đổi**.
+
+```
+Vị trí lưu trữ (tủ -80°C, bình nitơ... → ngăn → giá, độ sâu tùy ý)
+  └─ Hộp (lưới hàng × cột, tối đa 26 × 30; mẫu hộp 9×9, 10×10, 5×5...)
+       └─ Mẫu (ống đông lạnh, kháng thể...) — một ô chứa nhiều nhất một mẫu
+```
+
+Tên bảng giữ tiền tố `nhm_` (từ tên cũ «Ngân hàng mẫu») để không mất dữ liệu đã nhập.
+
+## Hai ngân hàng: tế bào và kháng thể
+
+Một module, hai ngân hàng. **Dùng chung:** tài khoản, nhóm nghiên cứu, hồ sơ thành viên, danh sách sinh viên, cấu hình các hạn. **Tách riêng:** thiết bị / hộp / mẫu, yêu cầu, người quản lý, đơn vị quản lý.
+- **Màn hình chọn:** vào module (địa chỉ không có `?nh=`) hiện hai nút «Ngân hàng tế bào» / «Ngân hàng kháng thể», mỗi nút ghi số thiết bị, mẫu, việc cần xử lý của người đăng nhập và «Bạn quản lý» nếu có. `GET /banks`.
+  Đầu thanh bên luôn ghi ngân hàng đang dùng và có «Đổi ngân hàng». Địa chỉ `index.html?nh=te_bao|khang_the` mở thẳng ngân hàng đó (liên kết trong thư dùng dạng này).
+- **Cách tách:** thiết bị gốc mang cột `nhm_containers.ngan_hang` (`te_bao` | `khang_the`), vị trí con / hộp / mẫu theo gốc; dữ liệu có sẵn thuộc ngân hàng tế bào. Giao diện gửi header `X-Ngan-Hang` (hoặc `?nh=`), không gửi thì mặc định tế bào
+  (`datNganHang` trong `boiCanh.js`). Dữ liệu của ngân hàng KHÔNG chọn bị ẩn bằng cùng cơ chế với thiết bị riêng (`tapAn`): không ở cây, tìm kiếm, xuất, yêu cầu, số đếm; truy cập theo id (kể cả id trong body: di chuyển, thêm mẫu chéo) là 404.
+  **Admin cũng chỉ thấy ngân hàng đang chọn.** Số liệu thẻ trang chủ cộng cả hai.
+- **Người quản lý theo ngân hàng:** `nhm_vai_tro.ngan_hang` (`te_bao` | `khang_the` | NULL = cả hai; chỉ vai trò Quản lý có phạm vi). Quản lý kháng thể không thấy và không quản lý được ngân hàng tế bào và ngược lại; quản lý đã có từ trước (không ghi phạm vi) giữ cả hai. Admin cấp ở tab Vai trò (ô «Phạm vi ngân hàng»).
+  Thư báo cho quản lý (yêu cầu quá hạn, đã duyệt, đã khai báo, nghi mất…) gửi đúng quản lý của ngân hàng chứa mẫu; tiêu đề thư ghi tên ngân hàng; phiếu in ghi tên ngân hàng.
+- **Đơn vị quản lý theo ngân hàng:** `nhm_don_vi.ngan_hang`. Ngân hàng tế bào có **Cellbank**, ngân hàng kháng thể có **AntibodyBank** (cả hai có sẵn, không xóa được; AntibodyBank là tên mới của «Ab-bank», được đổi tên tại chỗ khi khởi động nên giữ nguyên id, thiết bị và yêu cầu); thiết bị chỉ gắn được đơn vị cùng ngân hàng.
+
+### Ngân hàng kháng thể: không có Public, chỉ Viện trưởng duyệt
+
+- **Không có Public và không có thiết bị riêng.** Mọi thiết bị gốc thuộc AntibodyBank: tạo mới không chọn đơn vị vẫn gắn AntibodyBank, `PATCH` bỏ đơn vị hoặc đặt riêng là 400, form thiết bị ẩn ô «Ai quản lý thiết bị này» (`/meta.khongPublic`). Thiết bị kháng thể còn Public hoặc riêng từ bản trước được đưa về AntibodyBank khi khởi động. Vì vậy người dùng thường **không tự thêm hay lấy mẫu**, chỉ gửi yêu cầu (người duyệt đơn vị và quản lý vẫn thao tác bình thường).
+- **Người duyệt = Viện trưởng** (vai trò `vien_truong`, admin cấp ở tab Vai trò), **không gán tay**: tab Đơn vị quản lý không có ô thêm người duyệt, `POST /units` và `PATCH nguoi_duyet` ở ngân hàng này là 400. Có thể có nhiều Viện trưởng; ai duyệt trước thì yêu cầu đóng.
+- **Quản lý ngân hàng kháng thể** (vai trò Quản lý, phạm vi «Ngân hàng kháng thể»; thêm hai người trở lên được): **được báo và theo dõi**, không duyệt (403). Yêu cầu đang chờ hiện ở «Việc cần xử lý» trong khung riêng «Đang chờ Viện trưởng duyệt — bạn theo dõi» (`theo_doi: true`, không tính vào số việc cần xử lý). Sau khi duyệt, yêu cầu chuyển lên «Cần tôi xử lý» để **quản lý giao mẫu** (`/deliver`) theo quyết định rồi **nhận lại** (`/return`). Viện trưởng không giao mẫu.
+- **Thể tích (µL) của ống kháng thể:** xem mục «Thể tích (µL) của ống kháng thể» bên dưới.
+- **Luồng thư:** gửi yêu cầu → thư cho Viện trưởng (duyệt) và thư riêng «chờ Viện trưởng duyệt» cho các quản lý (theo dõi); duyệt → thư cho người yêu cầu («quản lý sẽ giao mẫu») và thư riêng «đã duyệt — cần giao mẫu» cho quản lý; từ chối → người yêu cầu và quản lý; giao / nhận lại → người yêu cầu. Tiêu đề thư ghi «[Ngân hàng kháng thể]».
+- **Không chuyển cấp khi quá hạn:** quản lý không duyệt được nên bộ quét quá hạn bỏ qua yêu cầu kháng thể; Viện trưởng vẫn là người duyệt.
+- **Không có người duyệt dự phòng:** quản lý và admin đều KHÔNG duyệt thay Viện trưởng. Chưa có Viện trưởng nào khác người gửi (chưa cấp vai trò, hoặc chính Viện trưởng muốn lấy mẫu) thì **không gửi được yêu cầu** (409; Viện trưởng lấy mẫu trực tiếp). Yêu cầu đã gửi mà Viện trưởng bị gỡ vai trò thì nằm chờ đến khi có Viện trưởng; người gửi hủy được.
+- **Lịch sử của mẫu** (`nhm_movements`, mở ở hộp thoại mẫu → Lịch sử) ghi đủ quá trình, mỗi dòng có người thao tác và giờ: gửi yêu cầu (người duyệt và quản lý theo dõi), duyệt hoặc từ chối (người duyệt, ghi chú, người được báo), hủy, giao (kèm người đã duyệt), nhận lại.
+- Bảng vai trò được dựng lại một lần khi khởi động để thêm cột phạm vi (giữ nguyên dữ liệu, id và quyền hiện có).
+
+## Mẫu thiết bị và sơ đồ thiết bị
+
+Thêm thiết bị bằng cách **chọn một mẫu** (ô «Mẫu thiết bị» ở đầu form «+ Thêm thiết bị lưu trữ») thay vì tự khai loại và nhiệt độ. Danh mục mẫu nằm ở `services/nganHangTeBaoKhangTheThietBi.js` (không thêm route: `POST /containers` nhận `mau_tb`, `/meta` trả `mauThietBi` và `nhomThietBi`), lưu mã mẫu ở `nhm_containers.mau_tb` của thiết bị gốc.
+
+- **Mẫu có sẵn (11):** bình nitơ lỏng (nhiều Rack); tủ âm sâu -86°C đứng **2 ngăn** (kiểu Panasonic) và 1 ngăn; tủ -86°C nằm ngang; tủ -150°C; tủ -20°C nằm ngang **2 cánh**; tủ -20°C đứng (ngăn kéo); tủ lạnh **2 ngăn: trên -20°C, dưới 4°C**; tủ lạnh / tủ mát 4°C đứng; tủ ấm CO₂ 37°C. Mục «Dòng máy tham khảo» chỉ là gợi ý; số ngăn và số kệ thực tế tùy model nên người dùng thêm hoặc xóa Rack / giỏ sau khi tạo. Thiết bị khác vẫn chọn «Thiết bị khác (tự khai)».
+- **Tạo kèm các NGĂN:** chọn mẫu thì máy chủ tạo thiết bị gốc (loại và nhiệt độ theo mẫu; loại chưa có trong danh mục thì tạo, kể cả «Giỏ», «Kệ») cùng các ngăn của mẫu (loại «Ngăn», đánh số vị trí 1.., nhiệt độ riêng của ngăn nếu mẫu khai, ví dụ ngăn đá -20°C và ngăn mát 4°C) trong MỘT transaction; yêu cầu bị từ chối thì không để lại gì. **Người dùng thêm Rack / giỏ / kệ vào từng ngăn rồi thêm hộp vào Rack sau**, bằng các nút có sẵn («+ Ngăn / Rack bên trong», «+ Hộp»). Rack / giỏ trong ngăn có ô «vị trí» (1–12; 1 ở trên cùng hoặc bên trái) để vẽ đúng chỗ trên sơ đồ; hộp có ô vị trí trong Rack (không bắt buộc, thêm từng hộp một).
+- **Sơ đồ SVG xuyên thấu** (`thiet-bi.js`, cùng phong cách sơ đồ bình nitơ lỏng `binh-ln.js`): `tu_dung` (tủ đứng **vẽ nghiêng 3D**: mỗi ngăn là một khoang mở, Rack là tấm dài chạy từ ngoài vào SÂU bên trong, Rack số 1 ở trên cùng, các hộp là khối xếp nối nhau dọc chiều dài Rack nên thấy được vị trí từng hộp, không bị che như khi nhìn thẳng mặt trước), `tu_lanh` (như tủ đứng nhưng ngăn đá thấp hơn ngăn mát), `tu_nam` (tủ nằm ngang chỉ vẽ nhìn từ trên xuống: các cánh cạnh nhau, giỏ đứng, không có mặt cắt). Ngăn, Rack và hộp lấy từ cây thiết bị; hộp là ô vuông trên Rack; chỗ chưa có Rack là ô nét đứt; bấm vào ngăn, Rack hoặc hộp trên sơ đồ để chọn; chọn mục (kể cả một ô ống trên lưới hộp) thì sáng ngăn, Rack, hộp và có chấm đỏ. Thiết bị tự khai cũng có sơ đồ (kiểu đoán theo tên loại: «nằm ngang», «2 ngăn», còn lại là tủ đứng). Form thêm thiết bị xem trước sơ đồ của mẫu đang chọn.
+- **Kéo Rack trên sơ đồ để đổi vị trí** (chỉ Admin, quản lý module hoặc người quản lý thiết bị; không thêm route, dùng `PATCH /containers/:id` với `parent_id` và `vi_tri` có sẵn): giữ chuột hoặc ngón tay trên một Rack rồi kéo sang ô khác của cùng thiết bị, kể cả ô ở ngăn khác. Ô trống thì Rack chuyển sang đó; ô đã có Rack khác thì **hoán đổi** hai Rack (tạm bỏ số của Rack đang kéo → Rack kia về chỗ cũ → Rack đang kéo vào ô mới, vì máy chủ không cho hai Rack trùng số trong một ngăn); lỗi giữa chừng thì tải lại cây và báo lỗi. Cả tủ đứng, tủ lạnh lẫn tủ nằm ngang (giỏ) đều kéo được. **Chống kéo / thả nhầm:** mọi lần đổi chỗ đều hiện hộp xác nhận («Chuyển «Rack A2» sang ô số 3 của «Ngăn trên», hoán đổi chỗ với …?») rồi mới lưu; trên cảm ứng (điện thoại, máy tính bảng) Rack không kéo được cho tới khi bấm **«Bật chế độ sắp xếp Rack»** (nhờ đó vuốt cuộn trang không kéo nhầm), và chế độ tự tắt sau mỗi lần kéo. Bàn phím: chọn Rack rồi **Alt + mũi tên** (lên / xuống ở tủ đứng, trái / phải ở tủ nằm ngang). Bấm một ô nét đứt để mở form thêm Rack với sẵn số vị trí của ô đó. Bấm (không kéo) vẫn là chọn Rack.
+- **Thông tin ống dưới sơ đồ (máy tính):** khi màn hình rộng (> 900px) và đang xem thiết bị có sơ đồ, hộp thoại ống (xem, sửa, lấy ra…) và form thêm mẫu hiện ngay DƯỚI sơ đồ ở cột phải thay cho popup, nên vẫn thấy lưới hộp và chấm đỏ vị trí khi thao tác. Điện thoại và các hộp thoại khác (quản lý module, xác nhận, di chuyển) vẫn là popup.
+
+## Hồ sơ dòng tế bào, lô, QC, tệp đính kèm, báo cáo GMO (ngân hàng tế bào)
+
+Chỉ ở ngân hàng **tế bào** (nút «Dòng tế bào» ở thanh bên). Code: `routes/nganHangTeBaoKhangThe/dongTeBao.js` (12 endpoint), `tepDinhKem.js` (3 endpoint), `services/nganHangTeBaoKhangTheDongTeBao.js`; bảng `nhm_dong_te_bao`, `nhm_lo`, `nhm_qc`, `nhm_tep`, cột `nhm_tubes.lo_id`.
+
+- **Hồ sơ dòng tế bào:** mã (duy nhất, không phân biệt hoa thường), tên, loài, mô nguồn gốc, bệnh, loại dòng (nguyên phát / bất tử hóa / iPSC), nguồn cung cấp và mã catalog, dạng nuôi, môi trường, bổ sung, nhiệt độ, CO₂, thời gian nhân đôi, hình thái, đặc điểm tăng trưởng, đề tài, nhóm, ghi chú. Ai có tài khoản module xem và tạo hồ sơ; **sửa / xóa: người tạo hoặc quản lý**. Xóa chỉ khi không còn ống đang giữ (xóa mềm; mã được dùng lại sau đó). Tìm kiếm bỏ dấu, nhiều từ khóa.
+- **Lô (stock):** một dòng có nhiều lô đông lạnh (mã lô duy nhất trong dòng, passage, ngày đông lạnh, số tế bào mỗi ống, tỉ lệ sống sót, môi trường đông lạnh). **Mỗi ống thuộc một lô** (ô «Dòng tế bào và lô» khi thêm / sửa mẫu; chọn lô thì điền sẵn passage, ngày đông lạnh, số tế bào); thay đổi lô ghi vào lịch sử mẫu. Chi tiết dòng liệt kê ống đang giữ và vị trí; hộp và kết quả tìm mẫu hiện «dòng · lô». Ống kháng thể không gắn lô.
+- **Luồng liền mạch dòng → lô → ống** (giao diện): ô «Dòng tế bào và lô» nằm Ở ĐẦU form thêm / sửa mẫu. Chọn dòng thì hiện thẻ tóm tắt (GMO / BSL / mycoplasma, nuôi cấy, cảnh báo an toàn sinh học hoặc mycoplasma dương tính); chọn lô thì điền sẵn tên ống («<tên dòng> <passage>»), passage, ngày đông lạnh, số tế bào, đề tài (chỉ ghi vào ô còn trống hoặc ô do chính phần này điền lần trước, không đè chữ người dùng gõ; sửa ống thì không tự điền). **Tạo dòng hoặc lô mới ngay trong form** («+ Tạo dòng tế bào mới…», «+ Tạo lô mới…»), không phải rời form nhập mẫu. Ống đã chọn dòng thì phải chọn lô. Ở hồ sơ dòng, nút **«Nhập ống»** của mỗi lô chọn sẵn dòng và lô cho lần nhập kế tiếp. Hộp thoại ống đặt thẻ «Dòng tế bào và lô» ở đầu (thông tin dòng, lô, nút mở hồ sơ).
+- **QC:** mycoplasma, STR, tỉ lệ sống sót, vi khuẩn / nấm, hình thái, khác; ghi theo dòng hoặc theo lô, kèm ngày (không ở tương lai), phương pháp, ghi chú, người ghi. **Chỉ thêm, không sửa / xóa** (trigger CSDL). Mycoplasma phải là âm / dương tính; lần thử gần nhất quyết định chip trạng thái; **chưa thử hoặc quá 180 ngày kể từ lần thử gần nhất thì cảnh báo «quá hạn thử»**, dương tính thì cảnh báo đỏ.
+- **Tệp đính kèm** (dòng, lô hoặc kết quả QC; tối đa 20 mỗi mục, 10 MB mỗi tệp): PDF, ảnh PNG / JPG / WEBP, .xlsx, .docx, .txt, .csv. **Loại tệp nhận dạng theo NỘI DUNG (đầu tệp) phải khớp phần mở rộng; không tin Content-Type do người dùng gửi.** Tệp lưu ở `uploads/ngan-hang/<năm>/<chuỗi ngẫu nhiên>` (không dùng tên người dùng trong đường dẫn; `khoa` được kiểm `^d{4}/[0-9a-f]{32}$` trước khi đọc nên không đi vòng ra ngoài thư mục), kèm SHA-256. Tải về qua API có đăng nhập: ảnh hiện trực tiếp, loại khác ép tải về, luôn `nosniff` và CSP `sandbox` chặn chạy mã. Xóa chỉ đánh dấu (giữ tệp và dòng ghi). Thêm / xóa: người tạo dòng hoặc quản lý (người đính kèm xóa được tệp của mình). Cần sao lưu thư mục `uploads/ngan-hang` cùng cơ sở dữ liệu.
+- **Báo cáo GMO / an toàn sinh học:** dòng biến đổi gen (`bien_doi_gen`) **bắt buộc mô tả biến đổi (vector, gen, phương pháp) và cấp an toàn sinh học BSL-1…4**. Báo cáo liệt kê các dòng đó kèm nguồn, đề tài / nhóm, số lô, số ống đang giữ, **vị trí lưu trữ**, mycoplasma gần nhất; tổng theo BSL; lọc theo BSL và từ khóa. Ba dạng: màn hình (`GET /reports/gmo`), **CSV** mở được trong Excel (có BOM UTF-8; ô bắt đầu bằng `=`, `+`, `-`, `@` được thêm dấu nháy để Excel không chạy như công thức) và **trang in A4 ngang** có chỗ ký (người lập, cán bộ an toàn sinh học, Viện trưởng). **Chỉ quản lý và Viện trưởng xem được** (danh mục an toàn sinh học); ống ở thiết bị riêng của người khác không được tính.
+
+## Ủy quyền duyệt (ngân hàng kháng thể)
+
+Viện trưởng không đủ thời gian duyệt hết nên có thể **giao quyền duyệt một phần kháng thể cho quản lý ngân hàng kháng thể**. Code: `routes/nganHangTeBaoKhangThe/uyQuyen.js` (3 endpoint), quy tắc ở `services/nganHangTeBaoKhangTheYeuCau.js` (`nguoiDuocUyQuyen`), bảng `nhm_uy_quyen_duyet`.
+
+- **Ai cấp:** CHỈ Viện trưởng (admin và quản lý thì không). Nút «Ủy quyền duyệt» ở thanh bên; quản lý bấm vào chỉ xem. Người nhận phải là quản lý ngân hàng kháng thể đang hoạt động, không phải chính Viện trưởng.
+- **Phạm vi** (chọn một): mọi kháng thể của ngân hàng, một thiết bị / Rack (kể cả hộp bên trong), một hộp, hoặc một loại kháng thể theo tên (so khớp không phân biệt hoa thường và dấu). **Hạn** tùy chọn (hết ngày đó thì tự mất hiệu lực); không đặt hạn thì tới khi thu hồi.
+- **Hiệu lực:** người được ủy quyền cùng Viện trưởng là người duyệt các yêu cầu thuộc phạm vi (ai duyệt trước thì yêu cầu đóng, người kia nhận 409). Tính tại thời điểm duyệt nên **thu hồi hoặc hết hạn có hiệu lực ngay, kể cả với yêu cầu đang chờ**. Không có quyền nào khác ngoài duyệt / từ chối; không tự duyệt yêu cầu của chính mình. Viện trưởng vẫn duyệt được mọi yêu cầu. Nếu Viện trưởng muốn lấy kháng thể mà có người được ủy quyền duyệt thì gửi yêu cầu được (người được ủy quyền duyệt).
+- **Dấu vết:** mỗi lần duyệt theo ủy quyền ghi `nhm_yeu_cau.uy_quyen_id`; lịch sử mẫu ghi «theo ủy quyền của Viện trưởng X (#id)»; thẻ yêu cầu, thư và phiếu in nêu rõ. Thu hồi chỉ ghi giờ thu hồi (không xóa) nên danh sách vẫn xem lại được ủy quyền đã thu hồi hoặc hết hạn. Người được ủy quyền nhận thư khi được cấp / bị thu hồi, và được báo yêu cầu mới như người duyệt.
+- **Khuyến nghị vận hành:** vì người duyệt cũng là người giao mẫu nếu là cùng một quản lý, nên ủy quyền cho người KHÁC với người thường giao mẫu khi có thể (sổ thể tích và lịch sử ghi rõ từng bước); xem lại danh sách ủy quyền định kỳ và đặt hạn cho ủy quyền tạm thời.
+
+## Thể tích (µL) của ống kháng thể
+
+Chỉ ở ngân hàng kháng thể. Quản lý ngân hàng kháng thể (và admin) ghi; ai thấy mẫu đều xem được số liệu và sổ. Code: `services/nganHangTeBaoKhangTheTheTich.js`, `routes/nganHangTeBaoKhangThe/theTich.js` (6 endpoint), giao / nhận lại trong `yeuCau.js`.
+
+- **Dữ liệu:** `nhm_tubes.the_tich_ul` (ban đầu) và `con_lai_ul` (còn lại), NULL = chưa ghi. **Sổ thể tích** `nhm_the_tich` ghi MỖI thay đổi (chỉ thêm, trigger chặn sửa / xóa): `ban_dau`, `dung` (số âm, kèm người dùng kháng thể và yêu cầu), `dieu_chinh` (đo lại, kèm lý do), `het`. Mỗi dòng cũng có một dòng trong lịch sử mẫu (`kt_ban_dau`, `kt_dung`, `kt_dieu_chinh`, `kt_het`) nên đọc theo trình tự cùng các bước gửi / duyệt / giao / nhận lại.
+- **Thêm ống kháng thể bắt buộc ghi thể tích ban đầu** (`the_tich_ul` ở `POST /tubes`, `/tubes/bulk`; mỗi ống cùng lô có thể tích đó). Ống cũ chưa ghi: quản lý bấm «Ghi thể tích ban đầu» một lần. Form kháng thể bỏ các ô Passage, số tế bào, thể tích mL.
+- **Số µL theo yêu cầu:** người yêu cầu ghi **số µL cần** (bắt buộc, không quá số còn lại nếu đã biết). Khi **giao**, quản lý ghi **số µL giao** (mặc định đúng số đã yêu cầu, không vượt số còn lại): trừ vào số còn lại, sổ ghi «dùng» kèm người nhận và số yêu cầu. Khi **nhận lại**, quản lý có thể nhập số còn lại đo được; khác số hệ thống tính thì ghi một dòng «đo lại» (lý do tự điền).
+- **Ghi ngoài yêu cầu:** «Ghi lần dùng» (số µL, người dùng, ghi chú), «Đo lại» (bắt buộc lý do), «Đánh dấu hết» (bắt buộc lý do; không làm được khi ống đang có yêu cầu chưa xong).
+- **Trạng thái:** Còn, **Sắp hết** (còn ≤ 20% thể tích ban đầu), **Hết**, Chưa ghi. Vào «sắp hết» hoặc «hết» thì **gửi thư cho quản lý ngân hàng kháng thể**. Tab «Ống sắp hết» ở «Việc cần xử lý» liệt kê các ống sắp hết và số ống chưa ghi thể tích.
+- **Khi ống HẾT** (giao hết số µL còn lại rồi nhận lại, dùng hết, đo lại về 0, hoặc đánh dấu hết): ống **bỏ khỏi kho** (trạng thái «đã hủy», nhả ô để đặt ống mới), sổ ghi dòng `het` kèm lý do (phần còn lại, nếu có, bị xóa sổ), lịch sử mẫu ghi «Ống hết». Ống và toàn bộ lịch sử vẫn tìm được ở «Tìm mẫu → mọi trạng thái»; không yêu cầu lấy được nữa. Nếu hết ngay lúc giao thì ống còn «đã lấy ra» cho tới khi quản lý nhận lại.
+- Phiếu in và thư ghi số µL yêu cầu / giao.
+- **Bỏ các trường của mẫu tế bào:** ống kháng thể không có Passage, số tế bào, thể tích (mL), ngày đông lạnh và nút «Rã đông» (form thêm / sửa và hộp thoại mẫu ẩn chúng).
+- **Chủ mẫu mặc định là AntibodyBank** (`nhm_tubes.chu_don_vi = 1`; không có loại chủ, nhóm, người sở hữu): ống kháng thể thường đắt nên do đơn vị mua và giữ. Chọn **«Cá nhân»** (mua bằng kinh phí cá nhân, xung công quỹ) thì khai loại chủ, nhóm và người sở hữu như ngân hàng tế bào (quản lý chọn được người sở hữu khác bằng `owner_user_id`). Quản lý đổi qua lại bằng `PATCH /tubes/:id { chu_don_vi }` (đổi sang đơn vị thì xóa chủ cá nhân; mọi đổi đều ghi lịch sử); «Chuyển chủ» sang một người thì thành của cá nhân đó. Ống kháng thể có sẵn từ bản trước được đánh dấu thuộc AntibodyBank một lần khi thêm cột.
+
+## Ai làm được gì
+
+Mọi tài khoản đăng nhập (nghiên cứu viên, cán bộ, sinh viên) đều dùng được module: xem sơ đồ, **tìm mẫu**, thêm mẫu vào
+thiết bị **công khai**, sửa mẫu của mình. Quản lý chỉ có ở những người **admin** phân quyền.
+
+| Vai trò | Lấy từ đâu | Làm được gì |
+|---|---|---|
+| **Admin** | `users.role = 'admin'` | Toàn quyền. Là người **duy nhất** cấp / gỡ vai trò module. |
+| **Quản lý module** (2–3 người) | bảng `nhm_vai_tro` | Thiết bị lưu trữ, hộp, danh mục, nhóm nghiên cứu, hồ sơ thành viên, sửa / xử lý mọi mẫu, xuất CSV, chuyển chủ sở hữu mẫu. Là người xử lý yêu cầu lấy mẫu: giao mẫu, nhận lại, xử lý thay khi người duyệt vắng. |
+| **Viện trưởng** (thiết bị riêng) | bảng `nhm_vai_tro` (`vien_truong`), chỉ admin cấp | Tạo **thiết bị riêng** và toàn quyền với nó (xem «Thiết bị riêng của Viện trưởng»). Không phải quản lý module; việc duyệt yêu cầu ở Cellbank là do được thêm làm người duyệt của đơn vị, tách riêng. |
+| **Trưởng CIPP** (quản lý Cellbank) | bảng `nhm_vai_tro` | Là người duyệt của đơn vị **Cellbank** (duyệt yêu cầu lấy mẫu ở thiết bị Cellbank). Không có quyền quản lý kho. |
+| Người dùng thường | mọi tài khoản còn lại | Tìm mẫu, thêm mẫu vào thiết bị công khai, sửa / di chuyển / lấy ra / rã đông / hủy / xóa **mẫu của mình**. |
+| Sinh viên của Viện (`sinh_vien`) | danh sách chờ do Trung tâm quản lý người học cung cấp | Như người dùng thường, **tới hết hạn dùng** ghi trong danh sách; tài khoản chỉ vào được module này và Đặt lịch thiết bị (xem «Sinh viên của Viện»). |
+| Tài khoản `crd_user` | — | Bị chặn khỏi cả module (`authMiddleware`). |
+
+- Vai trò module **không** đụng `users.role` dùng chung toàn hệ thống. **`users.role` = `manager` hay `phong_khcn` không còn tự có
+  quyền quản lý** ở module này: phải được admin gán vai trò «Quản lý module».
+- Mọi người dùng đọc được toàn bộ kho (kể cả tên người sở hữu): kho là tài nguyên dùng chung của Viện.
+- Bảng phân quyền đầy đủ của 110 route nằm trong `tests/nganHangTeBaoKhangThe.phanQuyen.test.js` và được đối chiếu
+  với danh sách route thật: thêm/bớt route mà quên cập nhật bảng thì test đỏ.
+
+### Thiết bị Public và thiết bị có đơn vị quản lý
+
+Mỗi **thiết bị gốc** (tủ, bình nitơ) hoặc là **Public**, hoặc gắn với một **đơn vị quản lý** (`nhm_containers.don_vi_id`); ngăn, giá bên trong thừa hưởng.
+Chọn ở ô «Ai quản lý thiết bị này» khi **Thêm / Chỉnh sửa thiết bị** (quản lý module và admin). Cột cũ `quan_ly_boi` được giữ cho khớp:
+`cong_khai` = Public, `cellbank` = có đơn vị (tên cũ từ lúc chỉ có Cellbank); hai cột luôn đi đôi, API vẫn nhận `quan_ly_boi` kiểu cũ (`cellbank` → đơn vị Cellbank).
+
+| | Public | Có đơn vị quản lý (Cellbank hoặc đơn vị khác) |
+|---|---|---|
+| Thêm mẫu vào ô trống | ai cũng được | **quản lý module và người duyệt của đơn vị** |
+| Sửa thông tin mô tả mẫu | chủ mẫu / quản lý | chủ mẫu / quản lý |
+| Di chuyển, lấy ra, rã đông, hủy, xóa mẫu | chủ mẫu / quản lý | **quản lý module và người duyệt của đơn vị** |
+| Lấy mẫu của người khác | gửi yêu cầu, **chủ mẫu** duyệt | gửi yêu cầu, **người duyệt của đơn vị** duyệt |
+
+**Người duyệt của đơn vị là cấp quản lý của thiết bị đó** (vd Viện trưởng, Trưởng CIPP với Cellbank): không bị chặn thêm / lấy / di chuyển mẫu ở thiết bị của đơn vị mình (`quanLyDonVi` trong `boiCanh.js`), không phải gửi yêu cầu; ở thiết bị của đơn vị KHÁC thì vẫn như người thường. Họ không có quyền quản lý kho (thêm thiết bị, hộp, danh mục) — quyền đó vẫn là của quản lý module / admin.
+
+**Đơn vị quản lý** (bảng `nhm_don_vi`, `nhm_don_vi_duyet`; `routes/nganHangTeBaoKhangThe/donVi.js`, tab **Quản lý module → Đơn vị quản lý**):
+- Có sẵn đơn vị **Cellbank** (không xóa được): người duyệt = những người giữ vai trò **Trưởng CIPP** (+ người được chỉ định thêm).
+- **Chỉ admin** tạo / sửa / xóa đơn vị và gán người duyệt (gán người duyệt là trao quyền quyết định, cùng quy tắc cấp vai trò). Quản lý module xem danh sách để chọn đơn vị cho thiết bị.
+- Người duyệt phải là tài khoản dùng được module (không bị khóa, không phải tài khoản chỉ Đặt lịch, không phải sinh viên).
+- **Nhiều người duyệt** (vd Cellbank: Viện trưởng + Trưởng CIPP): tất cả cùng nhận thư và thấy yêu cầu; **ai xử lý trước thì yêu cầu đóng** (người kia bấm sau nhận 409). Người còn lại nhận thư kết quả và thấy yêu cầu trong «Lịch sử xử lý», không phải làm gì.
+- Đơn vị **chưa có người duyệt**: yêu cầu đi thẳng quản lý module. Chỉ xóa được đơn vị khi không còn thiết bị thuộc nó.
+- Đổi thiết bị từ đơn vị sang Public (hoặc ngược lại) thì các yêu cầu đang chờ được định tuyến lại.
+- Thông báo, lịch sử mẫu và danh sách yêu cầu nêu tên đơn vị (ví dụ «Chờ Cellbank duyệt»); cấp duyệt trong bảng `nhm_yeu_cau.cap` vẫn lưu giá trị cũ `truong_cellbank`.
+
+### Thiết bị riêng của Viện trưởng (Non-public)
+
+Người có vai trò **Viện trưởng** chọn «Riêng tư» ở ô «Ai quản lý thiết bị này» khi thêm thiết bị (`POST /containers` với `rieng: true`; cột `nhm_containers.rieng_user_id`):
+- **Chỉ chủ và admin thấy.** Với mọi người khác (kể cả quản lý module, Trưởng CIPP) thiết bị, Rack, hộp, mẫu bên trong **không có**: không ở sơ đồ kho, tìm kiếm, xuất CSV,
+  danh sách yêu cầu / phát hiện / sự cố, số đếm «Việc cần xử lý», số liệu thẻ trang chủ; truy cập trực tiếp theo id (đường dẫn hoặc `box_id` / `container_id` / `parent_id` trong body) trả **404 giống hệt id không tồn tại**.
+  Cài đặt tập trung ở `boiCanh.js` (`tapAn`, `dkKhongAn`, `chanDuLieuRieng`); mọi truy vấn trả mẫu mới thêm sau này phải dùng `dkKhongAn`. Admin thấy hết (giao diện không nói điều này với người khác).
+- **Chủ toàn quyền** ở thiết bị của mình (thêm / sửa / xóa Rack, hộp, mẫu, kiểm kê), không cần là quản lý module. Không có quyền quản lý nơi khác (danh mục, thiết bị của người khác).
+- **Đổi chế độ bất cứ lúc nào** (`PATCH /containers/:id` với `rieng: false` và/hoặc `don_vi_id`): thành Public hoặc đơn vị (Cellbank…), hoặc đặt lại riêng. Chỉ đặt «riêng» được với thiết bị **do chính Viện trưởng tạo**; Viện trưởng giữ quyền với thiết bị mình tạo cả khi đã chuyển sang Public / đơn vị.
+- Hạn chế đã biết: số mẫu của một **nhóm nghiên cứu** (ở tab Nhóm) vẫn đếm cả mẫu riêng của thành viên nhóm đó. Bảng vai trò cũ được dựng lại một lần khi khởi động để thêm giá trị `vien_truong` (giữ nguyên dữ liệu).
+
+### Bình nitơ lỏng: Rack rồi hộp theo vị trí số
+
+Bình nitơ có nhiều giá, mỗi giá có nhiều hộp. Với thiết bị gốc có loại **Bình nitơ lỏng** (nhận biết theo tên loại, không phân biệt dấu): thêm **Rack** trước và khai
+**vị trí Rack trong bình** (`nhm_containers.vi_tri`, 1–50); trong Rack thêm **hộp** và khai **vị trí hộp trong Rack** (`nhm_boxes.vi_tri`, 1–50, số 1 ở trên cùng, càng lớn càng sâu) —
+thay cho ô «Số lượng hộp», mỗi lần một hộp. Số không được trùng trong cùng bình (giá) / cùng giá (hộp), API trả 409. Cây kho và danh sách sắp theo vị trí số.
+Tủ và thiết bị khác giữ cách cũ (thêm nhiều hộp một lần, không đánh số).
+
+**Mô hình bình xuyên thấu** (`public/ngan-hang-te-bao-khang-the/binh-ln.js`): khi xem bình, giá hoặc hộp nằm trong bình nitơ, cột bên phải (điện thoại: khung gập ở đầu trang)
+hiện mặt cắt đứng (giá đứng cạnh nhau, hộp xếp từ trên xuống, số 1 ở trên cùng) và hình nhìn từ trên xuống (các vị trí giá quanh cổ bình, đánh số). **Chấm đỏ** đánh dấu mục đang chọn:
+chọn giá → chấm ở giá; chọn hộp → ở ô hộp; rê chuột / chạm một ô ống trên lưới hộp → ngay vị trí ô đó; hình nhìn từ trên chấm đúng vị trí giá. Bấm vào giá / hộp trên mô hình để mở mục đó. Không in ra giấy.
+
+### Loại chủ mẫu và nhóm nghiên cứu
+
+Mỗi mẫu có **loại chủ** (`chu_loai`: sinh viên / nghiên cứu viên / cán bộ) và **nhóm nghiên cứu** (`nhom_id`) — để lọc, tìm
+kiếm, và để biết **ai duyệt yêu cầu khi người gửi mẫu đã ra trường / nghỉ việc**. Chỉ quản lý đổi được hai trường này sau khi
+mẫu đã tạo (chúng quyết định đường duyệt).
+
+- **Hồ sơ thành viên** (`nhm_ho_so`, do quản lý gán): loại + nhóm + trạng thái (đang hoạt động / **đã rời đi**). Người có hồ sơ
+- **Lời chào ở đầu trang** (`nhm_ho_so.chuc_danh`, ≤ 60 ký tự, quản lý đặt ở form hồ sơ): ví dụ «Viện trưởng» thì đầu trang module ghi «Xin chào Viện trưởng»; để trống thì chào bằng tên tài khoản. Chỉ quản lý module / admin đặt được, người dùng không tự đặt.
+  thì khi thêm mẫu hệ thống tự lấy loại và nhóm từ hồ sơ; sinh viên chỉ thêm mẫu cho nhóm của mình; hồ sơ «đã rời đi» chặn thêm
+  mẫu mới và ghi vào lịch sử mọi mẫu của họ.
+- **Người chưa có hồ sơ** vẫn dùng được nhưng phải tự khai loại chủ và nhóm khi thêm mẫu (cán bộ không bắt buộc nhóm; sinh viên
+  và nghiên cứu viên bắt buộc).
+- **Nhóm nghiên cứu** (`nhm_nhom`): tên + **trưởng nhóm là một tài khoản** (để gửi email duyệt, không gõ tay tên người). Người
+  dùng chọn nhóm có sẵn hoặc **đề xuất nhóm mới** (tên + chọn trưởng nhóm qua ô tìm tài khoản). Để tránh nhóm trùng và ghi sai
+  trưởng nhóm:
+  - tên nhóm so khớp **bỏ dấu, không phân biệt hoa thường**; trùng thì dùng lại nhóm cũ;
+  - nhóm mới ở trạng thái **chờ xác nhận**, quản lý kiểm rồi xác nhận, **gộp** được hai nhóm trùng;
+  - người được ghi là trưởng nhóm nhận thông báo trong module và phải bấm **«Đúng, tôi là trưởng nhóm»** hoặc **«Không phải»**;
+    chưa xác nhận thì coi như chưa có trưởng nhóm (yêu cầu về mẫu của nhóm đó sẽ đi thẳng tới quản lý module — xem «Yêu cầu lấy mẫu»);
+  - sinh viên không thể tự ghi mình là trưởng nhóm; sinh viên chỉ thêm mẫu vào nhóm **đã có trưởng nhóm**.
+  - Mọi thay đổi nhóm (đổi tên, đổi trưởng nhóm, giải thể, gộp, trưởng nhóm xác nhận / từ chối) ghi vào lịch sử **từng mẫu** của
+    nhóm.
+
+## Vòng đời của mẫu
+
+```
+in_storage ──checkout──▶ checked_out ──checkin──▶ in_storage
+    │                        │
+    └──────thaw / discard────┘──▶ thawed ──discard──▶ discarded
+```
+
+| Trạng thái | Ô trong hộp | Hiện trên lưới |
+|---|---|---|
+| `in_storage` Đang lưu kho | giữ | ✔ |
+| `checked_out` Đã lấy ra (tạm, chờ trả) | **vẫn giữ** | ✔ viền đỏ |
+| `thawed` Đã rã đông | nhả | ✘ (vẫn tìm được bằng «Gồm mẫu đã rã đông / hủy») |
+| `discarded` Đã hủy | nhả | ✘ |
+
+- Rã đông / hủy là **điểm cuối**, không hoàn tác. Mẫu đang lấy ra thì không di chuyển được (trả lại trước).
+- **Chủ mẫu tự lấy mẫu của mình** (thiết bị công khai) thì không cần ai duyệt, nhưng **bắt buộc khai thông tin thao tác** — lấy ra: mục
+  đích sử dụng; trả lại: tình trạng khi trả (còn lại bao nhiêu, có vấn đề gì không); rã đông: mục đích; hủy: lý do. Thiếu hoặc quá ngắn
+  (< 3 ký tự) thì 400 và mẫu không đổi trạng thái. Quản lý thao tác hộ cũng phải khai. Thông tin vào lịch sử mẫu và nhật ký hoạt động.
+  (Quyền và trạng thái được kiểm trước, nên người lạ vẫn nhận 403.)
+- Mẫu của mình ở thiết bị **Cellbank** thì chủ mẫu không tự lấy được mà phải **gửi yêu cầu** như người khác (Trưởng CIPP duyệt); chủ mẫu
+  không duyệt được yêu cầu của chính mình. Ở thiết bị công khai thì ngược lại: gửi yêu cầu cho mẫu của mình bị từ chối, hãy «Lấy ra».
+- Chủ mẫu thấy mẫu của mình biến mất vì **chính mình đã lấy mà chưa ghi**: bấm **«Chính tôi đã lấy mẫu này»** ở vụ việc nghi mất, ghi
+  mục đích (bắt buộc). Mẫu chuyển «đã lấy ra», lịch sử ghi `chu_tu_lay`, vụ việc đóng, **không** tính vào số lần lấy không xin phép.
+- **Xóa** (`DELETE /tubes/:id`) là xóa mềm (`deleted_at`) dành cho nhập nhầm; mẫu đã dùng xong thì dùng rã đông / hủy
+  để còn dấu vết.
+- Chỉ mục duy nhất một phần `ux_nhm_tube_position` bảo đảm một ô một mẫu **ở mức CSDL** (an toàn cả khi hai người
+  thao tác cùng lúc), không chỉ kiểm bằng code.
+
+## Lịch sử và nhật ký
+
+- **Lịch sử mẫu** (`nhm_movements`, chỉ thêm không sửa): `store`, `move`, `edit` (ghi **giá trị cũ → mới** dạng JSON
+  `{"passage":["P12","P13"]}`; trường không đổi thì không ghi dòng), `checkout`, `checkin`, `thaw`, `discard`,
+  `transfer`, `delete`, và `box_move` / `box_edit` khi **hộp** chứa mẫu đổi vị trí lưu trữ / đổi mã (ghi vào từng mẫu
+  trong hộp). Bản ghi `edit` cũ chỉ có tên cột (không phải JSON): giao diện vẫn hiển thị được.
+- **Không sửa, không xóa được** ở mức CSDL (trigger `trg_nhm_movements_khong_sua / _khong_xoa`), và mỗi dòng lưu **tên người thao tác tại thời điểm đó**
+  (`user_label`) nên vẫn đọc được khi tài khoản đổi tên hoặc bị xóa. Ngoài các hành động trên còn có `nhom_doi`, `nhom_giai_the`, `nhom_gop`,
+  `nhom_truong_xac_nhan`, `nhom_truong_tu_choi` (nhóm của mẫu đổi) và `chu_roi_di` / `chu_tro_lai` (chủ mẫu rời đi / quay lại).
+- Giờ lưu **UTC** (`datetime('now')`), giao diện đổi sang giờ máy người xem.
+- **Nhật ký hoạt động** (`user_activity_log`, module `ngan_hang_te_bao_khang_the`): hành động mang tiền tố `nhm_`
+  (`nhm_tube_update`, `nhm_box_update`, `nhm_container_delete`, `nhm_tube_export`...), phần chi tiết ghi thay đổi dạng
+  «Passage: P12 → P13». Tiền tố cũ `kmsp_` từ bản nháp **chưa từng lên production**.
+
+## Tìm kiếm, xuất, nhập hàng loạt
+
+- `GET /tubes/search`: `q` (tên, đề tài, passage, ghi chú), `sample_type_id`, `owner` (`me` hoặc id), `box_id`,
+  `status` (mặc định chỉ mẫu còn trong kho; `all` gồm cả đã rã đông / hủy), `limit` (≤ 200), `offset`.
+- `GET /tubes/export.csv` (chỉ quản lý): cùng bộ lọc, tối đa 20.000 dòng, UTF-8 có BOM để Excel đọc đúng tiếng Việt;
+  ô bắt đầu bằng `= + - @` được thêm dấu nháy đơn để không bị Excel hiểu là công thức.
+- `POST /tubes/bulk`: n ống (1–100) cùng lô vào các ô liên tiếp theo hàng từ ô bắt đầu; **tất cả hoặc không** (một ô
+  bị chiếm hoặc vượt lưới thì không thêm mẫu nào).
+- Module **không dùng mã vạch** (đã bỏ khỏi giao diện, API và CSV; cột `barcode` ở DB cũ nếu có thì để nguyên, không dùng).
+- Route tĩnh (`/tubes/search`, `/tubes/bulk`, `/tubes/export.csv`) đứng **trước** các route `/tubes/:id...` — xem
+  «Thứ tự đăng ký route» trong `KIEN-TRUC-VA-CAM-BAY.md`.
+
+### Xuất / nhập Excel một thiết bị (chuyển dữ liệu giữa hai hệ thống, sao lưu đọc được)
+
+- **Xuất:** ở trang một thiết bị gốc (quản lý module) bấm **«Xuất Excel»** → tải tệp `.xlsx` (`GET /containers/:id/export.xlsx`; code `services/nganHangTeBaoKhangTheExcel.js`). Gồm các trang: «Hướng dẫn», «Thiết bị», «Rack», «Hộp», «Dòng tế bào», «Lô», «Ống», «QC», «Lịch sử (chỉ đọc)».
+  Chỉ xuất ống đang giữ (đang lưu kho, đã lấy ra tạm); không có tệp đính kèm, mẫu đã rã đông / hủy, tài khoản. **Hiện chỉ xuất được thiết bị dạng bình nitơ**: thiết bị → Rack (đánh số vị trí) → hộp (đánh số vị trí); tủ có ngăn nhiều cấp thì báo rõ lý do.
+- **Nhập:** **Quản lý module → Nhập dữ liệu** (Admin), chọn tệp `.xlsx` đó (hệ thống nhận cả `.zip` Cellseeker lẫn `.xlsx`, theo đuôi tệp), «Kiểm tra» rồi «Nhập vào hệ thống» (`POST /import/excel`). Cùng cơ chế với nhập Cellseeker:
+  một giao dịch, chỉ thêm mới, không ghi đè, nhập lại không trùng, có sao lưu `data/backups/`. Khớp theo: thiết bị theo tên; Rack / hộp theo vị trí số; **dòng theo mã dòng**; lô theo (dòng, mã lô); ống theo ô; QC theo (dòng, loại, kết quả, ngày).
+- Giữ nguyên tên trang và tiêu đề cột khi sửa tệp. Dòng sai (ô ngoài hộp, trùng ô, thiếu mã…) bị bỏ qua kèm cảnh báo, không làm hỏng cả lần nhập. Chủ mẫu ghi bằng **email**: email chưa có tài khoản ở máy nhập thì người nhập làm chủ mẫu (có cảnh báo); nhóm nghiên cứu khớp theo tên nhóm (không có thì bỏ trống).
+- Dữ liệu từ Excel được ghi lịch sử mẫu là «Nhập từ Excel». Test: `tests/nganHangTeBaoKhangThe.excel.test.js`.
+
+### Nhập dữ liệu từ Cellseeker (một lần khi chuyển hệ thống)
+
+**Trên giao diện (không cần quyền máy chủ):** Admin vào **Quản lý module → Nhập dữ liệu** (chỉ ngân hàng tế bào), chọn tệp `.zip` tải về từ Cellseeker, chọn **cách Cellseeker đếm số ô trong hộp**
+(theo hàng hay theo cột; bảng «Đối chiếu cách đếm ô» cho biết ô số N sẽ thành ô nào, so với Cellseeker rồi đổi nếu lệch), bấm **«Kiểm tra»** (xem trước đúng số liệu, chưa ghi gì) rồi **«Nhập vào hệ thống»**.
+Route `POST /import/cellseeker` (`routes/nganHangTeBaoKhangThe/nhapDuLieu.js`, chỉ Admin, tệp ≤ 80 MB): giải nén `.zip` vào thư mục tạm (chỉ lấy `*.csv` và `stock-attachments/`, tên tệp lấy phần cuối, chặn zip nén quá mức), ghi trong **một giao dịch**
+(lỗi thì không có gì được ghi), sao lưu CSDL vào `data/backups/` trước khi ghi nếu làm được, ghi nhật ký hoạt động. Mỗi lúc chỉ một lần nhập chạy.
+
+Cùng logic có **bản dòng lệnh** `scripts/nhap-cellseeker.js` cho người có quyền máy chủ. Logic ở `services/nganHangTeBaoKhangTheNhapCellseeker.js`, test ở
+`tests/nganHangTeBaoKhangThe.nhapCellseeker.test.js`. Giao diện chỉ có thêm màn hình nhập này; ngoài ra vẫn chỉ có «Xuất CSV», thêm mẫu hàng loạt cùng lô và nhập danh sách sinh viên.
+
+Bản dòng lệnh:
+
+```
+node scripts/nhap-cellseeker.js <thư-mục-giải-nén> [--db data/sci-ace.db] [--nguoi-nhap <email|id>] [--uploads <thư mục>] [--kieu-dem hang|cot] [--ghi]
+```
+
+- **Mặc định chỉ chạy thử**: làm mọi bước trong một giao dịch rồi hủy, in số lượng mới / đã có / bỏ qua và cảnh báo mà không đổi gì. Thêm `--ghi` để ghi thật;
+  trước khi ghi tự sao lưu CSDL thành `<tệp>.truoc-cellseeker-<thời gian>.bak`. Nên chạy lúc ít người dùng. **Phải chạy trên máy chủ thật** (CSDL không nằm trong git).
+- **Nhập lại được**: không tạo trùng, không sửa hay xóa dữ liệu có sẵn (dòng nhận ra qua nhãn `[Cellseeker #id]` ở ghi chú, lô theo (dòng, mã lô), thiết bị theo tên, Rack / hộp theo vị trí số, ống theo ô).
+- Ánh xạ: `inventory.csv` → thiết bị **Bình nitơ lỏng** do **Cellbank** quản lý (ngân hàng tế bào) → **Rack** (vị trí số = nhãn Rack) → **hộp** (vị trí số = «Box position», cỡ hàng × cột theo tệp);
+  `cells.csv` → hồ sơ dòng (mã = tên trước dấu «(», GMO / BSL / nuôi cấy / nhà cung cấp / bổ sung môi trường); `stocks.csv` → lô (mã lô, passage, ngày đông lạnh, số tế bào mỗi ống = «Aliquot»,
+  loại lô MCB / WCB, lô gốc, người làm, các ngày thử mycoplasma / vô trùng ghi ở ghi chú); `vials.csv` → từng ống ở đúng ô, người tạo là tài khoản nhập, lịch sử mẫu có dòng «Nhập từ Cellseeker»;
+  `stock-attachments/` → tệp đính kèm của lô (tên «stock_lot_id-<mã lô>[-<hậu tố>].jpg»).
+- **Cách đếm ô** (mặc định **theo hàng** từ trái sang phải, trên xuống dưới: hộp 5 cột, ô 1 = A1, ô 6 = B1): phải đối chiếu với Cellseeker; chọn «theo cột» (ô 2 = B1) nếu lệch. Hộp 1 cột × 5 hàng không phụ thuộc cách đếm. Dòng lệnh: `--kieu-dem hang|cot`.
+- Không nhập: `cell-images/` (tên «cell_id-<số>-<số>» không suy ra được dòng nào), `str_profiles.csv` (không có giá trị lặp nào), `vectors.csv` (rỗng); kết quả mycoplasma / vô trùng của lô
+  (Cellseeker chỉ ghi ngày, không ghi kết quả) nên **không** tạo bản ghi QC — dòng sẽ hiện «Chưa thử mycoplasma» và vào «Đến hạn» sau 30 ngày ân hạn cho đến khi ghi QC.
+- Dòng GMO không có mô tả vector nên được ghi «CẦN BỔ SUNG» ở mô tả GMO; lô trùng mã khác hoa thường được thêm hậu tố « (2)».
+
+## Danh mục
+
+Loại vị trí lưu trữ, mẫu hộp, loại mẫu do **quản lý** thêm / sửa / xóa (nút «Quản lý danh mục»). Quy tắc:
+trùng tên 409; loại vị trí lưu trữ và loại mẫu **đang dùng thì không xóa**; xóa mẫu hộp chỉ gỡ liên kết (hộp đã tạo giữ
+nguyên kích thước vì `rows/cols` được chụp lại lúc tạo); mẫu hộp đã có hộp dùng thì không đổi kích thước.
+Dữ liệu mặc định trong schema chỉ nạp **một lần** (`nhm_meta.seed_v1`) để mục đã xóa không quay lại khi khởi động.
+
+## Kiểm tra đầu vào
+
+Số tế bào, thể tích ≥ 0; nhiệt độ −273…100 °C; ngày đông lạnh đúng `YYYY-MM-DD` và có thật; vị trí nguyên trong lưới;
+chuỗi sai trả **400** thay vì bị nuốt thành rỗng. Mã tự sinh (`HOP-0007`, `VC-0003`) bỏ qua mã đã được đặt tay.
+
+## Khởi tạo và địa chỉ cũ
+
+`server.js` chỉ gọi `require('./routes/nganHangTeBaoKhangThe').mount(app, { db, authMiddleware, insertUserActivityLog })`
+một lần (cùng số liệu thẻ trang chủ `miniStats`). `mount` tạo bảng (`CREATE ... IF NOT EXISTS`, idempotent; thiếu file
+schema thì **ném lỗi** để `server.js` ghi cảnh báo), đăng ký chuyển hướng 302 các địa chỉ cũ về trang mới, và chỉ đổi nhãn
+thẻ trang chủ khi dòng `homepage_modules.sample_storage` còn mang **tên cũ** («Ngân hàng mẫu», «Kho mẫu sinh phẩm») —
+nhãn admin tự đặt được giữ.
+
+Địa chỉ cũ còn chuyển hướng: `/kho-mau-sinh-pham(.html)`, `/public/kho-mau-sinh-pham/index.html`,
+`/ngan-hang-mau(.html)`, `/nganhangmau.html`. Bỏ được khi chắc không còn liên kết nào đã gửi dùng các địa chỉ này
+(sửa `LEGACY_PATHS` trong `services/nganHangTeBaoKhangTheKhoiTao.js`).
+
+## Bật / tắt trên trang chủ
+
+Thẻ module (`homepage_modules.code = 'sample_storage'`) hiện **bật sẵn** (`enabled: 1` ở `HOMEPAGE_MODULES_DEFAULT`
+trong `server.js`). Tắt chỉ làm mờ thẻ trên trang chủ — **không** chặn trang hay API, giống mọi module khác. Muốn ra
+mắt từ từ: đổi mặc định thành `0` rồi để admin bật khi sẵn sàng.
+
+## Sinh viên của Viện (danh sách chờ, xác minh, hết hạn)
+
+Cán bộ có email `@sci.edu.vn` đăng ký tài khoản bình thường (có xác minh hộp thư). Sinh viên **không** có email đó, và đăng ký ở module Đặt lịch
+thiết bị **không xác minh hộp thư** (ai gõ email của người khác cũng đăng ký được) nên không thể dùng nó để biết ai là sinh viên của Viện. Cách làm:
+
+1. **Danh sách chờ:** Trung tâm quản lý người học gửi email các đợt sinh viên mới; quản lý module vào **Quản lý module → Sinh viên → Nhập danh sách**:
+   - **Tệp Excel (.xlsx) hoặc CSV** — bấm «Tải mẫu Excel» (`GET /students/template.xlsx`: sheet «Danh sách» + sheet «Hướng dẫn»), điền rồi chọn tệp
+     (`POST /students/import-file`, trường `tep`, tối đa 2 MB, không nhận .xls cũ). Cột được nhận theo **tên tiêu đề** (không cần đúng thứ tự, thừa cột thì bỏ qua;
+     tên cột có `Họ đệm` + `Tên` thì ghép lại); dòng tiêu đề có thể không nằm ở dòng 1 (tìm trong 10 dòng đầu). Hạn là ngày Excel hoặc chữ `dd/mm/yyyy`.
+     Tệp của Trung tâm có tiêu đề khác thì thêm tên gọi vào `CAC_COT` trong `services/nganHangTeBaoKhangTheSinhVien.js` (không phải sửa chỗ nào khác).
+   - hoặc **dán** (mỗi dòng: email, họ tên, mã sinh viên, khóa / đợt, hạn dùng; dán thẳng từ Excel được).
+   - Cả hai đều có bước **Xem trước** (`xem_truoc`): hệ thống đọc, đếm mới / cập nhật / bỏ qua, liệt kê dòng lỗi và vài dòng mẫu **mà chưa ghi gì**; bấm «Nhập» mới ghi.
+   - Hạn mặc định áp cho dòng không ghi hạn. Nhập lại nhiều lần không trùng (cập nhật và gia hạn). Bảng `nhm_sinh_vien`.
+   - **Thao tác cả đợt** (`POST /students/bulk`, theo cột «Khóa / Đợt»): gia hạn cả đợt, «đợt đã ra trường» (hết hạn từ hôm qua, khóa module ngay), thu hồi cả đợt.
+2. Với mỗi email, hệ thống **tạo sẵn** tài khoản vai trò `sinh_vien` **chưa kích hoạt** (mật khẩu rỗng — cách tài khoản tạo sẵn đang dùng).
+3. Sinh viên vào trang **Đăng ký chính** (`dang-ky.html`), nhập **đúng email đó** → nhận thư xác minh tới **chính hộp thư** (liên kết dùng một lần, 2 giờ) →
+   đặt mật khẩu → tài khoản kích hoạt. Chưa xác minh được hộp thư thì không có tài khoản. Email ngoài `@sci.edu.vn` mà **không** có trong danh sách (hoặc hết
+   hạn) nhận **cùng thông báo** nhưng **không có thư** — không ai dò được ai nằm trong danh sách.
+4. Lần đầu vào module, tài khoản có **hồ sơ «sinh viên»** (chưa có nhóm): sinh viên chọn nhóm nghiên cứu ở mẫu đầu tiên (hoặc đề xuất nhóm; trưởng nhóm xác nhận),
+   nhóm đó được ghi vào hồ sơ; sau đó chỉ thêm mẫu cho nhóm của mình.
+
+**Chặn chiếm email.** Đăng ký CRD bằng email đang nằm trong danh sách bị từ chối (cùng thông báo «email đã được sử dụng»). Tài khoản `crd_user` **cũ** trùng email
+với danh sách (đăng ký trước đó, chưa xác minh hộp thư) bị **đặt lại**: vai trò `sinh_vien`, mật khẩu rỗng — chủ email thật xác minh lại là lấy lại được, người
+chiếm trước mất quyền. Tài khoản vai trò khác (vd cán bộ) trùng email thì **không đụng tới**.
+
+**Quyền của vai trò `sinh_vien`** (`services/vaiTroHanChe.js`, dùng ở `authMiddleware` và cổng `.html` trong `server.js`): API chỉ `/api/crd/` (Đặt lịch thiết bị) và
+`/api/ngan-hang-te-bao-khang-the/`; trang `.html` chỉ Đặt lịch, trang chủ, trang module; mọi thứ khác 403 / chuyển về trang module. Vai trò `crd_user` giữ nguyên
+hành vi cũ (chỉ Đặt lịch). Tài khoản dùng chung cho Đặt lịch thiết bị và Ngân hàng — không cần hai tài khoản.
+
+**Hết hạn: chỉ khóa module này.** Hết **ngày** ghi ở cột hạn (giờ Việt Nam), `ctx.chanSinhVien` trả 403 «đã hết hạn» cho mọi API của module (kể cả `/me`), hồ sơ
+chuyển «đã rời đi» (yêu cầu về mẫu của họ chuyển cho trưởng nhóm / quản lý, lịch sử ghi `chu_roi_di`). Tài khoản **không bị khóa**: vẫn đặt lịch thiết bị. Bộ quét
+30 phút (cùng bộ hẹn giờ với yêu cầu quá hạn) đánh dấu dòng «hết hạn» và xử lý ngay cả khi chưa ai vào. **Gia hạn** (sửa hạn) hoặc nhập lại danh sách thì mở lại và
+ghi `chu_tro_lai`; **thu hồi** thì khóa và phải nhập lại để cấp lại. Dòng đã hết hạn / thu hồi **quá 365 ngày bị xóa** khỏi danh sách (dữ liệu cá nhân).
+
+**Dữ liệu cá nhân:** danh sách chỉ có email, họ tên, mã sinh viên, khóa, hạn; chỉ Admin và quản lý module xem; nhật ký hoạt động ghi số lượng chứ **không ghi email**; mỗi
+lần xem danh sách có một dòng nhật ký. Email phải khớp đúng email Trung tâm cung cấp (không phân biệt hoa thường); sửa từng dòng ở thẻ «Sinh viên».
+
+## Yêu cầu lấy mẫu
+
+Người dùng bấm **«Yêu cầu lấy mẫu này»** ở một mẫu không phải của mình (cần ghi lý do). Mỗi mẫu chỉ có **một** yêu cầu đang xử lý;
+mẫu đang nghi mất hoặc không còn lưu kho thì không yêu cầu được.
+
+**Ai duyệt** (`services/nganHangTeBaoKhangTheYeuCau.js`, cột `nhm_yeu_cau.cap`):
+
+| Mẫu | Người duyệt | Nếu không có / chính là người yêu cầu |
+|---|---|---|
+| Ở thiết bị **có đơn vị quản lý** (Cellbank hoặc đơn vị khác) | người duyệt của đơn vị | quản lý module |
+| Ở thiết bị **ngân hàng kháng thể** (AntibodyBank) | **Viện trưởng** (chỉ Viện trưởng) | không gửi được yêu cầu; quản lý chỉ theo dõi và giao mẫu |
+| Công khai, chủ mẫu là cán bộ / nghiên cứu viên **còn hoạt động** | chủ mẫu | trưởng nhóm → quản lý |
+| Công khai, mẫu của **sinh viên** (kể cả đang học), hoặc chủ mẫu đã rời đi | **trưởng nhóm** (đã tự xác nhận, nhóm chưa giải thể) | quản lý |
+
+Sinh viên **không bao giờ** là người duyệt: người sắp ra trường không thể duyệt, nên người ở lại duyệt ngay từ đầu.
+
+- **Quá hạn phản hồi** (mặc định 3 ngày, chỉnh được) người duyệt cấp dưới chưa phản hồi thì yêu cầu **tự chuyển quản lý module** (bộ hẹn giờ 30 phút
+  trong tiến trình; câu UPDATE có điều kiện nên chạy chồng không chuyển hai lần; thư báo quản lý; lịch sử ghi không có người thao tác).
+- Chủ mẫu / trưởng nhóm vừa **rời đi**, nhóm đổi trưởng nhóm hay trưởng nhóm từ chối: các yêu cầu đang chờ được **định tuyến lại ngay**.
+- **Quản lý module và admin luôn xử lý được.** Nếu họ không phải người duyệt của cấp hiện tại thì là **«xử lý thay»**: bắt buộc ghi lý do
+  (≥ 5 ký tự), ghi rõ vào lịch sử và nhật ký. Admin là quyền cuối cùng khi không ai xử lý (kể cả ở cấp Trưởng CIPP) nhưng **không**
+  hiển thị thành vai trò hay nút riêng. Không ai duyệt được yêu cầu của chính mình, kể cả admin.
+- Sau khi **duyệt**, quản lý bấm **«Giao mẫu»** (mẫu chuyển «đã lấy ra») rồi **«Nhận lại mẫu»** khi trả. Mẫu được trả / rã đông / hủy
+  / xóa thì yêu cầu liên quan tự đóng.
+- **Email** (gửi nền, SMTP hỏng không làm hỏng thao tác chính): yêu cầu mới → người duyệt; đã duyệt → người yêu cầu **và** quản lý module;
+  **từ chối → người yêu cầu và quản lý module** (người vừa xử lý không nhận lại thư); giao / nhận lại → người yêu cầu; quá hạn → quản lý. Thư duyệt / từ chối có liên kết tới phiếu in. Liên kết trong thư mở thẳng bảng «Việc cần xử lý» (cần đăng nhập — không có
+  liên kết duyệt không cần đăng nhập, vì trình quét thư có thể tự mở liên kết).
+- **Lịch sử xử lý** (tab «Lịch sử xử lý» ở «Việc cần xử lý», `GET /requests?view=done`): mọi yêu cầu đã duyệt / từ chối / giao / trả / hủy được lưu vĩnh viễn
+  (bảng `nhm_yeu_cau` không xóa). Người duyệt thấy những yêu cầu **mình đã xử lý**; quản lý module và admin thấy tất cả; người yêu cầu xem ở «Yêu cầu của tôi».
+- **Phiếu yêu cầu in được** (`GET /requests/:id/print`, nút «In phiếu» trên mỗi yêu cầu; `services/nganHangTeBaoKhangThePhieu.js`): trang A4 gồm số phiếu `YC-000123`,
+  người yêu cầu, mẫu (vị trí, chủ mẫu, nhóm), mục đích, kết quả. Yêu cầu **đã duyệt** có khung «ĐÃ ĐƯỢC DUYỆT» và đoạn **xác nhận** (đơn vị / người duyệt, giờ duyệt,
+  «xử lý thay» nếu có) kèm ba ô ký; **bị từ chối / đã hủy** ghi rõ không dùng để nhận mẫu; **đang chờ** ghi chưa có giá trị nhận mẫu. Người yêu cầu bấm «In phiếu / lưu PDF».
+  Chỉ người gửi, người đã xử lý, người duyệt ở cấp hiện tại, quản lý module và admin xem được (người khác 403); mỗi lần in ghi nhật ký `request_print`; dữ liệu nhập được escape.
+- Mọi bước ghi vào lịch sử của mẫu: `yc_gui`, `yc_duyet`, `yc_tu_choi`, `yc_huy`, `yc_leo_thang`, `yc_dinh_tuyen_lai`, `giao`, `tra`.
+
+## Mẫu có thật trong ô nhưng chưa khai báo (thiết bị công khai)
+
+1. Quản lý bấm vào ô trống → **«Ô này có mẫu nhưng chưa khai báo»**, ghi mô tả (chữ trên ống, màu nắp…) và — nếu đoán được — người / nhóm **có thể** là chủ (chỉ là gợi ý để gửi thư nhắc, không phải kết luận).
+   Ô bị **giữ chỗ**: không ai thêm hay di chuyển mẫu khác vào. Thiết bị có đơn vị quản lý (Cellbank…) không dùng chức năng này.
+2. **Việc đầu tiên là nhắc chủ mẫu** (`POST /findings/:id/remind`): email người nghi + trưởng nhóm của họ, hoặc trưởng nhóm + mọi thành
+   viên đang hoạt động của nhóm nghi; không biết gì thì chỉ hiện trên bảng «Mẫu chưa khai báo» (ai đăng nhập cũng thấy). Nhắc lại được.
+3. Chủ mẫu bấm **«Đây là mẫu của tôi»**, điền thông tin ngay tại ô: ô thành mẫu bình thường, chủ mẫu là người nhận, lịch sử mẫu ghi
+   `khai_bao_bo_sung`, quản lý nhận thư.
+4. Quản lý chỉ được **«Bỏ mẫu»** khi **đã nhắc** và qua **hạn chờ** (mặc định 7 ngày, chỉnh được) kể từ lần nhắc đầu, kèm lý do bắt buộc. Admin bỏ sớm
+   hơn được, ghi `da_bo_som`.
+5. Mỗi mục có lịch sử riêng (`nhm_phat_hien_ls`, chặn sửa / xóa bằng trigger) vì mẫu chưa có bản ghi để gắn lịch sử.
+
+## Mẫu bị lấy không xin phép (thiết bị công khai)
+
+Phần mềm không ngăn được hành vi ngoài đời; nó giúp **phát hiện**, **cho đường nhận lỗi** và **ghi trách nhiệm**:
+
+- **Phát hiện:** chủ mẫu / trưởng nhóm / quản lý bấm «Báo không còn ở vị trí», hoặc quản lý **kiểm kê hộp** / **đợt kiểm kê** cả thiết bị (xem «Vận hành hằng ngày»; bấm những mẫu không thấy; mẫu
+  còn lại được ghi mốc `thay_luc` = «lần cuối thấy», lịch sử ghi `kiem_ke_thay` / `kiem_ke_khong_thay`).
+- Mẫu nghi mất mở một **vụ việc** (`nhm_vu_viec`): chủ mẫu, trưởng nhóm và quản lý nhận thư; mọi người thấy ở bảng «Mẫu nghi mất»;
+  mẫu vẫn giữ ô, không yêu cầu lấy được.
+- Người đã lấy bấm **«Tôi đã lấy mẫu này»** → chủ mẫu (hoặc trưởng nhóm / quản lý) **xác nhận** (mẫu chuyển «đã lấy ra», tính một lần lấy
+  không xin phép cho người đó — quản lý xem ở thẻ «Lấy không xin phép») hoặc **từ chối** (vụ việc mở lại). Người nhận không tự xác nhận.
+- Tìm thấy mẫu thì đóng vụ việc. Hết **hạn chờ người nhận** (mặc định 14 ngày, chỉnh được) không ai nhận, quản lý **chốt thất lạc** (mẫu thành «đã hủy», đóng
+  yêu cầu liên quan); admin chốt sớm được, ghi rõ.
+- Mức xử lý người lấy không xin phép là chính sách của Viện — hệ thống chỉ giữ bằng chứng (số lần theo người, có nhóm).
+
+## Vận hành hằng ngày: đợt kiểm kê, việc đến hạn, nhiệt độ thiết bị
+
+Ba tính năng giúp quản lý **chủ động** giữ an toàn mẫu thay vì chờ có người báo. Code: `routes/nganHangTeBaoKhangThe/kiemKe.js` (6 endpoint), `giamSat.js` (5), `nhacViec.js` (1 + bộ quét); nghiệp vụ thuần ở `services/nganHangTeBaoKhangTheNhacViec.js` và `…NhietDo.js`; bảng `nhm_kiem_ke`, `nhm_kiem_ke_hop`, `nhm_nhiet_do`, `nhm_canh_bao_nhiet`, `nhm_nhac_viec`; cột `nhm_boxes.kiem_ke_luc`, `nhm_containers.theo_doi_nhiet / nguong_duoi / nguong_tren`. Test: `tests/nganHangTeBaoKhangThe.vanHanh.test.js`.
+
+**Đợt kiểm kê** (Admin / Quản lý module / Viện trưởng với thiết bị của mình)
+- Ở trang chi tiết thiết bị, ngăn hoặc Rack bấm **«Mở đợt kiểm kê»**: hệ thống chụp danh sách mọi hộp đang chứa mẫu lưu kho bên trong (hộp rỗng bỏ qua). Một vị trí chỉ có một đợt đang làm; đợt chồng lên vị trí cha / con bị 409.
+- Mỗi hộp được kiểm bằng đúng thao tác «Kiểm kê hộp» (bấm những mẫu KHÔNG thấy): mẫu không thấy mở **vụ việc nghi mất** như cũ, mẫu thấy được ghi «lần cuối thấy», hộp được ghi mốc `kiem_ke_luc`. Làm trong đợt thì có **tiến độ** (`n/N hộp`, số mẫu có mặt / không thấy). Một hộp chỉ kiểm một lần trong một đợt; sửa sai bằng «Kiểm kê hộp» riêng.
+- **Kết thúc đợt** khi còn hộp chưa kiểm phải ghi lý do (≥ 5 ký tự); **hủy đợt** cần lý do. Đợt không xóa được (trigger). **Biên bản CSV** (`GET /inventories/:id/export.csv`, có BOM, chống công thức Excel) để lưu hồ sơ.
+- Đợt kiểm kê ở thiết bị riêng của Viện trưởng chỉ chủ và admin thấy.
+
+**Việc đến hạn** (tab «Đến hạn» ở «Việc cần xử lý»; số việc cộng vào huy hiệu; liên kết `…#den-han` trong thư mở thẳng tab này)
+
+| Loại | Điều kiện | Chu kỳ mặc định |
+|---|---|---|
+| Kiểm kê | thiết bị có hộp (còn mẫu lưu kho) mà lần kiểm kê gần nhất (hoặc ngày tạo hộp nếu chưa kiểm lần nào) quá chu kỳ | 180 ngày |
+| Mycoplasma | dòng **còn ống đang lưu** chưa thử (dòng mới có 30 ngày ân hạn) hoặc lần thử gần nhất quá chu kỳ | 180 ngày |
+| Mycoplasma dương tính | lần thử gần nhất dương tính mà dòng còn ống đang lưu (việc khẩn) | — |
+| STR | dòng còn ống đang lưu chưa xác thực STR hoặc quá chu kỳ | 365 ngày |
+| Nhiệt độ quên ghi | thiết bị đang theo dõi mà quá số ngày này chưa có số đo (3 ngày bao được cuối tuần) | 3 ngày |
+| Cảnh báo nhiệt độ | cảnh báo đang mở chưa ghi nhận xử lý (việc khẩn) | — |
+
+- Người thấy: quản lý module thấy mọi việc của ngân hàng; việc ở **thiết bị riêng** chỉ chủ và admin thấy. QC dòng tế bào chỉ có ở ngân hàng tế bào, ống ở thiết bị riêng không tính.
+- **Thư nhắc** do bộ quét chạy cùng bộ hẹn giờ quá hạn (30 phút một lần): **một thư gộp cho mỗi người** (quản lý của ngân hàng, thêm người tạo dòng / thiết bị), mỗi việc nhắc lại sau «Việc vẫn chưa làm thì nhắc lại» ngày (mặc định 7). Việc xong thì bị xóa khỏi sổ nhắc để tái phát được nhắc ngay. SMTP hỏng không làm quét lỗi; việc vẫn hiện trong tab «Đến hạn».
+- Ghi QC mycoplasma **dương tính** gửi thư khẩn ngay (không chờ bộ quét) cho quản lý và người tạo dòng.
+
+**Nhiệt độ thiết bị** (chỉ thiết bị gốc; khung «Nhiệt độ thiết bị» ở trang chi tiết)
+- Quản lý thiết bị (quản lý module, chủ thiết bị riêng, người duyệt của đơn vị quản lý) bật **«Theo dõi nhiệt độ»** và đặt khoảng cho phép; để trống thì dùng **gợi ý theo nhiệt độ chuẩn** (-86°C → -96…-70; -20°C → -25…-15; 4°C → 2…8; 37°C → 35…39; ≤ -150°C → cảnh báo khi lên quá -150). Thiết bị chưa có nhiệt độ chuẩn phải tự đặt khoảng.
+- Ghi số đo (nhiệt độ hiển thị trên tủ; bình nitơ ghi thêm mức nitơ): quản lý, chủ thiết bị và — ở thiết bị **Public** — mọi người dùng module; thiết bị có đơn vị quản lý chỉ quản lý và người duyệt của đơn vị. Số đo ghi tên người và **không sửa / xóa được** (trigger).
+- Số đo ra ngoài khoảng ở thiết bị đang theo dõi **mở một cảnh báo** (tối đa một cảnh báo mở cho mỗi thiết bị) và gửi thư khẩn cho quản lý + người tạo thiết bị; thiết bị hiện nhãn «Cảnh báo» trên cây. Cảnh báo **không tự đóng** khi số đo trở lại bình thường: người quản lý phải ghi nguyên nhân và việc đã làm (≥ 5 ký tự) rồi bấm «Ghi nhận xử lý».
+- Biểu đồ 30 ngày: dải khoảng cho phép, đường số đo, chấm đỏ cho số đo ngoài khoảng; kèm nhật ký (tối đa 100 dòng mới nhất). Phần mềm **chưa nối cảm biến** — số đo do người ghi; cần cảnh báo thời gian thực khi mất điện thì phải gắn cảm biến / bộ ghi nhiệt riêng.
+
+## Cấu hình các hạn
+
+Ba hạn chờ chỉnh được ở **Quản lý module → Cấu hình hạn** (admin và quản lý module; `GET/PUT /settings`, lưu ở bảng `nhm_cau_hinh`,
+đọc qua `layHan(db)`); cùng màn hình có thêm năm **chu kỳ nhắc việc định kỳ** (bảng dưới bảng này, đọc qua `layChuKy(db)`, áp dụng ngay khi lưu):
+
+| Hạn | Mặc định | Khoảng |
+|---|---|---|
+| Người duyệt cấp dưới phản hồi (quá hạn chuyển quản lý module) | 3 ngày | 1–30 |
+| Chờ chủ mẫu khai báo trước khi được bỏ mẫu (tính từ lần nhắc đầu) | 7 ngày | 1–90 |
+| Chờ người lấy tự nhận trước khi chốt thất lạc | 14 ngày | 1–90 |
+
+Hạn mới áp dụng cho yêu cầu và vụ việc **tạo sau khi lưu** (yêu cầu / vụ việc đang chạy giữ hạn đã ghi); riêng hạn bỏ mẫu chưa khai
+báo được tính lúc xem nên đổi là áp dụng ngay cho mọi mục đang chờ. Mỗi lần đổi ghi nhật ký «cũ → mới». Giá trị hỏng hoặc ngoài
+khoảng trong CSDL bị bỏ qua, dùng mặc định. Email và thông báo lỗi luôn nói đúng số ngày đang áp dụng.
+
+| Chu kỳ nhắc việc | Mặc định | Khoảng |
+|---|---|---|
+| Kiểm kê hộp (`KIEM_KE_NGAY`) | 180 ngày | 30–730 |
+| Thử mycoplasma của dòng (`MYCO_NGAY`) | 180 ngày | 30–730 |
+| Xác thực STR của dòng (`STR_NGAY`) | 365 ngày | 90–1095 |
+| Quên ghi nhiệt độ (`NHIET_GHI_NGAY`) | 3 ngày | 1–14 |
+| Nhắc lại qua email (`NHAC_LAI_NGAY`) | 7 ngày | 1–30 |
+
+## Điện thoại
+
+Giao diện dùng được trên điện thoại: ô tìm và nút «Việc cần xử lý» luôn hiện; sơ đồ kho gập lại sau khi chọn (thanh tóm tắt hiện đường
+dẫn); hộp thoại phủ cả màn hình, nút thao tác dính đáy; bảng thành thẻ có nhãn cột; vùng bấm ≥ 44px; ô nhập ≥ 16px để iOS không tự
+phóng to; lưới hộp cuộn ngang. Máy cảm ứng không có kéo-thả: di chuyển mẫu đi qua hộp thoại chọn ô.
+
+## Chưa làm
+
+- Nút «Tôi sắp mở tủ X» (ghi dấu ai vào tủ lúc nào, để thu hẹp danh sách người liên quan khi có vụ việc): đã cân nhắc, **chưa bật**
+  vì thêm một thao tác cho mọi người dùng.
+- Liên kết duyệt một chạm trong email không cần đăng nhập (xem lý do ở mục «Yêu cầu lấy mẫu»).
+
+## Chạy thử cục bộ
+
+`npm test` chạy cả 7 file test của module (DB trong bộ nhớ, không đụng `data/`). Xem giao diện: chạy `node server.js`
+với bản sao DB, đăng nhập bằng tài khoản có `users.role` = `admin` để thấy nút quản lý.

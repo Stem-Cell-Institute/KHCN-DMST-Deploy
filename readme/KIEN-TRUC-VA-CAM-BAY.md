@@ -51,7 +51,7 @@ node scripts/route-inventory.js    # liệt kê toàn bộ route đã đăng ký
 | `lib/` | hạ tầng: `database.js`, `appPaths.js`, `config.js`, `filenames.js`, `upload.js` |
 | `modules/document-workflow/` | module duy nhất đã có kiến trúc lớp đầy đủ — **dùng làm mẫu** |
 | `tests/` | smoke test + helper khởi động server trong hộp cát |
-| `readme/` | tài liệu tiếng Việt |
+| `readme/` | tài liệu tiếng Việt; module có tài liệu riêng: `MODULE-BAO-CAO-PHONG.md`, `MODULE-NGAN-HANG-TE-BAO-KHANG-THE.md` |
 
 Frontend là hỗn hợp: 49 trang `.html` tĩnh ở thư mục gốc, EJS trong `views/`, và hai app build
 (`frontend/document-workflow-ui` dùng Vite, `crd-lab-booking` dùng esbuild).
