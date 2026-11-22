@@ -731,52 +731,95 @@
 
         .stats-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
         }
 
         .stat-box {
-            background: white;
-            padding: 20px;
+            background: #ffffff;
+            padding: 16px 18px;
             border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-left: 4px solid #16233d;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid var(--kpi-accent, #16233d);
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
         }
+        .stat-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+        }
+        .stats-row .stat-box:nth-child(1) { --kpi-accent: #1d4ed8; }
+        .stats-row .stat-box:nth-child(2) { --kpi-accent: #059669; }
+        .stats-row .stat-box:nth-child(3) { --kpi-accent: #7c3aed; }
+        .stats-row .stat-box:nth-child(4) { --kpi-accent: #dc2626; }
+        .stats-row .stat-box:nth-child(5) { --kpi-accent: #0d9488; }
+        .stats-row .stat-box:nth-child(6) { --kpi-accent: #d97706; }
 
         .stat-label {
-            font-size: 12px;
-            color: #999;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #64748b;
             text-transform: uppercase;
-            margin-bottom: 8px;
+            letter-spacing: 0.03em;
+            margin-bottom: 6px;
         }
 
         .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #333;
+            font-size: 28px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #0f172a;
+            line-height: 1.15;
         }
 
         .stat-change {
-            font-size: 12px;
-            margin-top: 5px;
+            font-size: 11.5px;
+            color: #64748b;
+            margin-top: 6px;
         }
 
-        .stat-change.up { color: #6bcf7f; }
-        .stat-change.down { color: #ff4757; }
+        .stat-change.up { color: #16a34a; }
+        .stat-change.down { color: #dc2626; }
 
         .filter-bar {
-            background: white;
-            padding: 20px;
+            background: #ffffff;
+            padding: 16px 18px;
             border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
         }
 
         .filter-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 12px;
+        }
+        .filter-row--quick {
+            display: grid;
+            grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(140px, 1fr)) auto;
+            gap: 12px;
+            align-items: end;
+        }
+        @media (max-width: 960px) {
+            .filter-row--quick {
+                grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            }
+        }
+        .filter-bar-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .filter-bar-head h3 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.01em;
         }
 
         .form-group {
@@ -786,7 +829,7 @@
         .form-group label {
             display: block;
             font-size: 12px;
-            color: #666;
+            color: #475569;
             margin-bottom: 5px;
             font-weight: 600;
         }
@@ -794,16 +837,84 @@
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
+            padding: 8px 11px;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13.5px;
+            background: #ffffff;
+            color: #0f172a;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #16233d;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+        }
+
+        .reports-accordion > summary {
+            list-style: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            user-select: none;
+        }
+        .reports-accordion > summary::-webkit-details-marker { display: none; }
+        .reports-accordion-toggle {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1f4e79;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 5px 12px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        .reports-accordion[open] > summary .reports-accordion-toggle::after {
+            content: ' ▲';
+        }
+        .reports-accordion:not([open]) > summary .reports-accordion-toggle::after {
+            content: ' ▼';
+        }
+        .reports-accordion-body {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .owner-admin-zone {
+            margin-top: 22px;
+            padding: 18px;
+            border-radius: 12px;
+            background: linear-gradient(168deg, #f5f3ff 0%, #f8fafc 50%, #ffffff 100%);
+            border: 1px solid rgba(124, 58, 237, 0.22);
+            box-shadow: 0 2px 12px rgba(124, 58, 237, 0.06);
+        }
+        .owner-admin-eyebrow {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #6d28d9;
+            margin-bottom: 12px;
+        }
+        .owner-admin-eyebrow__dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #7c3aed;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.16);
+        }
+        .owner-admin-zone .filter-bar {
+            margin-bottom: 0;
+            box-shadow: none;
+            border-color: rgba(124, 58, 237, 0.16);
         }
 
         .table-container {
@@ -1240,117 +1351,15 @@
                     </div>
                 </div>
 
-                <!-- Chỉ Admin: mặc định ẩn, applyAdminUiVisibility() mới mở ra. -->
-                <div id="export-import-section" class="filter-bar" style="margin-bottom: 20px; display: none;">
-                    <h3 style="margin-bottom: 15px;">📥 Export / Import số liệu</h3>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">Tải mẫu CSV để điền số liệu, hoặc export số liệu hiện tại. <strong>Export Excel (.xlsx)</strong> hiển thị đúng tiếng Việt. Import file <strong>CSV hoặc Excel (.xlsx)</strong> để cập nhật dashboard.</p>
-                    <p style="font-size: 0.85rem; color: #555; margin-bottom: 12px;"><strong>Cách nhập hàng loạt:</strong> Trong file mẫu, <em>mỗi dòng</em> = 1 nhiệm vụ (mã, tên, chủ nhiệm, cấp, trạng thái, ngày bắt đầu/kết thúc, tiến độ %, kinh phí). Dòng 1 là tiêu đề cột, dòng 2 là ghi chú (bỏ qua). Từ dòng 3 trở đi: điền thêm nhiều dòng, mỗi dòng một nhiệm vụ. Khi import, hệ thống đọc từng dòng, tách theo cột; nếu <strong>mã đề tài</strong> đã tồn tại thì cập nhật, chưa có thì thêm mới.</p>
-                    <div class="filter-row" style="align-items: center; flex-wrap: wrap;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <a href="#" id="btn-export-template" class="btn btn-info">📄 Tải mẫu (Export template)</a>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <button type="button" class="btn btn-success" id="btn-export-excel">📊 Export Excel (.xlsx)</button>
-                            <button type="button" class="btn btn-secondary" id="btn-export-csv" style="margin-left: 8px;">Export CSV</button>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; gap: 8px;">
-                            <input type="file" id="importFile" accept=".csv,.xlsx" style="max-width: 260px;">
-                            <button type="button" class="btn btn-warning" id="btn-import">Import CSV / Excel</button>
-                        </div>
-                        <span id="import-msg" style="font-size: 0.9rem; color: #0a0;"></span>
-                    </div>
-                    <div id="templates-section" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
-                        <h4 style="margin-bottom: 10px;">📋 Mẫu hồ sơ đăng ký đề tài ngoài Viện</h4>
-                        <p style="font-size: 0.85rem; color: #555; margin-bottom: 12px;">Admin upload mẫu để user tải về khi đăng ký. User không thấy nút upload này.</p>
-                        <div class="filter-row" style="align-items: flex-end; flex-wrap: wrap; gap: 16px;">
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label style="font-size: 0.85rem;" for="template-thuyet-minh">Mẫu Thuyết minh chi tiết</label>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="file" id="template-thuyet-minh" accept=".pdf,.doc,.docx" style="max-width: 220px;">
-                                    <button type="button" class="btn btn-info" id="btn-upload-template-thuyet-minh" style="font-size: 0.9rem;">Upload mẫu</button>
-                                </div>
-                                <span id="template-thuyet-minh-msg" style="font-size: 0.8rem; color: #0a0;"></span>
-                            </div>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label style="font-size: 0.85rem;" for="template-van-ban-xin-phep">Mẫu Văn bản xin phép Viện trưởng</label>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="file" id="template-van-ban-xin-phep" accept=".pdf,.doc,.docx" style="max-width: 220px;">
-                                    <button type="button" class="btn btn-info" id="btn-upload-template-van-ban" style="font-size: 0.9rem;">Upload mẫu</button>
-                                </div>
-                                <span id="template-van-ban-msg" style="font-size: 0.8rem; color: #0a0;"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Chỉ Admin: mặc định ẩn, applyAdminUiVisibility() mới mở ra. -->
-                <div id="reports-section" class="filter-bar" style="margin-bottom: 20px; display: none;">
-                    <h3 style="margin-bottom: 8px;">📊 Thống kê &amp; Báo cáo</h3>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 4px;">
-                        Xuất báo cáo tổng hợp nhiều năm, gom nhóm <strong>từ cấp nhỏ đến cấp lớn</strong> (Viện → Trường → ĐHQG → Bộ → Nhà nước).
-                    </p>
-                    <p style="font-size: 0.85rem; color: #555; margin-bottom: 14px;">
-                        File Excel gồm 4 sheet: <strong>Tổng quan</strong> (chỉ số &amp; phân bổ theo cấp) ·
-                        <strong>Tổng hợp theo cấp</strong> (bảng chéo cấp × năm, số lượng và kinh phí) ·
-                        <strong>Chi tiết nhiệm vụ</strong> (danh sách có nhóm và dòng tổng) ·
-                        <strong>Theo trạng thái</strong>. Để trống bộ lọc = lấy toàn bộ.
-                    </p>
-                    <div class="filter-row" style="align-items: flex-end; flex-wrap: wrap; gap: 16px;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label for="reportFromYear">Từ năm</label>
-                            <select id="reportFromYear" style="min-width: 120px;"><option value="">Sớm nhất</option></select>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label for="reportToYear">Đến năm</label>
-                            <select id="reportToYear" style="min-width: 120px;"><option value="">Mới nhất</option></select>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label for="reportStatus">Trạng thái</label>
-                            <select id="reportStatus" style="min-width: 190px;">
-                                <option value="">Tất cả trạng thái</option>
-                                <optgroup label="Nhóm giai đoạn">
-                                    <option value="cho_vien_xet_chon,cho_bo_tham_dinh,cho_ngoai_xet_chon,cho_phe_duyet_ngoai">Chờ xét duyệt</option>
-                                    <option value="da_phe_duyet,cho_ky_hop_dong,approved">Đã phê duyệt / Chờ ký HĐ</option>
-                                    <option value="dang_thuc_hien,ongoing,xin_dieu_chinh">Đang thực hiện</option>
-                                    <option value="cho_nghiem_thu_co_so,nghiem_thu_trung_gian,cho_nghiem_thu_bo_nn,nghiem_thu_tong_ket,hoan_thien_sau_nghiem_thu,review">Nghiệm thu</option>
-                                    <option value="thanh_ly_hop_dong,hoan_thanh,completed">Hoàn thành</option>
-                                </optgroup>
-                                <optgroup label="Từng trạng thái">
-                                    <option value="planning">Lập kế hoạch</option>
-                                    <option value="dang_thuc_hien">Đang thực hiện</option>
-                                    <option value="cho_nghiem_thu_co_so">Chờ nghiệm thu cơ sở</option>
-                                    <option value="cho_nghiem_thu_bo_nn">Chờ nghiệm thu cấp Bộ/NN</option>
-                                    <option value="hoan_thanh">Hoàn thành</option>
-                                    <option value="thanh_ly_hop_dong">Thanh lý hợp đồng</option>
-                                    <option value="khong_duoc_phe_duyet">Không được phê duyệt</option>
-                                    <option value="overdue">Quá hạn</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                    </div>
-                    <div style="margin-top: 14px;">
-                        <label style="display: block; margin-bottom: 6px;">Cấp quản lý <span style="font-weight: 400; color: #666; font-size: 0.85rem;">(không chọn ô nào = lấy tất cả các cấp)</span></label>
-                        <div id="reportLevels" style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center;">
-                            <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" value="institute"> Cấp Viện</label>
-                            <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" value="school"> Cấp Trường ĐH KHTN</label>
-                            <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" value="university"> Cấp ĐHQG</label>
-                            <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" value="ministry"> Cấp Bộ</label>
-                            <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" value="national"> Cấp Nhà nước</label>
-                        </div>
-                    </div>
-                    <div style="margin-top: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                        <button type="button" class="btn btn-success" id="btn-export-report">📊 Xuất báo cáo Excel</button>
-                        <button type="button" class="btn btn-secondary" id="btn-reset-report">Đặt lại bộ lọc</button>
-                        <span id="report-msg" style="font-size: 0.9rem;"></span>
-                    </div>
-                </div>
-
                 <div id="missions-list-anchor" class="filter-bar">
-                    <h3 style="margin-bottom: 15px;">Bộ lọc nhanh</h3>
-                    <div class="filter-row">
+                    <div class="filter-bar-head">
+                        <h3>🔍 Bộ lọc nhanh</h3>
+                        <button type="button" class="btn btn-secondary" style="padding: 5px 12px; font-size: 12px;" onclick="resetQuickFilters()">Đặt lại bộ lọc</button>
+                    </div>
+                    <div class="filter-row filter-row--quick">
                         <div class="form-group">
                             <label for="searchInput">Tìm kiếm</label>
-                            <input type="text" placeholder="Mọi từ khóa: mã, tên, chủ nhiệm, cấp, trạng thái, ngày, tiến độ, kinh phí, nguồn…" id="searchInput" title="Nhiều từ cách nhau bằng khoảng trắng — mỗi từ đều phải khớp (giống Quản lý công bố). Không phân biệt dấu.">
+                            <input type="text" placeholder="Mã, tên đề tài, chủ nhiệm, trạng thái, kinh phí…" id="searchInput" title="Nhiều từ cách nhau bằng khoảng trắng — mỗi từ đều phải khớp (giống Quản lý công bố). Không phân biệt dấu.">
                         </div>
                         <div class="form-group">
                             <label for="levelFilter">Cấp đề tài</label>
@@ -1433,6 +1442,259 @@
                         </thead>
                         <tbody id="tasksTableBody"></tbody>
                     </table>
+                </div>
+
+                <!-- Chỉ Admin: mặc định ẩn, applyAdminUiVisibility() mới mở ra. Thu gọn mặc định để giữ trang gọn. -->
+                <div id="reports-section" class="filter-bar" style="margin-top: 22px; margin-bottom: 18px; display: none;">
+                    <style>
+                        .pr-scope-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+                        .pr-scope-btn {
+                            padding: 8px 16px; border: 1.5px solid #cbd5e1; background: #fff; color: #334155;
+                            border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all .15s;
+                        }
+                        .pr-scope-btn:hover { border-color: #1f4e79; color: #1f4e79; }
+                        .pr-scope-btn.active { background: #1f4e79; color: #fff; border-color: #1f4e79; }
+                        .pr-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+                        .pr-preset-btn {
+                            padding: 4px 10px; border: 1px solid #d1d5db; background: #f8fafc; color: #334155;
+                            border-radius: 999px; font-size: 0.8rem; cursor: pointer; transition: all .15s;
+                        }
+                        .pr-preset-btn:hover { background: #e2e8f0; border-color: #94a3b8; }
+                        .pr-month-wrap { display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+                        .pr-month-input { width: 135px !important; min-width: 135px !important; flex: 0 0 135px; padding: 8px 10px !important; font-weight: 600; letter-spacing: 0.4px; }
+                        .pr-month-picker { width: 40px !important; min-width: 40px !important; flex: 0 0 40px; padding: 7px 4px !important; cursor: pointer; }
+                        #reports-section .filter-row { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
+                        #reports-section .filter-row .form-group { flex: 0 0 auto; }
+                        .pr-preview-box {
+                            margin-top: 16px; padding: 14px 16px; background: #f8fafc;
+                            border: 1px solid #cbd5e1; border-radius: 10px;
+                        }
+                        .pr-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px; margin-top: 10px; }
+                        .pr-kpi-card {
+                            background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;
+                        }
+                        .pr-kpi-label { font-size: 0.78rem; color: #64748b; margin-bottom: 4px; }
+                        .pr-kpi-val { font-size: 1.15rem; font-weight: 700; color: #1f4e79; }
+                        .pr-kpi-sub { font-size: 0.76rem; color: #475569; margin-top: 2px; }
+                        .pr-level-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+                        .pr-level-pill {
+                            background: #e0ecfa; color: #1f4e79; padding: 3px 10px;
+                            border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+                        }
+                        .pr-detail-wrap { margin-top: 12px; max-height: 360px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+                        .pr-detail-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+                        .pr-detail-table th { position: sticky; top: 0; background: #1f4e79; color: #fff; padding: 7px 8px; text-align: left; }
+                        .pr-detail-table td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+                        .pr-detail-table tr:nth-child(even) { background: #f9fafb; }
+                    </style>
+
+                    <details id="reports-accordion" class="reports-accordion">
+                        <summary>
+                            <div>
+                                <h3 style="margin: 0; font-size: 15px; color: #0f172a;">📊 Thống kê &amp; Xuất số liệu báo cáo theo giai đoạn</h3>
+                                <p style="font-size: 0.84rem; color: #64748b; margin: 4px 0 0;">
+                                    Lọc chính xác từng tháng (<strong>MM/YYYY → MM/YYYY</strong>) và xuất Excel / tóm tắt Word cho Đề tài KHCN &amp; Bài báo khoa học.
+                                </p>
+                            </div>
+                            <span class="reports-accordion-toggle">Mở / Thu gọn</span>
+                        </summary>
+                        <div class="reports-accordion-body">
+                            <!-- Bước 1: Chọn loại số liệu -->
+                            <div class="pr-scope-tabs" id="reportScopeTabs" role="tablist" aria-label="Chọn đối tượng báo cáo">
+                                <button type="button" class="pr-scope-btn active" data-scope="missions">📋 Đề tài / Nhiệm vụ KHCN</button>
+                                <button type="button" class="pr-scope-btn" data-scope="publications">📄 Bài báo / Công bố KH</button>
+                                <button type="button" class="pr-scope-btn" data-scope="both">📦 Cả Đề tài &amp; Bài báo (1 file)</button>
+                            </div>
+
+                            <!-- Bước 2: Gõ giai đoạn chính xác từng tháng -->
+                            <div class="filter-row" style="align-items: flex-end; flex-wrap: wrap; gap: 14px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="reportFromMonth">Từ tháng/năm (MM/YYYY)</label>
+                                    <div class="pr-month-wrap">
+                                        <input type="text" id="reportFromMonth" class="pr-month-input" placeholder="VD: 01/2021" maxlength="7" autocomplete="off">
+                                        <input type="month" id="reportFromMonthPicker" class="pr-month-picker" title="Chọn nhanh trên lịch tháng">
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="reportToMonth">Đến tháng/năm (MM/YYYY)</label>
+                                    <div class="pr-month-wrap">
+                                        <input type="text" id="reportToMonth" class="pr-month-input" placeholder="VD: 12/2025" maxlength="7" autocomplete="off">
+                                        <input type="month" id="reportToMonthPicker" class="pr-month-picker" title="Chọn nhanh trên lịch tháng">
+                                    </div>
+                                </div>
+                                <div class="form-group" id="reportDateModeWrap" style="margin-bottom: 0;">
+                                    <label for="reportDateMode">Cách tính đề tài trong kỳ</label>
+                                    <select id="reportDateMode" style="min-width: 265px;">
+                                        <option value="overlap" selected>Giao thời gian thực hiện (mặc định)</option>
+                                        <option value="start">Chỉ tính đề tài bắt đầu trong kỳ</option>
+                                        <option value="end">Chỉ tính đề tài kết thúc trong kỳ</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="reportStatusWrap" style="margin-bottom: 0;">
+                                    <label for="reportStatus">Trạng thái đề tài</label>
+                                    <select id="reportStatus" style="min-width: 185px;">
+                                        <option value="">Tất cả trạng thái</option>
+                                        <optgroup label="Nhóm giai đoạn">
+                                            <option value="cho_vien_xet_chon,cho_bo_tham_dinh,cho_ngoai_xet_chon,cho_phe_duyet_ngoai">Chờ xét duyệt</option>
+                                            <option value="da_phe_duyet,cho_ky_hop_dong,approved">Đã phê duyệt / Chờ ký HĐ</option>
+                                            <option value="dang_thuc_hien,ongoing,xin_dieu_chinh">Đang thực hiện</option>
+                                            <option value="cho_nghiem_thu_co_so,nghiem_thu_trung_gian,cho_nghiem_thu_bo_nn,nghiem_thu_tong_ket,hoan_thien_sau_nghiem_thu,review">Nghiệm thu</option>
+                                            <option value="thanh_ly_hop_dong,hoan_thanh,completed">Hoàn thành</option>
+                                        </optgroup>
+                                        <optgroup label="Từng trạng thái">
+                                            <option value="planning">Lập kế hoạch</option>
+                                            <option value="dang_thuc_hien">Đang thực hiện</option>
+                                            <option value="cho_nghiem_thu_co_so">Chờ nghiệm thu cơ sở</option>
+                                            <option value="cho_nghiem_thu_bo_nn">Chờ nghiệm thu cấp Bộ/NN</option>
+                                            <option value="hoan_thanh">Hoàn thành</option>
+                                            <option value="thanh_ly_hop_dong">Thanh lý hợp đồng</option>
+                                            <option value="khong_duoc_phe_duyet">Không được phê duyệt</option>
+                                            <option value="overdue">Quá hạn</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Nút chọn nhanh mốc thời gian -->
+                            <div class="pr-presets" id="reportPresets">
+                                <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">Chọn nhanh:</span>
+                                <button type="button" class="pr-preset-btn" data-preset="this_year">Năm nay</button>
+                                <button type="button" class="pr-preset-btn" data-preset="last_year">Năm ngoái</button>
+                                <button type="button" class="pr-preset-btn" data-preset="h1_this_year">6 tháng đầu năm</button>
+                                <button type="button" class="pr-preset-btn" data-preset="h2_this_year">6 tháng cuối năm</button>
+                                <button type="button" class="pr-preset-btn" data-preset="this_quarter">Quý này</button>
+                                <button type="button" class="pr-preset-btn" data-preset="last_3y">3 năm gần nhất</button>
+                                <button type="button" class="pr-preset-btn" data-preset="last_5y">5 năm gần nhất</button>
+                                <button type="button" class="pr-preset-btn" data-preset="all">Toàn bộ</button>
+                            </div>
+
+                            <!-- Bộ lọc Cấp quản lý (khi chọn Đề tài hoặc Cả hai) -->
+                            <div id="reportMissionLevelsWrap" style="margin-top: 14px;">
+                                <label style="display: block; margin-bottom: 6px;">
+                                    Cấp đề tài
+                                    <span style="font-weight: 400; color: #666; font-size: 0.83rem;">(mặc định lấy tất cả; tick để lọc từng cấp cụ thể)</span>
+                                </label>
+                                <div id="reportLevels" style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center;">
+                                    <label style="font-weight: 600; color: #1f4e79; display: inline-flex; align-items: center; gap: 6px; margin: 0;">
+                                        <input type="checkbox" id="reportLevelAll" checked> Tất cả các cấp
+                                    </label>
+                                    <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="institute"> Cấp Viện</label>
+                                    <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="school"> Cấp Trường ĐH KHTN</label>
+                                    <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="university"> Cấp ĐHQG</label>
+                                    <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="ministry"> Cấp Bộ</label>
+                                    <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="national"> Cấp Nhà nước</label>
+                                </div>
+                            </div>
+
+                            <!-- Bộ lọc Bài báo (tự hiện khi chọn Bài báo hoặc Cả hai) -->
+                            <div id="reportPubFiltersWrap" style="margin-top: 14px; display: none;">
+                                <div class="filter-row" style="align-items: flex-end; flex-wrap: wrap; gap: 14px;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="reportPubQuartile">Phân hạng (Quartile)</label>
+                                        <select id="reportPubQuartile" style="min-width: 130px;">
+                                            <option value="">Tất cả</option>
+                                            <option value="Q1">Q1</option>
+                                            <option value="Q2">Q2</option>
+                                            <option value="Q3">Q3</option>
+                                            <option value="Q4">Q4</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="reportPubIndex">Chỉ mục</label>
+                                        <select id="reportPubIndex" style="min-width: 150px;">
+                                            <option value="">Tất cả chỉ mục</option>
+                                            <option value="scopus">Scopus</option>
+                                            <option value="wos">Web of Science (WoS)</option>
+                                            <option value="pubmed">PubMed</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="reportPubType">Loại công bố</label>
+                                        <select id="reportPubType" style="min-width: 165px;">
+                                            <option value="">Tất cả loại</option>
+                                            <option value="journal">Bài báo tạp chí</option>
+                                            <option value="conference">Hội nghị / Hội thảo</option>
+                                            <option value="book_chapter">Chương sách</option>
+                                            <option value="book">Sách chuyên khảo</option>
+                                            <option value="patent">Sáng chế / GPHI</option>
+                                        </select>
+                                    </div>
+                                    <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0 0 8px 0; font-size: 0.86rem;">
+                                        <input type="checkbox" id="reportIncludeYearOnly" checked> Bao gồm bài chỉ có năm (chưa rõ tháng)
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Khu vực xem trước tức thì -->
+                            <div id="report-preview-box" class="pr-preview-box">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                    <strong id="report-preview-title" style="color: #1f4e79;">Đang tải số liệu xem trước…</strong>
+                                    <span id="report-preview-note" style="font-size: 0.82rem; color: #b45309;"></span>
+                                </div>
+                                <div id="report-kpi-grid" class="pr-kpi-grid"></div>
+                                <div id="report-level-pills" class="pr-level-pills"></div>
+                                <div id="report-detail-container" style="display: none;"></div>
+                            </div>
+
+                            <!-- Hàng nút hành động -->
+                            <div style="margin-top: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-success" id="btn-export-report">📊 Xuất Excel chi tiết (.xlsx)</button>
+                                <button type="button" class="btn btn-info" id="btn-copy-report-summary">📋 Copy tóm tắt (dán Word)</button>
+                                <button type="button" class="btn btn-secondary" id="btn-toggle-report-detail">👁️ Xem danh sách chi tiết</button>
+                                <button type="button" class="btn btn-secondary" id="btn-reset-report">Đặt lại</button>
+                                <span id="report-msg" style="font-size: 0.88rem;"></span>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <!-- Chỉ Chủ sở hữu (Master Admin): mặc định ẩn, applyAdminUiVisibility() mới mở ra. -->
+                <div id="owner-admin-zone" class="owner-admin-zone" style="display: none;">
+                    <div class="owner-admin-eyebrow">
+                        <span class="owner-admin-eyebrow__dot" aria-hidden="true"></span>
+                        <span>Quản trị hệ thống · Chủ sở hữu</span>
+                    </div>
+                    <div id="export-import-section" class="filter-bar">
+                        <h3 style="margin-bottom: 10px; font-size: 15px; color: #0f172a;">📥 Export / Import số liệu</h3>
+                        <p style="font-size: 0.88rem; color: #475569; margin-bottom: 8px;">Tải mẫu CSV để điền số liệu, hoặc export số liệu hiện tại. <strong>Export Excel (.xlsx)</strong> hiển thị đúng tiếng Việt. Import file <strong>CSV hoặc Excel (.xlsx)</strong> để cập nhật dashboard.</p>
+                        <p style="font-size: 0.82rem; color: #64748b; margin-bottom: 12px;"><strong>Cách nhập hàng loạt:</strong> Mỗi dòng = 1 nhiệm vụ (dòng 1 tiêu đề, dòng 2 ghi chú bỏ qua, nhập từ dòng 3). Nếu <strong>mã đề tài</strong> đã tồn tại thì cập nhật, chưa có thì thêm mới.</p>
+                        <div class="filter-row" style="align-items: center; flex-wrap: wrap;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <a href="#" id="btn-export-template" class="btn btn-info">📄 Tải mẫu (Export template)</a>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <button type="button" class="btn btn-success" id="btn-export-excel">📊 Export Excel (.xlsx)</button>
+                                <button type="button" class="btn btn-secondary" id="btn-export-csv" style="margin-left: 8px;">Export CSV</button>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; gap: 8px;">
+                                <input type="file" id="importFile" accept=".csv,.xlsx" style="max-width: 260px;">
+                                <button type="button" class="btn btn-warning" id="btn-import">Import CSV / Excel</button>
+                            </div>
+                            <span id="import-msg" style="font-size: 0.9rem; color: #0a0;"></span>
+                        </div>
+                        <div id="templates-section" style="margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #e2e8f0;">
+                            <h4 style="margin-bottom: 8px; font-size: 14px; color: #0f172a;">📋 Mẫu hồ sơ đăng ký đề tài ngoài Viện</h4>
+                            <p style="font-size: 0.84rem; color: #64748b; margin-bottom: 12px;">Upload mẫu để user tải về khi đăng ký. Người dùng khác không thấy khu vực này.</p>
+                            <div class="filter-row" style="align-items: flex-end; flex-wrap: wrap; gap: 16px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.84rem;" for="template-thuyet-minh">Mẫu Thuyết minh chi tiết</label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="file" id="template-thuyet-minh" accept=".pdf,.doc,.docx" style="max-width: 220px;">
+                                        <button type="button" class="btn btn-info" id="btn-upload-template-thuyet-minh" style="font-size: 0.88rem;">Upload mẫu</button>
+                                    </div>
+                                    <span id="template-thuyet-minh-msg" style="font-size: 0.8rem; color: #0a0;"></span>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 0.84rem;" for="template-van-ban-xin-phep">Mẫu Văn bản xin phép Viện trưởng</label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="file" id="template-van-ban-xin-phep" accept=".pdf,.doc,.docx" style="max-width: 220px;">
+                                        <button type="button" class="btn btn-info" id="btn-upload-template-van-ban" style="font-size: 0.88rem;">Upload mẫu</button>
+                                    </div>
+                                    <span id="template-van-ban-msg" style="font-size: 0.8rem; color: #0a0;"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2278,6 +2540,8 @@
             if (item) item.classList.add('active');
             if (section === 'reports') {
                 if (!isAdmin) return; // không mở được kể cả khi gọi thẳng showSection('reports')
+                var acc = document.getElementById('reports-accordion');
+                if (acc) acc.open = true;
                 var rs = document.getElementById('reports-section');
                 if (rs) rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 return;
@@ -3027,43 +3291,106 @@
         }
 
         function updateProgress() { alert('Chức năng cập nhật tiến độ đang được phát triển...'); }
-        // ── Báo cáo thống kê nhiệm vụ (khu vực "Thống kê & Báo cáo") ──────────────
-        // Điền danh sách năm từ dữ liệu thật thay vì cố định, để không bỏ sót năm cũ.
-        function populateReportYears() {
-            var from = document.getElementById('reportFromYear');
-            var to = document.getElementById('reportToYear');
-            if (!from || !to) return;
-            fetch(apiBase + '/api/missions')
-                .then(function (r) { return r.json(); })
-                .then(function (d) {
-                    var years = [];
-                    (d.missions || []).forEach(function (m) {
-                        var mm = String(m.start_date || '').match(/^(\d{4})/);
-                        if (mm) years.push(Number(mm[1]));
-                    });
-                    var now = new Date().getFullYear();
-                    var min = years.length ? Math.min.apply(null, years) : now - 10;
-                    var max = Math.max(now, years.length ? Math.max.apply(null, years) : now);
-                    var html = '';
-                    for (var y = max; y >= min; y--) html += '<option value="' + y + '">' + y + '</option>';
-                    from.insertAdjacentHTML('beforeend', html);
-                    to.insertAdjacentHTML('beforeend', html);
-                })
-                .catch(function () { /* giữ nguyên "Sớm nhất/Mới nhất" nếu không tải được */ });
+        // ── Báo cáo số liệu theo giai đoạn tháng (khu vực "Thống kê & Báo cáo") ─────
+        var reportState = {
+            scope: 'missions',
+            detailVisible: false,
+            lastData: null,
+            previewTimer: null
+        };
+
+        function escHtmlReport(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function formatMoneyShort(v) {
+            var n = Number(v) || 0;
+            if (n >= 1e9) return (n / 1e9).toFixed(2).replace(/\.00$/, '') + ' tỷ';
+            if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + ' triệu';
+            return n.toLocaleString('vi-VN') + ' đ';
+        }
+
+        function autoFormatMonthInput(el) {
+            if (!el) return;
+            var digits = String(el.value || '').replace(/\D/g, '').slice(0, 6);
+            if (digits.length > 2) {
+                el.value = digits.slice(0, 2) + '/' + digits.slice(2);
+            } else {
+                el.value = digits;
+            }
+        }
+
+        function monthTextToIso(txt) {
+            var m = String(txt || '').trim().match(/^(\d{1,2})\/(\d{4})$/);
+            if (!m) return '';
+            var mm = Number(m[1]), yy = Number(m[2]);
+            if (mm < 1 || mm > 12 || yy < 1900 || yy > 2200) return '';
+            return yy + '-' + String(mm).padStart(2, '0');
+        }
+
+        function isoToMonthText(iso) {
+            var m = String(iso || '').trim().match(/^(\d{4})-(\d{2})$/);
+            return m ? (m[2] + '/' + m[1]) : '';
+        }
+
+        function syncMonthPickersFromText() {
+            var fTxt = (document.getElementById('reportFromMonth') || {}).value || '';
+            var tTxt = (document.getElementById('reportToMonth') || {}).value || '';
+            var fPick = document.getElementById('reportFromMonthPicker');
+            var tPick = document.getElementById('reportToMonthPicker');
+            if (fPick) fPick.value = monthTextToIso(fTxt);
+            if (tPick) tPick.value = monthTextToIso(tTxt);
+        }
+
+        function applyReportScopeUi() {
+            var sc = reportState.scope;
+            var showMissions = (sc === 'missions' || sc === 'both');
+            var showPubs = (sc === 'publications' || sc === 'both');
+            document.querySelectorAll('#reportScopeTabs .pr-scope-btn').forEach(function (b) {
+                b.classList.toggle('active', b.getAttribute('data-scope') === sc);
+            });
+            var mLv = document.getElementById('reportMissionLevelsWrap');
+            var mMode = document.getElementById('reportDateModeWrap');
+            var mStatus = document.getElementById('reportStatusWrap');
+            var pWrap = document.getElementById('reportPubFiltersWrap');
+            if (mLv) mLv.style.display = showMissions ? '' : 'none';
+            if (mMode) mMode.style.display = showMissions ? '' : 'none';
+            if (mStatus) mStatus.style.display = showMissions ? '' : 'none';
+            if (pWrap) pWrap.style.display = showPubs ? '' : 'none';
         }
 
         function buildReportQuery() {
             var params = new URLSearchParams();
-            var f = (document.getElementById('reportFromYear') || {}).value || '';
-            var t = (document.getElementById('reportToYear') || {}).value || '';
+            params.set('scope', reportState.scope);
+            var f = (document.getElementById('reportFromMonth') || {}).value || '';
+            var t = (document.getElementById('reportToMonth') || {}).value || '';
+            var dm = (document.getElementById('reportDateMode') || {}).value || 'overlap';
             var s = (document.getElementById('reportStatus') || {}).value || '';
-            if (f) params.set('fromYear', f);
-            if (t) params.set('toYear', t);
+            if (f.trim()) params.set('fromMonth', f.trim());
+            if (t.trim()) params.set('toMonth', t.trim());
+            if (dm) params.set('dateMode', dm);
             if (s) params.set('statuses', s);
-            var checked = [].slice.call(
-                document.querySelectorAll('#reportLevels input[type="checkbox"]:checked')
-            ).map(function (c) { return c.value; });
-            if (checked.length) params.set('levels', checked.join(','));
+
+            var allCb = document.getElementById('reportLevelAll');
+            if (!allCb || !allCb.checked) {
+                var checked = [].slice.call(
+                    document.querySelectorAll('#reportLevels input.report-level-cb:checked')
+                ).map(function (c) { return c.value; });
+                if (checked.length) params.set('levels', checked.join(','));
+            }
+
+            var q = (document.getElementById('reportPubQuartile') || {}).value || '';
+            var idx = (document.getElementById('reportPubIndex') || {}).value || '';
+            var pt = (document.getElementById('reportPubType') || {}).value || '';
+            var incY = document.getElementById('reportIncludeYearOnly');
+            if (q) params.set('quartile', q);
+            if (idx) params.set('indexDb', idx);
+            if (pt) params.set('pubType', pt);
+            params.set('includeYearOnly', incY && !incY.checked ? '0' : '1');
             return params.toString();
         }
 
@@ -3074,16 +3401,222 @@
             el.style.color = color || '#666';
         }
 
+        function renderReportPreview(data) {
+            reportState.lastData = data;
+            var titleEl = document.getElementById('report-preview-title');
+            var noteEl = document.getElementById('report-preview-note');
+            var kpiEl = document.getElementById('report-kpi-grid');
+            var pillEl = document.getElementById('report-level-pills');
+            var detEl = document.getElementById('report-detail-container');
+            if (!titleEl || !kpiEl) return;
+
+            var sc = data.scope;
+            var ms = data.summary.missions;
+            var ps = data.summary.publications;
+            var labelText = 'Giai đoạn: ' + (data.range && data.range.label ? data.range.label : 'Toàn bộ');
+            titleEl.textContent = '📊 Xem trước số liệu — ' + labelText;
+
+            var notes = [];
+            if ((sc === 'publications' || sc === 'both') && data.meta && data.meta.publicationsYearOnlyIncluded > 0) {
+                notes.push('Lưu ý: có ' + data.meta.publicationsYearOnlyIncluded + ' bài chỉ có năm (chưa rõ tháng) được gộp vào.');
+            }
+            if ((sc === 'publications' || sc === 'both') && data.meta && data.meta.publicationsYearOnlyExcluded > 0) {
+                notes.push('Đang ẩn ' + data.meta.publicationsYearOnlyExcluded + ' bài chỉ có năm (chưa rõ tháng).');
+            }
+            if (noteEl) noteEl.textContent = notes.join(' ');
+
+            var cards = [];
+            if (sc === 'missions' || sc === 'both') {
+                cards.push(
+                    '<div class="pr-kpi-card"><div class="pr-kpi-label">Tổng số đề tài khớp</div>' +
+                    '<div class="pr-kpi-val">' + ms.total + ' đề tài</div>' +
+                    '<div class="pr-kpi-sub">Đang làm: ' + ms.runningCount + ' · Hoàn thành: ' + ms.doneCount + '</div></div>'
+                );
+                cards.push(
+                    '<div class="pr-kpi-card"><div class="pr-kpi-label">Tổng kinh phí đề tài</div>' +
+                    '<div class="pr-kpi-val">' + formatMoneyShort(ms.totalBudget) + '</div>' +
+                    '<div class="pr-kpi-sub">' + (ms.totalBudget || 0).toLocaleString('vi-VN') + ' VNĐ</div></div>'
+                );
+            }
+            if (sc === 'publications' || sc === 'both') {
+                cards.push(
+                    '<div class="pr-kpi-card"><div class="pr-kpi-label">Tổng bài báo / công bố</div>' +
+                    '<div class="pr-kpi-val" style="color:#1d5b4e;">' + ps.total + ' bài</div>' +
+                    '<div class="pr-kpi-sub">Tổng trích dẫn: ' + ps.totalCitations + '</div></div>'
+                );
+                cards.push(
+                    '<div class="pr-kpi-card"><div class="pr-kpi-label">Chỉ mục &amp; Phân hạng</div>' +
+                    '<div class="pr-kpi-val" style="color:#1d5b4e;font-size:1rem;">Q1: ' + ps.quartileCounts.Q1 + ' · Q2: ' + ps.quartileCounts.Q2 + '</div>' +
+                    '<div class="pr-kpi-sub">Scopus: ' + ps.indexCounts.scopus + ' · WoS: ' + ps.indexCounts.wos + ' · PubMed: ' + ps.indexCounts.pubmed + '</div></div>'
+                );
+            }
+            kpiEl.innerHTML = cards.join('');
+
+            if (pillEl) {
+                if ((sc === 'missions' || sc === 'both') && ms.byLevel && ms.byLevel.length) {
+                    pillEl.innerHTML = ms.byLevel.map(function (lv) {
+                        return '<span class="pr-level-pill">' + escHtmlReport(lv.label) + ': ' + lv.count + '</span>';
+                    }).join('');
+                } else {
+                    pillEl.innerHTML = '';
+                }
+            }
+
+            if (detEl) {
+                detEl.style.display = reportState.detailVisible ? '' : 'none';
+                if (reportState.detailVisible) {
+                    detEl.innerHTML = buildPreviewDetailHtml(data);
+                }
+            }
+        }
+
+        function buildPreviewDetailHtml(data) {
+            var html = '';
+            if (data.scope === 'missions' || data.scope === 'both') {
+                html += '<div class="pr-detail-wrap"><table class="pr-detail-table"><thead><tr>' +
+                    '<th>#</th><th>Mã</th><th>Tên đề tài</th><th>Chủ nhiệm</th><th>Cấp</th><th>Thời gian</th><th>Tình trạng trong kỳ</th><th style="text-align:right;">Kinh phí</th>' +
+                    '</tr></thead><tbody>';
+                if (!data.missions.length) {
+                    html += '<tr><td colspan="8" style="text-align:center;color:#64748b;padding:12px;">Không có đề tài nào khớp giai đoạn &amp; bộ lọc.</td></tr>';
+                } else {
+                    data.missions.forEach(function (m, i) {
+                        html += '<tr>' +
+                            '<td>' + (i + 1) + '</td>' +
+                            '<td><strong>' + escHtmlReport(m.code) + '</strong></td>' +
+                            '<td>' + escHtmlReport(m.title) + '</td>' +
+                            '<td>' + escHtmlReport(m.principal) + '</td>' +
+                            '<td>' + escHtmlReport(m.level_label) + '</td>' +
+                            '<td style="white-space:nowrap;">' + escHtmlReport((m.start_date || '—') + ' → ' + (m.end_date || '—')) + '</td>' +
+                            '<td>' + escHtmlReport(m.period_role) + '</td>' +
+                            '<td style="text-align:right;white-space:nowrap;">' + (Number(m.budget) || 0).toLocaleString('vi-VN') + '</td>' +
+                            '</tr>';
+                    });
+                }
+                html += '</tbody></table></div>';
+            }
+            if (data.scope === 'publications' || data.scope === 'both') {
+                html += '<div class="pr-detail-wrap"><table class="pr-detail-table"><thead><tr>' +
+                    '<th style="background:#1d5b4e;">#</th><th style="background:#1d5b4e;">Tháng/Năm</th><th style="background:#1d5b4e;">Tiêu đề bài báo</th><th style="background:#1d5b4e;">Tác giả</th><th style="background:#1d5b4e;">Tạp chí / Hội nghị</th><th style="background:#1d5b4e;">Chỉ mục / Q</th><th style="background:#1d5b4e;">Trích dẫn</th>' +
+                    '</tr></thead><tbody>';
+                if (!data.publications.length) {
+                    html += '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:12px;">Không có bài báo nào khớp giai đoạn &amp; bộ lọc.</td></tr>';
+                } else {
+                    data.publications.forEach(function (p, i) {
+                        html += '<tr>' +
+                            '<td>' + (i + 1) + '</td>' +
+                            '<td style="white-space:nowrap;">' + escHtmlReport(p.display_month) + (p.date_note ? '<div style="font-size:0.72rem;color:#b45309;">' + escHtmlReport(p.date_note) + '</div>' : '') + '</td>' +
+                            '<td>' + escHtmlReport(p.title) + '</td>' +
+                            '<td>' + escHtmlReport(p.authors) + '</td>' +
+                            '<td>' + escHtmlReport(p.journal_name || p.conference_name) + '</td>' +
+                            '<td>' + escHtmlReport([p.index_db, p.quartile].filter(Boolean).join(' · ')) + '</td>' +
+                            '<td style="text-align:center;">' + (Number(p.citation_count) || 0) + '</td>' +
+                            '</tr>';
+                    });
+                }
+                html += '</tbody></table></div>';
+            }
+            return html;
+        }
+
+        function scheduleReportPreview() {
+            clearTimeout(reportState.previewTimer);
+            reportState.previewTimer = setTimeout(loadReportPreview, 250);
+        }
+
+        function loadReportPreview() {
+            if (!isAdmin) return;
+            var token = localStorage.getItem('token');
+            if (!token) return;
+            var titleEl = document.getElementById('report-preview-title');
+            if (titleEl) titleEl.textContent = '⏳ Đang tổng hợp số liệu…';
+            var qs = buildReportQuery();
+            fetch(apiBase + '/api/missions/period-report/preview?' + qs, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+                .then(function (r) {
+                    if (!r.ok) return r.json().catch(function () { return {}; }).then(function (d) { throw new Error(d.message || r.statusText); });
+                    return r.json();
+                })
+                .then(renderReportPreview)
+                .catch(function (e) {
+                    if (titleEl) titleEl.textContent = '❌ Không tải được số liệu xem trước: ' + (e.message || '');
+                });
+        }
+
+        function applyReportPreset(preset) {
+            var now = new Date();
+            var y = now.getFullYear();
+            var m = now.getMonth() + 1;
+            var fromVal = '', toVal = '';
+            if (preset === 'this_year') {
+                fromVal = '01/' + y; toVal = '12/' + y;
+            } else if (preset === 'last_year') {
+                fromVal = '01/' + (y - 1); toVal = '12/' + (y - 1);
+            } else if (preset === 'h1_this_year') {
+                fromVal = '01/' + y; toVal = '06/' + y;
+            } else if (preset === 'h2_this_year') {
+                fromVal = '07/' + y; toVal = '12/' + y;
+            } else if (preset === 'this_quarter') {
+                var qStart = Math.floor((m - 1) / 3) * 3 + 1;
+                fromVal = String(qStart).padStart(2, '0') + '/' + y;
+                toVal = String(qStart + 2).padStart(2, '0') + '/' + y;
+            } else if (preset === 'last_3y') {
+                fromVal = '01/' + (y - 2); toVal = '12/' + y;
+            } else if (preset === 'last_5y') {
+                fromVal = '01/' + (y - 4); toVal = '12/' + y;
+            } else if (preset === 'all') {
+                fromVal = ''; toVal = '';
+            }
+            var fEl = document.getElementById('reportFromMonth');
+            var tEl = document.getElementById('reportToMonth');
+            if (fEl) fEl.value = fromVal;
+            if (tEl) tEl.value = toVal;
+            syncMonthPickersFromText();
+            loadReportPreview();
+        }
+
+        function copyReportSummaryText() {
+            var d = reportState.lastData;
+            if (!d) { setReportMsg('⚠️ Chưa có số liệu để copy.', '#c8490e'); return; }
+            var lines = ['BÁO CÁO SỐ LIỆU KHCN — GIAI ĐOẠN: ' + (d.range ? d.range.label : 'Toàn bộ')];
+            if (d.scope === 'missions' || d.scope === 'both') {
+                var ms = d.summary.missions;
+                lines.push('');
+                lines.push('1. ĐỀ TÀI / NHIỆM VỤ KHCN: ' + ms.total + ' đề tài (Tổng kinh phí: ' + (ms.totalBudget || 0).toLocaleString('vi-VN') + ' VNĐ)');
+                lines.push('   - Đang thực hiện: ' + ms.runningCount + ' · Hoàn thành/Thanh lý: ' + ms.doneCount);
+                (ms.byLevel || []).forEach(function (lv) {
+                    lines.push('   - ' + lv.label + ': ' + lv.count + ' đề tài (' + (lv.budget || 0).toLocaleString('vi-VN') + ' VNĐ)');
+                });
+            }
+            if (d.scope === 'publications' || d.scope === 'both') {
+                var ps = d.summary.publications;
+                lines.push('');
+                lines.push('2. BÀI BÁO / CÔNG BỐ KHOA HỌC: ' + ps.total + ' bài (Tổng trích dẫn: ' + ps.totalCitations + ')');
+                lines.push('   - Chỉ mục: Scopus ' + ps.indexCounts.scopus + ' · WoS ' + ps.indexCounts.wos + ' · PubMed ' + ps.indexCounts.pubmed);
+                lines.push('   - Phân hạng: Q1: ' + ps.quartileCounts.Q1 + ' · Q2: ' + ps.quartileCounts.Q2 + ' · Q3: ' + ps.quartileCounts.Q3 + ' · Q4: ' + ps.quartileCounts.Q4);
+            }
+            var text = lines.join('\n');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function () {
+                    setReportMsg('✅ Đã copy tóm tắt số liệu — bạn có thể Ctrl+V thẳng vào Word.', '#0a7d32');
+                }).catch(function () {
+                    window.prompt('Copy đoạn tóm tắt sau:', text);
+                });
+            } else {
+                window.prompt('Copy đoạn tóm tắt sau:', text);
+            }
+        }
+
         function exportMissionReport() {
             var token = localStorage.getItem('token');
             if (!token) { alert('Vui lòng đăng nhập (Admin) để xuất báo cáo.'); return; }
             var btn = document.getElementById('btn-export-report');
             if (btn) btn.disabled = true;
-            setReportMsg('⏳ Đang tạo báo cáo…', '#666');
+            setReportMsg('⏳ Đang tạo file Excel báo cáo…', '#666');
 
             var qs = buildReportQuery();
             var filename = '';
-            fetch(apiBase + '/api/missions/report-excel' + (qs ? '?' + qs : ''), {
+            fetch(apiBase + '/api/missions/period-report/excel?' + qs, {
                 headers: { 'Authorization': 'Bearer ' + token }
             })
                 .then(function (r) {
@@ -3097,9 +3630,10 @@
                     }
                     var cd = r.headers.get('Content-Disposition') || '';
                     var m = cd.match(/filename="?([^";]+)"?/);
-                    filename = m ? m[1] : 'bao_cao_nhiem_vu_khcn.xlsx';
-                    var count = r.headers.get('X-Mission-Count');
-                    return r.arrayBuffer().then(function (buf) { return { buf: buf, count: count }; });
+                    filename = m ? m[1] : 'bao_cao_khcn.xlsx';
+                    var mCount = r.headers.get('X-Mission-Count');
+                    var pCount = r.headers.get('X-Publication-Count');
+                    return r.arrayBuffer().then(function (buf) { return { buf: buf, mCount: mCount, pCount: pCount }; });
                 })
                 .then(function (res) {
                     var blob = new Blob([res.buf], {
@@ -3110,12 +3644,10 @@
                     a.download = filename;
                     a.click();
                     URL.revokeObjectURL(a.href);
-                    var n = res.count == null ? '' : res.count;
-                    if (n === '0') {
-                        setReportMsg('⚠️ Không có nhiệm vụ nào khớp bộ lọc — file chỉ có phần khung.', '#c8490e');
-                    } else {
-                        setReportMsg('✅ Đã xuất ' + n + ' nhiệm vụ — ' + filename, '#0a7d32');
-                    }
+                    var parts = [];
+                    if (reportState.scope !== 'publications') parts.push((res.mCount || '0') + ' đề tài');
+                    if (reportState.scope !== 'missions') parts.push((res.pCount || '0') + ' bài báo');
+                    setReportMsg('✅ Đã xuất ' + parts.join(' & ') + ' — ' + filename, '#0a7d32');
                 })
                 .catch(function (e) {
                     setReportMsg('❌ ' + (e.message || 'Không xuất được báo cáo.'), '#c0392b');
@@ -3124,19 +3656,107 @@
         }
 
         function resetReportFilters() {
-            var f = document.getElementById('reportFromYear');
-            var t = document.getElementById('reportToYear');
-            var s = document.getElementById('reportStatus');
-            if (f) f.value = '';
-            if (t) t.value = '';
-            if (s) s.value = '';
-            document.querySelectorAll('#reportLevels input[type="checkbox"]').forEach(function (c) {
+            var ids = ['reportFromMonth', 'reportToMonth', 'reportFromMonthPicker', 'reportToMonthPicker', 'reportStatus', 'reportPubQuartile', 'reportPubIndex', 'reportPubType'];
+            ids.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            var dm = document.getElementById('reportDateMode');
+            if (dm) dm.value = 'overlap';
+            var incY = document.getElementById('reportIncludeYearOnly');
+            if (incY) incY.checked = true;
+            var allCb = document.getElementById('reportLevelAll');
+            if (allCb) allCb.checked = true;
+            document.querySelectorAll('#reportLevels input.report-level-cb').forEach(function (c) {
                 c.checked = false;
             });
             setReportMsg('');
+            loadReportPreview();
+        }
+
+        function initPeriodReportEvents() {
+            document.querySelectorAll('#reportScopeTabs .pr-scope-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    reportState.scope = btn.getAttribute('data-scope') || 'missions';
+                    applyReportScopeUi();
+                    loadReportPreview();
+                });
+            });
+            document.querySelectorAll('#reportPresets .pr-preset-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    applyReportPreset(btn.getAttribute('data-preset'));
+                });
+            });
+
+            ['reportFromMonth', 'reportToMonth'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('input', function () {
+                    autoFormatMonthInput(el);
+                    syncMonthPickersFromText();
+                    if (!el.value || /^\d{2}\/\d{4}$/.test(el.value)) scheduleReportPreview();
+                });
+                el.addEventListener('change', function () {
+                    syncMonthPickersFromText();
+                    loadReportPreview();
+                });
+            });
+            document.getElementById('reportFromMonthPicker')?.addEventListener('change', function (e) {
+                var el = document.getElementById('reportFromMonth');
+                if (el) el.value = isoToMonthText(e.target.value);
+                loadReportPreview();
+            });
+            document.getElementById('reportToMonthPicker')?.addEventListener('change', function (e) {
+                var el = document.getElementById('reportToMonth');
+                if (el) el.value = isoToMonthText(e.target.value);
+                loadReportPreview();
+            });
+
+            var allCb = document.getElementById('reportLevelAll');
+            var levelCbs = [].slice.call(document.querySelectorAll('#reportLevels input.report-level-cb'));
+            if (allCb) {
+                allCb.addEventListener('change', function () {
+                    if (allCb.checked) {
+                        levelCbs.forEach(function (c) { c.checked = false; });
+                    }
+                    loadReportPreview();
+                });
+            }
+            levelCbs.forEach(function (c) {
+                c.addEventListener('change', function () {
+                    var anyChecked = levelCbs.some(function (x) { return x.checked; });
+                    if (allCb) allCb.checked = !anyChecked;
+                    loadReportPreview();
+                });
+            });
+
+            ['reportDateMode', 'reportStatus', 'reportPubQuartile', 'reportPubIndex', 'reportPubType', 'reportIncludeYearOnly'].forEach(function (id) {
+                document.getElementById(id)?.addEventListener('change', loadReportPreview);
+            });
+
+            document.getElementById('btn-copy-report-summary')?.addEventListener('click', copyReportSummaryText);
+            document.getElementById('btn-toggle-report-detail')?.addEventListener('click', function () {
+                reportState.detailVisible = !reportState.detailVisible;
+                var btn = document.getElementById('btn-toggle-report-detail');
+                if (btn) btn.textContent = reportState.detailVisible ? '🙈 Ẩn danh sách chi tiết' : '👁️ Xem danh sách chi tiết';
+                if (reportState.lastData) renderReportPreview(reportState.lastData);
+            });
+            applyReportScopeUi();
         }
 
         function exportTask() { alert('Chức năng xuất báo cáo đang được phát triển...'); }
+
+        function resetQuickFilters() {
+            var s = document.getElementById('searchInput');
+            var l = document.getElementById('levelFilter');
+            var st = document.getElementById('statusFilter');
+            var y = document.getElementById('yearFilter');
+            if (s) s.value = '';
+            if (l) l.value = '';
+            if (st) st.value = '';
+            if (y) y.value = '';
+            loadMissions();
+        }
 
         window.addEventListener('load', () => {
             if (!enforceInstituteAccess()) return;
@@ -3144,11 +3764,10 @@
             try { currentUser = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) { currentUser = {}; }
 
             function applyAdminUiVisibility() {
-                // Export/Import số liệu và Thống kê & Báo cáo: CHỈ Admin.
-                // Các vai trò khác (kể cả vien_truong, phong_khcn) đều không thấy.
-                // Đây chỉ là lớp hiển thị — chặn thật nằm ở adminOnly trên từng endpoint.
-                var exportImportSection = document.getElementById('export-import-section');
-                if (exportImportSection) exportImportSection.style.display = isAdmin ? '' : 'none';
+                // Export/Import số liệu & Mẫu hồ sơ: CHỈ Chủ sở hữu (Master Admin).
+                // Các vai trò khác (kể cả Viện trưởng, Admin phụ, phòng KHCN) đều không thấy.
+                var ownerAdminZone = document.getElementById('owner-admin-zone');
+                if (ownerAdminZone) ownerAdminZone.style.display = isMasterAdmin ? '' : 'none';
                 var reportsSection = document.getElementById('reports-section');
                 if (reportsSection) reportsSection.style.display = isAdmin ? '' : 'none';
                 var menuReports = document.getElementById('menu-reports');
@@ -3169,6 +3788,7 @@
                 loadCapVienTrackBadge();
                 loadCtHdNgoaiVienBadge();
                 loadMissions();
+                if (isAdmin) loadReportPreview();
             }
 
             if (token) {
@@ -3197,7 +3817,7 @@
             if (btnTpl) btnTpl.href = apiBase + '/api/missions/export-template';
             document.getElementById('btn-export-report')?.addEventListener('click', exportMissionReport);
             document.getElementById('btn-reset-report')?.addEventListener('click', resetReportFilters);
-            populateReportYears();
+            initPeriodReportEvents();
             document.getElementById('btn-export-excel')?.addEventListener('click', function() {
                 if (!token) { alert('Vui lòng đăng nhập (Admin) để export số liệu.'); return; }
                 fetch(apiBase + '/api/missions/export-excel', { headers: { 'Authorization': 'Bearer ' + token } })

@@ -256,6 +256,21 @@
     );
     pointer-events: none;
   }
+  .main-zone--owner {
+    padding: 18px 18px 22px;
+    margin-top: 18px;
+    background: linear-gradient(168deg, #f5f3ff 0%, #f8fafc 48%, var(--bg) 100%);
+    border: 1px solid rgba(124, 58, 237, 0.18);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
+  }
+  .main-zone-eyebrow--owner {
+    color: #6d28d9;
+  }
+  .main-zone-eyebrow--owner .main-zone-eyebrow__dot {
+    background: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
+  }
   .main-zone-eyebrow {
     font-family: var(--mono);
     font-size: 10px;
@@ -1509,6 +1524,9 @@
   .pub-admin-only { display: none !important; }
   body.pub-is-admin .pub-admin-only { display: inline-flex !important; align-items: center; gap: 4px; }
   body.pub-is-admin .pub-admin-only.pub-admin-stack { display: flex !important; flex-direction: column; align-items: stretch; }
+  .pub-master-only { display: none !important; }
+  body.pub-is-master .pub-master-only { display: inline-flex !important; align-items: center; gap: 4px; }
+  body.pub-is-master .pub-master-only.pub-admin-stack { display: flex !important; flex-direction: column; align-items: stretch; }
   #pubTable th.pub-check-col,
   #pubTable td.pub-check-col { display: none; }
   body.pub-is-admin #pubTable th.pub-check-col,
@@ -2187,10 +2205,10 @@
       </a>
     </div>
 
-    <div class="pub-admin-only pub-admin-stack" style="gap:0">
+    <div class="pub-master-only pub-admin-stack" style="gap:0">
       <hr class="sidebar-divider">
       <div class="sidebar-section">
-        <span class="sidebar-label">Quản trị</span>
+        <span class="sidebar-label">Quản trị (Chủ sở hữu)</span>
         <div class="sidebar-item" onclick="scrollToOrcidNvAdmin()">
           <span class="si-icon">👥</span> NCV &amp; ORCID
           <span class="si-count" id="sidebarNvActiveCount">—</span>
@@ -2208,10 +2226,10 @@
       <div class="sidebar-item" onclick="quickReportPdfSidebar()" title="Mở trang in — Ctrl+P → Lưu PDF">
         <span class="si-icon">📑</span> Báo cáo PDF
       </div>
-      <div class="sidebar-item pub-admin-only" onclick="quickSyncOrcidSidebar(event)" style="cursor:pointer" title="Admin: quét ORCID hàng loạt (máy chủ).">
+      <div class="sidebar-item pub-master-only" onclick="quickSyncOrcidSidebar(event)" style="cursor:pointer" title="Chủ sở hữu: quét ORCID hàng loạt (máy chủ).">
         <span class="si-icon">🔗</span> Đồng bộ ORCID
       </div>
-      <div class="sidebar-item pub-admin-only" onclick="quickRefreshScopusWosSidebar()" title="Cần SCOPUS_API_KEY trong .env để lấy EID/trích dẫn Scopus; luôn thử OpenAlex.">
+      <div class="sidebar-item pub-master-only" onclick="quickRefreshScopusWosSidebar()" title="Cần SCOPUS_API_KEY trong .env để lấy EID/trích dẫn Scopus; luôn thử OpenAlex.">
         <span class="si-icon">🔄</span> Cập nhật Scopus/WoS
       </div>
     </div>
@@ -2345,82 +2363,6 @@
         <p class="stats-footnote" id="pubDonutFootnote"></p>
       </div>
     </div>
-
-    <!-- Quản lý nghiên cứu viên — ORCID (chỉ Admin) -->
-    <section id="admin-orcid-nv" class="nv-admin-panel pub-admin-only pub-admin-stack" aria-labelledby="nv-admin-heading">
-      <div class="nv-head">
-        <div>
-          <h2 id="nv-admin-heading">Quản lý nghiên cứu viên (ORCID)</h2>
-          <p class="nv-desc">
-            Khai báo <strong>mã ORCID</strong> (định dạng 0000-0000-0000-000X) cho từng nghiên cứu viên. Quét works và duyệt import: dùng trang riêng <a href="orcid-harvest.html" style="color:var(--accent);font-weight:600">ORCID Auto-Harvest</a>.
-            <strong>Tắt</strong> khi tạm dừng quét; <strong>Xóa</strong> khi nghỉ việc / không còn trong Viện. Cùng một ORCID có thể cập nhật lại họ tên hoặc phòng bằng cách thêm lại (ghi đè).
-          </p>
-        </div>
-        <div class="nv-actions-top">
-          <span class="nv-badge" id="nvActiveBadge">Đang bật quét: 0</span>
-          <a class="btn" href="orcid-harvest.html" style="text-decoration:none;display:inline-flex;align-items:center;">🛰 Trang ORCID Auto-Harvest</a>
-        </div>
-      </div>
-      <div class="nv-form-row">
-        <input type="text" id="nvOrcidNameInput" placeholder="Họ và tên" autocomplete="name">
-        <input type="text" id="nvOrcidDeptInput" placeholder="Phòng / đơn vị" autocomplete="organization">
-        <input type="text" id="nvOrcidIdInput" placeholder="ORCID iD: 0000-0000-0000-000X" inputmode="text" spellcheck="false">
-        <button type="button" class="btn btn-primary" onclick="saveOrcidResearcher()">Thêm / cập nhật</button>
-      </div>
-      <div class="nv-table-wrap">
-        <table class="nv-table">
-          <thead>
-            <tr>
-              <th>Họ tên</th>
-              <th>Phòng</th>
-              <th>ORCID iD</th>
-              <th>Trạng thái</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody id="nvOrcidResearchersTbody">
-            <tr><td colspan="5" style="color:var(--text-3)">Đang tải danh sách…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section id="admin-sjr-import" class="nv-admin-panel pub-admin-only pub-admin-stack" aria-labelledby="sjr-import-heading" style="margin-top:16px">
-      <div class="nv-head">
-        <div>
-          <h2 id="sjr-import-heading">Import SCImago Journal Rank (Admin)</h2>
-          <p class="nv-desc" style="margin:8px 0 0">
-            Nạp <strong>dữ liệu offline</strong> vào bảng <code>journal_metrics</code> để tra cứu phân hạng Q / SJR theo ISSN khi enrich.
-            Trên SCImago: <a href="https://www.scimagojr.com/journalrank.php" target="_blank" rel="noopener">Journal Rank</a> → menu <strong>Export → CSV</strong>
-            (định dạng chuẩn của hệ thống: cột phân tách bằng dấu <code>;</code>, có header <em>Issn</em>, <em>Title</em>, <em>SJR Best Quartile</em>, <em>SJR</em>…).
-            File <code>.xlsx</code> tải thẳng từ trình duyệt thường <strong>không</strong> dùng được — cần bản CSV xuất từ trang SCImago, hoặc mở Excel → Lưu dưới dạng CSV với phân tách <code>;</code> (kiểu châu Âu) và đúng tên cột.
-          </p>
-        </div>
-      </div>
-      <form id="sjrImportForm" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:12px" onsubmit="submitSjrCsvImport(event)" aria-label="Import SCImago CSV">
-        <label class="stats-inline"><span>Năm kỳ SJR</span>
-          <select id="sjrImportYear" class="stats-select stats-year" required aria-label="Năm dữ liệu SCImago">
-            <option value="2026">2026</option>
-            <option value="2025">2025</option>
-            <option value="2024" selected>2024</option>
-            <option value="2023">2023</option>
-            <option value="2022">2022</option>
-            <option value="2021">2021</option>
-            <option value="2020">2020</option>
-            <option value="2019">2019</option>
-            <option value="2018">2018</option>
-            <option value="2017">2017</option>
-            <option value="2016">2016</option>
-            <option value="2015">2015</option>
-          </select>
-        </label>
-        <label class="stats-inline"><span>File CSV</span>
-          <input type="file" id="sjrImportFile" accept=".csv,text/csv" required aria-label="File CSV SCImago">
-        </label>
-        <button type="submit" class="btn btn-primary" id="sjrImportBtn">📥 Import vào CSDL</button>
-      </form>
-      <pre id="sjrImportLog" style="margin-top:12px;padding:12px;background:var(--accent-light);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;max-height:220px;overflow:auto;white-space:pre-wrap;display:none"></pre>
-    </section>
     </div>
 
     <div class="main-zone main-zone--listing" aria-label="Khu vực tra cứu và danh sách công bố">
@@ -2439,10 +2381,6 @@
       <div class="toolbar-action-group" aria-label="Thao tác xuất / nhập">
         <button type="button" class="btn btn-tool btn-tool-excel" onclick="exportToolbarExcel()" title="Xuất các dòng đang hiển thị (sau ô tìm &amp; lọc) — file CSV, mở bằng Excel">📊 Xuất Excel</button>
         <button type="button" class="btn btn-tool btn-tool-bibtex-out" onclick="exportToolbarBibtex()" title="File .bib cho các công bố đang hiển thị">📎 BibTeX</button>
-        <button type="button" class="btn btn-tool btn-tool-import-bib pub-admin-only" onclick="openBibtexImportModal()" title="Nhập nhiều công bố từ BibTeX">📥 Import BibTeX</button>
-        <a href="bibtex-import-review.html" class="btn btn-tool btn-tool-bibtex-compare pub-admin-only" title="So sánh với CSDL, xem trùng / lỗi / nghi ngờ, nhập có chọn lọc">📋 So sánh BibTeX</a>
-        <button type="button" class="btn btn-tool btn-tool-sjr-nav pub-admin-only" onclick="scrollToSjrImportAdmin()" title="Nạp CSV SCImago vào CSDL">📥 Import SCImago (SJR)</button>
-        <a class="btn btn-tool btn-tool-orcid pub-admin-only" href="orcid-harvest.html" style="text-decoration:none;">🛰 ORCID Auto-Harvest</a>
         <button type="button" class="btn btn-primary btn-tool-add pub-admin-only" onclick="openAddModal()">＋ Thêm công bố</button>
       </div>
     </div>
@@ -2569,6 +2507,105 @@
       </div>
     </div>
     </div>
+    </div>
+
+    <div class="main-zone main-zone--owner pub-master-only pub-admin-stack" aria-label="Khu vực quản trị hệ thống (Chủ sở hữu)">
+      <div class="main-zone-eyebrow main-zone-eyebrow--owner">
+        <span class="main-zone-eyebrow__dot" aria-hidden="true"></span>
+        <span>Quản trị hệ thống · Chủ sở hữu</span>
+        <span class="main-zone-eyebrow__title">Công cụ nhập liệu BibTeX, quét ORCID và nạp bảng xếp hạng SCImago (SJR)</span>
+      </div>
+
+      <section class="nv-admin-panel" aria-label="Công cụ nhập liệu và đồng bộ">
+        <div class="nv-head" style="margin-bottom:10px">
+          <div>
+            <h2>Công cụ nhập liệu &amp; đồng bộ nâng cao</h2>
+            <p class="nv-desc">Các tác vụ nhập hàng loạt từ BibTeX, đối chiếu trùng lặp và thu thập tự động từ ORCID (chỉ hiển thị cho Chủ sở hữu).</p>
+          </div>
+        </div>
+        <div class="toolbar-action-group" style="justify-content:flex-start">
+          <button type="button" class="btn btn-tool btn-tool-import-bib" onclick="openBibtexImportModal()" title="Nhập nhiều công bố từ BibTeX">📥 Import BibTeX</button>
+          <a href="bibtex-import-review.html" class="btn btn-tool btn-tool-bibtex-compare" title="So sánh với CSDL, xem trùng / lỗi / nghi ngờ, nhập có chọn lọc">📋 So sánh BibTeX</a>
+          <a class="btn btn-tool btn-tool-orcid" href="orcid-harvest.html" style="text-decoration:none;">🛰 ORCID Auto-Harvest</a>
+          <button type="button" class="btn btn-tool btn-tool-sjr-nav" onclick="scrollToSjrImportAdmin()" title="Cuộn tới mục nạp CSV SCImago">📥 Import SCImago (SJR)</button>
+        </div>
+      </section>
+
+      <!-- Quản lý nghiên cứu viên — ORCID (chỉ chủ sở hữu / Master Admin) -->
+      <section id="admin-orcid-nv" class="nv-admin-panel" aria-labelledby="nv-admin-heading">
+        <div class="nv-head">
+          <div>
+            <h2 id="nv-admin-heading">Quản lý nghiên cứu viên (ORCID)</h2>
+            <p class="nv-desc">
+              Khai báo <strong>mã ORCID</strong> (định dạng 0000-0000-0000-000X) cho từng nghiên cứu viên. Quét works và duyệt import: dùng trang riêng <a href="orcid-harvest.html" style="color:var(--accent);font-weight:600">ORCID Auto-Harvest</a>.
+              <strong>Tắt</strong> khi tạm dừng quét; <strong>Xóa</strong> khi nghỉ việc / không còn trong Viện. Cùng một ORCID có thể cập nhật lại họ tên hoặc phòng bằng cách thêm lại (ghi đè).
+            </p>
+          </div>
+          <div class="nv-actions-top">
+            <span class="nv-badge" id="nvActiveBadge">Đang bật quét: 0</span>
+            <a class="btn" href="orcid-harvest.html" style="text-decoration:none;display:inline-flex;align-items:center;">🛰 Trang ORCID Auto-Harvest</a>
+          </div>
+        </div>
+        <div class="nv-form-row">
+          <input type="text" id="nvOrcidNameInput" placeholder="Họ và tên" autocomplete="name">
+          <input type="text" id="nvOrcidDeptInput" placeholder="Phòng / đơn vị" autocomplete="organization">
+          <input type="text" id="nvOrcidIdInput" placeholder="ORCID iD: 0000-0000-0000-000X" inputmode="text" spellcheck="false">
+          <button type="button" class="btn btn-primary" onclick="saveOrcidResearcher()">Thêm / cập nhật</button>
+        </div>
+        <div class="nv-table-wrap">
+          <table class="nv-table">
+            <thead>
+              <tr>
+                <th>Họ tên</th>
+                <th>Phòng</th>
+                <th>ORCID iD</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="nvOrcidResearchersTbody">
+              <tr><td colspan="5" style="color:var(--text-3)">Đang tải danh sách…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="admin-sjr-import" class="nv-admin-panel" aria-labelledby="sjr-import-heading" style="margin-bottom:0">
+        <div class="nv-head">
+          <div>
+            <h2 id="sjr-import-heading">Import SCImago Journal Rank (Chủ sở hữu)</h2>
+            <p class="nv-desc" style="margin:8px 0 0">
+              Nạp <strong>dữ liệu offline</strong> vào bảng <code>journal_metrics</code> để tra cứu phân hạng Q / SJR theo ISSN khi enrich.
+              Trên SCImago: <a href="https://www.scimagojr.com/journalrank.php" target="_blank" rel="noopener">Journal Rank</a> → menu <strong>Export → CSV</strong>
+              (định dạng chuẩn của hệ thống: cột phân tách bằng dấu <code>;</code>, có header <em>Issn</em>, <em>Title</em>, <em>SJR Best Quartile</em>, <em>SJR</em>…).
+              File <code>.xlsx</code> tải thẳng từ trình duyệt thường <strong>không</strong> dùng được — cần bản CSV xuất từ trang SCImago, hoặc mở Excel → Lưu dưới dạng CSV với phân tách <code>;</code> (kiểu châu Âu) và đúng tên cột.
+            </p>
+          </div>
+        </div>
+        <form id="sjrImportForm" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:12px" onsubmit="submitSjrCsvImport(event)" aria-label="Import SCImago CSV">
+          <label class="stats-inline"><span>Năm kỳ SJR</span>
+            <select id="sjrImportYear" class="stats-select stats-year" required aria-label="Năm dữ liệu SCImago">
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+              <option value="2024" selected>2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="2021">2021</option>
+              <option value="2020">2020</option>
+              <option value="2019">2019</option>
+              <option value="2018">2018</option>
+              <option value="2017">2017</option>
+              <option value="2016">2016</option>
+              <option value="2015">2015</option>
+            </select>
+          </label>
+          <label class="stats-inline"><span>File CSV</span>
+            <input type="file" id="sjrImportFile" accept=".csv,text/csv" required aria-label="File CSV SCImago">
+          </label>
+          <button type="submit" class="btn btn-primary" id="sjrImportBtn">📥 Import vào CSDL</button>
+        </form>
+        <pre id="sjrImportLog" style="margin-top:12px;padding:12px;background:var(--accent-light);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;max-height:220px;overflow:auto;white-space:pre-wrap;display:none"></pre>
+      </section>
     </div>
 
   </main>
@@ -2982,6 +3019,7 @@ function syncUserFromApiMe() {
               email: data.email,
               fullname: data.fullname,
               role: data.role,
+              isMasterAdmin: Boolean(data.isMasterAdmin),
             })
           );
         }
@@ -4106,12 +4144,21 @@ function isPubAdmin() {
   } catch (_) { return false; }
 }
 
+function isPubMasterAdmin() {
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    if (u.isMasterAdmin === true) return true;
+    return typeof isSystemSuperAdminEmail === 'function' && isSystemSuperAdminEmail(u.email);
+  } catch (_) { return false; }
+}
+
 function persistPubs() {
   try { localStorage.setItem(PUB_STORAGE_KEY, JSON.stringify(pubs)); } catch (_) {}
 }
 
 function applyPubAdminChrome() {
   document.body.classList.toggle('pub-is-admin', isPubAdmin());
+  document.body.classList.toggle('pub-is-master', isPubMasterAdmin());
 }
 
 /** Phần D: hiện link Phân tích công bố (sidebar + header) nếu admin hoặc có quyền dashboard pub_analytics; badge = tổng bài từ /publications/stats */
@@ -5752,7 +5799,7 @@ function showNotif(msg) {
 if (PUB_INSTITUTE_OK) {
   syncUserFromApiMe().then(function () {
     updateWelcomeUser();
-    if (isPubAdmin()) {
+    if (isPubMasterAdmin()) {
       loadOrcidResearchers().catch(function () {
         var tb = document.getElementById('nvOrcidResearchersTbody');
         if (tb) {

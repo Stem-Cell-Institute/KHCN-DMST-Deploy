@@ -6,83 +6,466 @@
     <link rel="stylesheet" href="/public/css/a11y.css">
     <script src="/public/js/a11y.js" defer></script>
     <title>Đăng nhập - Hệ thống Viện Tế bào gốc</title>
-    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:wght@700&display=swap" rel="stylesheet">
     <style>
-        .auth-page { max-width: 440px; margin: 3rem auto; padding: 0 1rem; }
-        .auth-card { background: var(--white); padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 20px var(--shadow); }
-        .auth-card h2 { font-family: 'Libre Baskerville', serif; color: var(--primary); margin-bottom: 1.5rem; }
-        .form-group { margin-bottom: 1.25rem; }
-        .form-group label { display: block; font-weight: 500; margin-bottom: 0.4rem; }
-        .form-group input { width: 100%; padding: 0.75rem 1rem; border: 2px solid #dee2e6; border-radius: 8px; font-size: 1rem; }
-        .form-group input:focus { outline: none; border-color: var(--primary); }
-        .btn-block { width: 100%; padding: 1rem; font-size: 1.05rem; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; background: var(--primary); color: var(--white); }
-        .btn-block:hover { background: var(--primary-light); }
-        .btn-block:disabled { opacity: 0.6; cursor: not-allowed; }
-        .auth-footer { text-align: center; margin-top: 1.5rem; color: var(--gray); font-size: 0.95rem; }
-        .auth-footer a { color: var(--primary); font-weight: 500; }
-        .msg { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
-        .msg.error { background: #f8d7da; color: #721c24; display: block; }
-        .msg.success { background: #d4edda; color: #155724; display: block; }
-        .role-links { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee; font-size: 0.9rem; }
-        .role-links a { display: block; margin: 0.4rem 0; color: var(--gray); }
-        .role-links a:hover { color: var(--primary); }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --brand: #14533c;
+            --brand-dark: #0b3325;
+            --brand-light: #1e6b4e;
+            --accent: #0ea5e9;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+        }
+        html, body {
+            height: 100%;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+        }
+        .login-shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1.05fr 1fr;
+        }
+
+        /* ── Left Brand Panel ── */
+        .brand-panel {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(155deg, #0b3325 0%, #14533c 48%, #0f2942 100%);
+            color: #ffffff;
+            padding: 40px 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .brand-panel::before {
+            content: '';
+            position: absolute;
+            inset: -20%;
+            background:
+                radial-gradient(circle at 20% 25%, rgba(52, 211, 153, 0.18) 0%, transparent 45%),
+                radial-gradient(circle at 80% 75%, rgba(56, 189, 248, 0.16) 0%, transparent 48%);
+            pointer-events: none;
+        }
+        .brand-panel > * { position: relative; z-index: 1; }
+
+        .brand-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .back-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255, 255, 255, 0.88);
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 500;
+            padding: 7px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            backdrop-filter: blur(8px);
+            transition: background 0.18s ease, transform 0.18s ease;
+        }
+        .back-home:hover {
+            background: rgba(255, 255, 255, 0.18);
+            transform: translateX(-2px);
+        }
+
+        .brand-center {
+            max-width: 480px;
+            margin: 32px 0;
+        }
+        .brand-logo-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .brand-logo-box {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: #ffffff;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+        }
+        .brand-logo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        .brand-org {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #a7f3d0;
+        }
+        .brand-suborg {
+            font-size: 12.5px;
+            color: rgba(255, 255, 255, 0.78);
+            margin-top: 2px;
+        }
+        .brand-title {
+            font-family: 'Libre Baskerville', Georgia, serif;
+            font-size: 30px;
+            line-height: 1.3;
+            font-weight: 700;
+            margin-bottom: 14px;
+            letter-spacing: -0.01em;
+        }
+        .brand-desc {
+            font-size: 14.5px;
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.84);
+            margin-bottom: 28px;
+        }
+        .brand-modules {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .brand-module-pill {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.94);
+        }
+        .brand-bottom {
+            font-size: 12.5px;
+            color: rgba(255, 255, 255, 0.65);
+        }
+
+        /* ── Right Form Panel ── */
+        .form-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 28px;
+            background: var(--bg);
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--surface);
+            padding: 36px 34px 32px;
+            border-radius: 18px;
+            border: 1px solid #e2e8f0;
+            box-shadow:
+                0 4px 6px -1px rgba(15, 23, 42, 0.04),
+                0 20px 40px -12px rgba(15, 23, 42, 0.09);
+        }
+        .auth-head {
+            margin-bottom: 24px;
+        }
+        .auth-head h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+        }
+        .auth-head p {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .msg {
+            padding: 11px 14px;
+            border-radius: 10px;
+            margin-bottom: 18px;
+            font-size: 13.5px;
+            line-height: 1.45;
+            display: none;
+        }
+        .msg.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            display: block;
+        }
+        .msg.success {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+        }
+        .forgot-link {
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--brand);
+            text-decoration: none;
+        }
+        .forgot-link:hover { text-decoration: underline; }
+
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14.5px;
+            color: var(--text);
+            background: #ffffff;
+            transition: border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+        .form-group input.has-toggle {
+            padding-right: 44px;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3.5px rgba(20, 83, 60, 0.12);
+        }
+        .toggle-pw {
+            position: absolute;
+            right: 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .toggle-pw:hover {
+            color: var(--text);
+            background: #f1f5f9;
+        }
+
+        .btn-submit {
+            width: 100%;
+            margin-top: 4px;
+            padding: 12px 16px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            color: #ffffff;
+            background: linear-gradient(180deg, var(--brand-light) 0%, var(--brand) 100%);
+            box-shadow: 0 4px 14px rgba(20, 83, 60, 0.28);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+        }
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(20, 83, 60, 0.34);
+        }
+        .btn-submit:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .btn-submit:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        .auth-divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 22px 0 18px;
+        }
+        .auth-footer {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+        .auth-footer a {
+            color: var(--brand);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .auth-footer a:hover { text-decoration: underline; }
+
+        .mobile-brand-bar { display: none; }
+
+        @media (max-width: 900px) {
+            .login-shell {
+                grid-template-columns: 1fr;
+            }
+            .brand-panel {
+                display: none;
+            }
+            .mobile-brand-bar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                max-width: 420px;
+                margin-bottom: 18px;
+            }
+            .mobile-brand-id {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .mobile-brand-id img {
+                width: 38px;
+                height: 38px;
+                object-fit: contain;
+                border-radius: 8px;
+                background: #fff;
+                padding: 3px;
+                border: 1px solid #e2e8f0;
+            }
+            .mobile-brand-id span {
+                font-weight: 700;
+                font-size: 14px;
+                color: var(--brand-dark);
+            }
+            .mobile-home-link {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--brand);
+                text-decoration: none;
+            }
+        }
     </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <a href="index.html" class="logo"><img src="images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc" style="height:72px;width:auto;display:block;"></a>
-                <div class="header-text">
-                    <h1>Đăng nhập</h1>
-                    <p>Hệ thống dùng chung cho Trang chủ, Nhiệm vụ KHCN, Đề tài cấp Viện, Hội đồng đạo đức (SCI-ACE)</p>
+    <div class="login-shell">
+        <aside class="brand-panel" aria-label="Giới thiệu hệ thống">
+            <div class="brand-top">
+                <a href="index.html" class="back-home">← Trang chủ</a>
+            </div>
+
+            <div class="brand-center">
+                <div class="brand-logo-wrap">
+                    <div class="brand-logo-box">
+                        <img src="images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc">
+                    </div>
+                    <div>
+                        <div class="brand-org">Viện Tế bào gốc</div>
+                        <div class="brand-suborg">Trường ĐH Khoa học Tự nhiên · ĐHQG TP.HCM</div>
+                    </div>
+                </div>
+                <h2 class="brand-title">Hệ thống Quản lý KHCN &amp; Đổi mới sáng tạo</h2>
+                <p class="brand-desc">
+                    Cổng làm việc tập trung dành cho nghiên cứu viên, hội đồng xét duyệt và quản trị viên của Viện.
+                </p>
+                <div class="brand-modules">
+                    <div class="brand-module-pill">📋 Nhiệm vụ KHCN</div>
+                    <div class="brand-module-pill">📚 Công bố khoa học</div>
+                    <div class="brand-module-pill">🏛️ Đề tài cấp Viện</div>
+                    <div class="brand-module-pill">⚖️ Hội đồng đạo đức</div>
+                    <div class="brand-module-pill">🔬 Đặt lịch thiết bị CRD</div>
+                    <div class="brand-module-pill">🗂️ Văn bản hành chính</div>
                 </div>
             </div>
-        </div>
-    </header>
-    <nav>
-        <div class="container nav-auth">
-            <a href="index.html">🏠 Trang chủ</a>
-            <span class="nav-divider"></span>
-            <a href="dang-ky.html">📝 Đăng ký</a>
-            <span class="nav-divider"></span>
-            <a href="quan-tri-cap-vien.html">⚙️ Quản trị</a>
-            <div id="auth-status"></div>
-        </div>
-    </nav>
-    <main class="content-page">
-        <div class="auth-page">
+
+            <div class="brand-bottom">
+                &copy; 2026 Viện Tế bào gốc — STIMS / SCI-ACE
+            </div>
+        </aside>
+
+        <main class="form-panel">
+            <div class="mobile-brand-bar">
+                <div class="mobile-brand-id">
+                    <img src="images/logo-vien-te-bao-goc.png" alt="Logo Viện Tế bào gốc">
+                    <span>Viện Tế bào gốc</span>
+                </div>
+                <a href="index.html" class="mobile-home-link">← Trang chủ</a>
+            </div>
+
             <div class="auth-card">
-                <h2>Đăng nhập</h2>
-                <div id="msg" class="msg"></div>
+                <div class="auth-head">
+                    <h1>Đăng nhập</h1>
+                </div>
+
+                <div id="msg" class="msg" role="alert"></div>
+
                 <form id="form-dang-nhap" action="/api/login" method="POST">
                     <div class="form-group">
                         <label for="email">Email</label>
-                        <input type="email" id="email" name="email" placeholder="Email của bạn" required autocomplete="email">
+                        <div class="input-wrap">
+                            <input type="email" id="email" name="email" placeholder="ten@sci.edu.vn" required autocomplete="email">
+                        </div>
                     </div>
+
                     <div class="form-group">
-                        <label for="password">Mật khẩu</label>
-                        <input type="password" id="password" name="password" placeholder="Mật khẩu" required autocomplete="current-password">
-                        <p style="margin-top: 0.5rem; font-size: 0.9rem;"><a href="quen-mat-khau.html">Quên mật khẩu?</a></p>
+                        <div class="label-row">
+                            <label for="password">Mật khẩu</label>
+                            <a href="quen-mat-khau.html" class="forgot-link">Quên mật khẩu?</a>
+                        </div>
+                        <div class="input-wrap">
+                            <input type="password" id="password" name="password" class="has-toggle" placeholder="Nhập mật khẩu" required autocomplete="current-password">
+                            <button type="button" class="toggle-pw" id="toggle-pw-btn" aria-label="Hiện mật khẩu">Hiện</button>
+                        </div>
                     </div>
-                    <button type="submit" class="btn-block" id="btn-submit">Đăng nhập</button>
+
+                    <button type="submit" class="btn-submit" id="btn-submit">Đăng nhập</button>
                 </form>
-                <p class="auth-footer">Chưa có tài khoản? <a href="dang-ky.html">Đăng ký Viện</a> (@sci.edu.vn) · <a href="crd-dang-ky.html">Đăng ký đặt lịch CRD</a> (mọi email)</p>
+
+                <div class="auth-divider"></div>
+
+                <p class="auth-footer">
+                    Chưa có tài khoản?<br>
+                    <a href="dang-ky.html">Đăng ký Viện</a> (@sci.edu.vn) · <a href="crd-dang-ky.html">Đăng ký đặt lịch CRD</a> (mọi email)
+                </p>
             </div>
-        </div>
-    </main>
-    <footer>
-        <div class="container">
-            <div class="footer-bottom"><p>&copy; 2026 Viện Tế bào gốc — Hệ thống Quản lý KHCN & ĐMST</p></div>
-        </div>
-    </footer>
-    <script src="js/page-greeting.js"></script>
-    <script src="js/auth-status.js"></script>
+        </main>
+    </div>
+
     <script>
         const form = document.getElementById('form-dang-nhap');
         const msgEl = document.getElementById('msg');
         const btn = document.getElementById('btn-submit');
+        const pwInput = document.getElementById('password');
+        const togglePwBtn = document.getElementById('toggle-pw-btn');
+
+        if (togglePwBtn && pwInput) {
+            togglePwBtn.addEventListener('click', function () {
+                const isHidden = pwInput.type === 'password';
+                pwInput.type = isHidden ? 'text' : 'password';
+                togglePwBtn.textContent = isHidden ? 'Ẩn' : 'Hiện';
+                togglePwBtn.setAttribute('aria-label', isHidden ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+            });
+        }
 
         function showMsg(text, type) {
             msgEl.textContent = text;
@@ -99,6 +482,8 @@
             msgEl.className = 'msg';
             msgEl.textContent = '';
             btn.disabled = true;
+            const origText = btn.textContent;
+            btn.textContent = 'Đang đăng nhập…';
             try {
                 const res = await fetch('/api/login', {
                     method: 'POST',
@@ -119,10 +504,12 @@
                 } else {
                     showMsg(data.message || 'Email hoặc mật khẩu không đúng.', 'error');
                     btn.disabled = false;
+                    btn.textContent = origText;
                 }
             } catch (err) {
                 showMsg('Không thể kết nối máy chủ. Chạy trong thư mục dự án: npm install → npm start. Sau đó mở trình duyệt tại: http://localhost:3000/dang-nhap.html', 'error');
                 btn.disabled = false;
+                btn.textContent = origText;
             }
         });
     </script>

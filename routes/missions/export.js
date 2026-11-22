@@ -11,6 +11,8 @@
 const express = require('express');
 const XLSX = require('xlsx');
 const { buildMissionReportBuffer } = require('../../services/missionReportBuilder');
+const { queryPeriodReportData } = require('../../services/periodReportService');
+const { buildPeriodReportExcelBuffer } = require('../../services/periodReportExcelBuilder');
 
 const MISSION_CSV_HEADER = 'code,title,principal,level,status,start_date,end_date,progress,budget';
 const MISSION_SELECT_BASIC =
@@ -200,6 +202,103 @@ module.exports = function createMissionsExportRouter({
     } catch (err) {
       console.error('[Missions report]', err);
       return res.status(500).json({ message: 'Lỗi xuất báo cáo: ' + (err.message || 'Không xác định') });
+    }
+  });
+
+  function parsePeriodReportOpts(query) {
+    const scope = ['missions', 'publications', 'both'].includes(String(query.scope || '').trim())
+      ? String(query.scope).trim()
+      : 'missions';
+    const dateMode = ['overlap', 'start', 'end'].includes(String(query.dateMode || '').trim())
+      ? String(query.dateMode).trim()
+      : 'overlap';
+    return {
+      scope,
+      fromMonth: String(query.fromMonth || '').trim(),
+      toMonth: String(query.toMonth || '').trim(),
+      dateMode,
+      levels: parseList(query.levels),
+      statuses: parseList(query.statuses),
+      includeYearOnly: String(query.includeYearOnly || '1') !== '0',
+      pubType: String(query.pubType || '').trim(),
+      quartile: String(query.quartile || '').trim(),
+      indexDb: String(query.indexDb || '').trim(),
+    };
+  }
+
+  /**
+   * Xem trước số liệu báo cáo theo giai đoạn tháng (MM/YYYY → MM/YYYY)
+   * cho Đề tài KHCN, Bài báo khoa học, hoặc cả hai.
+   */
+  router.get('/missions/period-report/preview', ...adminGuard, async (req, res) => {
+    try {
+      const opts = parsePeriodReportOpts(req.query);
+      if (opts.scope !== 'publications') {
+        syncMissionsFromCapVien();
+      }
+      const data = await queryPeriodReportData(db, opts);
+      return res.json(data);
+    } catch (err) {
+      console.error('[Period report preview]', err);
+      return res.status(500).json({ message: 'Lỗi tải số liệu báo cáo: ' + (err.message || 'Không xác định') });
+    }
+  });
+
+  /**
+   * Xuất báo cáo Excel (.xlsx) theo giai đoạn tháng (MM/YYYY → MM/YYYY)
+   * cho Đề tài KHCN, Bài báo khoa học, hoặc cả hai.
+   */
+  router.get('/missions/period-report/excel', ...adminGuard, async (req, res) => {
+    try {
+      const opts = parsePeriodReportOpts(req.query);
+      if (opts.scope !== 'publications') {
+        syncMissionsFromCapVien();
+      }
+      const data = await queryPeriodReportData(db, opts);
+      const buf = await buildPeriodReportExcelBuffer({
+        data,
+        filters: opts,
+        generatedBy: (req.user && (req.user.fullname || req.user.email)) || '',
+      });
+
+      const prefix =
+        opts.scope === 'both'
+          ? 'bao_cao_khcn_tong_hop'
+          : opts.scope === 'publications'
+            ? 'bao_cao_bai_bao_khcn'
+            : 'bao_cao_de_tai_khcn';
+      const fSlug = data.range.fromLabel ? data.range.fromLabel.replace('/', '-') : 'dau';
+      const tSlug = data.range.toLabel ? data.range.toLabel.replace('/', '-') : 'nay';
+      const span = data.range.fromMonth || data.range.toMonth ? `_${fSlug}_den_${tSlug}` : '_toan_bo';
+      const filename = `${prefix}${span}_${todayStamp()}.xlsx`;
+
+      insertUserActivityLog(req, {
+        userId: req.user && req.user.id,
+        email: req.user && req.user.email,
+        action: 'missions_period_report_export',
+        module: 'missions',
+        path: req.originalUrl || '/api/missions/period-report/excel',
+        detail: JSON.stringify({
+          at: new Date().toISOString(),
+          scope: opts.scope,
+          fromMonth: data.range.fromMonth,
+          toMonth: data.range.toMonth,
+          dateMode: opts.dateMode,
+          levels: opts.levels,
+          missionCount: data.missions.length,
+          publicationCount: data.publications.length,
+        }),
+      });
+
+      res.setHeader('Content-Type', XLSX_MIME);
+      res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
+      res.setHeader('X-Mission-Count', String(data.missions.length));
+      res.setHeader('X-Publication-Count', String(data.publications.length));
+      res.setHeader('Access-Control-Expose-Headers', 'X-Mission-Count, X-Publication-Count, Content-Disposition');
+      return res.send(Buffer.from(buf));
+    } catch (err) {
+      console.error('[Period report excel]', err);
+      return res.status(500).json({ message: 'Lỗi xuất báo cáo Excel: ' + (err.message || 'Không xác định') });
     }
   });
 

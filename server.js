@@ -16414,7 +16414,7 @@ async function mountSciKhcnPublicationsRouters() {
   app.post(
     '/api/admin/sjr-csv-import',
     authMiddleware,
-    adminOnly,
+    masterAdminOnly,
     (req, res, next) => {
       uploadSjrCsv.single('file')(req, res, (err) => {
         if (err) return res.status(400).json({ message: 'Upload thất bại' });
@@ -16583,8 +16583,8 @@ async function mountSciKhcnPublicationsRouters() {
   // không có lớp phân quyền nào, nên chặn tại đây TRƯỚC khi mount — giao diện đã
   // ẩn bằng .pub-admin-only, nhưng lớp ẩn đó dựa trên localStorage nên không đủ.
   // Chỉ khoá thao tác GHI; GET danh sách vẫn để nguyên cho trang Auto-Harvest.
-  app.post('/api/orcid/researchers', authMiddleware, adminOnly);
-  app.delete('/api/orcid/researchers/:id', authMiddleware, adminOnly);
+  app.post('/api/orcid/researchers', authMiddleware, masterAdminOnly);
+  app.delete('/api/orcid/researchers/:id', authMiddleware, masterAdminOnly);
   app.post('/api/orcid/queue/:id/approve', authMiddleware, adminOnly);
   app.post('/api/orcid/queue/:id/reject', authMiddleware, adminOnly);
   app.post('/api/orcid/queue/approve-all', authMiddleware, adminOnly);
