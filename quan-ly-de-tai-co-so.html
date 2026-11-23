@@ -1598,6 +1598,9 @@
                                     <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="coe"> COE</label>
                                     <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="first"> FIRST</label>
                                 </div>
+                                <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; font-size: 0.85rem; color: #334155;">
+                                    <input type="checkbox" id="reportIncludeMissingDate" checked> Bao gồm đề tài chưa có ngày thực hiện (tự nhận diện năm từ mã đề tài như <code>.../25</code> nếu có)
+                                </label>
                             </div>
 
                             <!-- Bộ lọc Bài báo (tự hiện khi chọn Bài báo hoặc Cả hai) -->
@@ -3415,10 +3418,12 @@
             var idx = (document.getElementById('reportPubIndex') || {}).value || '';
             var pt = (document.getElementById('reportPubType') || {}).value || '';
             var incY = document.getElementById('reportIncludeYearOnly');
+            var incMiss = document.getElementById('reportIncludeMissingDate');
             if (q) params.set('quartile', q);
             if (idx) params.set('indexDb', idx);
             if (pt) params.set('pubType', pt);
             params.set('includeYearOnly', incY && !incY.checked ? '0' : '1');
+            params.set('includeMissingDate', incMiss && !incMiss.checked ? '0' : '1');
             return params.toString();
         }
 
@@ -3445,6 +3450,17 @@
             titleEl.textContent = '📊 Xem trước số liệu — ' + labelText;
 
             var notes = [];
+            if ((sc === 'missions' || sc === 'both') && data.meta) {
+                if (data.meta.missionsInferredFromCode > 0) {
+                    notes.push('Có ' + data.meta.missionsInferredFromCode + ' đề tài thiếu ngày được nhận diện năm từ mã đề tài.');
+                }
+                if (data.meta.missionsMissingDateIncluded > 0) {
+                    notes.push('Đang gộp ' + data.meta.missionsMissingDateIncluded + ' đề tài chưa có ngày thực hiện.');
+                }
+                if (data.meta.missionsMissingDateCount > 0) {
+                    notes.push('Đang ẩn ' + data.meta.missionsMissingDateCount + ' đề tài chưa có ngày thực hiện.');
+                }
+            }
             if ((sc === 'publications' || sc === 'both') && data.meta && data.meta.publicationsYearOnlyIncluded > 0) {
                 notes.push('Lưu ý: có ' + data.meta.publicationsYearOnlyIncluded + ' bài chỉ có năm (chưa rõ tháng) được gộp vào.');
             }
@@ -3693,6 +3709,8 @@
             if (dm) dm.value = 'overlap';
             var incY = document.getElementById('reportIncludeYearOnly');
             if (incY) incY.checked = true;
+            var incMiss = document.getElementById('reportIncludeMissingDate');
+            if (incMiss) incMiss.checked = true;
             var allCb = document.getElementById('reportLevelAll');
             if (allCb) allCb.checked = true;
             document.querySelectorAll('#reportLevels input.report-level-cb').forEach(function (c) {
@@ -3758,7 +3776,7 @@
                 });
             });
 
-            ['reportDateMode', 'reportStatus', 'reportPubQuartile', 'reportPubIndex', 'reportPubType', 'reportIncludeYearOnly'].forEach(function (id) {
+            ['reportDateMode', 'reportStatus', 'reportIncludeMissingDate', 'reportPubQuartile', 'reportPubIndex', 'reportPubType', 'reportIncludeYearOnly'].forEach(function (id) {
                 document.getElementById(id)?.addEventListener('change', loadReportPreview);
             });
 

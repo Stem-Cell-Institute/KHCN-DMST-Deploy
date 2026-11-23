@@ -219,6 +219,7 @@ module.exports = function createMissionsExportRouter({
       dateMode,
       levels: parseList(query.levels),
       statuses: parseList(query.statuses),
+      includeMissingDate: String(query.includeMissingDate || '0') === '1',
       includeYearOnly: String(query.includeYearOnly || '1') !== '0',
       pubType: String(query.pubType || '').trim(),
       quartile: String(query.quartile || '').trim(),

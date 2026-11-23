@@ -181,6 +181,35 @@ function pubTypeLabel(v) {
 }
 
 /**
+ * Suy luận năm từ mã đề tài khi bản ghi thiếu cả start_date lẫn end_date.
+ * Ví dụ:
+ * - 'NCKH-SCI.11/25' → 2025
+ * - 'NVTC.002/26' → 2026
+ * - 'DT-UN-2026-8566', 'CB2025-18-26', 'FIRST-SCI/2018/09' → 2026, 2025, 2018
+ * - 'VAST.ĐLT.11/15-16' → 2015
+ */
+function inferYearFromMissionCode(code) {
+  const s = String(code || '').trim();
+  if (!s) return null;
+
+  // 1. Năm 4 chữ số (1990–2099)
+  const m4 = s.match(/(?:^|[^\d])((?:199\d|20\d{2}))(?:[^\d]|$)/);
+  if (m4) {
+    const y = Number(m4[1]);
+    if (y >= 1990 && y <= 2099) return y;
+  }
+
+  // 2. Đuôi /YY hoặc /YY-YY (VD: NCKH-SCI.11/25, NVTC.002/26, VAST.ĐLT.11/15-16)
+  const m2 = s.match(/\/(\d{2})(?:-\d{2})?$/);
+  if (m2) {
+    const yy = Number(m2[1]);
+    return yy >= 80 ? 1900 + yy : 2000 + yy;
+  }
+
+  return null;
+}
+
+/**
  * Lọc danh sách nhiệm vụ KHCN theo giai đoạn tháng + cấp + trạng thái.
  * Mặc định dateMode = 'overlap': lấy mọi đề tài có thời gian thực hiện giao với giai đoạn.
  */
@@ -189,6 +218,7 @@ function filterMissionsByPeriod(allRows, opts = {}) {
   const dateMode = ['overlap', 'start', 'end'].includes(opts.dateMode) ? opts.dateMode : 'overlap';
   const levels = Array.isArray(opts.levels) ? opts.levels.filter(Boolean) : [];
   const statuses = Array.isArray(opts.statuses) ? opts.statuses.filter(Boolean) : [];
+  const includeMissingDate = Boolean(opts.includeMissingDate);
   const levelSet = levels.length ? new Set(levels) : null;
   const statusSet = statuses.length ? new Set(statuses) : null;
 
@@ -198,6 +228,8 @@ function filterMissionsByPeriod(allRows, opts = {}) {
 
   const matched = [];
   let missingDateCount = 0;
+  let missingDateIncludedCount = 0;
+  let inferredFromCodeCount = 0;
 
   for (const r of allRows || []) {
     if (levelSet && !levelSet.has(r.level)) continue;
@@ -208,49 +240,73 @@ function filterMissionsByPeriod(allRows, opts = {}) {
     const startKey = s ? toMonthKey(s.year, s.hasMonth ? s.month : 1) : null;
     const endKey = e ? toMonthKey(e.year, e.hasMonth ? e.month : 12) : null;
 
+    let periodRole = 'Toàn giai đoạn';
+
     if (hasDateFilter) {
-      if (dateMode === 'start') {
-        if (startKey == null) {
+      if (startKey == null && endKey == null) {
+        const inferredYear = inferYearFromMissionCode(r.code);
+        if (inferredYear != null) {
+          const effStart = toMonthKey(inferredYear, 1);
+          const effEnd = toMonthKey(inferredYear, 12);
+          if (toKey != null && effStart > toKey) continue;
+          if (fromKey != null && effEnd < fromKey) continue;
+          periodRole = `Suy luận từ mã (năm ${inferredYear})`;
+          inferredFromCodeCount += 1;
+        } else if (includeMissingDate) {
+          periodRole = 'Chưa có ngày thực hiện';
+          missingDateIncludedCount += 1;
+        } else {
           missingDateCount += 1;
           continue;
         }
-        if (fromKey != null && startKey < fromKey) continue;
-        if (toKey != null && startKey > toKey) continue;
+      } else if (dateMode === 'start') {
+        if (startKey == null) {
+          if (includeMissingDate) {
+            periodRole = 'Chưa có ngày bắt đầu';
+            missingDateIncludedCount += 1;
+          } else {
+            missingDateCount += 1;
+            continue;
+          }
+        } else {
+          if (fromKey != null && startKey < fromKey) continue;
+          if (toKey != null && startKey > toKey) continue;
+        }
       } else if (dateMode === 'end') {
         if (endKey == null) {
-          missingDateCount += 1;
-          continue;
+          if (includeMissingDate) {
+            periodRole = 'Chưa có ngày kết thúc';
+            missingDateIncludedCount += 1;
+          } else {
+            missingDateCount += 1;
+            continue;
+          }
+        } else {
+          if (fromKey != null && endKey < fromKey) continue;
+          if (toKey != null && endKey > toKey) continue;
         }
-        if (fromKey != null && endKey < fromKey) continue;
-        if (toKey != null && endKey > toKey) continue;
       } else {
         // overlap (mặc định): giao với [fromKey, toKey]
-        if (startKey == null && endKey == null) {
-          missingDateCount += 1;
-          continue;
-        }
         const effStart = startKey != null ? startKey : endKey;
         const effEnd = endKey != null ? endKey : Infinity;
         if (toKey != null && effStart > toKey) continue;
         if (fromKey != null && effEnd < fromKey) continue;
       }
-    }
 
-    // Xác định vai trò của đề tài trong giai đoạn báo cáo
-    let periodRole = 'Toàn giai đoạn';
-    if (hasDateFilter) {
-      const startedIn =
-        startKey != null &&
-        (fromKey == null || startKey >= fromKey) &&
-        (toKey == null || startKey <= toKey);
-      const endedIn =
-        endKey != null &&
-        (fromKey == null || endKey >= fromKey) &&
-        (toKey == null || endKey <= toKey);
-      if (startedIn && endedIn) periodRole = 'Mở mới & kết thúc trong kỳ';
-      else if (startedIn) periodRole = 'Mở mới trong kỳ';
-      else if (endedIn) periodRole = 'Chuyển tiếp & kết thúc trong kỳ';
-      else periodRole = 'Chuyển tiếp (đang triển khai)';
+      if (periodRole === 'Toàn giai đoạn') {
+        const startedIn =
+          startKey != null &&
+          (fromKey == null || startKey >= fromKey) &&
+          (toKey == null || startKey <= toKey);
+        const endedIn =
+          endKey != null &&
+          (fromKey == null || endKey >= fromKey) &&
+          (toKey == null || endKey <= toKey);
+        if (startedIn && endedIn) periodRole = 'Mở mới & kết thúc trong kỳ';
+        else if (startedIn) periodRole = 'Mở mới trong kỳ';
+        else if (endedIn) periodRole = 'Chuyển tiếp & kết thúc trong kỳ';
+        else periodRole = 'Chuyển tiếp (đang triển khai)';
+      }
     }
 
     matched.push({
@@ -269,7 +325,7 @@ function filterMissionsByPeriod(allRows, opts = {}) {
     return String(a.code || '').localeCompare(String(b.code || ''));
   });
 
-  return { rows: matched, missingDateCount };
+  return { rows: matched, missingDateCount, missingDateIncludedCount, inferredFromCodeCount };
 }
 
 /**
@@ -453,7 +509,7 @@ async function queryPeriodReportData(db, opts = {}) {
   const scope = ['missions', 'publications', 'both'].includes(opts.scope) ? opts.scope : 'missions';
   const range = normalizeRange(opts.fromMonth, opts.toMonth);
 
-  let missionsResult = { rows: [], missingDateCount: 0 };
+  let missionsResult = { rows: [], missingDateCount: 0, missingDateIncludedCount: 0, inferredFromCodeCount: 0 };
   let publicationsResult = {
     rows: [],
     yearOnlyIncludedCount: 0,
@@ -499,6 +555,8 @@ async function queryPeriodReportData(db, opts = {}) {
     },
     meta: {
       missionsMissingDateCount: missionsResult.missingDateCount,
+      missionsMissingDateIncluded: missionsResult.missingDateIncludedCount || 0,
+      missionsInferredFromCode: missionsResult.inferredFromCodeCount || 0,
       publicationsYearOnlyIncluded: publicationsResult.yearOnlyIncludedCount,
       publicationsYearOnlyExcluded: publicationsResult.yearOnlyExcludedCount,
       publicationsMissingDateCount: publicationsResult.missingDateCount,
@@ -509,6 +567,7 @@ async function queryPeriodReportData(db, opts = {}) {
 module.exports = {
   parseMonthInput,
   extractYearMonth,
+  inferYearFromMissionCode,
   formatMonthVi,
   normalizeRange,
   filterMissionsByPeriod,

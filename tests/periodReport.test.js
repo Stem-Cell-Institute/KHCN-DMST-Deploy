@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const ExcelJS = require('exceljs');
 const {
   parseMonthInput,
+  inferYearFromMissionCode,
   filterMissionsByPeriod,
   filterPublicationsByPeriod,
   summarizeMissions,
@@ -48,6 +49,32 @@ test('filterMissionsByPeriod (overlap): lấy đúng đề tài giao thời gian
     levels: ['institute'],
   });
   assert.deepEqual(instOnly.rows.map((r) => r.code), ['DT-NEW']);
+});
+
+test('inferYearFromMissionCode và đề tài thiếu ngày (NCKH-SCI.11/25)', () => {
+  assert.equal(inferYearFromMissionCode('NCKH-SCI.11/25'), 2025);
+  assert.equal(inferYearFromMissionCode('NVTC.002/26'), 2026);
+  assert.equal(inferYearFromMissionCode('DT-UN-2026-8566'), 2026);
+  assert.equal(inferYearFromMissionCode('VAST.ĐLT.11/15-16'), 2015);
+  assert.equal(inferYearFromMissionCode('NO-YEAR-CODE'), null);
+
+  const sample = [
+    { id: 1, code: 'NCKH-SCI.11/25', title: 'Đề tài cấp Viện 2025 thiếu ngày', level: 'institute', status: 'planning', start_date: '', end_date: '' },
+    { id: 2, code: 'NCKH-SCI.01/19', title: 'Đề tài cấp Viện 2019 thiếu ngày', level: 'institute', status: 'completed', start_date: null, end_date: null },
+    { id: 3, code: 'DT-NO-DATE', title: 'Không có ngày lẫn năm trong mã', level: 'institute', status: 'planning', start_date: '', end_date: '' },
+  ];
+
+  // Lọc 01/2022 – 12/2026, không bật includeMissingDate: vẫn tự nhận NCKH-SCI.11/25 (năm 2025), bỏ 2019 và DT-NO-DATE
+  const r1 = filterMissionsByPeriod(sample, { fromMonth: '01/2022', toMonth: '12/2026', includeMissingDate: false });
+  assert.deepEqual(r1.rows.map((r) => r.code), ['NCKH-SCI.11/25']);
+  assert.equal(r1.inferredFromCodeCount, 1);
+  assert.equal(r1.missingDateCount, 1);
+  assert.equal(r1.rows[0].period_role, 'Suy luận từ mã (năm 2025)');
+
+  // Bật includeMissingDate: lấy thêm cả DT-NO-DATE
+  const r2 = filterMissionsByPeriod(sample, { fromMonth: '01/2022', toMonth: '12/2026', includeMissingDate: true });
+  assert.deepEqual(r2.rows.map((r) => r.code), ['DT-NO-DATE', 'NCKH-SCI.11/25']);
+  assert.equal(r2.missingDateIncludedCount, 1);
 });
 
 test('filterPublicationsByPeriod: lọc chính xác từng tháng và xử lý bài thiếu tháng', () => {
