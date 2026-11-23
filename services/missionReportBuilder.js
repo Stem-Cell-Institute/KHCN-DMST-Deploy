@@ -16,7 +16,7 @@ const ExcelJS = require('exceljs');
 const ORG_NAME = 'VIỆN TẾ BÀO GỐC';
 
 /** Cấp quản lý, xếp từ nhỏ đến lớn. */
-const LEVEL_ORDER = ['institute', 'school', 'university', 'ministry', 'national'];
+const LEVEL_ORDER = ['institute', 'school', 'university', 'ministry', 'national', 'coe', 'first'];
 
 const LEVEL_LABEL = {
   institute: 'Cấp Viện',
@@ -24,6 +24,8 @@ const LEVEL_LABEL = {
   university: 'Cấp ĐHQG',
   ministry: 'Cấp Bộ',
   national: 'Cấp Nhà nước',
+  coe: 'COE',
+  first: 'FIRST',
 };
 
 /** Giữ khớp với getStatusText() trong quan-ly-de-tai-co-so.html — sửa thì sửa cả hai. */

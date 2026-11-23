@@ -1002,6 +1002,8 @@
         .level-ministry { background: #e1bee7; color: #6a1b9a; }
         .level-university { background: #b3e5fc; color: #01579b; }
         .level-school { background: #b2dfdb; color: #00695c; }
+        .level-coe { background: #ffe0b2; color: #e65100; }
+        .level-first { background: #d1c4e9; color: #4527a0; }
         .level-institute { background: #c8e6c9; color: #2e7d32; }
 
         .progress-container {
@@ -1257,6 +1259,14 @@
                             <span>Cấp Viện</span>
                             <span class="badge">91</span>
                         </div>
+                        <div class="menu-item menu-item--filter" data-filter-level="coe" tabindex="0" role="button" onclick="filterByLevel('coe')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByLevel('coe');}">
+                            <span>COE</span>
+                            <span class="badge">0</span>
+                        </div>
+                        <div class="menu-item menu-item--filter" data-filter-level="first" tabindex="0" role="button" onclick="filterByLevel('first')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterByLevel('first');}">
+                            <span>FIRST</span>
+                            <span class="badge">0</span>
+                        </div>
                     </div>
                 </details>
 
@@ -1369,6 +1379,8 @@
                                 <option value="ministry">Cấp Bộ</option>
                                 <option value="university">Cấp ĐHQG</option>
                                 <option value="school">Cấp Trường ĐH KHTN</option>
+                                <option value="coe">COE</option>
+                                <option value="first">FIRST</option>
                                 <option value="institute">Cấp Viện</option>
                             </select>
                         </div>
@@ -1583,6 +1595,8 @@
                                     <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="university"> Cấp ĐHQG</label>
                                     <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="ministry"> Cấp Bộ</label>
                                     <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="national"> Cấp Nhà nước</label>
+                                    <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="coe"> COE</label>
+                                    <label style="font-weight: 400; display: inline-flex; align-items: center; gap: 6px; margin: 0;"><input type="checkbox" class="report-level-cb" value="first"> FIRST</label>
                                 </div>
                             </div>
 
@@ -1731,6 +1745,14 @@
                     <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer;">
                         <input type="radio" name="addTaskLevel" value="national">
                         <span><strong>Cấp Nhà nước</strong> — Bộ KH&CN / Bộ GD&ĐT phê duyệt</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer;">
+                        <input type="radio" name="addTaskLevel" value="coe">
+                        <span><strong>COE</strong> — Đề tài thuộc chương trình COE (Trung tâm xuất sắc)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer;">
+                        <input type="radio" name="addTaskLevel" value="first">
+                        <span><strong>FIRST</strong> — Đề tài thuộc dự án/chương trình FIRST</span>
                     </label>
                 </div>
                 <div style="margin-top: 1.5rem; display: flex; gap: 10px; justify-content: flex-end;">
@@ -1921,6 +1943,8 @@
                                 <option value="ministry">Cấp Bộ</option>
                                 <option value="university">Cấp ĐHQG</option>
                                 <option value="school">Cấp Trường ĐH KHTN</option>
+                                <option value="coe">COE</option>
+                                <option value="first">FIRST</option>
                                 <option value="institute" selected>Cấp Viện</option>
                             </select>
                         </div>
@@ -2038,6 +2062,8 @@
                         <option value="ministry">Cấp Bộ</option>
                         <option value="university">Cấp ĐHQG</option>
                         <option value="school">Cấp Trường ĐH KHTN</option>
+                        <option value="coe">COE</option>
+                        <option value="first">FIRST</option>
                         <option value="institute">Cấp Viện</option>
                     </select>
                 </div>
@@ -2342,6 +2368,8 @@
                     else if (text.includes('Cấp ĐHQG')) setSidebarStatBadge(badge, byLevel.university || 0);
                     else if (text.includes('Cấp Trường ĐH KHTN')) setSidebarStatBadge(badge, byLevel.school || 0);
                     else if (text.includes('Cấp Viện')) setSidebarStatBadge(badge, byLevel.institute || 0);
+                    else if (text.includes('COE')) setSidebarStatBadge(badge, byLevel.coe || 0);
+                    else if (text.includes('FIRST')) setSidebarStatBadge(badge, byLevel.first || 0);
                     else if (text.includes('Lập kế hoạch')) setSidebarStatBadge(badge, byStatus.planning || 0);
                     else if (text.includes('Chờ xét duyệt')) setSidebarStatBadge(badge, (byStatus.cho_vien_xet_chon || 0) + (byStatus.cho_bo_tham_dinh || 0) + (byStatus.cho_ngoai_xet_chon || 0) + (byStatus.cho_phe_duyet_ngoai || 0));
                     else if (text.includes('Đã phê duyệt') || text.includes('Chờ ký HĐ')) setSidebarStatBadge(badge, (byStatus.da_phe_duyet || 0) + (byStatus.cho_ky_hop_dong || 0) + (byStatus.approved || 0));
@@ -2502,7 +2530,7 @@
         }
 
         function getLevelText(level) {
-            const levels = { 'national': 'Cấp Nhà nước', 'ministry': 'Cấp Bộ', 'university': 'Cấp ĐHQG', 'school': 'Cấp Trường ĐH KHTN', 'institute': 'Cấp Viện' };
+            const levels = { 'national': 'Cấp Nhà nước', 'ministry': 'Cấp Bộ', 'university': 'Cấp ĐHQG', 'school': 'Cấp Trường ĐH KHTN', 'coe': 'COE', 'first': 'FIRST', 'institute': 'Cấp Viện' };
             return levels[level] || level;
         }
 

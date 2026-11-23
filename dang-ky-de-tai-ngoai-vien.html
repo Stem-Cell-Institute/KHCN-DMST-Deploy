@@ -121,6 +121,8 @@
                                         <option value="university">Cấp ĐHQG</option>
                                         <option value="school">Cấp Trường ĐH KHTN</option>
                                         <option value="national">Cấp Nhà nước</option>
+                                        <option value="coe">COE</option>
+                                        <option value="first">FIRST</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -381,7 +383,7 @@
             return m ? decodeURIComponent(m[1]) : '';
         })();
         var levelSelect = document.getElementById('add-level');
-        if (levelSelect && ['national','ministry','university','school'].indexOf(levelParam) >= 0) {
+        if (levelSelect && ['national','ministry','university','school','coe','first'].indexOf(levelParam) >= 0) {
             levelSelect.value = levelParam;
         }
 

@@ -132,7 +132,7 @@
                     <select id="modal_cap_moi_a" style="width:100%;padding:8px;"><option value="ministry">Bộ GD&amp;ĐT</option><option value="university">ĐHQG-HCM</option><option value="school">Trường ĐHKHTN</option></select>
                 </div>
                 <div id="modal-reset-cap-b" style="margin-bottom:12px;display:none;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;" for="modal_cap_moi_b">Cấp đề tài mới</label>
-                    <select id="modal_cap_moi_b" style="width:100%;padding:8px;"><option value="national">Nhà nước</option><option value="nafosted">NAFOSTED</option><option value="bo_nganh_khac">Bộ ngành khác</option><option value="nhiem_vu_bo_gd">Nhiệm vụ Bộ GD không phải đề tài</option></select>
+                    <select id="modal_cap_moi_b" style="width:100%;padding:8px;"><option value="national">Nhà nước</option><option value="coe">COE</option><option value="first">FIRST</option><option value="nafosted">NAFOSTED</option><option value="bo_nganh_khac">Bộ ngành khác</option><option value="nhiem_vu_bo_gd">Nhiệm vụ Bộ GD không phải đề tài</option></select>
                 </div>
                 <div style="margin-bottom:12px;"><label style="display:block;font-size:13px;font-weight:500;margin-bottom:4px;" for="modal_ly_do">Lý do thay đổi * (tối thiểu 20 ký tự)</label>
                     <textarea id="modal_ly_do" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;" placeholder="Nhập lý do..."></textarea>
@@ -199,7 +199,7 @@
             { label: 'Giai đoạn 2 — Thực hiện & nghiệm thu', keys: ['dang_thuc_hien','ongoing','xin_dieu_chinh','cho_nghiem_thu_co_so','nghiem_thu_trung_gian','review','cho_nghiem_thu_bo_nn','nghiem_thu_tong_ket','hoan_thien_sau_nghiem_thu','thanh_ly_hop_dong','hoan_thanh','completed'] }
         ];
 
-        var LEVEL_LABELS = { national: 'Cấp Nhà nước', ministry: 'Cấp Bộ', university: 'Cấp ĐHQG', institute: 'Cấp Viện', school: 'Trường ĐHKHTN', nafosted: 'NAFOSTED', bo_nganh_khac: 'Bộ ngành khác', nhiem_vu_bo_gd: 'Nhiệm vụ Bộ GD không phải đề tài' };
+        var LEVEL_LABELS = { national: 'Cấp Nhà nước', ministry: 'Cấp Bộ', university: 'Cấp ĐHQG', institute: 'Cấp Viện', school: 'Trường ĐHKHTN', coe: 'COE', first: 'FIRST', nafosted: 'NAFOSTED', bo_nganh_khac: 'Bộ ngành khác', nhiem_vu_bo_gd: 'Nhiệm vụ Bộ GD không phải đề tài' };
 
         function formatDate(s) {
             if (!s) return '—';

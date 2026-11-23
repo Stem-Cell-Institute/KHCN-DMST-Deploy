@@ -38,7 +38,7 @@ router.get('/missions/stats', authMiddleware, (req, res) => {
   const all = db.prepare('SELECT id, level, status, end_date, budget, start_date FROM missions').all();
   const now = new Date().toISOString().slice(0, 10);
   const thisMonthStart = now.slice(0, 7) + '-01';
-  const byLevel = { national: 0, ministry: 0, university: 0, school: 0, institute: 0 };
+  const byLevel = { national: 0, ministry: 0, university: 0, school: 0, coe: 0, first: 0, institute: 0 };
   const byStatus = { planning: 0, approved: 0, ongoing: 0, review: 0, completed: 0, overdue: 0, cho_phe_duyet_ngoai: 0, da_phe_duyet: 0, dang_thuc_hien: 0, nghiem_thu_trung_gian: 0, nghiem_thu_tong_ket: 0, hoan_thanh: 0, khong_duoc_phe_duyet: 0, cho_vien_xet_chon: 0, cho_bo_tham_dinh: 0, cho_ngoai_xet_chon: 0, cho_ky_hop_dong: 0, xin_dieu_chinh: 0, cho_nghiem_thu_co_so: 0, cho_nghiem_thu_bo_nn: 0, hoan_thien_sau_nghiem_thu: 0, thanh_ly_hop_dong: 0 };
   let totalBudget = 0;
   let overdue = 0;
@@ -87,6 +87,8 @@ const MISSION_LEVEL_SEARCH_LABELS = {
   ministry: 'Cấp Bộ bo',
   university: 'Cấp ĐHQG dai hoc quoc gia',
   school: 'Cấp Trường ĐH KHTN truong dai hoc khoa hoc tu nhien',
+  coe: 'COE trung tam xuat sac',
+  first: 'FIRST chuong trinh first',
   institute: 'Cấp Viện vien co so',
 };
 
@@ -262,8 +264,8 @@ router.post('/missions', authMiddleware, (req, res) => {
   const user = req.user;
   const body = req.body || {};
   const level = (body.level || '').trim().toLowerCase();
-  if (!['national', 'ministry', 'university', 'school'].includes(level)) {
-    return res.status(400).json({ message: 'API này chỉ dùng cho Cấp Bộ, Cấp ĐHQG, Cấp Trường ĐH KHTN, Cấp Nhà nước. Cấp Viện vui lòng nộp tại trang Đề tài cấp Viện.' });
+  if (!['national', 'ministry', 'university', 'school', 'coe', 'first'].includes(level)) {
+    return res.status(400).json({ message: 'API này chỉ dùng cho Cấp Bộ, Cấp ĐHQG, Cấp Trường ĐH KHTN, Cấp Nhà nước, COE, FIRST. Cấp Viện vui lòng nộp tại trang Đề tài cấp Viện.' });
   }
   const title = (body.title || '').trim();
   if (!title) return res.status(400).json({ message: 'Tên đề tài không được để trống.' });
@@ -304,7 +306,7 @@ router.post('/missions', authMiddleware, (req, res) => {
   }
 });
 
-const LEVEL_LABELS_EMAIL = { national: 'Cấp Nhà nước', ministry: 'Cấp Bộ', university: 'Cấp ĐHQG', school: 'Cấp Trường ĐH KHTN', institute: 'Cấp Viện' };
+const LEVEL_LABELS_EMAIL = { national: 'Cấp Nhà nước', ministry: 'Cấp Bộ', university: 'Cấp ĐHQG', school: 'Cấp Trường ĐH KHTN', coe: 'COE', first: 'FIRST', institute: 'Cấp Viện' };
 
 function sendMissionProposalToCouncil(mission, submitterEmail) {
   const toList = getNotificationEmails();

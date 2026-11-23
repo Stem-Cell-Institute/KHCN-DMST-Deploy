@@ -9088,7 +9088,7 @@ app.put('/api/admin/missions/:id', authMiddleware, adminOrPhongKhcnMissionEditor
   if (principal_hoc_vi !== undefined) { try { updates.push('principal_hoc_vi = ?'); params.push(principal_hoc_vi != null ? String(principal_hoc_vi).trim() : null); } catch (e) {} }
   if (principal_don_vi !== undefined) { try { updates.push('principal_don_vi = ?'); params.push(principal_don_vi != null ? String(principal_don_vi).trim() : null); } catch (e) {} }
   if (principal_orcid !== undefined) { try { updates.push('principal_orcid = ?'); params.push(principal_orcid != null ? String(principal_orcid).trim() : null); } catch (e) {} }
-  if (level != null && ['national', 'ministry', 'university', 'school', 'institute'].includes(level)) { updates.push('level = ?'); params.push(level); }
+  if (level != null && ['national', 'ministry', 'university', 'school', 'coe', 'first', 'institute'].includes(level)) { updates.push('level = ?'); params.push(level); }
   if (status != null) {
     const resolved = resolveMissionStatusInput(status);
     if (resolved) {
@@ -9427,7 +9427,7 @@ app.post('/api/admin/missions/import', authMiddleware, adminOnly, upload.single(
 
   let inserted = 0;
   let updated = 0;
-  const levels = ['national', 'ministry', 'university', 'school', 'institute'];
+  const levels = ['national', 'ministry', 'university', 'school', 'coe', 'first', 'institute'];
   const statuses = ['planning', 'approved', 'ongoing', 'review', 'completed', 'overdue'];
   for (let i = 0; i < dataRows.length; i++) {
     const cells = dataRows[i];
@@ -9481,8 +9481,8 @@ app.post('/api/admin/missions/manual', authMiddleware, adminOnly, (req, res) => 
 
   if (!code) return res.status(400).json({ message: 'Thiếu mã đề tài (code).' });
   if (!title) return res.status(400).json({ message: 'Thiếu tên đề tài (title).' });
-  if (!['national', 'ministry', 'university', 'school', 'institute'].includes(level)) {
-    return res.status(400).json({ message: 'Cấp đề tài không hợp lệ. Hãy chọn: national | ministry | university | school | institute.' });
+  if (!['national', 'ministry', 'university', 'school', 'coe', 'first', 'institute'].includes(level)) {
+    return res.status(400).json({ message: 'Cấp đề tài không hợp lệ. Hãy chọn: national | ministry | university | school | coe | first | institute.' });
   }
   if (!statusResolved) {
     return res.status(400).json({ message: 'Trạng thái không hợp lệ (quá dài hoặc ký tự không được phép).' });

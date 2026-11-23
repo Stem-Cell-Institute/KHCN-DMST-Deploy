@@ -60,7 +60,7 @@ module.exports = function createMissionsExportRouter({
   // đọc thêm cookie auth_token (đặt khi đăng nhập) nên link vẫn tải được.
   router.get('/missions/export-template', ...adminGuard, (req, res) => {
     const note =
-      'GHI CHÚ (dòng này bỏ qua khi import): Mỗi dòng = 1 nhiệm vụ. Cấp: national|ministry|university|school|institute. Trạng thái: planning|cho_vien_xet_chon|cho_bo_tham_dinh|cho_ngoai_xet_chon|cho_phe_duyet_ngoai|da_phe_duyet|cho_ky_hop_dong|dang_thuc_hien|xin_dieu_chinh|cho_nghiem_thu_co_so|nghiem_thu_trung_gian|cho_nghiem_thu_bo_nn|nghiem_thu_tong_ket|hoan_thien_sau_nghiem_thu|thanh_ly_hop_dong|hoan_thanh|khong_duoc_phe_duyet. Ngày: YYYY-MM-DD';
+      'GHI CHÚ (dòng này bỏ qua khi import): Mỗi dòng = 1 nhiệm vụ. Cấp: national|ministry|university|school|coe|first|institute. Trạng thái: planning|cho_vien_xet_chon|cho_bo_tham_dinh|cho_ngoai_xet_chon|cho_phe_duyet_ngoai|da_phe_duyet|cho_ky_hop_dong|dang_thuc_hien|xin_dieu_chinh|cho_nghiem_thu_co_so|nghiem_thu_trung_gian|cho_nghiem_thu_bo_nn|nghiem_thu_tong_ket|hoan_thien_sau_nghiem_thu|thanh_ly_hop_dong|hoan_thanh|khong_duoc_phe_duyet. Ngày: YYYY-MM-DD';
     const sample1 =
       'DT-2025-001,Nghiên cứu ứng dụng tế bào gốc trong điều trị,TS. Nguyễn Văn A,institute,ongoing,2025-01-15,2027-12-31,35,500000000';
     const sample2 =
