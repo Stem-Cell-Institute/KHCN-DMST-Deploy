@@ -21,8 +21,8 @@ async function loadRBACData() {
     if (userJson.success) {
       currentUser = userJson.data;
 
-      // Phương án 1: Chỉ SUPER_ADMIN và PHONG_KHCN mới được truy cập trang Phân quyền
-      if (!['SUPER_ADMIN', 'PHONG_KHCN'].includes(currentUser.role)) {
+      // Chỉ Master Admin E-Office mới được truy cập trang Phân quyền & Gán vai trò
+      if (!currentUser.is_master_admin) {
         const container = document.querySelector('main.container');
         if (container) {
           container.innerHTML = `
@@ -30,17 +30,13 @@ async function loadRBACData() {
               <div style="width:68px; height:68px; border-radius:50%; background:#fee2e2; color:#b91c1c; display:inline-flex; align-items:center; justify-content:center; font-size:2rem; margin-bottom:1.25rem;">
                 <i class="fa-solid fa-lock"></i>
               </div>
-              <h2 style="font-size:1.35rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Khu vực Giới hạn Quyền Quản trị</h2>
+              <h2 style="font-size:1.35rem; font-weight:700; color:#0f172a; margin-bottom:0.5rem;">Khu vực Giới hạn — Chỉ Master Admin</h2>
               <p style="color:#64748b; font-size:0.9rem; line-height:1.6; margin-bottom:1.75rem;">
-                Theo quy định bảo mật hệ thống (Phương án 1), tính năng <strong>Quản trị & Cấu hình Phân quyền</strong> chỉ dành riêng cho <strong>Admin hệ thống</strong> và <strong>Phòng Khoa học & Công nghệ</strong>.<br>
-                Bạn đang truy cập với vai trò: <strong style="color:#0f172a;">${currentUser.role_info?.name || currentUser.role}</strong>.
+                Trang <strong>Quản trị &amp; Gán vai trò hệ thống</strong> chỉ dành riêng cho <strong>Master Admin E-Office</strong> và được ẩn với tất cả tài khoản khác.
               </p>
               <div style="display:flex; justify-content:center; gap:12px;">
-                <a href="/" class="btn btn-primary" style="text-decoration:none; padding:8px 18px;">
+                <a href="./" class="btn btn-primary" style="text-decoration:none; padding:8px 18px;">
                   <i class="fa-solid fa-house"></i> Về Trang chủ Tổng quan
-                </a>
-                <a href="/quan-ly-dot.html" class="btn btn-outline" style="text-decoration:none; padding:8px 18px;">
-                  <i class="fa-solid fa-file-signature"></i> Đăng ký Đề tài
                 </a>
               </div>
             </div>
@@ -50,6 +46,9 @@ async function loadRBACData() {
       }
 
       updateCurrentUserUI();
+      if (currentUser && currentUser.can_switch_role) {
+        loadUserRoleAssignments();
+      }
     }
 
     // 2. Lấy danh sách 7 vai trò
@@ -148,7 +147,7 @@ function renderMatrixTable(searchTerm = '', filterRole = '') {
   const tbody = document.getElementById('matrixTableBody');
   if (!tbody || !rbacData) return;
 
-  const roleOrder = ['VIEN_TRUONG', 'SUPER_ADMIN', 'PHONG_KHCN', 'PHONG_TCHC', 'CHU_NHIEM', 'THU_KHO', 'PHONG_TC_CU'];
+  const roleOrder = ['VIEN_TRUONG', 'SUPER_ADMIN', 'PHONG_KHCN', 'CHU_NHIEM', 'THU_KHO', 'PHONG_TC_CU'];
   
   let html = '';
   let globalIndex = 0;
@@ -170,7 +169,7 @@ function renderMatrixTable(searchTerm = '', filterRole = '') {
     // Header nhóm chức năng
     html += `
       <tr class="matrix-group-row">
-        <td colspan="9">
+        <td colspan="8">
           <i class="fa-solid fa-folder-closed" style="color: var(--primary); margin-right: 6px;"></i>
           ${escapeHtml(group.group_name)} (${matchedPerms.length} quyền)
         </td>
@@ -454,4 +453,144 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+
+// ============================================================================
+// ADMIN E-OFFICE: GÁN VAI TRÒ THỰC TẾ CHO TÀI KHOẢN E-OFFICE (nckh_user_roles)
+// ============================================================================
+let eofficeUsersCache = [];
+let assignmentsCache = [];
+
+async function loadUserRoleAssignments() {
+  const section = document.getElementById('adminRoleAssignSection');
+  if (!section) return;
+  try {
+    const res = await fetch('/api/rbac/assignments');
+    if (res.status === 403) {
+      section.style.display = 'none';
+      return;
+    }
+    const json = await res.json();
+    if (!json.success || !json.data) return;
+
+    section.style.display = 'block';
+    eofficeUsersCache = json.data.eoffice_users || [];
+    assignmentsCache = json.data.assignments || [];
+
+    const sel = document.getElementById('assignUserSelect');
+    if (sel) {
+      sel.innerHTML =
+        '<option value="">-- Chọn từ E-Office hoặc nhập email --</option>' +
+        eofficeUsersCache
+          .map(
+            (u) =>
+              `<option value="${u.id}" data-email="${escapeHtml(u.email)}" data-name="${escapeHtml(u.fullname || u.email)}">${escapeHtml(u.fullname || u.email)} (${escapeHtml(u.email)})</option>`
+          )
+          .join('');
+    }
+    renderAssignmentsTable();
+  } catch (err) {
+    console.error('Lỗi tải danh sách gán vai trò:', err);
+  }
+}
+
+function onAssignUserSelectChange() {
+  const sel = document.getElementById('assignUserSelect');
+  if (!sel || !sel.value) return;
+  const opt = sel.options[sel.selectedIndex];
+  const emailEl = document.getElementById('assignEmailInput');
+  const nameEl = document.getElementById('assignFullnameInput');
+  if (emailEl && opt.dataset.email) emailEl.value = opt.dataset.email;
+  if (nameEl && opt.dataset.name) nameEl.value = opt.dataset.name;
+}
+
+function renderAssignmentsTable() {
+  const tbody = document.getElementById('assignmentsTableBody');
+  if (!tbody) return;
+  if (!assignmentsCache.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="6" style="text-align:center; padding:1.25rem; color:#64748b;">Chưa có phân quyền nào. Chọn tài khoản ở trên để gán vai trò.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = assignmentsCache
+    .map((a, idx) => {
+      const r = a.role_info || {};
+      const badge = `<span class="badge" style="background:${r.bg || '#e0f2fe'}; color:${r.color || '#0284c7'}; font-weight:700;">${escapeHtml(r.name || a.role_key)}</span>`;
+      return `
+        <tr>
+          <td style="text-align:center; color:#64748b;">${idx + 1}</td>
+          <td style="font-weight:600; color:#0f172a;">${escapeHtml(a.fullname || a.email)}</td>
+          <td><code>${escapeHtml(a.email)}</code></td>
+          <td>${badge}</td>
+          <td>${escapeHtml(a.position_title || '—')}</td>
+          <td style="text-align:right; white-space:nowrap;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="editUserRoleAssignment(${a.id})" style="font-size:0.75rem; padding:4px 8px;">Sửa</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="deleteUserRoleAssignment(${a.id}, '${escapeHtml(a.email)}')" style="font-size:0.75rem; padding:4px 8px; color:#b91c1c; border-color:#fecaca;">Gỡ</button>
+          </td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+function editUserRoleAssignment(id) {
+  const item = assignmentsCache.find((a) => Number(a.id) === Number(id));
+  if (!item) return;
+  const emailEl = document.getElementById('assignEmailInput');
+  const nameEl = document.getElementById('assignFullnameInput');
+  const roleEl = document.getElementById('assignRoleSelect');
+  const titleEl = document.getElementById('assignTitleInput');
+  const sel = document.getElementById('assignUserSelect');
+  if (emailEl) emailEl.value = item.email || '';
+  if (nameEl) nameEl.value = item.fullname || '';
+  if (roleEl) roleEl.value = item.role_key || 'CHU_NHIEM';
+  if (titleEl) titleEl.value = item.position_title || '';
+  if (sel) sel.value = item.eoffice_user_id ? String(item.eoffice_user_id) : '';
+  if (emailEl) emailEl.focus();
+}
+
+async function saveUserRoleAssignment(event) {
+  if (event) event.preventDefault();
+  const sel = document.getElementById('assignUserSelect');
+  const email = (document.getElementById('assignEmailInput')?.value || '').trim();
+  const fullname = (document.getElementById('assignFullnameInput')?.value || '').trim();
+  const role_key = document.getElementById('assignRoleSelect')?.value || '';
+  const position_title = (document.getElementById('assignTitleInput')?.value || '').trim();
+  const eoffice_user_id = sel && sel.value ? Number(sel.value) : null;
+
+  try {
+    const res = await fetch('/api/rbac/assignments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eoffice_user_id, email, fullname, role_key, position_title }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      showToast(json.error || 'Không thể lưu phân quyền.', 'error');
+      return;
+    }
+    showToast(json.message || 'Đã lưu phân quyền thành công!', 'success');
+    const form = document.getElementById('assignRoleForm');
+    if (form) form.reset();
+    await loadUserRoleAssignments();
+  } catch (err) {
+    showToast('Lỗi kết nối khi lưu phân quyền.', 'error');
+  }
+}
+
+async function deleteUserRoleAssignment(id, email) {
+  if (!confirm(`Gỡ vai trò đã gán cho ${email}? (Tài khoản sẽ trở về vai trò mặc định theo E-Office)`)) return;
+  try {
+    const res = await fetch(`/api/rbac/assignments/${id}`, { method: 'DELETE' });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      showToast(json.error || 'Không thể gỡ phân quyền.', 'error');
+      return;
+    }
+    showToast(json.message || 'Đã gỡ phân quyền.', 'success');
+    await loadUserRoleAssignments();
+  } catch (err) {
+    showToast('Lỗi kết nối khi gỡ phân quyền.', 'error');
+  }
 }

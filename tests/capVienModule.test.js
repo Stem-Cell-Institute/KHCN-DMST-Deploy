@@ -197,3 +197,109 @@ test('Cách 1: CHU_NHIEM chỉ thấy đúng đề tài của mình (khớp 2 l�
     }
   }
 });
+
+test('gộp Phòng Kế hoạch tổng hợp (6 vai trò) và Admin gán vai trò thực tế (/api/rbac/assignments)', async () => {
+  const adminHeaders = {
+    Authorization: 'Bearer ' + srv.tokens.admin,
+    'Content-Type': 'application/json',
+  };
+
+  // Kiểm tra 6 vai trò (đã gộp PHONG_TCHC vào PHONG_KHCN = Phòng Kế hoạch tổng hợp)
+  const rolesRes = await fetch(srv.baseUrl + '/de-tai-cap-vien/api/rbac/roles', { headers: adminHeaders });
+  assert.equal(rolesRes.status, 200);
+  const roles = (await rolesRes.json()).data;
+  assert.equal(roles.length, 6);
+  assert.ok(!roles.some((r) => r.key === 'PHONG_TCHC'));
+  const khth = roles.find((r) => r.key === 'PHONG_KHCN');
+  assert.equal(khth.name, 'Phòng Kế hoạch tổng hợp');
+
+  // Admin đọc danh sách tài khoản Eoffice & phân quyền
+  const listRes = await fetch(srv.baseUrl + '/de-tai-cap-vien/api/rbac/assignments', { headers: adminHeaders });
+  assert.equal(listRes.status, 200);
+  const listData = (await listRes.json()).data;
+  assert.ok(Array.isArray(listData.eoffice_users) && listData.eoffice_users.length >= 1);
+  assert.ok(Array.isArray(listData.assignments));
+
+  // Admin gán vai trò thử và xóa sạch lại
+  const saveRes = await fetch(srv.baseUrl + '/de-tai-cap-vien/api/rbac/assignments', {
+    method: 'POST',
+    headers: adminHeaders,
+    body: JSON.stringify({
+      email: 'test-thukho@sci.edu.vn',
+      fullname: 'Cán bộ Thủ kho Test',
+      role_key: 'THU_KHO',
+      position_title: 'Thủ kho',
+    }),
+  });
+  assert.equal(saveRes.status, 200);
+  const savedId = (await saveRes.json()).data.id;
+  assert.ok(savedId);
+
+  const delRes = await fetch(srv.baseUrl + `/de-tai-cap-vien/api/rbac/assignments/${savedId}`, {
+    method: 'DELETE',
+    headers: adminHeaders,
+  });
+  assert.equal(delRes.status, 200);
+
+  // Người dùng thường bị chặn 403 trên /api/rbac/assignments
+  if (srv.tokens.plain) {
+    const plainRes = await fetch(srv.baseUrl + '/de-tai-cap-vien/api/rbac/assignments', {
+      headers: { Authorization: 'Bearer ' + srv.tokens.plain },
+    });
+    assert.equal(plainRes.status, 403);
+  }
+});
+
+test('Quản lý nhiệm vụ KHCN: đã bỏ mục Cấp Viện thừa trên UI nhưng thống kê vẫn bao gồm đề tài từ module Cấp Viện', async () => {
+  const adminHeaders = { Authorization: 'Bearer ' + srv.tokens.admin };
+
+  // 1. Giao diện quan-ly-de-tai-co-so.html không còn tùy chọn đăng ký Cấp Viện & link theo dõi hồ sơ cấp Viện cũ
+  const htmlRes = await fetch(srv.baseUrl + '/quan-ly-de-tai-co-so.html');
+  assert.equal(htmlRes.status, 200);
+  const html = await htmlRes.text();
+  assert.ok(!html.includes('id="menu-cap-vien-track"'), 'Không còn mục Theo dõi tiến trình Hồ sơ đề tài cấp Viện');
+  assert.ok(!html.includes('name="addTaskLevel" value="institute"'), 'Không còn radio Cấp Viện trong modal đăng ký mới');
+
+  // 2. /api/missions/stats và /api/missions/period-report/preview phải bao gồm số liệu nckh_projects
+  const cvDb = new Database(CAP_VIEN_DB, { readonly: true });
+  const cvRows = cvDb.prepare('SELECT code, status FROM nckh_projects').all();
+  cvDb.close();
+
+  const listRes = await fetch(srv.baseUrl + '/api/missions', { headers: adminHeaders });
+  assert.equal(listRes.status, 200);
+  const dbMissions = (await listRes.json()).missions || [];
+  const existingCodes = new Set(dbMissions.map((m) => String(m.code || '').trim().toUpperCase()).filter(Boolean));
+  const extraCvCount = cvRows.filter((r) => !existingCodes.has(String(r.code || '').trim().toUpperCase())).length;
+
+  const statsRes = await fetch(srv.baseUrl + '/api/missions/stats', { headers: adminHeaders });
+  assert.equal(statsRes.status, 200);
+  const stats = await statsRes.json();
+  assert.equal(
+    stats.total,
+    dbMissions.length + extraCvCount,
+    'Tổng số đề tài trong /api/missions/stats phải gồm cả đề tài từ module Đề tài cấp Viện'
+  );
+  const dbInstituteCount = dbMissions.filter((m) => (m.level || 'institute').toLowerCase() === 'institute').length;
+  assert.equal(
+    stats.byLevel.institute,
+    dbInstituteCount + extraCvCount,
+    'Số liệu byLevel.institute phải gộp cả đề tài từ module Đề tài cấp Viện'
+  );
+
+  const reportRes = await fetch(srv.baseUrl + '/api/missions/period-report/preview?scope=missions', {
+    headers: adminHeaders,
+  });
+  assert.equal(reportRes.status, 200);
+  const report = await reportRes.json();
+  assert.equal(
+    report.summary.missions.total,
+    dbMissions.length + extraCvCount,
+    'Báo cáo thống kê giai đoạn phải bao gồm cả đề tài từ module Đề tài cấp Viện'
+  );
+
+  // 3. /api/homepage-stats trả missions khớp tổng đã gộp
+  const hpRes = await fetch(srv.baseUrl + '/api/homepage-stats', { headers: adminHeaders });
+  assert.equal(hpRes.status, 200);
+  const hp = await hpRes.json();
+  assert.equal(hp.missions, stats.total);
+});

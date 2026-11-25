@@ -8,22 +8,34 @@
 
 const { ROLES, DEMO_PROFILES, hasPermission, getPermissionsByRole } = require('../config/roles');
 
+function normalizeRoleKey(rk) {
+  const k = String(rk || '').trim().toUpperCase();
+  if (k === 'PHONG_TCHC') return 'PHONG_KHCN'; // Đã gộp Phòng KHCN & TC-HC thành Phòng Kế hoạch tổng hợp
+  return ROLES[k] ? k : null;
+}
+
 function mapEofficeRoleToCapVien(eofficeUser) {
   if (!eofficeUser) return 'PHONG_KHCN';
+  // Ưu tiên 1: vai trò do Admin E-Office gán trực tiếp trong trang Phân quyền (nckh_user_roles)
+  if (eofficeUser.assignedRole) {
+    const mapped = normalizeRoleKey(eofficeUser.assignedRole);
+    if (mapped) return mapped;
+  }
+  // Ưu tiên 2: ánh xạ mặc định theo role E-Office
   if (eofficeUser.isAdmin) return 'SUPER_ADMIN';
   const r = String(eofficeUser.role || '').trim().toLowerCase();
   if (r === 'vien_truong' || r === 'pho_vien_truong') return 'VIEN_TRUONG';
-  if (r === 'phong_khcn' || r === 'thu_ky' || r === 'chu_tich') return 'PHONG_KHCN';
+  if (r === 'phong_khcn' || r === 'phong_tchc' || r === 'phong_khth' || r === 'thu_ky' || r === 'chu_tich') return 'PHONG_KHCN';
   if (r === 'ke_toan' || r === 'totruong_tham_dinh_tc' || r === 'phong_tc_cu') return 'PHONG_TC_CU';
-  if (r === 'phong_tchc') return 'PHONG_TCHC';
   if (r === 'thu_kho') return 'THU_KHO';
   return 'CHU_NHIEM';
 }
 
 module.exports = function authMiddleware(req, res, next) {
   const eo = req.eofficeUser || null;
+  const isMasterAdminAccount = eo ? !!eo.isMasterAdmin : true;
   const realRoleKey = eo ? mapEofficeRoleToCapVien(eo) : 'PHONG_KHCN';
-  const canSwitchRole = eo ? !!eo.isAdmin : true;
+  const canSwitchRole = isMasterAdminAccount;
 
   let roleKey = realRoleKey;
   if (canSwitchRole) {
@@ -59,11 +71,12 @@ module.exports = function authMiddleware(req, res, next) {
     fullname,
     leader_name: leaderName,
     unit: baseProfile.unit,
-    title: baseProfile.title,
+    title: (!isRolePreview && eo && eo.assignedTitle) ? eo.assignedTitle : baseProfile.title,
     role: roleKey,
     real_role: realRoleKey,
     real_fullname: eo ? eo.fullname : baseProfile.fullname,
     eoffice_role: eo ? eo.role : null,
+    is_master_admin: isMasterAdminAccount,
     can_switch_role: canSwitchRole,
     is_role_preview: isRolePreview,
     role_info: roleInfo,

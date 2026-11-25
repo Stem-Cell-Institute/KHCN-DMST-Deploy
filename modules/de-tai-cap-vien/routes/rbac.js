@@ -70,6 +70,7 @@ router.get('/current-user', async (req, res) => {
         role: u.role,
         real_role: u.real_role,
         real_fullname: u.real_fullname,
+        is_master_admin: !!u.is_master_admin,
         can_switch_role: canSwitch,
         is_role_preview: !!u.is_role_preview,
         role_info: u.role_info || ROLES[u.role] || ROLES.CHU_NHIEM,
@@ -156,6 +157,142 @@ router.post('/switch-role', (req, res) => {
       role_info: ROLES[role]
     }
   });
+});
+
+// 6. Quản lý gán vai trò thực tế cho tài khoản E-Office — CHỈ DÀNH CHO ADMIN E-OFFICE
+router.get('/assignments', async (req, res) => {
+  try {
+    if (!req.user || !req.user.can_switch_role) {
+      return res.status(403).json({
+        success: false,
+        error: 'Chỉ Admin E-Office mới có quyền quản lý gán vai trò người dùng.'
+      });
+    }
+
+    let eofficeUsers = [];
+    if (req.eofficeDb) {
+      try {
+        eofficeUsers = req.eofficeDb
+          .prepare('SELECT id, email, fullname, role FROM users ORDER BY fullname COLLATE NOCASE, email')
+          .all();
+      } catch (_) {
+        eofficeUsers = [];
+      }
+    }
+
+    const assignments = await db.all(`
+      SELECT id, eoffice_user_id, email, fullname, role_key, position_title, assigned_by, updated_at
+      FROM nckh_user_roles
+      ORDER BY updated_at DESC, id DESC
+    `);
+
+    res.json({
+      success: true,
+      data: {
+        eoffice_users: eofficeUsers,
+        assignments: assignments.map((a) => ({
+          ...a,
+          role_info: ROLES[a.role_key] || ROLES.CHU_NHIEM
+        })),
+        roles: Object.values(ROLES)
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/assignments', async (req, res) => {
+  try {
+    if (!req.user || !req.user.can_switch_role) {
+      return res.status(403).json({
+        success: false,
+        error: 'Chỉ Admin E-Office mới có quyền gán vai trò người dùng.'
+      });
+    }
+
+    const { eoffice_user_id, email, fullname, role_key, position_title } = req.body || {};
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanRole = String(role_key || '').trim().toUpperCase() === 'PHONG_TCHC'
+      ? 'PHONG_KHCN'
+      : String(role_key || '').trim().toUpperCase();
+
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      return res.status(400).json({ success: false, error: 'Vui lòng chọn tài khoản hoặc nhập email hợp lệ.' });
+    }
+    if (!ROLES[cleanRole]) {
+      return res.status(400).json({ success: false, error: 'Vai trò không hợp lệ.' });
+    }
+
+    // Tự động khớp với tài khoản E-Office nếu tồn tại
+    let resolvedUserId = eoffice_user_id ? Number(eoffice_user_id) : null;
+    let resolvedFullname = String(fullname || '').trim();
+    if (req.eofficeDb) {
+      try {
+        const eoRow = resolvedUserId
+          ? req.eofficeDb.prepare('SELECT id, email, fullname FROM users WHERE id = ?').get(resolvedUserId)
+          : req.eofficeDb.prepare('SELECT id, email, fullname FROM users WHERE LOWER(TRIM(email)) = ?').get(cleanEmail);
+        if (eoRow) {
+          resolvedUserId = eoRow.id;
+          if (!resolvedFullname) resolvedFullname = eoRow.fullname || eoRow.email;
+        }
+      } catch (_) {}
+    }
+
+    const assignedBy = (req.user && (req.user.email || req.user.fullname)) || 'admin';
+    const existing = await db.get('SELECT id FROM nckh_user_roles WHERE LOWER(TRIM(email)) = ?', [cleanEmail]);
+
+    if (existing) {
+      await db.run(
+        `UPDATE nckh_user_roles
+         SET eoffice_user_id = COALESCE(?, eoffice_user_id),
+             fullname = ?,
+             role_key = ?,
+             position_title = ?,
+             assigned_by = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [resolvedUserId, resolvedFullname || cleanEmail, cleanRole, String(position_title || '').trim() || null, assignedBy, existing.id]
+      );
+    } else {
+      await db.run(
+        `INSERT INTO nckh_user_roles (eoffice_user_id, email, fullname, role_key, position_title, assigned_by)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [resolvedUserId, cleanEmail, resolvedFullname || cleanEmail, cleanRole, String(position_title || '').trim() || null, assignedBy]
+      );
+    }
+
+    const saved = await db.get('SELECT * FROM nckh_user_roles WHERE LOWER(TRIM(email)) = ?', [cleanEmail]);
+    res.json({
+      success: true,
+      message: `Đã gán vai trò ${ROLES[cleanRole].name} cho ${saved.fullname || saved.email}`,
+      data: { ...saved, role_info: ROLES[cleanRole] }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.delete('/assignments/:id', async (req, res) => {
+  try {
+    if (!req.user || !req.user.can_switch_role) {
+      return res.status(403).json({
+        success: false,
+        error: 'Chỉ Admin E-Office mới có quyền gỡ vai trò người dùng.'
+      });
+    }
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ success: false, error: 'ID không hợp lệ.' });
+    }
+    const r = await db.run('DELETE FROM nckh_user_roles WHERE id = ?', [id]);
+    if (!r.rowsAffected) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy phân quyền.' });
+    }
+    res.json({ success: true, message: 'Đã gỡ phân quyền thành công.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 module.exports = router;

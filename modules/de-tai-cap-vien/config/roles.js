@@ -27,23 +27,13 @@ const ROLES = {
   },
   PHONG_KHCN: {
     key: 'PHONG_KHCN',
-    name: 'Phòng Khoa học & Công nghệ',
-    short_name: 'Phòng KHCN',
+    name: 'Phòng Kế hoạch tổng hợp',
+    short_name: 'Phòng KHTH',
     badge_class: 'badge-blue',
-    icon: 'fa-microscope',
+    icon: 'fa-briefcase',
     color: '#0284c7',
     bg: '#e0f2fe',
-    desc: 'Đơn vị thường trực quản lý đề tài: Thẩm định hồ sơ, tổ chức Hội đồng, giám sát tiến độ 6 tháng, kiểm soát hồ sơ kiểm toán'
-  },
-  PHONG_TCHC: {
-    key: 'PHONG_TCHC',
-    name: 'Phòng Tổ chức - Hành chính',
-    short_name: 'Phòng TC-HC',
-    badge_class: 'badge-yellow',
-    icon: 'fa-building-user',
-    color: '#b45309',
-    bg: '#fef3c7',
-    desc: 'Cấp số công văn, đóng dấu và phát hành văn bản pháp lý; kiểm tra tư cách nhân sự và lưu trữ hồ sơ gốc của Viện'
+    desc: 'Đơn vị thường trực quản lý đề tài (gộp KHCN & TC-HC): Thẩm định hồ sơ, tổ chức Hội đồng, cấp số & đóng dấu văn bản pháp lý, giám sát tiến độ 6 tháng và hồ sơ kiểm toán'
   },
   CHU_NHIEM: {
     key: 'CHU_NHIEM',
@@ -87,7 +77,7 @@ const PERMISSION_GROUPS = [
         key: 'VIEW_DASHBOARD_ALL',
         name: 'Xem Dashboard & KPI toàn viện',
         desc: 'Xem toàn bộ số liệu thống kê đề tài của tất cả các nhóm',
-        roles: ['VIEN_TRUONG', 'SUPER_ADMIN', 'PHONG_KHCN', 'PHONG_TCHC', 'PHONG_TC_CU', 'THU_KHO']
+        roles: ['VIEN_TRUONG', 'SUPER_ADMIN', 'PHONG_KHCN', 'PHONG_TC_CU', 'THU_KHO']
       },
       {
         key: 'VIEW_DASHBOARD_OWN',
@@ -99,7 +89,7 @@ const PERMISSION_GROUPS = [
         key: 'EXPORT_REPORTS',
         name: 'Xuất báo cáo tổng kết & Danh sách đề tài (Excel/CSV)',
         desc: 'Xuất danh sách và báo cáo tiến độ chung',
-        roles: ['VIEN_TRUONG', 'SUPER_ADMIN', 'PHONG_KHCN', 'PHONG_TCHC', 'PHONG_TC_CU']
+        roles: ['VIEN_TRUONG', 'SUPER_ADMIN', 'PHONG_KHCN', 'PHONG_TC_CU']
       }
     ]
   },
@@ -123,7 +113,7 @@ const PERMISSION_GROUPS = [
         key: 'VERIFY_HR_COMPLIANCE',
         name: 'Thẩm định nhân sự & Định mức giờ NCKH',
         desc: 'Kiểm tra hợp đồng lao động, tư cách chủ nhiệm và phân bổ giờ nghiên cứu',
-        roles: ['SUPER_ADMIN', 'PHONG_TCHC']
+        roles: ['SUPER_ADMIN', 'PHONG_KHCN']
       },
       {
         key: 'SIGN_ASSIGNMENT_DECISION',
@@ -135,7 +125,7 @@ const PERMISSION_GROUPS = [
         key: 'ISSUE_STAMP_DOCS',
         name: 'Cấp số công văn & Đóng dấu văn bản pháp lý',
         desc: 'Vào sổ công văn, cấp số quyết định và đóng dấu pháp nhân của Viện',
-        roles: ['SUPER_ADMIN', 'PHONG_TCHC']
+        roles: ['SUPER_ADMIN', 'PHONG_KHCN']
       },
       {
         key: 'SIGN_CONTRACT',
@@ -285,7 +275,7 @@ const PERMISSION_GROUPS = [
         key: 'VIEW_AUDIT_CHECKLIST_ALL',
         name: 'Xem ma trận hồ sơ pháp lý 13+ tài liệu toàn viện',
         desc: 'Tra cứu danh mục văn bản còn thiếu của tất cả 30 đề tài',
-        roles: ['VIEN_TRUONG', 'SUPER_ADMIN', 'PHONG_KHCN', 'PHONG_TCHC', 'PHONG_TC_CU']
+        roles: ['VIEN_TRUONG', 'SUPER_ADMIN', 'PHONG_KHCN', 'PHONG_TC_CU']
       },
       {
         key: 'VIEW_AUDIT_CHECKLIST_OWN',
@@ -296,20 +286,20 @@ const PERMISSION_GROUPS = [
       {
         key: 'VERIFY_HARDCOPY_AUDIT',
         name: 'Xác thực hồ sơ giấy bản cứng (Verify Audit)',
-        desc: 'P. KHCN xác nhận đã nhận đủ bản cứng gốc đóng dấu lưu trữ',
+        desc: 'Phòng KHTH xác nhận đã nhận đủ bản cứng gốc đóng dấu lưu trữ',
         roles: ['SUPER_ADMIN', 'PHONG_KHCN']
       },
       {
         key: 'UPLOAD_AUDIT_DOCUMENTS',
         name: 'Tải lên tài liệu số hóa (PDF)',
         desc: 'Upload các quyết định, hợp đồng, biên bản vào kho số hóa đề tài',
-        roles: ['SUPER_ADMIN', 'PHONG_KHCN', 'PHONG_TCHC', 'CHU_NHIEM', 'THU_KHO', 'PHONG_TC_CU']
+        roles: ['SUPER_ADMIN', 'PHONG_KHCN', 'CHU_NHIEM', 'THU_KHO', 'PHONG_TC_CU']
       },
       {
         key: 'EXPORT_AUDIT_HTML',
         name: 'Xuất Báo cáo Kiểm toán độc lập (HTML / Excel / In A4)',
         desc: 'Tải file báo cáo hoàn chỉnh phục vụ đoàn thanh tra, kiểm toán',
-        roles: ['VIEN_TRUONG', 'SUPER_ADMIN', 'PHONG_KHCN', 'PHONG_TCHC', 'PHONG_TC_CU']
+        roles: ['VIEN_TRUONG', 'SUPER_ADMIN', 'PHONG_KHCN', 'PHONG_TC_CU']
       }
     ]
   },
@@ -343,9 +333,9 @@ const PERMISSION_GROUPS = [
 const DEMO_PROFILES = [
   {
     role: 'VIEN_TRUONG',
-    fullname: 'GS.TS. Phạm Văn Phúc',
+    fullname: 'PGS. TS. Phạm Văn Phúc',
     title: 'Viện trưởng Viện Tế bào gốc',
-    email: 'pvphuc@sci.edu.vn',
+    email: 'phucpham@sci.edu.vn',
     unit: 'Ban Lãnh đạo Viện'
   },
   {
@@ -357,23 +347,16 @@ const DEMO_PROFILES = [
   },
   {
     role: 'PHONG_KHCN',
-    fullname: 'ThS. Nguyễn Thu Trang',
-    title: 'Trưởng phòng KHCN & ĐN',
-    email: 'p.khcn@sci.edu.vn',
-    unit: 'Phòng Khoa học Công nghệ & Đối ngoại'
-  },
-  {
-    role: 'PHONG_TCHC',
-    fullname: 'ThS. Lê Hoàng Nam',
-    title: 'Phó Trưởng phòng TC-HC',
-    email: 'p.tchc@sci.edu.vn',
-    unit: 'Phòng Tổ chức - Hành chính'
+    fullname: 'Trương Châu Nhật',
+    title: 'Trưởng phòng Kế hoạch tổng hợp',
+    email: 'nhattruong@sci.edu.vn',
+    unit: 'Phòng Kế hoạch tổng hợp'
   },
   {
     role: 'CHU_NHIEM',
-    fullname: 'ThS. Nguyễn Trường Sinh',
+    fullname: 'Nguyễn Trường Sinh',
     title: 'Chủ nhiệm Đề tài (Cancer Biology)',
-    email: 'ntsinh@sci.edu.vn',
+    email: 'sinhnguyen@sci.edu.vn',
     unit: 'Nhóm nghiên cứu Cancer Biology',
     sample_project_code: 'NCKH-SCI.07/24'
   },

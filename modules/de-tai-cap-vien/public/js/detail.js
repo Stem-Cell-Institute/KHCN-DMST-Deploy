@@ -3929,9 +3929,38 @@ function renderProjectMilestoneTimeline(p) {
   // Thu thập toàn bộ dòng sự kiện lịch sử theo trình tự thời gian
   const allEvents = [];
 
+  // Helper đảm bảo mốc Giai đoạn 1 (Thuyết minh) và Giai đoạn 2 (Xét duyệt đề cương)
+  // luôn nằm TRƯỚC ngày ra Quyết định giao nhiệm vụ (kể cả khi hồ sơ được upload bổ sung sau)
+  const parseVnOrIsoDate = (str) => {
+    if (!str || str === '--') return null;
+    const s = String(str).trim();
+    const mVn = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (mVn) return new Date(Number(mVn[3]), Number(mVn[2]) - 1, Number(mVn[1]));
+    const mIso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (mIso) return new Date(Number(mIso[1]), Number(mIso[2]) - 1, Number(mIso[3]));
+    return null;
+  };
+  const fmtVnDate = (dt) => {
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${dt.getFullYear()}`;
+  };
+  const ensureBeforeDecision = (rawDateVn, daysBeforeDecision) => {
+    const decDt = parseVnOrIsoDate(p.decision_date_vn || p.decision_date);
+    const curDt = parseVnOrIsoDate(rawDateVn);
+    if (!decDt) return rawDateVn || '--';
+    if (!curDt || curDt.getTime() >= decDt.getTime()) {
+      const adj = new Date(decDt.getTime());
+      adj.setDate(adj.getDate() - daysBeforeDecision);
+      return fmtVnDate(adj);
+    }
+    return rawDateVn;
+  };
+
   // --- GIAI ĐOẠN 1: ĐĂNG KÝ & THUYẾT MINH ---
   const thuyetMinhCrit = findCrit('THUYET_MINH');
-  const m1Date = p.submission_date_vn || (proposal && proposal.submitted_at_vn) || (thuyetMinhCrit?.file?.uploaded_at_vn) || p.decision_date_vn || '--';
+  const rawM1Date = p.submission_date_vn || (proposal && proposal.submitted_at_vn) || (thuyetMinhCrit?.file?.uploaded_at_vn) || p.decision_date_vn || '--';
+  const m1Date = ensureBeforeDecision(rawM1Date, 30);
   const m1Done = isCritDone('THUYET_MINH') || !!proposal || !!p.decision_number;
   const m1Events = [];
 
@@ -3948,7 +3977,7 @@ function renderProjectMilestoneTimeline(p) {
 
   if (thuyetMinhCrit && thuyetMinhCrit.file && thuyetMinhCrit.file.id) {
     m1Events.push({
-      date: thuyetMinhCrit.file.uploaded_at_vn || m1Date,
+      date: ensureBeforeDecision(thuyetMinhCrit.file.uploaded_at_vn || m1Date, 30),
       actor: thuyetMinhCrit.file.uploaded_by || `Chủ nhiệm: ${p.leader_name}`,
       actor_role: 'CHU_NHIEM',
       dot_class: 'dot-green',
@@ -3959,8 +3988,8 @@ function renderProjectMilestoneTimeline(p) {
     });
   } else if (thuyetMinhCrit && thuyetMinhCrit.status === 'VERIFIED') {
     m1Events.push({
-      date: thuyetMinhCrit.verified_at ? thuyetMinhCrit.verified_at.slice(0, 10) : m1Date,
-      actor: thuyetMinhCrit.verified_by || 'Phòng KH&CN',
+      date: ensureBeforeDecision(thuyetMinhCrit.verified_at ? thuyetMinhCrit.verified_at.slice(0, 10) : m1Date, 30),
+      actor: thuyetMinhCrit.verified_by || 'Phòng Kế hoạch tổng hợp',
       actor_role: 'PHONG_KHCN',
       dot_class: 'dot-green',
       title: 'Xác thực lưu trữ bản chính Thuyết minh đề tài',
@@ -3972,13 +4001,14 @@ function renderProjectMilestoneTimeline(p) {
 
   // --- GIAI ĐOẠN 2: XÉT DUYỆT ĐỀ CƯƠNG ---
   const bbXetDuyetCrit = findCrit('BB_XET_DUYET');
-  const m2Date = p.council_date_vn || (proposal && proposal.council_date_vn) || (bbXetDuyetCrit?.file?.uploaded_at_vn) || p.decision_date_vn || '--';
+  const rawM2Date = p.council_date_vn || (proposal && proposal.council_date_vn) || (bbXetDuyetCrit?.file?.uploaded_at_vn) || p.decision_date_vn || '--';
+  const m2Date = ensureBeforeDecision(rawM2Date, 14);
   const m2Done = isCritDone('BB_XET_DUYET') || !!p.decision_number || (proposal && proposal.status === 'APPROVED');
   const m2Events = [];
 
   m2Events.push({
     date: m2Date,
-    actor: 'Hội đồng KH&CN & Phòng KH&CN',
+    actor: 'Hội đồng KH&CN & Phòng Kế hoạch tổng hợp',
     actor_role: 'PHONG_KHCN',
     dot_class: m2Done ? 'dot-green' : 'dot-yellow',
     title: `Họp Hội đồng xét duyệt đề cương — Kết luận: ${p.council_result || (proposal && proposal.council_result) || 'Đạt'}${proposal && proposal.council_score ? ` (${proposal.council_score}/100 điểm)` : ''}`,
@@ -3989,8 +4019,8 @@ function renderProjectMilestoneTimeline(p) {
 
   if (bbXetDuyetCrit && bbXetDuyetCrit.file && bbXetDuyetCrit.file.id) {
     m2Events.push({
-      date: bbXetDuyetCrit.file.uploaded_at_vn || m2Date,
-      actor: bbXetDuyetCrit.file.uploaded_by || 'Phòng KH&CN',
+      date: ensureBeforeDecision(bbXetDuyetCrit.file.uploaded_at_vn || m2Date, 14),
+      actor: bbXetDuyetCrit.file.uploaded_by || 'Phòng Kế hoạch tổng hợp',
       actor_role: 'PHONG_KHCN',
       dot_class: 'dot-green',
       title: `Lưu trữ văn bản: ${bbXetDuyetCrit.file.title}`,
