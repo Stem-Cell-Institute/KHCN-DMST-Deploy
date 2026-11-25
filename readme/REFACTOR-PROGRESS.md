@@ -50,17 +50,17 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 | └ 3.2 | Hồ sơ SCI-ACE GĐ6–GĐ7 (chấp thuận có điều kiện, họp, cấp QĐ, báo cáo) | 7 | ✅ Đã merge · −303 dòng | `refactor/routes-submissions-1` |
 | └ 3.3 | Hồ sơ SCI-ACE GĐ3–GĐ5 + tải file + xóa | 10 | ✅ Đã merge · −357 dòng | `refactor/routes-submissions-1` |
 | └ 3.4 | Công bố khoa học (5 endpoint bổ sung trong `server.js`) | 5 | ✅ Đã merge · −101 dòng | `refactor/routes-submissions-1` |
-| 4 | `cap-vien` — 49 route `/api/cap-vien/*` sang 9 file dưới `routes/cap-vien/` | 49 | 🔵 **Tách xong — `server.js` hết `/api/cap-vien`** (chờ review/merge vào `main`) | `refactor/routes-cap-vien-1` |
-| └ 4.0 | Lưới test `tests/capVien.test.js` (8 test phủ 49 route) | 0 | 🔵 Chờ review (`69d0b7c`) | `refactor/routes-cap-vien-1` |
-| └ 4.1–4.9 | Nộp hồ sơ/danh mục, danh sách/chi tiết, Bước 6–8, BC định kỳ, Bước 5/HĐ, dispatcher Bước 2–9, vật tư/điều chỉnh, Bước 4/4A, deadline & bổ sung/tải/xóa | 49 | 🔵 Chờ review · −2.549 dòng | `refactor/routes-cap-vien-1` |
-| 5 | `cooperation` + `htqt` + `events` (84 route + 20 `/api/admin/cooperation/*` đan xen trong `vanBanWord.js`) | 84 | 🔵 **Tách xong — `server.js` hết `/api/cooperation`, `/api/htqt`, `/api/events`** (chờ review/merge) · −3.100 dòng | `refactor/routes-cooperation-1` |
-| 6 | `admin` — 104 route `/api/admin/*` (20 route đan xen trong `vanBanWord.js` ở Đợt 5 + 84 route còn lại sang 9 file dưới `routes/admin/`) | 104 | 🔵 **Tách xong — `server.js` hết `/api/admin/*`** (chờ review/merge) · −1.349 dòng | `refactor/routes-admin-1` |
-| └ 6.0 | Lưới test `tests/admin.test.js` (5 test phủ 105 route `/api/admin*`) | 0 | 🔵 Chờ review (`10a3ab6`) | `refactor/routes-admin-1` |
-| └ 6.1 | `routes/admin/capVien.js` (28 route `/api/admin/cap-vien/*` & sync) | 28 | 🔵 Chờ review (`83d4a78`) · −324 dòng | `refactor/routes-admin-1` |
-| └ 6.2 | `routes/admin/usersVaNhatKy.js` (5) + `routes/admin/phanQuyenVaTaiKhoan.js` (10) | 15 | 🔵 Chờ review (`0491e6d`) · −339 dòng | `refactor/routes-admin-1` |
-| └ 6.3 | `missionsQuanTri.js` (2), `aceTemplatesVaMissionsImport.js` (4), `homepageModules.js` (3), `caiDatVaThongBao.js` (4) + chuyển `GET notification-recipients` | 13 | 🔵 Chờ review (`778861d`) · −327 dòng | `refactor/routes-admin-1` |
-| └ 6.4 | `cooperationSettings.js` (7), `cooperationDeXuat.js` (12), `journalMetrics.js` (1) | 20 | 🔵 Chờ review (`b7da932`) · −359 dòng | `refactor/routes-admin-1` |
-| 7 | `core` + rút `server.js` < 300 dòng | ~15 | ⬜ Chưa bắt đầu | — |
+| 4 | `cap-vien` — 49 route `/api/cap-vien/*` sang 9 file dưới `routes/cap-vien/` | 49 | ✅ **Đã merge vào `main`** · −2.549 dòng | `refactor/routes-cap-vien-1` |
+| └ 4.0 | Lưới test `tests/capVien.test.js` (8 test phủ 49 route) | 0 | ✅ Đã merge (`69d0b7c`) | `refactor/routes-cap-vien-1` |
+| └ 4.1–4.9 | Nộp hồ sơ/danh mục, danh sách/chi tiết, Bước 6–8, BC định kỳ, Bước 5/HĐ, dispatcher Bước 2–9, vật tư/điều chỉnh, Bước 4/4A, deadline & bổ sung/tải/xóa | 49 | ✅ Đã merge · −2.549 dòng | `refactor/routes-cap-vien-1` |
+| 5 | `cooperation` + `htqt` + `events` (84 route + 20 `/api/admin/cooperation/*` đan xen trong `vanBanWord.js`) | 84 | ✅ **Đã merge vào `main`** · −3.100 dòng | `refactor/routes-cooperation-1` |
+| 6 | `admin` — 104 route `/api/admin/*` (20 route đan xen trong `vanBanWord.js` ở Đợt 5 + 84 route còn lại sang 10 file dưới `routes/admin/`) | 104 | ✅ **Đã merge vào `main`** · −1.349 dòng | `refactor/routes-admin-1` |
+| └ 6.0 | Lưới test `tests/admin.test.js` (5 test phủ 105 route `/api/admin*`) | 0 | ✅ Đã merge (`10a3ab6`) | `refactor/routes-admin-1` |
+| └ 6.1 | `routes/admin/capVien.js` (28 route `/api/admin/cap-vien/*` & sync) | 28 | ✅ Đã merge (`83d4a78`) · −324 dòng | `refactor/routes-admin-1` |
+| └ 6.2 | `routes/admin/usersVaNhatKy.js` (5) + `routes/admin/phanQuyenVaTaiKhoan.js` (10) | 15 | ✅ Đã merge (`0491e6d`) · −339 dòng | `refactor/routes-admin-1` |
+| └ 6.3 | `missionsQuanTri.js` (2), `aceTemplatesVaMissionsImport.js` (4), `homepageModules.js` (3), `caiDatVaThongBao.js` (4) + chuyển `GET notification-recipients` | 13 | ✅ Đã merge (`778861d`) · −327 dòng | `refactor/routes-admin-1` |
+| └ 6.4 | `cooperationSettings.js` (7), `cooperationDeXuat.js` (12), `journalMetrics.js` (1) | 20 | ✅ Đã merge (`b7da932`) · −359 dòng | `refactor/routes-admin-1` |
+| 7 | `core` + rút `server.js` < 300 dòng (19.836 → **119 dòng**) | ~15 | ✅ **Xong — `server.js` chỉ còn 119 dòng bootstrap** | `refactor/routes-core-1` |
 
 Ký hiệu: ⬜ chưa bắt đầu · 🟡 đang làm · 🔵 chờ review/merge · ✅ đã merge + deploy ổn định
 
@@ -317,6 +317,22 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-11-25 · refactor/routes-core-1 · Đợt 7 — hoàn tất `core` + rút `server.js` < 300 dòng · **Toàn bộ kế hoạch 8 đợt khép**
+
+- **Đã xong:**
+  - Dựng lưới test [tests/core.test.js](tests/core.test.js) (3 test phủ `health`, `server-time`, `homepage-stats`, `homepage-modules`, `standard-label`, `ace-templates`, `me`, `activity/track`, `users/search`, `dev/pub-analytics-access`, `admin-ui-status`, `login/logout/forgot/reset`).
+  - Tách các route lõi ra khỏi `server.js` sang `routes/core/`: `healthVaTime.js`, `auth.js`, `passwordReset.js`, `homepageStats.js`, `aceTemplates.js`, `homepageModulesVaLabel.js`, `crdVaMe.js`, `devVaUsers.js`.
+  - Chuyển toàn bộ khởi tạo schema, helper nghiệp vụ, multer/paths, email service, cron jobs và bootstrap mount sang kiến trúc phân lớp rõ ràng:
+    - `bootstrap/`: `appSetup.js`, `securityVaCors.js`, `modulesConVaAnalytics.js`, `trangHtmlVaVendor.js`, `adminUi.js`, `sciKhcnPublications.js`, `mountAuthVaSubmissions.js`, `mountCapVienVaUsers.js`, `mountMissionsVaTrangChu.js`, `mountCooperation1.js`, `mountCrdVaModulesCon.js`, `mountCooperationVaEvents.js`, `mountAllRoutes.js`, `startServer.js`
+    - `db/`: `capVienBaseSchema.js`, `capVienSchemaVaHelpers.js`, `crdInitVaHelpers.js`, `coreSchemaInit.js`, `homepageModulesInit.js`, `dmsInit.js`, `seedAdminVaMeeting.js`, `cooperationInit.js`
+    - `lib/`: `storagePaths.js`, `multerUploads.js`
+    - `middleware/`: `authVaPhanQuyen.js`
+    - `services/`: `cascadeVaTenFile.js`, `missionAccessHelpers.js`, `emailThongBao.js`, `emailCoopThongBao.js`, `cooperationPartnerHelpers.js`, `cooperationMailVaHetHan.js`, `cooperationVanBanHelpers.js`, `crdStateHelpers.js`
+    - `jobs/`: `nhacViecDinhKy.js`
+  - `server.js` 9.657 → **119 dòng** (toàn bộ Đợt 0→7: **19.836 → 119 dòng**, đạt mục tiêu `< 300 dòng`); hạ trần `.github/server-js-max-lines` xuống `119`.
+- **Bằng chứng:** `route-inventory.js` (816 route, giữ nguyên 100% thứ tự) → diff **rỗng**; `npm test` **693/693 xanh** (0 fail, 0 skipped).
+- **Merge & Push:** merge nối tiếp Đợt 4 → 5 → 6 → 7 (`refactor/routes-core-1`) vào `main` và push lên `origin/main`.
 
 ### 2026-11-25 · refactor/routes-admin-1 · Đợt 6 — hoàn tất Đợt 6 (`/api/admin/*`, 104 route) · **Đợt 6 khép**
 

@@ -1,0 +1,314 @@
+/**
+ * Gắn các router Hợp tác Quốc tế phần 1 (admin settings, quản lý đề xuất, thẩm định, HTQT, nộp/danh sách, thỏa thuận) và phân quyền tài khoản.
+ *
+ * Tách khỏi server.js (Đợt 7 của readme/KE-HOACH-REFACTOR.md), giữ NGUYÊN hành vi.
+ */
+
+const db = require('../lib/db-bridge');
+
+module.exports = function mountCooperationPhase1({
+  ALLOWED_EMAIL_DOMAIN,
+  BUDGET_TEAM_ROLES,
+  COUNCIL_ROLE_TOKENS,
+  DOAN_RA_TO_TRINH_TEMPLATE_PATH,
+  DOAN_VAO_TO_TRINH_TEMPLATE_PATH,
+  MOU_TO_TRINH_TEMPLATE_PATH,
+  PORT,
+  YTNN_TO_TRINH_TEMPLATE_PATH,
+  adminOnly,
+  app,
+  authMiddleware,
+  cooperationComputePartnerStats,
+  getSmtpFrom,
+  isSafeEmailFormat,
+  masterAdminOnly,
+  normalizeAndCheckDownloadPath,
+  reqIsMasterAdmin,
+  resolveCoopVanBanWordFileForUnlink,
+  resolveStoredFileFromDb,
+  roleIsAny,
+  thoaThuanAutoStatusByExpiry,
+  thoaThuanHetHanFromSigningYears,
+  thoaThuanParseOpenEndedFlag,
+  transporter,
+  uploadHtqtThoaThuanScan,
+  uploadHtqtThoaThuanTermination,
+  userEmailIsMasterAdmin,
+}) {
+  const {
+    coopAddHistory,
+    coopBuildEmail,
+    coopFmtDateVN,
+    coopGenMa,
+    coopGetRecipients,
+    coopGetThoaThuanExpiryMonths,
+    coopGetThoaThuanPostExpiryMaxEmails,
+    coopGetThoaThuanPostExpiryMinDays,
+    coopIsVienTruong,
+    coopRunThoaThuanExpiryAlerts,
+    coopSendMail,
+  } = require('../services/cooperationMailVaHetHan')({ PORT, getSmtpFrom, transporter });
+
+  // Module Hợp tác quốc tế: lấy email nhận thông báo theo topic (doan_ra, mou, ...) hoặc 'all'
+  const {
+    coopAssertSubmitter,
+    coopEmailListMinus,
+    coopEmailsPhongKhcnForTopic,
+    coopEmailsVienTruongForTopic,
+    coopEscHtml,
+    coopNotifyPhongToCcVt,
+    coopSendMailTuChoi,
+    getCooperationRecipients,
+    getCooperationRecipientsSplit,
+  } = require('../services/emailCoopThongBao')({
+    PORT,
+    coopBuildEmail,
+    coopGenMa,
+    coopGetRecipients,
+    coopSendMail,
+  });
+
+  // Quản trị HTQT (danh sách người nhận thông báo & cảnh báo thỏa thuận hết hạn) — đã tách sang routes/admin/cooperationSettings.js (Đợt 6.4)
+  app.use('/api', require('../routes/admin/cooperationSettings')({
+    db,
+    authMiddleware,
+    adminOnly,
+    isSafeEmailFormat,
+    coopGetThoaThuanExpiryMonths,
+    coopGetThoaThuanPostExpiryMaxEmails,
+    coopGetThoaThuanPostExpiryMinDays,
+    coopRunThoaThuanExpiryAlerts,
+  }));
+
+  const STATUS_LABELS_COOP = {
+    cho_phong_duyet:  'Chờ Phòng KHCN thẩm định',
+    cho_phan_loai:    'Chờ Phòng KHCN phân loại',
+    yeu_cau_bo_sung:  'Yêu cầu bổ sung hồ sơ',
+    cho_vt_duyet:     'Chờ Viện trưởng phê duyệt',
+    cho_vt_phe_duyet: 'Chờ Viện trưởng phê duyệt',
+    da_duyet:         'Đã phê duyệt',
+    da_phe_duyet:     'Đã phê duyệt',
+    tu_choi:          'Không phê duyệt',
+    khong_phe_duyet:  'Không phê duyệt',
+    hoan_thanh:       'Hoàn thành',
+    ket_thuc_boi_nguoi_nop: 'Đã kết thúc (người gửi không nộp lại)',
+    // legacy
+    dang_tham_dinh:   'Chờ Phòng KHCN thẩm định',
+    cho_ky_duyet:     'Chờ Viện trưởng phê duyệt',
+    cho_tham_dinh:    'Chờ Phòng KHCN thẩm định',
+  };
+
+  // Helper: Admin hoặc Viện trưởng (email trong cooperation_notification_recipients với role=vien_truong)
+  function vienTruongOrAdmin(req, res, next) {
+    const role = (req.user.role || '').toLowerCase();
+    if (role === 'admin') return next();
+    const email = (req.user.email || '').trim().toLowerCase();
+    if (!email) return res.status(403).json({ message: 'Chỉ Viện trưởng hoặc Admin mới có quyền này' });
+    try {
+      const r = db.prepare('SELECT 1 FROM cooperation_notification_recipients WHERE lower(trim(email)) = ? AND lower(trim(role)) = \'vien_truong\'').get(email);
+      if (r) return next();
+    } catch (e) {}
+    return res.status(403).json({ message: 'Chỉ Viện trưởng hoặc Admin mới có quyền này' });
+  }
+
+  // Helper: Admin, P.KHCN (users.role) hoặc Viện trưởng — dùng cho mục QUẢN LÝ
+  function canSeeQuanLySection(req, res, next) {
+    const role = (req.user.role || '').toLowerCase();
+    if (role === 'admin' || roleIsAny(req, ['phong_khcn'])) return next();
+    const email = (req.user.email || '').trim().toLowerCase();
+    if (!email) return res.status(403).json({ message: 'Chỉ Admin, Phòng KHCN hoặc Viện trưởng mới có quyền này' });
+    try {
+      const r = db.prepare('SELECT 1 FROM cooperation_notification_recipients WHERE lower(trim(email)) = ? AND lower(trim(role)) = \'vien_truong\'').get(email);
+      if (r) return next();
+    } catch (e) {}
+    return res.status(403).json({ message: 'Chỉ Admin, Phòng KHCN hoặc Viện trưởng mới có quyền này' });
+  }
+  const {
+    coopBuildTitle,
+    coopCanDownloadDoanRaVanBan,
+    coopCanDownloadDoanVaoVanBan,
+    coopCanDownloadMouVanBan,
+    coopCanDownloadYtnnVanBan,
+    coopDashMergeStatusBuckets,
+    coopDashSeries12m,
+    coopDashboardViewer,
+    coopEnsureFreshDoanRaVanBan,
+    coopEnsureFreshDoanVaoVanBan,
+    coopEnsureFreshMouVanBan,
+    coopEnsureFreshYtnnVanBan,
+    coopFmtDate,
+    coopIsManager,
+    coopPhongOrAdmin,
+    coopTryAutoGenerateDoanRaVanBan,
+    coopTryAutoGenerateDoanVaoVanBan,
+    coopTryAutoGenerateMouVanBan,
+    coopTryAutoGenerateYtnnVanBan,
+    coopUnlinkDoanRaVanBanFile,
+    coopUnlinkDoanVaoVanBanFile,
+    coopUnlinkMouVanBanFile,
+    coopUnlinkYtnnVanBanFile,
+    coopVTOrAdmin,
+  } = require('../services/cooperationVanBanHelpers')({
+    DOAN_RA_TO_TRINH_TEMPLATE_PATH,
+    DOAN_VAO_TO_TRINH_TEMPLATE_PATH,
+    MOU_TO_TRINH_TEMPLATE_PATH,
+    STATUS_LABELS_COOP,
+    YTNN_TO_TRINH_TEMPLATE_PATH,
+    coopFmtDateVN,
+    coopGenMa,
+    coopIsVienTruong,
+    resolveCoopVanBanWordFileForUnlink,
+    resolveStoredFileFromDb,
+    roleIsAny,
+  });
+
+  // Đợt 5.3–5.4: nộp MOU, quản lý đề xuất & thẩm định/duyệt legacy
+  app.use('/api', require('../routes/cooperation/quanLyDeXuat')({
+    db,
+    authMiddleware,
+    roleIsAny,
+    vienTruongOrAdmin,
+    canSeeQuanLySection,
+    getCooperationRecipientsSplit,
+    coopAddHistory,
+    coopGenMa,
+    transporter,
+    getSmtpFrom,
+  }));
+
+  app.use('/api', require('../routes/cooperation/thamDinhVaDuyetCu')({
+    db,
+    PORT,
+    authMiddleware,
+    coopPhongOrAdmin,
+    vienTruongOrAdmin,
+    coopAddHistory,
+    coopGenMa,
+    coopSendMail,
+    coopSendMailTuChoi,
+    coopBuildEmail,
+    coopGetRecipients,
+    STATUS_LABELS_COOP,
+    coopTryAutoGenerateDoanVaoVanBan,
+    coopTryAutoGenerateMouVanBan,
+    coopTryAutoGenerateDoanRaVanBan,
+  }));
+
+  // ========== HTQT ĐỀ XUẤT YTNN (Chương VII Quy chế KHCN-ĐMST SCI 2026) — đã tách sang routes/htqt.js (Đợt 5.2) ==========
+  app.use('/api', require('../routes/htqt')({
+    db,
+    authMiddleware,
+    adminOnly,
+    roleIsAny,
+    vienTruongOrAdmin,
+    coopTryAutoGenerateYtnnVanBan,
+  }));
+
+  // Đợt 5.5: đề xuất của tôi, nộp & danh sách Đoàn ra / Đoàn vào / MOU
+  app.use('/api', require('../routes/cooperation/nopVaDanhSach')({
+    db,
+    PORT,
+    authMiddleware,
+    getCooperationRecipients,
+    coopAddHistory,
+    coopGenMa,
+    coopGetRecipients,
+    coopEscHtml,
+    coopBuildEmail,
+    coopSendMail,
+    transporter,
+  }));
+
+  // Admin: cập nhật trạng thái đề xuất Đoàn ra (đã tách sang routes/admin/cooperationDeXuat.js, Đợt 6.4)
+  const adminCoopDeXuat = require('../routes/admin/cooperationDeXuat');
+  app.use('/api', adminCoopDeXuat.createDoanRaStatusRouter({
+    db,
+    authMiddleware,
+    adminOnly,
+    coopTryAutoGenerateDoanRaVanBan,
+  }));
+
+  // Đợt 5.6: tổng quan, đối tác & đọc/tải scan thỏa thuận
+  app.use('/api', require('../routes/cooperation/tongQuanVaThoaThuan')({
+    db,
+    authMiddleware,
+    cooperationComputePartnerStats,
+    normalizeAndCheckDownloadPath,
+  }));
+
+  // Admin / P.KHCN: sửa & xóa thỏa thuận (đã tách sang routes/admin/cooperationDeXuat.js, Đợt 6.4)
+  app.use('/api', adminCoopDeXuat.createThoaThuanRouter({
+    db,
+    authMiddleware,
+    coopPhongOrAdmin,
+    thoaThuanParseOpenEndedFlag,
+    thoaThuanAutoStatusByExpiry,
+  }));
+
+  // Đợt 5.7: thêm, chấm dứt & cập nhật scan thỏa thuận
+  app.use('/api', require('../routes/cooperation/thoaThuanCapNhat')({
+    db,
+    authMiddleware,
+    coopPhongOrAdmin,
+    uploadHtqtThoaThuanScan,
+    uploadHtqtThoaThuanTermination,
+    thoaThuanParseOpenEndedFlag,
+    thoaThuanAutoStatusByExpiry,
+    thoaThuanHetHanFromSigningYears,
+  }));
+
+  // Đợt 6.2b: quản trị phân quyền, Hội đồng KHCN, Tổ thẩm định TC & mật khẩu/trạng thái tài khoản
+  app.use('/api', require('../routes/admin/phanQuyenVaTaiKhoan')({
+    db,
+    authMiddleware,
+    adminOnly,
+    masterAdminOnly,
+    reqIsMasterAdmin,
+    userEmailIsMasterAdmin,
+    ALLOWED_EMAIL_DOMAIN,
+    BUDGET_TEAM_ROLES,
+    COUNCIL_ROLE_TOKENS,
+  }));
+
+  return {
+    STATUS_LABELS_COOP,
+    coopAddHistory,
+    coopAssertSubmitter,
+    coopBuildEmail,
+    coopBuildTitle,
+    coopCanDownloadDoanRaVanBan,
+    coopCanDownloadDoanVaoVanBan,
+    coopCanDownloadMouVanBan,
+    coopCanDownloadYtnnVanBan,
+    coopDashMergeStatusBuckets,
+    coopDashSeries12m,
+    coopDashboardViewer,
+    coopEmailListMinus,
+    coopEmailsPhongKhcnForTopic,
+    coopEmailsVienTruongForTopic,
+    coopEnsureFreshDoanRaVanBan,
+    coopEnsureFreshDoanVaoVanBan,
+    coopEnsureFreshMouVanBan,
+    coopEnsureFreshYtnnVanBan,
+    coopEscHtml,
+    coopFmtDate,
+    coopGenMa,
+    coopGetRecipients,
+    coopIsManager,
+    coopIsVienTruong,
+    coopNotifyPhongToCcVt,
+    coopPhongOrAdmin,
+    coopRunThoaThuanExpiryAlerts,
+    coopSendMail,
+    coopSendMailTuChoi,
+    coopTryAutoGenerateDoanRaVanBan,
+    coopTryAutoGenerateDoanVaoVanBan,
+    coopTryAutoGenerateMouVanBan,
+    coopTryAutoGenerateYtnnVanBan,
+    coopUnlinkDoanRaVanBanFile,
+    coopUnlinkDoanVaoVanBanFile,
+    coopUnlinkMouVanBanFile,
+    coopUnlinkYtnnVanBanFile,
+    coopVTOrAdmin,
+  };
+};
