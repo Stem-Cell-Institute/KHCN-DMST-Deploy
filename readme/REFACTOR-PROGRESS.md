@@ -44,13 +44,15 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 | └ 2.1 | đăng ký công khai + phần người dùng thường (state, đặt/sửa/hủy lịch, chat, khiếu nại) — **2 router** | 10 | 🔵 Chờ review (PR 2.1) · −296 dòng | `refactor/routes-crd-1` |
 | └ 2.2 | snapshot, thông báo phòng lab, thiết bị (admin) + kiểm duyệt tin, email-notif, khiếu nại (admin) — **2 router** | 14 | 🔵 Chờ review (PR 2.2) · −281 dòng | `refactor/routes-crd-2` |
 | └ 2.3 | hồ sơ CRD, tài khoản, vai trò, lịch (quản trị) | 12 | 🔵 Chờ review (PR 2.3) · −282 dòng | `refactor/routes-crd-3` |
-| 3 | `submissions` + `publications` — 36 route = 21 hồ sơ (20 `/api/submissions*` + `/api/users/council`) + 15 công bố (14 `/api/publications*` + `/api/researchers/list-for-disambiguation`). **26 route nằm trong `server.js`** (10 route công bố đã là router riêng `sci-khcn-publications/src/routes/publications.js`) | 36 | 🔵 **Tách xong — `server.js` hết `/api/submissions` & 5 route công bố** (chờ review/merge rồi deploy, theo dõi 48 giờ) | `refactor/routes-submissions-1` |
-| └ 3.0 | Lưới test `tests/submissions.test.js` + `tests/publications.test.js` | 0 | 🔵 Đã đưa lên nhánh Đợt 3 | `test/luoi-submissions-publications` |
-| └ 3.1 | Hồ sơ SCI-ACE cơ bản (nộp, danh sách, hội đồng, chi tiết) | 4 | 🔵 Chờ review · −209 dòng | `refactor/routes-submissions-1` |
-| └ 3.2 | Hồ sơ SCI-ACE GĐ6–GĐ7 (chấp thuận có điều kiện, họp, cấp QĐ, báo cáo) | 7 | 🔵 Chờ review · −303 dòng | `refactor/routes-submissions-1` |
-| └ 3.3 | Hồ sơ SCI-ACE GĐ3–GĐ5 + tải file + xóa | 10 | 🔵 Chờ review · −357 dòng | `refactor/routes-submissions-1` |
-| └ 3.4 | Công bố khoa học (5 endpoint bổ sung trong `server.js`) | 5 | 🔵 Chờ review · −101 dòng | `refactor/routes-submissions-1` |
-| 4 | `cap-vien` | 47 | ⬜ Chưa bắt đầu | — |
+| 3 | `submissions` + `publications` — 36 route = 21 hồ sơ (20 `/api/submissions*` + `/api/users/council`) + 15 công bố (14 `/api/publications*` + `/api/researchers/list-for-disambiguation`). **26 route nằm trong `server.js`** | 36 | ✅ **Đã merge (`01a8506`)** | `refactor/routes-submissions-1` |
+| └ 3.0 | Lưới test `tests/submissions.test.js` + `tests/publications.test.js` | 0 | ✅ Đã merge | `test/luoi-submissions-publications` |
+| └ 3.1 | Hồ sơ SCI-ACE cơ bản (nộp, danh sách, hội đồng, chi tiết) | 4 | ✅ Đã merge · −209 dòng | `refactor/routes-submissions-1` |
+| └ 3.2 | Hồ sơ SCI-ACE GĐ6–GĐ7 (chấp thuận có điều kiện, họp, cấp QĐ, báo cáo) | 7 | ✅ Đã merge · −303 dòng | `refactor/routes-submissions-1` |
+| └ 3.3 | Hồ sơ SCI-ACE GĐ3–GĐ5 + tải file + xóa | 10 | ✅ Đã merge · −357 dòng | `refactor/routes-submissions-1` |
+| └ 3.4 | Công bố khoa học (5 endpoint bổ sung trong `server.js`) | 5 | ✅ Đã merge · −101 dòng | `refactor/routes-submissions-1` |
+| 4 | `cap-vien` — 49 route `/api/cap-vien/*` sang 9 file dưới `routes/cap-vien/` | 49 | 🔵 **Tách xong — `server.js` hết `/api/cap-vien`** (chờ review/merge vào `main`) | `refactor/routes-cap-vien-1` |
+| └ 4.0 | Lưới test `tests/capVien.test.js` (8 test phủ 49 route) | 0 | 🔵 Chờ review (`69d0b7c`) | `refactor/routes-cap-vien-1` |
+| └ 4.1–4.9 | Nộp hồ sơ/danh mục, danh sách/chi tiết, Bước 6–8, BC định kỳ, Bước 5/HĐ, dispatcher Bước 2–9, vật tư/điều chỉnh, Bước 4/4A, deadline & bổ sung/tải/xóa | 49 | 🔵 Chờ review · −2.549 dòng | `refactor/routes-cap-vien-1` |
 | 5 | `cooperation` + `htqt` + `events` | 84 | ⬜ Chưa bắt đầu | — |
 | 6 | `admin` | 79 | ⬜ Chưa bắt đầu | — |
 | 7 | `core` + rút `server.js` < 300 dòng | ~15 | ⬜ Chưa bắt đầu | — |
@@ -69,9 +71,9 @@ routes/crd/kiemDuyetThongBao.js  DELETE /crd/admin/chats/:id, /crd/email-notif, 
 
 Thứ tự **giữa** các router CRD không ảnh hưởng (đường dẫn không va chạm), nhưng thứ tự **trong** `quanTriThietBi.js` thì có — đã ghi ở đầu file và có test canh.
 
-**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → 17.647 (sau Đợt 2) → **16.677** (sau Đợt 3) → *mục tiêu < 300*. Route khai báo thẳng trong `server.js`: 360 → 284 → **258** (284 − 21 hồ sơ − 5 công bố).
+**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → 17.647 (sau Đợt 2) → 16.677 (sau Đợt 3) → **14.106** (sau Đợt 4) → *mục tiêu < 300*. Route khai báo thẳng trong `server.js`: 360 → 284 → 258 → **209** (258 − 49 cấp Viện).
 
-Đã cắt **2.255 dòng** qua các đợt refactor (trần hiện tại ở `.github/server-js-max-lines` là `16677`, CI đỏ nếu file dài ra). Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
+Đã cắt **4.804 dòng** qua các đợt refactor (trần hiện tại ở `.github/server-js-max-lines` là `14106`, CI đỏ nếu file dài ra). Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
 
 ---
 
@@ -83,8 +85,8 @@ Thứ tự **giữa** các router CRD không ảnh hưởng (đường dẫn kh�
 | Đợt | Miền | Route còn trong `server.js` | Lưới test | Trạng thái |
 |---|---|---|---|---|
 | 2 | `/api/crd` | 36 | ✅ `tests/crd.test.js` — 31 test: bảng phân quyền đối chiếu route thật, đặt lịch, trùng lịch, chat, khiếu nại, quản trị. **21/21 đột biến bị bắt** (xem bên dưới) | **Đã tách xong** (chờ merge và deploy) |
-| 3 | `/api/submissions` + `/api/publications` | 36 | ✅ `tests/submissions.test.js` (21 test, 21 route) + `tests/publications.test.js` (17 test, 15 route): bảng phân quyền đối chiếu route thật, máy trạng thái hồ sơ GĐ3→GĐ7 chạy bằng chính các route, lỗi 4xx, CRUD/BibTeX/xuất file. **68/75 đột biến bị bắt (48/48 của `/api/submissions`); 7 còn sống đều là "bỏ authMiddleware" bị cổng ngầm che — tương đương, xem nợ #16** | **Lưới đã dựng, chưa tách route** |
-| 4 | `/api/cap-vien` | 49 | ❌ 0 test | Cần dựng lưới trước (có DB riêng) |
+| 3 | `/api/submissions` + `/api/publications` | 36 | ✅ `tests/submissions.test.js` (21 test, 21 route) + `tests/publications.test.js` (17 test, 15 route) | **Đã tách & merge (`01a8506`)** |
+| 4 | `/api/cap-vien` | 49 | ✅ `tests/capVien.test.js` (8 test: bảng phân quyền khớp 49 route thật, công khai/401/403, nộp hồ sơ + sinh mã DTSCI, mẫu công khai, luồng B2→B3→B4→tải/xóa) | **Đã tách xong** (chờ merge) |
 | 5 | `/api/cooperation` + `/api/htqt` + `/api/events` | 84 | ⚠️ 4 test nhưng chỉ chạm 2/84 route (dashboard-stats, tat-ca-de-xuat) | Cần dựng lưới trước, **rủi ro cao** |
 | 6 | `/api/admin` | 84 | ⚠️ 2 test kiểm ranh giới quyền, chạm 2/84 route | Cần dựng lưới trước, **rủi ro cao** |
 
@@ -310,6 +312,25 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-11-25 · refactor/routes-cap-vien-1 · Đợt 4 — hoàn tất Đợt 4 (`/api/cap-vien`, 49 route) · **Đợt 4 khép**
+
+- **Đã xong:** dựng lưới test [tests/capVien.test.js](tests/capVien.test.js) (8 test phủ 49 route `/api/cap-vien/*`, xanh trên code cũ) và tách toàn bộ 49 route ra khỏi `server.js` sang 9 file dưới `routes/cap-vien/`:
+  - `nopHoSoVaDanhMuc.js` (10 route: nộp hồ sơ, 5 danh mục công khai, 4 mẫu công khai)
+  - `danhSachVaChiTiet.js` (2 route: danh sách, chi tiết)
+  - `quyetDinhHopDongDaoDuc.js` (6 route: Bước 6, 7, 8)
+  - `baoCaoDinhKy.js` (2 route: upload kỳ, công cụ admin)
+  - `deadline.js` (1 route: deadline bước)
+  - `hoiDongBuoc5.js` (8 route: Bước 5 họp/biên bản/chỉnh sửa/thông qua & council)
+  - `cacBuocQuyTrinh.js` (1 route: dispatcher `steps/:step` cho Bước 2, 3, 6, 7, 8, 8a, 9)
+  - `vatTuVaDieuChinh.js` (2 route: `step9-supply/action`, `step11-adjustment/action`)
+  - `phanBienVaDuToan.js` (9 route: Bước 4, Bước 4A, gửi lại email)
+  - `boSungTaiVaXoa.js` (8 route: `revert-to-step-2`, `revert-to-step/:step`, `dev-reset-step/:step`, `resubmit`, `supplement`, `download`, `files/:fileId/download`, `DELETE`)
+  - `server.js` 16.655 → **14.106** (**−2.549 dòng**); hạ trần `.github/server-js-max-lines` xuống `14106`.
+- **Bằng chứng:** `route-inventory.js` trước/sau (816 route, cùng thứ tự) → diff **rỗng**; `route:compare` (1.401 yêu cầu) → 0 đổi mã trạng thái, 0 đổi nội dung ở `/api/cap-vien/*` (1 khác biệt timestamp trên `GET /api/ngan-hang-te-bao-khang-the/reports/gmo/print` do chạy cách nhau 23 phút); `npm test` xanh hoàn toàn.
+- **Đang dở:** `quan-tri-cap-vien.html` còn thay đổi chưa commit từ trước phiên làm việc (giữ nguyên trong working tree).
+- **Phiên sau làm:** (1) Review/merge `refactor/routes-cap-vien-1` vào `main`. (2) Tiếp tục **Đợt 5 (`cooperation` + `htqt` + `events`, 84 route)** — dựng lưới test trước khi tách.
+- **Nợ kỹ thuật thêm:** các hàm phụ `capVien*` dùng chung vẫn ở `server.js` (truyền qua factory; có thể gom sang `services/capVien*.js` ở đợt dọn sau).
 
 ### 2026-11-18 · refactor/routes-submissions-1 · Đợt 3.2–3.4 — hoàn tất Đợt 3 (`submissions` + `publications`) · **Đợt 3 khép**
 
