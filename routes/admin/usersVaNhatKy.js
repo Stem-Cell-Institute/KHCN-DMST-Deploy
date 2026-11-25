@@ -221,5 +221,15 @@ module.exports = function createAdminUsersVaNhatKyRouter({
     return res.json({ message: 'Đã gửi email thông báo đến ' + em });
   });
 
+  // Admin: danh sách người nhận email thông báo
+  router.get('/admin/notification-recipients', authMiddleware, adminOnly, (req, res) => {
+    try {
+      const rows = db.prepare('SELECT id, email, fullname, createdAt FROM notification_recipients ORDER BY id').all();
+      return res.json({ recipients: rows || [] });
+    } catch (e) {
+      return res.json({ recipients: [] });
+    }
+  });
+
   return router;
 };

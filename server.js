@@ -5863,15 +5863,7 @@ app.use('/api', require('./routes/admin/usersVaNhatKy')({
   transporter,
 }));
 
-// Admin: danh sách người nhận email thông báo (Admin thêm/xóa; khi có danh sách này thì mọi thông báo gửi tới đây)
-app.get('/api/admin/notification-recipients', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const rows = db.prepare('SELECT id, email, fullname, createdAt FROM notification_recipients ORDER BY id').all();
-    return res.json({ recipients: rows || [] });
-  } catch (e) {
-    return res.json({ recipients: [] });
-  }
-});
+// (GET /api/admin/notification-recipients đã gộp vào routes/admin/usersVaNhatKy.js)
 
 // ========== Thống kê trang chủ (số liệu thật từ các module) ==========
 function dbCount(sql) {
@@ -6175,86 +6167,17 @@ app.use('/api', require('./routes/missions/choXetDuyet')({
   roleIsAny,
 }));
 
-// Admin / Phòng KHCN: cập nhật nhiệm vụ (đề tài) — trạng thái có thể là mã chuẩn hoặc chuỗi tự do
-app.put('/api/admin/missions/:id', authMiddleware, adminOrPhongKhcnMissionEditor, (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (!id || isNaN(id)) return res.status(400).json({ message: 'ID không hợp lệ.' });
-  const row = db.prepare('SELECT id FROM missions WHERE id = ?').get(id);
-  if (!row) return res.status(404).json({ message: 'Không tìm thấy đề tài.' });
-  const { code, title, principal, principal_hoc_vi, principal_don_vi, principal_orcid, level, status, start_date, end_date, progress, budget, managing_agency, contract_number, funding_source, approved_budget, disbursed_budget, disbursement_year, cooperating_units } = req.body || {};
-  const updates = [];
-  const params = [];
-  if (code != null && String(code).trim()) { updates.push('code = ?'); params.push(String(code).trim()); }
-  if (title != null) { updates.push('title = ?'); params.push(String(title).trim()); }
-  if (principal !== undefined) { updates.push('principal = ?'); params.push(principal != null ? String(principal).trim() : null); }
-  if (principal_hoc_vi !== undefined) { try { updates.push('principal_hoc_vi = ?'); params.push(principal_hoc_vi != null ? String(principal_hoc_vi).trim() : null); } catch (e) {} }
-  if (principal_don_vi !== undefined) { try { updates.push('principal_don_vi = ?'); params.push(principal_don_vi != null ? String(principal_don_vi).trim() : null); } catch (e) {} }
-  if (principal_orcid !== undefined) { try { updates.push('principal_orcid = ?'); params.push(principal_orcid != null ? String(principal_orcid).trim() : null); } catch (e) {} }
-  if (level != null && ['national', 'ministry', 'university', 'school', 'coe', 'first', 'institute'].includes(level)) { updates.push('level = ?'); params.push(level); }
-  if (status != null) {
-    const resolved = resolveMissionStatusInput(status);
-    if (resolved) {
-      updates.push('status = ?');
-      params.push(resolved);
-    }
-  }
-  if (start_date != null) { updates.push('start_date = ?'); params.push(String(start_date).trim() || null); }
-  if (end_date != null) { updates.push('end_date = ?'); params.push(String(end_date).trim() || null); }
-  if (progress != null && !isNaN(parseInt(progress, 10))) { updates.push('progress = ?'); params.push(Math.min(100, Math.max(0, parseInt(progress, 10)))); }
-  if (budget !== undefined) { updates.push('budget = ?'); params.push(budget != null && !isNaN(parseFloat(budget)) ? parseFloat(budget) : null); }
-  if (managing_agency !== undefined) { updates.push('managing_agency = ?'); params.push((managing_agency || '').trim() || null); }
-  if (contract_number !== undefined) { updates.push('contract_number = ?'); params.push((contract_number || '').trim() || null); }
-  if (funding_source !== undefined) { updates.push('funding_source = ?'); params.push((funding_source || '').trim() || null); }
-  if (approved_budget !== undefined) { updates.push('approved_budget = ?'); params.push(approved_budget != null && !isNaN(parseFloat(approved_budget)) ? parseFloat(approved_budget) : null); }
-  if (disbursed_budget !== undefined) { updates.push('disbursed_budget = ?'); params.push(disbursed_budget != null && !isNaN(parseFloat(disbursed_budget)) ? parseFloat(disbursed_budget) : null); }
-  if (disbursement_year !== undefined) { updates.push('disbursement_year = ?'); params.push((disbursement_year || '').trim() || null); }
-  if (cooperating_units !== undefined) { updates.push('cooperating_units = ?'); params.push((cooperating_units || '').trim() || null); }
-  if (updates.length === 0) return res.status(400).json({ message: 'Không có trường nào để cập nhật.' });
-  params.push(id);
-  db.prepare('UPDATE missions SET ' + updates.join(', ') + ' WHERE id = ?').run(...params);
-  const updated = db.prepare('SELECT id, code, title, principal, level, status, start_date, end_date, progress, budget FROM missions WHERE id = ?').get(id);
-  return res.json({ message: 'Đã cập nhật đề tài.', mission: updated });
-});
-
-// Master Admin: xóa nhiệm vụ — nếu đồng bộ từ cấp Viện thì xóa luôn hồ sơ + tiến trình + file trên toàn hệ thống
-app.delete('/api/admin/missions/:id', authMiddleware, masterAdminOnly, (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (!id || isNaN(id)) return res.status(400).json({ message: 'ID không hợp lệ.' });
-  const row = db.prepare('SELECT id, code, title, source_type, source_id FROM missions WHERE id = ?').get(id);
-  if (!row) return res.status(404).json({ message: 'Không tìm thấy đề tài.' });
-  const isCapVien = String(row.source_type || '').toLowerCase() === 'cap_vien' && row.source_id != null;
-  try {
-    if (isCapVien) {
-      deleteCapVienSubmissionCascade(row.source_id);
-    } else {
-      deleteMissionCascade(id);
-    }
-  } catch (e) {
-    const msg = e && e.message ? String(e.message) : '';
-    console.error('[admin/missions DELETE]', msg || e);
-    return res.status(500).json({ message: 'Không thể xóa đề tài (lỗi cơ sở dữ liệu). ' + msg });
-  }
-  try {
-    insertUserActivityLog(req, {
-      userId: req.user.id,
-      email: req.user.email,
-      action: isCapVien ? 'admin_delete_cap_vien_submission_and_missions' : 'admin_delete_mission',
-      module: 'missions_dashboard',
-      path: '/api/admin/missions/' + id,
-      detail: JSON.stringify({
-        code: row.code || '',
-        title: (row.title || '').slice(0, 500),
-        source_type: row.source_type || null,
-        source_id: row.source_id != null ? row.source_id : null,
-        cascade_cap_vien: !!isCapVien,
-      }),
-    });
-  } catch (eLog) {
-    /* không chặn phản hồi */
-  }
-  const tail = isCapVien ? ' (đã gỡ khỏi dashboard, theo dõi tiến trình và hồ sơ cấp Viện)' : '';
-  return res.json({ message: 'Đã xóa đề tài "' + (row.code || '') + '" khỏi hệ thống.' + tail, deletedId: id });
-});
+// Đợt 6.3a: quản trị sửa/xóa Nhiệm vụ KHCN
+app.use('/api', require('./routes/admin/missionsQuanTri')({
+  db,
+  authMiddleware,
+  adminOrPhongKhcnMissionEditor,
+  masterAdminOnly,
+  resolveMissionStatusInput,
+  deleteCapVienSubmissionCascade,
+  deleteMissionCascade,
+  insertUserActivityLog,
+}));
 
 // CSV helper: escape field for CSV (quote if contains comma, newline or quote)
 function csvEscape(s) {
@@ -6367,344 +6290,27 @@ app.get('/api/ace-templates/:type/download', authMiddleware, (req, res) => {
   return res.sendFile(fullPath);
 });
 
-app.post(
-  '/api/admin/ace-templates',
+// Đợt 6.3b: quản trị mẫu ACE & import/thêm thủ công Nhiệm vụ KHCN
+app.use('/api', require('./routes/admin/aceTemplatesVaMissionsImport')({
+  db,
+  uploadDir,
+  upload,
   authMiddleware,
-  (req, res, next) => {
-    if (!aceCanManageTemplates(req)) return res.status(403).json({ message: 'Chỉ Admin hoặc Thư ký Hội đồng mới được cập nhật mẫu.' });
-    next();
-  },
-  upload.single('file'),
-  (req, res) => {
-    const type = (req.body.template_type || '').trim();
-    if (!ACE_TEMPLATE_TYPES.includes(type)) {
-      try { if (req.file && req.file.path) fs.unlinkSync(req.file.path); } catch (_) {}
-      return res.status(400).json({ message: 'template_type không hợp lệ' });
-    }
-    if (!req.file || !req.file.path) return res.status(400).json({ message: 'Vui lòng chọn file để upload' });
-    const ext = (req.file.originalname || '').split('.').pop().toLowerCase();
-    if (!['pdf', 'doc', 'docx'].includes(ext)) {
-      try { fs.unlinkSync(req.file.path); } catch (_) {}
-      return res.status(400).json({ message: 'Chỉ chấp nhận PDF, Word (.doc, .docx)' });
-    }
-    const destDir = path.join(uploadDir, 'ace-templates');
-    fs.mkdirSync(destDir, { recursive: true });
-    const finalName = type + '_' + Date.now() + '.' + ext;
-    const destPath = path.join(destDir, finalName);
-    fs.copyFileSync(req.file.path, destPath);
-    try { fs.unlinkSync(req.file.path); } catch (_) {}
-    db.prepare("INSERT OR REPLACE INTO ace_templates (template_type, original_name, path, updated_at) VALUES (?, ?, ?, datetime('now'))").run(type, req.file.originalname || finalName, finalName);
-    const row = db.prepare('SELECT template_type, original_name, updated_at FROM ace_templates WHERE template_type = ?').get(type);
-    return res.status(201).json({ message: 'Đã cập nhật mẫu ' + (ACE_TEMPLATE_BY_TYPE[type] ? ACE_TEMPLATE_BY_TYPE[type].label : type), template: row });
-  }
-);
+  adminOnly,
+  aceCanManageTemplates,
+  ACE_TEMPLATE_TYPES,
+  ACE_TEMPLATE_BY_TYPE,
+  pathIsStrictlyInsideResolvedRoot,
+  resolveMissionStatusInput,
+}));
 
-app.delete('/api/admin/ace-templates/:type', authMiddleware, (req, res) => {
-  if (!aceCanManageTemplates(req)) return res.status(403).json({ message: 'Chỉ Admin hoặc Thư ký Hội đồng mới được xóa mẫu.' });
-  const type = (req.params.type || '').trim();
-  if (!ACE_TEMPLATE_TYPES.includes(type)) return res.status(400).json({ message: 'Loại mẫu không hợp lệ' });
-  const row = db.prepare('SELECT path FROM ace_templates WHERE template_type = ?').get(type);
-  if (!row) return res.status(404).json({ message: 'Không có file để xóa' });
-  try {
-    const templatesRoot = path.resolve(uploadDir, 'ace-templates');
-    const fullPath = path.resolve(templatesRoot, String(row.path || '').trim());
-    if (pathIsStrictlyInsideResolvedRoot(templatesRoot, fullPath) && fs.existsSync(fullPath)) {
-      try { fs.unlinkSync(fullPath); } catch (_) {}
-    }
-    db.prepare('DELETE FROM ace_templates WHERE template_type = ?').run(type);
-    return res.json({ ok: true, message: 'Đã xóa mẫu' });
-  } catch (e) {
-    console.error('[ace-templates delete]', e);
-    return res.status(500).json({ message: 'Lỗi xóa' });
-  }
-});
-
-// Import CSV hoặc Excel (.xlsx): cập nhật/thêm đề tài vào missions (Admin)
-app.post('/api/admin/missions/import', authMiddleware, adminOnly, upload.single('file'), (req, res) => {
-  if (!req.file || !req.file.path) {
-    return res.status(400).json({ message: 'Vui lòng chọn file CSV hoặc Excel (.xlsx) để import.' });
-  }
-  const isExcel = (req.file.originalname || '').toLowerCase().endsWith('.xlsx');
-  let headerCells = [];
-  let dataRows = [];
-
-  if (isExcel) {
-    try {
-      const buf = fs.readFileSync(req.file.path);
-      const workbook = XLSX.read(buf, { type: 'buffer', cellDates: false });
-      const sheetName = workbook.SheetNames[0];
-      if (!sheetName) return res.status(400).json({ message: 'File Excel không có sheet nào.' });
-      const sheet = workbook.Sheets[sheetName];
-      const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
-      if (!rawRows.length) return res.status(400).json({ message: 'File Excel trống.' });
-      headerCells = (rawRows[0] || []).map(c => String(c == null ? '' : c).trim().toLowerCase());
-      const startDateCol = headerCells.indexOf('start_date') >= 0 ? headerCells.indexOf('start_date') : -1;
-      const endDateCol = headerCells.indexOf('end_date') >= 0 ? headerCells.indexOf('end_date') : -1;
-      for (let r = 1; r < rawRows.length; r++) {
-        const row = rawRows[r] || [];
-        const cells = [];
-        for (let c = 0; c < headerCells.length; c++) {
-          const val = row[c];
-          if (c === startDateCol || c === endDateCol) {
-            if (typeof val === 'number' && val >= 1) {
-              const d = XLSX.SSF.parse_date_code(val);
-              if (d && d.y) cells.push(d.y + '-' + String(d.m).padStart(2, '0') + '-' + String(d.d).padStart(2, '0'));
-              else cells.push(String(val == null ? '' : val));
-            } else cells.push(String(val == null ? '' : val));
-          } else cells.push(String(val == null ? '' : val));
-        }
-        dataRows.push(cells);
-      }
-    } catch (e) {
-      if (req.file.path && fs.existsSync(req.file.path)) try { fs.unlinkSync(req.file.path); } catch (_) {}
-      return res.status(400).json({ message: 'Không đọc được file Excel. Bạn có thể lưu lại dưới dạng CSV (UTF-8) và thử import CSV.' });
-    }
-  } else {
-    let raw = '';
-    if (fs.existsSync(req.file.path)) {
-      raw = (fs.readFileSync(req.file.path, 'utf8') || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    }
-    if (!raw || raw.trim().length === 0) {
-      return res.status(400).json({ message: 'File trống hoặc không đọc được.' });
-    }
-    let lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-    if (lines[0] && lines[0].toLowerCase() === 'sep=,') lines = lines.slice(1);
-    let delim = ',';
-    if (lines[0] && /^sep=;/i.test(lines[0])) { lines = lines.slice(1); delim = ';'; }
-    if (lines.length < 2) {
-      return res.status(400).json({ message: 'File CSV cần có ít nhất dòng tiêu đề và một dòng dữ liệu.' });
-    }
-    const parseRow = (line) => {
-      const out = [];
-      let inQuoted = false, cur = '';
-      for (let i = 0; i < line.length; i++) {
-        const c = line[i];
-        if (c === '"') {
-          if (inQuoted && line[i + 1] === '"') { cur += '"'; i++; }
-          else inQuoted = !inQuoted;
-        } else if (c === delim && !inQuoted) { out.push(cur.trim()); cur = ''; }
-        else cur += c;
-      }
-      out.push(cur.trim());
-      return out;
-    };
-    headerCells = parseRow(lines[0]).map(h => h.trim().toLowerCase());
-    for (let i = 1; i < lines.length; i++) dataRows.push(parseRow(lines[i]));
-  }
-
-  const codeIdx = headerCells.indexOf('code') >= 0 ? headerCells.indexOf('code') : 0;
-  const titleIdx = headerCells.indexOf('title') >= 0 ? headerCells.indexOf('title') : 1;
-  const principalIdx = headerCells.indexOf('principal') >= 0 ? headerCells.indexOf('principal') : 2;
-  const levelIdx = headerCells.indexOf('level') >= 0 ? headerCells.indexOf('level') : 3;
-  const statusIdx = headerCells.indexOf('status') >= 0 ? headerCells.indexOf('status') : 4;
-  const startIdx = headerCells.indexOf('start_date') >= 0 ? headerCells.indexOf('start_date') : 5;
-  const endIdx = headerCells.indexOf('end_date') >= 0 ? headerCells.indexOf('end_date') : 6;
-  const progressIdx = headerCells.indexOf('progress') >= 0 ? headerCells.indexOf('progress') : 7;
-  const budgetIdx = headerCells.indexOf('budget') >= 0 ? headerCells.indexOf('budget') : 8;
-
-  const normalizeDate = (s) => {
-    if (!s || typeof s !== 'string') return null;
-    const v = s.trim();
-    if (!v) return null;
-    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(v)) return v.slice(0, 10);
-    const parts = v.split(/[/\-.]/).map(p => p.trim());
-    if (parts.length >= 3) {
-      const a = parseInt(parts[0], 10);
-      const b = parseInt(parts[1], 10);
-      const c = parseInt(parts[2], 10);
-      if (!isNaN(a) && !isNaN(b) && !isNaN(c) && parts[2].length >= 4) {
-        let year = c;
-        let month = a;
-        let day = b;
-        if (year < 100) year = 2000 + year;
-        if (a > 12 && b <= 12) { month = b; day = a; }
-        else if (b > 12 && a <= 12) { month = a; day = b; }
-        month = Math.max(1, Math.min(12, month));
-        day = Math.max(1, Math.min(31, day));
-        return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-      }
-    }
-    return null;
-  };
-
-  let inserted = 0;
-  let updated = 0;
-  const levels = ['national', 'ministry', 'university', 'school', 'coe', 'first', 'institute'];
-  const statuses = ['planning', 'approved', 'ongoing', 'review', 'completed', 'overdue'];
-  for (let i = 0; i < dataRows.length; i++) {
-    const cells = dataRows[i];
-    if (cells.length < 2) continue;
-    const code = (cells[codeIdx] != null ? cells[codeIdx] : cells[0] || '').trim();
-    if (!code) continue;
-    if (code.length > 80 || code.indexOf('Cấp') >= 0 || code.indexOf('Trạng thái') >= 0 || code.indexOf('GHI CHÚ') >= 0) continue;
-    const title = (cells[titleIdx] != null ? cells[titleIdx] : cells[1] || '').trim() || code;
-    const principal = (cells[principalIdx] != null ? cells[principalIdx] : '').trim();
-    let level = (cells[levelIdx] != null ? cells[levelIdx] : 'institute').trim().toLowerCase();
-    if (!levels.includes(level)) level = 'institute';
-    let status = (cells[statusIdx] != null ? cells[statusIdx] : 'planning').trim().toLowerCase();
-    if (!statuses.includes(status)) status = 'planning';
-    const start_date = normalizeDate((cells[startIdx] != null ? cells[startIdx] : '').trim());
-    const end_date = normalizeDate((cells[endIdx] != null ? cells[endIdx] : '').trim());
-    let progress = parseInt(cells[progressIdx], 10);
-    if (isNaN(progress)) progress = 0;
-    progress = Math.max(0, Math.min(100, progress));
-    let budget = null;
-    const b = cells[budgetIdx];
-    if (b != null && b.trim() !== '') { const n = parseFloat(String(b).replace(/,/g, '.')); if (!isNaN(n)) budget = n; }
-    const existing = db.prepare('SELECT id, source_type FROM missions WHERE code = ?').get(code);
-    if (existing) {
-      db.prepare(
-        'UPDATE missions SET title=?, principal=?, level=?, status=?, start_date=?, end_date=?, progress=?, budget=? WHERE code=?'
-      ).run(title, principal, level, status, start_date, end_date, progress, budget, code);
-      updated++;
-    } else {
-      db.prepare(
-        'INSERT INTO missions (code, title, principal, level, status, start_date, end_date, progress, budget, source_id, source_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)'
-      ).run(code, title, principal, level, status, start_date, end_date, progress, budget);
-      inserted++;
-    }
-  }
-  if (req.file.path && fs.existsSync(req.file.path)) try { fs.unlinkSync(req.file.path); } catch (e) {}
-  return res.json({
-    message: 'Import xong. Đã thêm ' + inserted + ' đề tài, cập nhật ' + updated + ' đề tài. Dashboard sẽ hiển thị số liệu mới.',
-    inserted,
-    updated
-  });
-});
-
-// Admin: Thêm thủ công 1 đề tài vào bảng missions (upsert theo code)
-app.post('/api/admin/missions/manual', authMiddleware, adminOnly, (req, res) => {
-  const body = req.body || {};
-  const code = String(body.code || '').trim();
-  const title = String(body.title || '').trim();
-  const principal = String(body.principal || '').trim() || null;
-  const level = String(body.level || '').trim().toLowerCase();
-  const statusResolved = resolveMissionStatusInput(body.status != null && body.status !== '' ? body.status : 'planning');
-
-  if (!code) return res.status(400).json({ message: 'Thiếu mã đề tài (code).' });
-  if (!title) return res.status(400).json({ message: 'Thiếu tên đề tài (title).' });
-  if (!['national', 'ministry', 'university', 'school', 'coe', 'first', 'institute'].includes(level)) {
-    return res.status(400).json({ message: 'Cấp đề tài không hợp lệ. Hãy chọn: national | ministry | university | school | coe | first | institute.' });
-  }
-  if (!statusResolved) {
-    return res.status(400).json({ message: 'Trạng thái không hợp lệ (quá dài hoặc ký tự không được phép).' });
-  }
-
-  const normalizeDate = (v) => {
-    if (!v) return null;
-    const s = String(v).trim();
-    if (!s) return null;
-    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) return s.slice(0, 10);
-    // chấp nhận DD/MM/YYYY hoặc MM/DD/YYYY để đỡ sai khi admin nhập tay
-    const parts = s.split(/[/\-.]/).map(p => p.trim()).filter(Boolean);
-    if (parts.length < 3) return null;
-    const a = parseInt(parts[0], 10);
-    const b = parseInt(parts[1], 10);
-    const c = parseInt(parts[2], 10);
-    if (!isNaN(a) && !isNaN(b) && !isNaN(c)) {
-      const year = c;
-      const month = Math.max(1, Math.min(12, a));
-      const day = Math.max(1, Math.min(31, b));
-      return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-    }
-    return null;
-  };
-
-  const start_date = normalizeDate(body.start_date || body.startDate || null);
-  const end_date = normalizeDate(body.end_date || body.endDate || null);
-
-  let progress = 0;
-  if (body.progress != null && body.progress !== '') {
-    progress = parseInt(body.progress, 10);
-    if (!isNaN(progress)) progress = Math.max(0, Math.min(100, progress));
-    else progress = 0;
-  }
-
-  let budget = null;
-  if (body.budget != null && String(body.budget).trim() !== '') {
-    const n = parseFloat(String(body.budget).replace(/,/g, '.'));
-    if (!isNaN(n)) budget = n;
-  }
-
-  const existing = db.prepare('SELECT id FROM missions WHERE code = ?').get(code);
-  try {
-    if (existing) {
-      db.prepare(
-        'UPDATE missions SET title=?, principal=?, level=?, status=?, start_date=?, end_date=?, progress=?, budget=? WHERE code=?'
-      ).run(title, principal, level, statusResolved, start_date, end_date, progress, budget, code);
-      return res.json({ ok: true, message: 'Đã cập nhật đề tài.', id: existing.id, updated: true });
-    }
-
-    db.prepare(
-      `INSERT INTO missions
-        (code, title, principal, level, status, start_date, end_date, progress, budget, source_id, source_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'manual')`
-    ).run(code, title, principal, level, statusResolved, start_date, end_date, progress, budget);
-    const id = db.prepare('SELECT id FROM missions WHERE code=? ORDER BY id DESC LIMIT 1').get(code).id;
-    return res.status(201).json({ ok: true, message: 'Đã thêm đề tài thủ công.', id, updated: false });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi thêm thủ công: ' + (e.message || String(e)) });
-  }
-});
-
-// Admin: cấu hình bật/tắt module trên trang chủ
-app.get('/api/admin/homepage-modules', authMiddleware, adminOnly, (req, res) => {
-  // Nếu bảng trống thì seed mặc định
-  const existing = db.prepare('SELECT code, label, enabled FROM homepage_modules').all();
-  if (!existing || existing.length === 0) {
-    const stmt = db.prepare('INSERT OR IGNORE INTO homepage_modules (code, label, enabled, sort_order) VALUES (?, ?, ?, ?)');
-    db.transaction(() => {
-      HOMEPAGE_MODULES_DEFAULT.forEach((m, i) => {
-        stmt.run(m.code, m.label, m.enabled ? 1 : 0, i);
-      });
-    })();
-  }
-  const rows = db.prepare('SELECT code, label, enabled, sort_order FROM homepage_modules ORDER BY sort_order, code').all();
-  return res.json({ modules: rows });
-});
-
-// Phải khai báo TRƯỚC /:code — nếu không PUT .../reorder bị khớp :code=reorder và chèn dòng sai vào DB
-app.put('/api/admin/homepage-modules/reorder', authMiddleware, adminOnly, (req, res) => {
-  const order = req.body && Array.isArray(req.body.order) ? req.body.order.map(c => String(c || '').trim()).filter(Boolean) : [];
-  const expected = HOMEPAGE_MODULES_DEFAULT.map(m => m.code);
-  if (order.length !== expected.length) {
-    return res.status(400).json({ message: 'Danh sách thứ tự phải đủ ' + expected.length + ' module.' });
-  }
-  const set = new Set(order);
-  if (!expected.every(c => set.has(c))) {
-    return res.status(400).json({ message: 'Thứ tự module không hợp lệ (thiếu hoặc trùng mã).' });
-  }
-  const tx = db.transaction(() => {
-    order.forEach((code, idx) => {
-      const def = HOMEPAGE_MODULES_DEFAULT.find(m => m.code === code);
-      const labelDefault = (def || {}).label || code;
-      const en = def ? (def.enabled ? 1 : 0) : 1;
-      db.prepare('INSERT OR IGNORE INTO homepage_modules (code, label, enabled, sort_order) VALUES (?, ?, ?, ?)').run(code, labelDefault, en, idx);
-      db.prepare('UPDATE homepage_modules SET sort_order = ? WHERE code = ?').run(idx, code);
-    });
-    db.prepare('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)').run('homepage_module_order', JSON.stringify(order));
-  });
-  tx();
-  return res.json({ message: 'Đã lưu thứ tự hiển thị module trên Trang chủ.' });
-});
-
-app.put('/api/admin/homepage-modules/:code', authMiddleware, adminOnly, (req, res) => {
-  const code = (req.params.code || '').trim();
-  if (!code) return res.status(400).json({ message: 'Thiếu mã module' });
-  if (!HOMEPAGE_MODULES_DEFAULT.some(m => m.code === code)) {
-    return res.status(400).json({ message: 'Mã module không hợp lệ.' });
-  }
-  const enabled = req.body && typeof req.body.enabled !== 'undefined' ? !!req.body.enabled : true;
-  const labelDefault = (HOMEPAGE_MODULES_DEFAULT.find(m => m.code === code) || {}).label || code;
-  const maxSo = db.prepare('SELECT COALESCE(MAX(sort_order), -1) AS m FROM homepage_modules').get().m;
-  const idxDefault = HOMEPAGE_MODULES_DEFAULT.findIndex(m => m.code === code);
-  const sortOrder = idxDefault >= 0 ? idxDefault : maxSo + 1;
-  db.prepare('INSERT OR IGNORE INTO homepage_modules (code, label, enabled, sort_order) VALUES (?, ?, ?, ?)')
-    .run(code, labelDefault, enabled ? 1 : 0, sortOrder);
-  db.prepare('UPDATE homepage_modules SET enabled = ? WHERE code = ?').run(enabled ? 1 : 0, code);
-  const row = db.prepare('SELECT code, label, enabled, sort_order FROM homepage_modules WHERE code = ?').get(code);
-  return res.json({ message: 'Đã cập nhật cấu hình module.', module: row });
-});
+// Đợt 6.3c: quản trị cấu hình module trên Trang chủ
+app.use('/api', require('./routes/admin/homepageModules')({
+  db,
+  authMiddleware,
+  adminOnly,
+  HOMEPAGE_MODULES_DEFAULT,
+}));
 
 // Public: cấu hình module cho trang chủ (không cần đăng nhập)
 app.get('/api/homepage-modules', (req, res) => {
@@ -6738,43 +6344,13 @@ app.get('/api/settings/standard-label', (req, res) => {
   return res.json({ label: value === '' ? '' : (value || 'ISO9001') });
 });
 
-app.get('/api/admin/settings/standard-label', authMiddleware, adminOnly, (req, res) => {
-  const row = db.prepare('SELECT value FROM system_settings WHERE key = ?').get('standard_label');
-  return res.json({ label: (row && row.value != null) ? String(row.value).trim() : 'ISO9001' });
-});
-
-app.put('/api/admin/settings/standard-label', authMiddleware, adminOnly, (req, res) => {
-  const label = req.body && req.body.label != null ? String(req.body.label).trim() : '';
-  db.prepare('INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)').run('standard_label', label);
-  return res.json({ message: label ? 'Đã lưu tiêu chuẩn hiển thị.' : 'Đã xóa dòng tiêu chuẩn (sẽ không hiển thị trên Trang chủ).', label: label });
-});
-
-app.post('/api/admin/notification-recipients', authMiddleware, adminOnly, (req, res) => {
-  const { email, fullname } = req.body || {};
-  const em = (email || '').trim().toLowerCase();
-  if (!em) return res.status(400).json({ message: 'Vui lòng nhập email' });
-  if (!isSafeEmailFormat(em)) return res.status(400).json({ message: 'Email không hợp lệ.' });
-  try {
-    db.prepare('INSERT INTO notification_recipients (email, fullname) VALUES (?, ?)').run(em, (fullname || '').trim() || null);
-    const row = db.prepare('SELECT id, email, fullname, createdAt FROM notification_recipients WHERE email = ?').get(em);
-    return res.status(201).json({ message: 'Đã thêm người nhận thông báo.', recipient: row });
-  } catch (e) {
-    if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') return res.status(400).json({ message: 'Email này đã có trong danh sách.' });
-    return res.status(500).json({ message: 'Lỗi thêm: ' + (e.message || '') });
-  }
-});
-
-app.delete('/api/admin/notification-recipients/:id', authMiddleware, adminOnly, (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (!id) return res.status(400).json({ message: 'ID không hợp lệ' });
-  try {
-    const r = db.prepare('DELETE FROM notification_recipients WHERE id = ?').run(id);
-    if (r.changes === 0) return res.status(404).json({ message: 'Không tìm thấy bản ghi.' });
-    return res.json({ message: 'Đã xóa khỏi danh sách nhận thông báo.' });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi xóa: ' + (e.message || '') });
-  }
-});
+// Đợt 6.3d: quản trị nhãn tiêu chuẩn & danh sách người nhận thông báo chung
+app.use('/api', require('./routes/admin/caiDatVaThongBao')({
+  db,
+  authMiddleware,
+  adminOnly,
+  isSafeEmailFormat,
+}));
 
 // ========== Module Hợp tác quốc tế: danh sách email nhận thông báo (đề xuất đoàn ra, đoàn vào, ...) — chỉ Admin ==========
 app.get('/api/admin/cooperation/notification-recipients', authMiddleware, adminOnly, (req, res) => {
