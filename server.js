@@ -6352,138 +6352,17 @@ app.use('/api', require('./routes/admin/caiDatVaThongBao')({
   isSafeEmailFormat,
 }));
 
-// ========== Module Hợp tác quốc tế: danh sách email nhận thông báo (đề xuất đoàn ra, đoàn vào, ...) — chỉ Admin ==========
-app.get('/api/admin/cooperation/notification-recipients', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const rows = db.prepare('SELECT id, email, fullname, topics, role, createdAt FROM cooperation_notification_recipients ORDER BY id').all();
-    return res.json({ recipients: rows || [] });
-  } catch (e) {
-    return res.json({ recipients: [] });
-  }
-});
-
-app.post('/api/admin/cooperation/notification-recipients', authMiddleware, adminOnly, (req, res) => {
-  const { email, fullname, topics, role } = req.body || {};
-  const em = (email || '').trim().toLowerCase();
-  if (!em) return res.status(400).json({ message: 'Vui lòng nhập email.' });
-  if (!isSafeEmailFormat(em)) return res.status(400).json({ message: 'Email không hợp lệ.' });
-  const topicsVal = (topics === 'all' || (typeof topics === 'string' && topics.trim() === 'all')) ? 'all' : (Array.isArray(topics) ? topics.filter(Boolean).join(',') : (typeof topics === 'string' ? topics.trim() : 'all'));
-  const roleVal = (role === 'vien_truong' || (typeof role === 'string' && role.trim().toLowerCase() === 'vien_truong')) ? 'vien_truong' : null;
-  try {
-    db.prepare('INSERT INTO cooperation_notification_recipients (email, fullname, topics, role) VALUES (?, ?, ?, ?)').run(em, (fullname || '').trim() || null, topicsVal || 'all', roleVal);
-    const row = db.prepare('SELECT id, email, fullname, topics, role, createdAt FROM cooperation_notification_recipients WHERE email = ?').get(em);
-    return res.status(201).json({ message: 'Đã thêm người nhận thông báo.', recipient: row });
-  } catch (e) {
-    if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') return res.status(400).json({ message: 'Email này đã có trong danh sách.' });
-    return res.status(500).json({ message: 'Lỗi thêm: ' + (e.message || '') });
-  }
-});
-
-app.delete('/api/admin/cooperation/notification-recipients/:id', authMiddleware, adminOnly, (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (!id) return res.status(400).json({ message: 'ID không hợp lệ.' });
-  try {
-    const r = db.prepare('DELETE FROM cooperation_notification_recipients WHERE id = ?').run(id);
-    if (r.changes === 0) return res.status(404).json({ message: 'Không tìm thấy bản ghi.' });
-    return res.json({ message: 'Đã xóa khỏi danh sách nhận thông báo.' });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi xóa: ' + (e.message || '') });
-  }
-});
-
-app.patch('/api/admin/cooperation/notification-recipients/:id', authMiddleware, adminOnly, (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const { role, fullname, topics } = req.body || {};
-  if (!id) return res.status(400).json({ message: 'ID không hợp lệ.' });
-  const row0 = db.prepare('SELECT id FROM cooperation_notification_recipients WHERE id = ?').get(id);
-  if (!row0) return res.status(404).json({ message: 'Không tìm thấy bản ghi.' });
-  const sets = [];
-  const vals = [];
-  if (role !== undefined) {
-  const roleVal = (role === 'vien_truong' || (typeof role === 'string' && role.trim().toLowerCase() === 'vien_truong')) ? 'vien_truong' : null;
-    sets.push('role = ?');
-    vals.push(roleVal);
-  }
-  if (fullname !== undefined) {
-    sets.push('fullname = ?');
-    vals.push((fullname && String(fullname).trim()) || null);
-  }
-  if (topics !== undefined) {
-    let topicsVal = 'all';
-    if (topics === 'all' || (typeof topics === 'string' && topics.trim().toLowerCase() === 'all')) topicsVal = 'all';
-    else if (Array.isArray(topics)) topicsVal = topics.map((t) => String(t).trim().toLowerCase()).filter(Boolean).join(',') || 'all';
-    else if (typeof topics === 'string') topicsVal = topics.trim() || 'all';
-    sets.push('topics = ?');
-    vals.push(topicsVal);
-  }
-  if (!sets.length) return res.status(400).json({ message: 'Không có trường nào để cập nhật (role, fullname, topics).' });
-  vals.push(id);
-  try {
-    db.prepare(`UPDATE cooperation_notification_recipients SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
-    const row = db.prepare('SELECT id, email, fullname, topics, role, createdAt FROM cooperation_notification_recipients WHERE id = ?').get(id);
-    return res.json({ ok: true, message: 'Đã cập nhật.', recipient: row });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi: ' + (e.message || '') });
-  }
-});
-
-// Cảnh báo thỏa thuận đã ký — trước/sau hết hạn (topic thoa_thuan_het_han)
-app.get('/api/admin/cooperation/settings/thoa-thuan-expiry', authMiddleware, adminOnly, (req, res) => {
-  return res.json({
-    months: coopGetThoaThuanExpiryMonths(),
-    post_expiry_max_emails: coopGetThoaThuanPostExpiryMaxEmails(),
-    post_expiry_min_days: coopGetThoaThuanPostExpiryMinDays()
-  });
-});
-
-app.put('/api/admin/cooperation/settings/thoa-thuan-expiry', authMiddleware, adminOnly, (req, res) => {
-  const body = req.body || {};
-  const updates = [];
-  if (body.months != null) {
-    const m = parseInt(body.months, 10);
-    if (!Number.isFinite(m) || m < 1 || m > 36) {
-      return res.status(400).json({ message: 'months phải là số từ 1 đến 36.' });
-    }
-    db.prepare('INSERT OR REPLACE INTO cooperation_settings (key, value) VALUES (?, ?)').run('thoa_thuan_expiry_alert_months', String(m));
-    updates.push('months');
-  }
-  if (body.post_expiry_max_emails != null) {
-    const n = parseInt(body.post_expiry_max_emails, 10);
-    if (!Number.isFinite(n) || n < 0 || n > 20) {
-      return res.status(400).json({ message: 'post_expiry_max_emails phải từ 0 (không gửi) đến 20.' });
-    }
-    db.prepare('INSERT OR REPLACE INTO cooperation_settings (key, value) VALUES (?, ?)').run('thoa_thuan_post_expiry_max_emails', String(n));
-    updates.push('post_expiry_max_emails');
-  }
-  if (body.post_expiry_min_days != null) {
-    const d = parseInt(body.post_expiry_min_days, 10);
-    if (!Number.isFinite(d) || d < 1 || d > 90) {
-      return res.status(400).json({ message: 'post_expiry_min_days phải từ 1 đến 90.' });
-    }
-    db.prepare('INSERT OR REPLACE INTO cooperation_settings (key, value) VALUES (?, ?)').run('thoa_thuan_post_expiry_min_days', String(d));
-    updates.push('post_expiry_min_days');
-  }
-  if (!updates.length) {
-    return res.status(400).json({ message: 'Gửi ít nhất một trường: months, post_expiry_max_emails, post_expiry_min_days.' });
-  }
-  try {
-    return res.json({
-      ok: true,
-      message: 'Đã lưu cấu hình cảnh báo thỏa thuận.',
-      months: coopGetThoaThuanExpiryMonths(),
-      post_expiry_max_emails: coopGetThoaThuanPostExpiryMaxEmails(),
-      post_expiry_min_days: coopGetThoaThuanPostExpiryMinDays()
-    });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi lưu cấu hình.' });
-  }
-});
-
-app.post('/api/admin/cooperation/thoa-thuan/run-expiry-check', authMiddleware, adminOnly, (req, res) => {
-  coopRunThoaThuanExpiryAlerts()
-    .then((r) => res.json({ ok: true, ...r }))
-    .catch((e) => res.status(500).json({ message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.' }));
-});
+// Quản trị HTQT (danh sách người nhận thông báo & cảnh báo thỏa thuận hết hạn) — đã tách sang routes/admin/cooperationSettings.js (Đợt 6.4)
+app.use('/api', require('./routes/admin/cooperationSettings')({
+  db,
+  authMiddleware,
+  adminOnly,
+  isSafeEmailFormat,
+  coopGetThoaThuanExpiryMonths,
+  coopGetThoaThuanPostExpiryMaxEmails,
+  coopGetThoaThuanPostExpiryMinDays,
+  coopRunThoaThuanExpiryAlerts,
+}));
 
 const STATUS_LABELS_COOP = {
   cho_phong_duyet:  'Chờ Phòng KHCN thẩm định',
@@ -6586,25 +6465,14 @@ app.use('/api', require('./routes/cooperation/nopVaDanhSach')({
   transporter,
 }));
 
-// Admin: cập nhật trạng thái đề xuất Đoàn ra (quá trình xử lý)
-app.put('/api/admin/cooperation/doan-ra/:id/status', authMiddleware, adminOnly, (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const status = (req.body && req.body.status) ? String(req.body.status).trim() : '';
-  const allowed = ['cho_phong_duyet', 'cho_vt_duyet', 'yeu_cau_bo_sung', 'cho_ky_duyet', 'dang_chuan_bi', 'da_duyet', 'tu_choi', 'ket_thuc_boi_nguoi_nop'];
-  if (!id || !allowed.includes(status)) {
-    return res.status(400).json({ message: 'ID hoặc trạng thái không hợp lệ. Trạng thái: cho_phong_duyet | cho_vt_duyet | yeu_cau_bo_sung | da_duyet | tu_choi | ket_thuc_boi_nguoi_nop | …' });
-  }
-  try {
-    const r = db.prepare('UPDATE cooperation_doan_ra SET status = ?, updated_at = datetime(\'now\'), coop_reminder_last_at = NULL WHERE id = ?').run(status, id);
-    if (r.changes === 0) return res.status(404).json({ message: 'Không tìm thấy đề xuất.' });
-    if (status === 'da_duyet') {
-      coopTryAutoGenerateDoanRaVanBan(id);
-    }
-    return res.json({ message: 'Đã cập nhật trạng thái.', status });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi: ' + (e.message || '') });
-  }
-});
+// Admin: cập nhật trạng thái đề xuất Đoàn ra (đã tách sang routes/admin/cooperationDeXuat.js, Đợt 6.4)
+const adminCoopDeXuat = require('./routes/admin/cooperationDeXuat');
+app.use('/api', adminCoopDeXuat.createDoanRaStatusRouter({
+  db,
+  authMiddleware,
+  adminOnly,
+  coopTryAutoGenerateDoanRaVanBan,
+}));
 
 /** Đối tác hợp tác — cùng logic với GET /api/cooperation/doi-tac (dùng cho trang chủ + module) */
 function cooperationComputePartnerStats() {
@@ -6724,90 +6592,14 @@ app.use('/api', require('./routes/cooperation/tongQuanVaThoaThuan')({
   normalizeAndCheckDownloadPath,
 }));
 
-// Admin / P.KHCN: xóa thỏa thuận
-app.delete('/api/admin/cooperation/thoa-thuan/:id', authMiddleware, coopPhongOrAdmin, (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (!id) return res.status(400).json({ message: 'ID không hợp lệ.' });
-  try {
-    const r = db.prepare('DELETE FROM cooperation_thoa_thuan WHERE id = ?').run(id);
-    if (r.changes === 0) return res.status(404).json({ message: 'Không tìm thấy.' });
-    return res.json({ ok: true, message: 'Đã xóa thỏa thuận.' });
-  } catch(e) { return res.status(500).json({ message: 'Lỗi: ' + e.message }); }
-});
-
-// P.KHCN / Admin: sửa thỏa thuận (staff notes, open-ended flag, core fields)
-app.put('/api/admin/cooperation/thoa-thuan/:id', authMiddleware, coopPhongOrAdmin, (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const body = req.body || {};
-  let prev;
-  try {
-    prev = db.prepare('SELECT * FROM cooperation_thoa_thuan WHERE id=?').get(id);
-  } catch (e) {}
-  if (!prev) return res.status(404).json({ message: 'Không tìm thấy.' });
-  const sets = [];
-  const vals = [];
-  const allowed = ['ten', 'doi_tac', 'loai', 'trang_thai', 'quoc_gia', 'loai_doi_tac', 'staff_notes'];
-  for (const k of allowed) {
-    if (body[k] !== undefined) {
-      sets.push(`${k}=?`);
-      vals.push(body[k]);
-    }
-  }
-  if (body.no_fixed_term !== undefined) {
-    const wantOpen = thoaThuanParseOpenEndedFlag(body.no_fixed_term);
-    if (wantOpen) {
-      if (String(prev.terminated_at || '').trim()) {
-        return res.status(400).json({ message: 'Đã ghi nhận kết thúc; không thể chuyển lại sang không thời hạn cố định qua form này.' });
-      }
-      sets.push('no_fixed_term=1');
-      sets.push('het_han=NULL');
-      sets.push('trang_thai=?');
-      vals.push('hieu_luc');
-      sets.push('expiry_alert_sent_at=NULL');
-      sets.push('post_expiry_alert_count=0');
-      sets.push('last_post_expiry_alert_at=NULL');
-    } else {
-      sets.push('no_fixed_term=0');
-      const newH = body.het_han !== undefined ? String(body.het_han || '').trim() : String(prev.het_han || '').trim();
-      if (!newH) {
-        return res.status(400).json({ message: 'Thời hạn cố định cần có ngày hết hiệu lực (het_han, YYYY-MM-DD).' });
-      }
-      sets.push('het_han=?');
-      vals.push(newH);
-      const oldH = String(prev.het_han || '').trim();
-      if (newH !== oldH) {
-        sets.push('trang_thai=?');
-        vals.push(thoaThuanAutoStatusByExpiry(newH));
-        sets.push('expiry_alert_sent_at=NULL');
-        sets.push('post_expiry_alert_count=0');
-        sets.push('last_post_expiry_alert_at=NULL');
-      }
-    }
-  } else if (body.het_han !== undefined) {
-    const newH = String(body.het_han || '').trim() || null;
-    const oldH = String(prev.het_han || '').trim() || '';
-    const newS = newH || '';
-    if (newS !== oldH) {
-      sets.push('het_han=?');
-      vals.push(newH);
-      sets.push('trang_thai=?');
-      vals.push(thoaThuanAutoStatusByExpiry(newH));
-      sets.push('expiry_alert_sent_at=NULL');
-      sets.push('post_expiry_alert_count=0');
-      sets.push('last_post_expiry_alert_at=NULL');
-      if (newH) sets.push('no_fixed_term=0');
-    }
-  }
-  if (!sets.length) return res.status(400).json({ message: 'Không có gì cập nhật.' });
-  sets.push("updated_at=datetime('now','localtime')");
-  vals.push(id);
-  try {
-    db.prepare(`UPDATE cooperation_thoa_thuan SET ${sets.join(', ')} WHERE id=?`).run(...vals);
-    return res.json({ ok: true, message: 'Đã cập nhật.' });
-  } catch (e) {
-    return res.status(500).json({ message: 'Lỗi: ' + e.message });
-  }
-});
+// Admin / P.KHCN: sửa & xóa thỏa thuận (đã tách sang routes/admin/cooperationDeXuat.js, Đợt 6.4)
+app.use('/api', adminCoopDeXuat.createThoaThuanRouter({
+  db,
+  authMiddleware,
+  coopPhongOrAdmin,
+  thoaThuanParseOpenEndedFlag,
+  thoaThuanAutoStatusByExpiry,
+}));
 
 // Đợt 5.7: thêm, chấm dứt & cập nhật scan thỏa thuận
 app.use('/api', require('./routes/cooperation/thoaThuanCapNhat')({
@@ -8995,12 +8787,7 @@ app.use('/api', require('./routes/cooperation/nopLaiVaSuKien')({
   coopNotifyPhongToCcVt,
 }));
 
-app.delete('/api/admin/cooperation/su-kien/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    db.prepare('DELETE FROM cooperation_su_kien WHERE id=?').run(parseInt(req.params.id,10));
-    return res.json({ ok:true, message:'Đã xóa sự kiện.' });
-  } catch(e) { return res.status(500).json({ message:'Lỗi: '+e.message }); }
-});
+app.use('/api', adminCoopDeXuat.createSuKienRouter({ db, authMiddleware, adminOnly }));
 
 // ============================================================
 // ROUTE MỚI — EVENTS WORKFLOW (đã tách sang routes/events.js, Đợt 5.1)
@@ -9023,141 +8810,20 @@ app.use('/api', require('./routes/events')({
 }));
 
 // ============================================================
-// ROUTE MỚI — ADMIN: SỬA/XÓA ĐỀ XUẤT
+// ROUTE MỚI — ADMIN: SỬA/XÓA ĐỀ XUẤT (đã tách sang routes/admin/cooperationDeXuat.js, Đợt 6.4)
 // ============================================================
-const COOP_ADMIN_DENY_COLS = new Set(['id', 'created_at', 'updated_at']);
-
-function coopAdminUpdateSetsFromBody(body, allowedColSet) {
-  const sets = [];
-  const vals = [];
-  const b = body && typeof body === 'object' ? body : {};
-  for (const k of Object.keys(b)) {
-    if (COOP_ADMIN_DENY_COLS.has(k)) continue;
-    if (!allowedColSet.has(k)) continue;
-    sets.push(`${k}=?`);
-    vals.push(b[k]);
-  }
-  return { sets, vals };
-}
-
-const COOP_ADMIN_COLS_DOAN_RA = new Set([
-  'submitted_by_email', 'submitted_by_name', 'muc_dich', 'quoc_gia', 'ngay_di', 'ngay_ve', 'thanh_vien', 'nguon_kinh_phi', 'du_toan', 'status',
-  'ma_de_xuat', 'submitted_by_id', 'ghi_chu', 'note_phong', 'note_vt', 'phong_xu_ly_id', 'phong_xu_ly_at', 'vt_xu_ly_id', 'vt_xu_ly_at',
-  'van_ban_word_path', 'van_ban_word_original_name', 'van_ban_word_uploaded_at', 'coop_reminder_last_at',
-]);
-const COOP_ADMIN_COLS_DOAN_VAO = new Set([
-  'submitted_by_email', 'submitted_by_name', 'muc_dich', 'don_vi_de_xuat', 'ngay_den', 'ngay_roi_di', 'thanh_phan_doan', 'noi_dung_lam_viec',
-  'kinh_phi_nguon', 'ho_tro_visa', 'status',
-  'ma_de_xuat', 'submitted_by_id', 'ghi_chu', 'note_phong', 'note_vt', 'phong_xu_ly_id', 'phong_xu_ly_at', 'vt_xu_ly_id', 'vt_xu_ly_at',
-  'van_ban_word_path', 'van_ban_word_original_name', 'van_ban_word_uploaded_at', 'coop_reminder_last_at',
-]);
-const COOP_ADMIN_COLS_MOU = new Set([
-  'submitted_by_email', 'submitted_by_name', 'loai_thoa_thuan', 'ten_doi_tac', 'quoc_gia', 'thoi_han_nam', 'gia_tri_tai_chinh', 'don_vi_de_xuat',
-  'noi_dung_hop_tac', 'status',
-  'ma_de_xuat', 'submitted_by_id', 'ghi_chu', 'note_phong', 'note_vt', 'phong_xu_ly_id', 'phong_xu_ly_at', 'vt_xu_ly_id', 'vt_xu_ly_at',
-  'van_ban_word_path', 'van_ban_word_original_name', 'van_ban_word_uploaded_at', 'coop_reminder_last_at',
-]);
-const COOP_ADMIN_COLS_YTNN = new Set([
-  'ma_de_xuat', 'ten', 'mo_ta', 'doi_tac_ten', 'doi_tac_quoc_gia', 'doi_tac_nguoi_dai_dien', 'doi_tac_website', 'hinh_thuc_hop_tac',
-  'chu_nhiem_ten', 'chu_nhiem_hoc_vi', 'chu_nhiem_don_vi', 'thanh_vien_json', 'ngay_bat_dau', 'ngay_ket_thuc', 'thoi_gian_thang',
-  'kinh_phi', 'don_vi_tien_te', 'kinh_phi_vnd', 'loai_hinh', 'to_phan_loai_json', 'to_trinh_phong_khcn', 'de_nghi_vt', 'vt_y_kien',
-  'vt_ngay_ky', 'vt_so_van_ban', 'vt_nguoi_ky_id', 'ly_do_khong_duyet', 'han_xu_ly_vt', 'muc_do_uu_tien', 'ghi_chu_noi_bo', 'nguoi_phu_trach_id',
-  'phi_quan_ly_pct', 'phi_quan_ly_vnd', 'submitted_by_email', 'submitted_by_name', 'submitted_by_id', 'status', 'ngay_tiep_nhan',
-  'note_phong', 'note_vt', 'phong_xu_ly_id', 'phong_xu_ly_at', 'vt_xu_ly_id', 'vt_xu_ly_at',
-  'van_ban_word_path', 'van_ban_word_original_name', 'van_ban_word_uploaded_at', 'coop_reminder_last_at',
-]);
-
-const COOP_ADMIN_COLS_BY_EP = {
-  'doan-ra': COOP_ADMIN_COLS_DOAN_RA,
-  'doan-vao': COOP_ADMIN_COLS_DOAN_VAO,
-  mou: COOP_ADMIN_COLS_MOU,
-};
-
-['doan-ra','doan-vao','mou'].forEach(ep => {
-  const tableMap = { 'doan-ra':'cooperation_doan_ra', 'doan-vao':'cooperation_doan_vao', 'mou':'cooperation_mou_de_xuat' };
-  const loaiMap = { 'doan-ra':'doan_ra', 'doan-vao':'doan_vao', 'mou':'mou' };
-  const tbl = tableMap[ep];
-  const loai = loaiMap[ep];
-  const colWhitelist = COOP_ADMIN_COLS_BY_EP[ep];
-  app.put(`/api/admin/cooperation/${ep}/:id`, authMiddleware, adminOnly, (req, res) => {
-    const id = parseInt(req.params.id, 10);
-    const body = req.body || {};
-    const { sets, vals } = coopAdminUpdateSetsFromBody(body, colWhitelist);
-    if (!sets.length) return res.status(400).json({ message:'Không có gì cập nhật.' });
-    sets.push("updated_at=datetime('now','localtime')"); vals.push(id);
-    try {
-      const r = db.prepare(`UPDATE ${tbl} SET ${sets.join(',')} WHERE id=?`).run(...vals);
-      if (r.changes===0) return res.status(404).json({ message:'Không tìm thấy.' });
-      coopAddHistory(loai, id, 0, 'admin_edit', 'Admin chỉnh sửa', req.user, JSON.stringify(body));
-      if (ep === 'mou' && String(body.status || '').toLowerCase() === 'da_duyet') {
-        try {
-          const gen = coopTryAutoGenerateMouVanBan(id);
-          if (!gen.ok && gen.skipped === 'no_template') {
-            console.warn('[mou] Admin đặt trạng thái Đã phê duyệt nhưng chưa có mẫu Word trên hệ thống.');
-          } else if (!gen.ok && gen.skipped === 'error') {
-            console.error('[mou] Auto Word sau admin cập nhật:', gen.message);
-          }
-        } catch (e) {}
-      }
-      return res.json({ ok:true, message:'Đã cập nhật.' });
-    } catch(e) { return res.status(500).json({ message:'Lỗi: '+e.message }); }
-  });
-  app.delete(`/api/admin/cooperation/${ep}/:id`, authMiddleware, adminOnly, (req, res) => {
-    const id = parseInt(req.params.id, 10);
-    try {
-      if (ep === 'doan-ra') {
-        const row = db.prepare('SELECT * FROM cooperation_doan_ra WHERE id=?').get(id);
-        coopUnlinkDoanRaVanBanFile(row);
-      }
-      if (ep === 'doan-vao') {
-        const row = db.prepare('SELECT * FROM cooperation_doan_vao WHERE id=?').get(id);
-        coopUnlinkDoanVaoVanBanFile(row);
-      }
-      if (ep === 'mou') {
-        const row = db.prepare('SELECT * FROM cooperation_mou_de_xuat WHERE id=?').get(id);
-        coopUnlinkMouVanBanFile(row);
-      }
-      db.prepare(`DELETE FROM ${tbl} WHERE id=?`).run(id);
-      try { db.prepare('DELETE FROM coop_history WHERE loai=? AND de_xuat_id=?').run(loai, id); } catch(e) {}
-      return res.json({ ok:true, message:'Đã xóa.' });
-    } catch(e) { return res.status(500).json({ message:'Lỗi: '+e.message }); }
-  });
-});
-
-// admin ytnn
-app.put('/api/admin/cooperation/ytnn/:id', authMiddleware, adminOnly, (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const body = req.body || {};
-  const { sets, vals } = coopAdminUpdateSetsFromBody(body, COOP_ADMIN_COLS_YTNN);
-  if (!sets.length) return res.status(400).json({ message:'Không có gì cập nhật.' });
-  sets.push("updated_at=datetime('now','localtime')"); vals.push(id);
-  try {
-    const r = db.prepare(`UPDATE htqt_de_xuat SET ${sets.join(',')} WHERE id=?`).run(...vals);
-    if (r.changes === 0) return res.status(404).json({ message: 'Không tìm thấy.' });
-    coopAddHistory('ytnn', id, 0, 'admin_edit', 'Admin chỉnh sửa', req.user, JSON.stringify(body));
-    if (String(body.status || '').toLowerCase() === 'da_duyet') {
-      try {
-        const gen = coopTryAutoGenerateYtnnVanBan(id);
-        if (!gen.ok && gen.skipped === 'no_template') {
-          console.warn('[ytnn] Admin đặt trạng thái Đã phê duyệt nhưng chưa có mẫu Word trên hệ thống.');
-        } else if (!gen.ok && gen.skipped === 'error') {
-          console.error('[ytnn] Auto Word sau admin cập nhật:', gen.message);
-        }
-      } catch (e) {}
-    }
-    return res.json({ ok:true, message:'Đã cập nhật.' });
-  } catch(e) { return res.status(500).json({ message:'Lỗi: '+e.message }); }
-});
-app.delete('/api/admin/cooperation/ytnn/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    const row = db.prepare('SELECT * FROM htqt_de_xuat WHERE id=?').get(id);
-    if (row) coopUnlinkYtnnVanBanFile(row);
-    db.prepare('DELETE FROM htqt_de_xuat WHERE id=?').run(id);
-    try { db.prepare('DELETE FROM coop_history WHERE loai=? AND de_xuat_id=?').run('ytnn', id); } catch(e) {}
-    return res.json({ ok:true, message:'Đã xóa.' });
-  } catch(e) { return res.status(500).json({ message:'Lỗi: '+e.message }); }
-});
+app.use('/api', adminCoopDeXuat.createDeXuatCrudRouter({
+  db,
+  authMiddleware,
+  adminOnly,
+  coopAddHistory,
+  coopTryAutoGenerateMouVanBan,
+  coopTryAutoGenerateYtnnVanBan,
+  coopUnlinkDoanRaVanBanFile,
+  coopUnlinkDoanVaoVanBanFile,
+  coopUnlinkMouVanBanFile,
+  coopUnlinkYtnnVanBanFile,
+}));
 
 // ============================================================
 // HELPER: build title cho list view
@@ -9797,38 +9463,13 @@ async function mountSciKhcnPublicationsRouters() {
     }
   );
 
-  app.post('/api/admin/journal-metrics/update-if', authMiddleware, adminOnly, (req, res) => {
-    try {
-      const issnNorm = normalizeIssnJournalMetricsInput(req.body?.issn);
-      if (!issnNorm || !/^\d{4}-[\dX]{4}$/i.test(issnNorm)) {
-        return res.status(400).json({ message: 'ISSN phải đúng định dạng XXXX-XXXX' });
-      }
-      const year = parseInt(req.body?.year, 10);
-      if (!Number.isFinite(year) || year < 1900 || year > 2100) {
-        return res.status(400).json({ message: 'Năm không hợp lệ (1900–2100)' });
-      }
-      const jcrIf = Number(req.body?.jcr_if);
-      if (!Number.isFinite(jcrIf) || jcrIf <= 0) {
-        return res.status(400).json({ message: 'jcr_if phải là số dương' });
-      }
-      const r = db
-        .prepare(
-          `UPDATE journal_metrics SET jcr_if_manual = ?, updated_at = datetime('now')
-           WHERE sjr_year = ? AND (issn_print = ? OR issn_electronic = ?)`
-        )
-        .run(jcrIf, year, issnNorm, issnNorm);
-      const changes = Number(r?.changes ?? 0);
-      if (!changes) {
-        return res.status(404).json({
-          message: 'Không tìm thấy bản ghi journal_metrics khớp ISSN và năm SJR',
-        });
-      }
-      return res.json({ ok: true, message: 'Đã cập nhật JCR IF', changes });
-    } catch (e) {
-      console.error('[journal-metrics/update-if]', e);
-      return res.status(500).json({ message: 'Lỗi CSDL' });
-    }
-  });
+  // Quản trị journal_metrics (cập nhật thủ công JCR IF) — đã tách sang routes/admin/journalMetrics.js (Đợt 6.4)
+  app.use('/api', require('./routes/admin/journalMetrics')({
+    db,
+    authMiddleware,
+    adminOnly,
+    normalizeIssnJournalMetricsInput,
+  }));
 
   // Công bố khoa học — 5 endpoint bổ sung đã tách sang routes/publications/boSung.js.
   // PHẢI mount trước app.use('/api/publications', pubMod.publicationsRouter) để không bị :id nuốt.
