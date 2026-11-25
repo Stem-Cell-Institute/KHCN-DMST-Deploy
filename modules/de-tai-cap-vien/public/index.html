@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <script src="js/mount-path.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Đề tài Cấp Viện | Viện Tế bào gốc (SCI)</title>
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <a href="./" class="nav-brand">
+      <div class="brand-text">
+        <h1>QUẢN LÝ ĐỀ TÀI CẤP VIỆN</h1>
+        <p>Nhiệm vụ KHCN cấp cơ sở - Viện Tế bào gốc</p>
+      </div>
+    </a>
+
+    <nav class="nav-menu">
+      <a href="./" class="nav-link active">
+        <i class="fa-solid fa-chart-pie"></i> Tổng quan
+      </a>
+      <a href="ban-lam-viec-khcn.html" class="nav-link nav-khcn-only" style="display:none;">
+        <i class="fa-solid fa-diagram-project"></i> Điều phối KH&CN
+        <span class="khcn-work-badge" style="display:none; background:#ef4444; color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:3px;"></span>
+      </a>
+      <a href="quan-ly-dot.html" class="nav-link">
+        <i class="fa-solid fa-file-signature"></i> Đăng ký Đề tài
+      </a>
+      <a href="kiem-tra-ho-so.html" class="nav-link">
+        <i class="fa-solid fa-clipboard-check"></i> Hồ sơ & Kiểm toán
+      </a>
+      <a href="hoi-dong-ecv.html" class="nav-link">
+        <i class="fa-solid fa-award"></i> Hội đồng & e-CV
+      </a>
+      <a href="phan-quyen.html" class="nav-link">
+        <i class="fa-solid fa-users-gear"></i> Phân quyền
+      </a>
+    </nav>
+
+    <div class="nav-user">
+      <a href="phan-quyen.html" class="user-badge" title="Bấm để xem và chuyển đổi 7 vai trò trong Ma trận phân quyền" style="text-decoration: none;">
+        <i class="fa-solid fa-user-shield"></i>
+        <span id="navUserRole">Phòng KHCN & ĐN</span>
+        <i class="fa-solid fa-chevron-down" style="font-size: 0.65rem; margin-left: 4px; opacity: 0.7;"></i>
+      </a>
+      <a href="/" data-eoffice-root="1" class="btn btn-outline btn-sm"  title="Trở về trang E-Office mẹ">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> E-Office SCI
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Page Header & Action -->
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">Tổng quan Tiến độ Đề tài Nghiên cứu</h2>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-outline" onclick="loadData()">
+          <i class="fa-solid fa-arrows-rotate"></i> Làm mới
+        </button>
+        <button class="btn btn-primary" id="btnNewProjectMain" onclick="openNewProjectModal()">
+          <i class="fa-solid fa-plus"></i> Thêm đề tài mới
+        </button>
+      </div>
+    </div>
+
+    <!-- Banner Thông báo Đợt Đăng ký Đề tài Mở thường xuyên -->
+    <section id="callDashboardBanner" class="card" style="display: none; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border-radius: 10px; padding: 14px 18px; margin-bottom: 1.25rem; box-shadow: var(--shadow-md);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">
+            <i class="fa-solid fa-bullhorn" style="color: #ffffff;"></i>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="badge" style="background: #22c55e; color: white; font-size: 0.7rem; font-weight: 700; padding: 2px 7px;">
+                <i class="fa-solid fa-circle-check"></i> ĐANG MỞ TIẾP NHẬN
+              </span>
+              <span style="font-size: 0.72rem; opacity: 0.9; text-transform: uppercase; font-weight: 600;">Thông báo từ Phòng Khoa học & Công nghệ</span>
+            </div>
+            <div style="font-size: 1.05rem; font-weight: 700; margin: 3px 0 2px 0;" id="dashCallTitle">
+              Đợt Đăng ký Đề tài NCKH Cấp Viện Năm 2026 đang mở tiếp nhận hồ sơ thường xuyên
+            </div>
+            <div style="font-size: 0.8rem; opacity: 0.95;">
+              Kính mời các Nhà khoa học, Nhóm nghiên cứu tải biểu mẫu và nộp thuyết minh trực tuyến (Định mức tối đa 50 triệu đồng/đề tài).
+            </div>
+          </div>
+        </div>
+        <div>
+          <a href="quan-ly-dot.html" class="btn" style="background: #ffffff; color: #0369a1; font-weight: 700; font-size: 0.82rem; padding: 8px 16px; border: none; text-decoration: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap;">
+            <i class="fa-solid fa-file-signature" style="color: #0284c7;"></i> Tải Biểu mẫu & Đăng ký Đề tài &rarr;
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Active Role Context Banner -->
+    <div id="dashboardRoleBanner" style="background: #ffffff; border: 1px solid #cbd5e1; border-left: 4px solid var(--primary); border-radius: 8px; padding: 10px 16px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 0.85rem;" id="dashboardRoleText">
+        <i class="fa-solid fa-user-shield" style="color: var(--primary);"></i>
+        <span>Đang tải phân quyền hệ thống...</span>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;" id="dashboardRoleActions">
+        <button class="btn btn-outline btn-sm" onclick="openGlobalRoleSwitcherModal()" style="font-size: 0.75rem;">
+          <i class="fa-solid fa-repeat"></i> Đổi vai trò (Admin / Viện trưởng / P. KHCN / Chủ nhiệm)
+        </button>
+      </div>
+    </div>
+
+    <!-- Khu vực Bàn làm việc Nghiệp vụ Phòng KHCN (Hiển thị khi đăng nhập đúng vai trò) -->
+    <section id="khcnWorkstationCard" class="card" style="display: none; background: #ffffff; border: 1px solid #bfdbfe; border-left: 5px solid #0284c7; border-radius: 10px; padding: 14px 18px; margin-bottom: 1.25rem; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="background: #e0f2fe; color: #0284c7; width: 34px; height: 34px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem;">
+            <i class="fa-solid fa-briefcase"></i>
+          </div>
+          <div>
+            <h3 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+              TRUNG TÂM ĐIỀU PHỐI KH&CN CẤP CƠ SỞ
+              <span class="badge" style="background: #fee2e2; color: #b91c1c; font-size: 0.68rem; font-weight: 700;" id="khcnTotalPendingBadge">0 việc tồn</span>
+            </h3>
+            <span style="font-size: 0.73rem; color: #64748b;">Nhiệm vụ KH&CN Cấp Cơ sở - Viện Tế bào gốc</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-outline btn-sm" id="btnDashScanDeadlines" onclick="triggerDashboardDeadlineScan()" style="font-size: 0.74rem;">
+            <i class="fa-solid fa-arrows-rotate"></i> Quét hạn & Gửi email thông báo
+          </button>
+          <a href="ban-lam-viec-khcn.html" class="btn btn-primary btn-sm" style="font-size: 0.74rem; text-decoration: none;">
+            <i class="fa-solid fa-diagram-project"></i> Mở Trung tâm Điều phối KH&CN &rarr;
+          </a>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px;" id="khcnWorkstationBoxes">
+        <!-- Render 4 blocks tác nghiệp bởi dashboard.js -->
+      </div>
+    </section>
+
+    <!-- Top KPI Stat Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card" id="cardTotal" onclick="filterByColor('')" title="Bấm để xem tất cả đề tài">
+        <div class="kpi-info">
+          <h3>Tổng số đề tài</h3>
+          <div class="kpi-number" id="statTotal">--</div>
+        </div>
+        <div class="kpi-icon" style="background: #f1f5f9; color: #475569;">
+          <i class="fa-solid fa-flask-vial"></i>
+        </div>
+      </div>
+
+      <div class="kpi-card" id="cardGreen" onclick="filterByColor('GREEN')" title="Bấm để lọc đề tài đúng hạn">
+        <div class="kpi-info">
+          <h3>Đang đúng hạn</h3>
+          <div class="kpi-number" style="color: var(--color-green);" id="statGreen">--</div>
+        </div>
+        <div class="kpi-icon" style="background: var(--color-green-bg); color: var(--color-green);">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+      </div>
+
+      <div class="kpi-card" id="cardYellow" onclick="filterByColor('YELLOW')" title="Bấm để lọc đề tài sắp hết hạn">
+        <div class="kpi-info">
+          <h3>Cảnh báo sắp hết hạn</h3>
+          <div class="kpi-number" style="color: var(--color-yellow);" id="statYellow">--</div>
+        </div>
+        <div class="kpi-icon" style="background: var(--color-yellow-bg); color: var(--color-yellow);">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+      </div>
+
+      <div class="kpi-card" id="cardRed" onclick="filterByColor('RED')" title="Bấm để lọc đề tài quá hạn">
+        <div class="kpi-info">
+          <h3>BÁO ĐỎ QUÁ HẠN</h3>
+          <div class="kpi-number" style="color: var(--color-red);" id="statRed">--</div>
+        </div>
+        <div class="kpi-icon" style="background: var(--color-red-bg); color: var(--color-red);">
+          <i class="fa-solid fa-bell"></i>
+        </div>
+      </div>
+
+      <div class="kpi-card" id="cardExtended" onclick="filterByColor('EXTENDED')" title="Bấm để lọc danh sách các đề tài đã gia hạn">
+        <div class="kpi-info">
+          <h3>ĐỀ TÀI ĐÃ GIA HẠN</h3>
+          <div class="kpi-number" style="color: #9333ea;" id="statExtended">--</div>
+          <div class="kpi-subtext" style="font-size: 0.72rem; color: #7e22ce; margin-top: 3px; font-weight: 500;">Lần 1 hoặc Lần 2 (Tối đa 2 lần)</div>
+        </div>
+        <div class="kpi-icon" style="background: #f3e8ff; color: #9333ea;">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+      </div>
+
+      <div class="kpi-card" id="cardBlue" onclick="filterByColor('BLUE')" title="Bấm để lọc đề tài đã nghiệm thu">
+        <div class="kpi-info">
+          <h3>Đã nghiệm thu</h3>
+          <div class="kpi-number" style="color: var(--color-blue);" id="statCompleted">--</div>
+        </div>
+        <div class="kpi-icon" style="background: var(--color-blue-bg); color: var(--color-blue);">
+          <i class="fa-solid fa-award"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter Bar -->
+    <section class="filter-card">
+      <div class="filter-group" style="flex: 2; min-width: 260px;">
+        <input type="text" id="searchInput" class="filter-input" placeholder="🔍 Tìm theo Mã đề tài (NCKH-SCI...), tên đề tài hoặc chủ nhiệm..." oninput="debounceFilter()">
+      </div>
+
+      <div class="filter-group">
+        <select id="groupSelect" class="filter-select" onchange="applyFilters()">
+          <option value="">-- Tất cả Nhóm nghiên cứu --</option>
+          <option value="Biochip">Biochip</option>
+          <option value="Stem Cell Biology">Stem Cell Biology</option>
+          <option value="Cancer Biology">Cancer Biology</option>
+          <option value="Neural Regenerative Medicine">Neural Regenerative Medicine</option>
+          <option value="Diagnostic and Therapeutic Research and Development">Diagnostic & Therapeutic R&D</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <select id="colorSelect" class="filter-select" onchange="applyFilters()">
+          <option value="">-- Tất cả trạng thái hạn --</option>
+          <option value="RED">🔴 Báo đỏ (Quá hạn)</option>
+          <option value="YELLOW">🟡 Báo vàng (Sắp hết hạn)</option>
+          <option value="GREEN">🟢 Xanh (Đúng tiến độ)</option>
+          <option value="EXTENDED">🟣 Đề tài đã gia hạn (Lần 1 hoặc 2)</option>
+          <option value="BLUE">🔵 Đã nghiệm thu</option>
+          <option value="GRAY">⚪ Hủy đề tài</option>
+        </select>
+      </div>
+
+      <div class="filter-group" style="flex: 0 0 140px;">
+        <select id="yearSelect" class="filter-select" onchange="applyFilters()">
+          <option value="">-- Tất cả năm --</option>
+          <option value="2024">Năm 2024</option>
+          <option value="2025">Năm 2025</option>
+          <option value="2026">Năm 2026</option>
+        </select>
+      </div>
+
+      <button class="btn btn-outline btn-sm" onclick="resetFilters()">
+        <i class="fa-solid fa-filter-circle-xmark"></i> Xóa lọc
+      </button>
+    </section>
+
+    <!-- Filter Notice Banner -->
+    <div id="filterNoticeBanner" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 16px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm);">
+      <div style="font-size: 0.9rem; color: #1e40af; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-filter"></i> <span id="filterNoticeText">Đang hiển thị đề tài...</span>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="resetFilters()" style="background: white; border-color: #93c5fd; color: #1e40af;">
+        <i class="fa-solid fa-xmark"></i> Xem tất cả 30 đề tài
+      </button>
+    </div>
+
+    <!-- Project Data Table -->
+    <section class="table-card">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 36px; text-align: center;">STT</th>
+              <th style="width: 110px;">Mã đề tài</th>
+              <th>Tên đề tài cấp Viện</th>
+              <th style="width: 150px;">Chủ nhiệm & Nhóm</th>
+              <th style="width: 155px;">Thời gian thực hiện</th>
+              <th style="width: 95px;">Dự toán</th>
+              <th style="width: 120px;">Hồ sơ Pháp lý</th>
+              <th style="width: 135px;">Cảnh báo Tiến độ</th>
+              <th style="width: 75px; text-align: center;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="projectsTableBody">
+            <tr>
+              <td colspan="11" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu đề tài cấp Viện...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Thêm mới đề tài cấp Viện -->
+  <div class="modal-overlay" id="newProjectModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>Thêm Mới Đề Tài Cấp Viện</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('newProjectModal')">&times;</button>
+      </div>
+      <form id="newProjectForm" onsubmit="handleCreateProject(event)">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Mã đề tài (Bắt buộc) *</label>
+              <input type="text" name="code" class="form-control" placeholder="VD: NCKH-SCI.15/25" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Loại đề tài</label>
+              <select name="category" class="form-control">
+                <option value="Cơ bản">Cơ bản</option>
+                <option value="Ứng dụng">Ứng dụng</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tên đề tài nghiên cứu *</label>
+            <textarea name="title" class="form-control" rows="2" placeholder="Nhập đầy đủ tên đề tài..." required></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Chủ nhiệm đề tài *</label>
+              <input type="text" name="leader_name" class="form-control" placeholder="Họ và tên chủ nhiệm" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nhóm nghiên cứu</label>
+              <input type="text" name="research_group" list="projectResearchGroupsList" class="form-control" placeholder="Chọn nhóm gợi ý hoặc tự nhập nhóm mới..." autocomplete="off">
+              <datalist id="projectResearchGroupsList">
+                <option value="Biochip">
+                <option value="Stem Cell Biology">
+                <option value="Cancer Biology">
+                <option value="Neural Regenerative Medicine">
+                <option value="Diagnostic & Therapeutic R&D">
+                <option value="Immunology & Cell Therapy">
+                <option value="Biomaterials & Tissue Engineering">
+                <option value="Nhóm Nghiên cứu Liên ngành">
+              </datalist>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Thành viên tham gia</label>
+            <input type="text" name="members" class="form-control" placeholder="Danh sách thành viên (cách nhau bởi dấu phẩy)">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Số Quyết định giao nhiệm vụ</label>
+              <input type="text" name="decision_number" class="form-control" placeholder="VD: 15/QĐ-SCI">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ngày ký QĐ (Ngày Bắt đầu) *</label>
+              <input type="date" name="decision_date" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Thời gian thực hiện gốc</label>
+              <select name="duration_months" class="form-control">
+                <option value="12">12 tháng (1 năm)</option>
+                <option value="6">6 tháng</option>
+                <option value="24">24 tháng</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kinh phí dự toán phê duyệt (VNĐ)</label>
+              <input type="number" name="budget_total" class="form-control" placeholder="VD: 50000000" value="50000000">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ghi chú</label>
+            <input type="text" name="notes" class="form-control" placeholder="Ghi chú thêm...">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('newProjectModal')">Hủy bỏ</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Lưu & Khởi tạo Đề tài</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/rbac-header.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

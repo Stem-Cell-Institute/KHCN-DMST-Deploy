@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <script src="js/mount-path.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng ký Đề tài | Quản lý Đề tài Cấp Viện SCI</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    .form-download-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.15s;
+    }
+    .form-download-card:hover {
+      border-color: #93c5fd;
+      background: #f8fafc;
+      box-shadow: var(--shadow-sm);
+    }
+    .status-step-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .step-submitted { background: #e0f2fe; color: #0284c7; }
+    .step-council { background: #f3e8ff; color: #7e22ce; }
+    .step-approved { background: #dcfce7; color: #15803d; }
+    .step-revision { background: #fee2e2; color: #b91c1c; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <a href="./" class="nav-brand">
+      <div class="brand-text">
+        <h1>QUẢN LÝ ĐỀ TÀI CẤP VIỆN</h1>
+        <p>Nhiệm vụ KHCN cấp cơ sở - Viện Tế bào gốc</p>
+      </div>
+    </a>
+
+    <nav class="nav-menu">
+      <a href="./" class="nav-link">
+        <i class="fa-solid fa-chart-pie"></i> Tổng quan
+      </a>
+      <a href="ban-lam-viec-khcn.html" class="nav-link nav-khcn-only" style="display:none;">
+        <i class="fa-solid fa-diagram-project"></i> Điều phối KH&CN
+        <span class="khcn-work-badge" style="display:none; background:#ef4444; color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:3px;"></span>
+      </a>
+      <a href="quan-ly-dot.html" class="nav-link active">
+        <i class="fa-solid fa-file-signature"></i> Đăng ký Đề tài
+      </a>
+      <a href="kiem-tra-ho-so.html" class="nav-link">
+        <i class="fa-solid fa-clipboard-check"></i> Hồ sơ & Kiểm toán
+      </a>
+      <a href="phan-quyen.html" class="nav-link">
+        <i class="fa-solid fa-users-gear"></i> Phân quyền
+      </a>
+    </nav>
+
+    <div class="nav-user">
+      <a href="phan-quyen.html" class="user-badge" id="activeRoleBadgeHeader" style="text-decoration: none;">
+        <i class="fa-solid fa-user-shield"></i>
+        <span>Phòng KHCN & ĐN</span>
+      </a>
+      <a href="/" data-eoffice-root="1" class="btn btn-outline btn-sm" >
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> E-Office SCI
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Active Role Context Banner -->
+    <div id="callRoleBanner" style="background: #ffffff; border: 1px solid #cbd5e1; border-left: 4px solid var(--primary); border-radius: 8px; padding: 10px 16px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 0.85rem;" id="callRoleText">
+        <i class="fa-solid fa-user-shield" style="color: var(--primary);"></i>
+        <span>Đang tải thông tin phân quyền...</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-outline btn-sm" onclick="openGlobalRoleSwitcherModal()" style="font-size: 0.75rem;">
+          <i class="fa-solid fa-repeat"></i> Đổi vai trò
+        </button>
+      </div>
+    </div>
+
+    <!-- Banner Trạng thái Đợt Kêu gọi Đề xuất -->
+    <section class="card" id="callStatusCard" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border-radius: 12px; padding: 18px 22px; margin-bottom: 1.25rem; box-shadow: var(--shadow-md);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
+        <div style="flex: 1; min-width: 300px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <span class="badge" id="callStatusBadge" style="background: #22c55e; color: white; font-size: 0.75rem; font-weight: 700; padding: 3px 10px;">
+              <i class="fa-solid fa-circle-check"></i> ĐANG MỞ TIẾP NHẬN THƯỜNG XUYÊN
+            </span>
+            <span style="font-size: 0.75rem; opacity: 0.9;" id="callCodeText">DOT-THUONG-XUYEN-2025</span>
+          </div>
+          <h2 style="font-size: 1.3rem; font-weight: 700; margin: 0;" id="callTitleText">
+            Đợt Đăng ký Đề tài NCKH Cấp Viện Thường xuyên
+          </h2>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+          <button class="btn" id="btnSubmitProposalMain" onclick="openSubmitProposalModal()" style="background: #ffffff; color: #0369a1; font-weight: 700; padding: 8px 16px; border: none; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <i class="fa-solid fa-file-circle-plus" style="color: #0284c7;"></i> Nộp Hồ sơ Đăng ký
+          </button>
+          <div id="khcnCallControlBox" style="display: none; display: flex; gap: 6px;">
+            <button class="btn btn-outline btn-sm" id="btnBroadcastEmail" onclick="sendBroadcastAnnouncementEmail()" style="background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.5); font-size: 0.75rem;" title="Phát email thông báo mở đợt đến tất cả các Nhà khoa học và Chủ nhiệm đề tài trong Viện">
+              <i class="fa-solid fa-paper-plane"></i> Gửi Email Thông Báo Mở Đợt
+            </button>
+            <button class="btn btn-outline btn-sm" id="btnToggleCallActive" onclick="toggleCallActiveState()" style="background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.4); font-size: 0.75rem;">
+              <i class="fa-solid fa-power-off"></i> Đóng đợt (Khi Viện dừng tổ chức)
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Khu vực 1: Tải trọn bộ Biểu mẫu Chuẩn (1-Click Download) -->
+    <section class="card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; margin-bottom: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-file-word" style="color: #0284c7;"></i>
+          Biểu mẫu Viện Tế bào gốc (Chủ nhiệm Tải về & Điền hồ sơ)
+        </h3>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px;" id="formsContainer">
+        <!-- Render bởi JS -->
+      </div>
+    </section>
+
+    <!-- Khu vực 2: Bảng Quản lý Danh sách Hồ sơ Đề xuất đã Tiếp nhận -->
+    <div class="table-card">
+      <div style="padding: 12px 18px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h3 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0;">
+            <i class="fa-solid fa-list-check" style="color: var(--primary);"></i>
+            Danh sách Hồ sơ Đề xuất đã Tiếp nhận
+          </h3>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <select id="proposalFilterStatus" class="filter-select" onchange="loadProposals()" style="font-size: 0.78rem; padding: 4px 8px;">
+            <option value="">-- Tất cả trạng thái --</option>
+            <option value="SUBMITTED">Mới nộp (Chờ P. KHCN thẩm định)</option>
+            <option value="COUNCIL_REVIEW">Hội đồng đang xét duyệt</option>
+            <option value="APPROVED">Đã phê duyệt giao nhiệm vụ</option>
+            <option value="REVISION_NEEDED">Đạt có chỉnh sửa</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="openEmailLogsModal()" title="Xem nhật ký các email thông báo đã gửi tự động" style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+            <i class="fa-solid fa-envelope-circle-check" style="color: var(--primary);"></i>
+            <span>Nhật ký Email</span>
+            <span id="emailLogsCountBadge" style="background: #e0f2fe; color: #0284c7; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 10px;"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table" style="min-width: 950px;">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">STT</th>
+              <th style="width: 110px;">MÃ HỒ SƠ</th>
+              <th>TÊN ĐỀ TÀI ĐỀ XUẤT</th>
+              <th style="width: 170px;">CHỦ NHIỆM & NHÓM</th>
+              <th style="width: 120px;">DỰ TOÁN XIN</th>
+              <th style="width: 110px;">FILE NỘP</th>
+              <th style="width: 140px;">TIẾN ĐỘ XỬ LÝ</th>
+              <th style="width: 150px; text-align: center;">THAO TÁC THEO VAI TRÒ</th>
+            </tr>
+          </thead>
+          <tbody id="proposalsTableBody">
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <i class="fa-solid fa-spinner fa-spin"></i> Đang tải danh sách hồ sơ đề xuất...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL: NỘP HỒ SƠ ĐỀ XUẤT ĐỀ TÀI (CHỦ NHIỆM NỘP 1-CLICK) -->
+  <div class="modal-overlay" id="submitProposalModal">
+    <div class="modal" style="background: #ffffff; max-width: 680px; width: 95%;">
+      <div class="modal-header" style="background: #f8fafc;">
+        <div>
+          <h3 class="modal-title" style="font-size: 1.05rem;">
+            <i class="fa-solid fa-file-circle-plus" style="color: var(--primary);"></i>
+            Nộp Hồ sơ Đề xuất Đề tài Cấp Viện
+          </h3>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+            Hồ sơ sẽ được Phòng KHCN tiếp nhận và thực hiện quy trình thẩm định
+          </p>
+        </div>
+        <button class="modal-close" onclick="closeSubmitProposalModal()">&times;</button>
+      </div>
+      <form id="submitProposalForm" onsubmit="handleSubmitProposal(event)">
+        <div class="modal-body" style="background: #ffffff; padding: 1.25rem; max-height: 75vh; overflow-y: auto;">
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">Tên đề tài nghiên cứu đề xuất <span style="color:red;">*</span></label>
+            <input type="text" name="title" class="form-control" required placeholder="VD: Nghiên cứu tối ưu hóa quy trình phân lập exosome từ tế bào gốc trung mô...">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label">Chủ nhiệm đề tài <span style="color:red;">*</span></label>
+              <input type="text" name="leader_name" id="propLeaderInput" class="form-control" required placeholder="Họ và tên Chủ nhiệm">
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label">Email Chủ nhiệm (Nhận thông báo tiến độ)</label>
+              <input type="email" name="leader_email" id="propEmailInput" class="form-control" placeholder="chunhiem@sci.edu.vn">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label">Phân nhóm nghiên cứu</label>
+              <input type="text" name="research_group" id="propResearchGroupInput" list="researchGroupsList" class="form-control" placeholder="Chọn nhóm gợi ý hoặc tự nhập nhóm mới..." autocomplete="off">
+              <datalist id="researchGroupsList">
+                <option value="Stem Cell Biology">
+                <option value="Cancer Biology">
+                <option value="Biochip">
+                <option value="Neural Regenerative Medicine">
+                <option value="Diagnostic & Therapeutic R&D">
+                <option value="Immunology & Cell Therapy">
+                <option value="Biomaterials & Tissue Engineering">
+                <option value="Nhóm Nghiên cứu Liên ngành">
+              </datalist>
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label">Thời gian thực hiện dự kiến</label>
+              <select name="duration_months" class="form-control">
+                <option value="12">12 tháng (1 năm)</option>
+                <option value="6">6 tháng</option>
+                <option value="24">24 tháng</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">Dự toán kinh phí đề xuất (VNĐ) <span style="color:red;">*</span></label>
+            <input type="number" name="budget_proposed" class="form-control" required value="50000000" placeholder="VD: 50000000">
+            <small style="color: var(--text-muted); font-size: 0.72rem;">Định mức thông thường: 50.000.000 đ/đề tài cấp Viện.</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">Thành viên tham gia nghiên cứu</label>
+            <input type="text" name="members" class="form-control" placeholder="VD: ThS. Lê Văn B, CN. Trần Thị C...">
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+            <div style="font-weight: 700; font-size: 0.82rem; color: #0f172a; margin-bottom: 8px;">
+              <i class="fa-solid fa-paperclip" style="color: var(--primary);"></i> Đính kèm File Hồ sơ (Theo Biểu mẫu của Viện):
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div>
+                <label style="font-size: 0.76rem; font-weight: 600; color: #334155; display: block; margin-bottom: 2px;">
+                  1. File Thuyết minh đề cương (.docx hoặc .pdf) <span style="color:red;">*</span>
+                </label>
+                <input type="file" name="thuyet_minh_file" class="form-control" accept=".doc,.docx,.pdf" required style="padding: 5px;">
+              </div>
+              <div>
+                <label style="font-size: 0.76rem; font-weight: 600; color: #334155; display: block; margin-bottom: 2px;">
+                  2. File Bảng dự toán kinh phí (.xlsx hoặc .pdf) <span style="color:red;">*</span>
+                </label>
+                <input type="file" name="du_toan_file" class="form-control" accept=".xls,.xlsx,.pdf" required style="padding: 5px;">
+              </div>
+              <div>
+                <label style="font-size: 0.76rem; font-weight: 600; color: #334155; display: block; margin-bottom: 2px;">
+                  3. Lý lịch khoa học / Văn bản phối hợp (nếu có)
+                </label>
+                <input type="file" name="ly_lich_file" class="form-control" accept=".doc,.docx,.pdf" style="padding: 5px;">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeSubmitProposalModal()">Hủy</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitProposalSend">
+            <i class="fa-solid fa-paper-plane"></i> Gửi Hồ sơ & Kích hoạt Quy trình
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: LÊN LỊCH HỘI ĐỒNG XÉT DUYỆT (PHÒNG KHCN) -->
+  <div class="modal-overlay" id="scheduleCouncilModal">
+    <div class="modal" style="max-width: 500px; width: 95%;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="font-size: 1rem;">
+          <i class="fa-solid fa-calendar-check" style="color: #7e22ce;"></i>
+          Lên Lịch Họp Hội Đồng Xét Tuyển Đề Cương
+        </h3>
+        <button class="modal-close" onclick="closeScheduleCouncilModal()">&times;</button>
+      </div>
+      <form id="scheduleCouncilForm" onsubmit="handleScheduleCouncilSubmit(event)">
+        <input type="hidden" id="scProposalId" name="proposal_id">
+        <div class="modal-body" style="padding: 1.25rem;">
+          <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 10px; font-size: 0.8rem; color: #6b21a8; margin-bottom: 12px;">
+            Đề tài: <strong id="scProposalTitle">--</strong><br>
+            Chủ nhiệm: <strong id="scProposalLeader">--</strong>
+          </div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">Ngày họp Hội đồng tuyển chọn *</label>
+            <input type="date" name="council_date" id="scCouncilDate" class="form-control" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Ý kiến thẩm tra của P. KHCN & Hướng dẫn cho CNĐT</label>
+            <textarea name="khcn_notes" class="form-control" rows="3">Hồ sơ Thuyết minh và Bảng dự toán hợp lệ. Mời Chủ nhiệm chuẩn bị slide báo cáo 15 phút trước Hội đồng.</textarea>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeScheduleCouncilModal()">Đóng</button>
+          <button type="submit" class="btn btn-primary" style="background: #7e22ce; border-color: #7e22ce;">
+            <i class="fa-solid fa-envelope"></i> Lưu Lịch & Gửi Email Thông Báo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: VIỆN TRƯỞNG PHÊ DUYỆT GIAO NHIỆM VỤ ĐỀ TÀI -->
+  <div class="modal-overlay" id="directorApproveProposalModal">
+    <div class="modal" style="max-width: 550px; width: 95%;">
+      <div class="modal-header" style="background: #f0fdf4;">
+        <div>
+          <h3 class="modal-title" style="font-size: 1rem; color: #15803d;">
+            <i class="fa-solid fa-signature"></i>
+            Phê Duyệt & Giao Nhiệm Vụ Đề Tài Cấp Cơ Sở
+          </h3>
+          <p style="font-size: 0.75rem; color: #166534; margin-top: 2px;">
+            Thẩm quyền Viện trưởng: Ban hành Quyết định giao nhiệm vụ và đưa vào danh mục theo dõi quản lý
+          </p>
+        </div>
+        <button class="modal-close" onclick="closeDirectorApproveProposalModal()">&times;</button>
+      </div>
+      <form id="directorApproveProposalForm" onsubmit="handleDirectorApproveProposalSubmit(event)">
+        <input type="hidden" id="dapProposalId" name="proposal_id">
+        <div class="modal-body" style="padding: 1.25rem;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; font-size: 0.8rem; margin-bottom: 12px;">
+            Đề tài: <strong id="dapTitle">--</strong><br>
+            Chủ nhiệm: <strong id="dapLeader">--</strong>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label">Số Quyết định Giao nhiệm vụ *</label>
+              <input type="text" name="decision_number" id="dapDecNumber" class="form-control" required placeholder="VD: 18/QĐ-SCI">
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label">Ngày ký Quyết định *</label>
+              <input type="date" name="decision_date" id="dapDecDate" class="form-control" required>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label">Kinh phí Phê duyệt (VNĐ) *</label>
+              <input type="number" name="budget_approved" id="dapBudget" class="form-control" required>
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label">Điểm đánh giá Hội đồng</label>
+              <input type="number" name="council_score" class="form-control" value="88" step="0.1">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Bút phê / Ý kiến chỉ đạo của Viện trưởng</label>
+            <textarea name="director_decision" class="form-control" rows="2">Đồng ý phê duyệt giao nhiệm vụ nghiên cứu khoa học cấp cơ sở. Giao Phòng KHCN và Phòng TC-CU phối hợp triển khai hợp đồng.</textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeDirectorApproveProposalModal()">Đóng</button>
+          <button type="submit" class="btn btn-primary" style="background: #15803d; border-color: #15803d;">
+            <i class="fa-solid fa-stamp"></i> Phê duyệt & Ban hành Quyết định
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: NHẬT KÝ EMAIL THÔNG BÁO TỰ ĐỘNG ĐÃ GỬI -->
+  <div class="modal-overlay" id="emailLogsModal">
+    <div class="modal" style="max-width: 800px; width: 95%;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="font-size: 1rem;">
+          <i class="fa-solid fa-envelopes-bulk" style="color: var(--primary);"></i>
+          Nhật Ký Email Tự Động Theo Ma Trận Phân Quyền
+        </h3>
+        <button class="modal-close" onclick="closeEmailLogsModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 1rem; max-height: 70vh; overflow-y: auto;">
+        <div id="emailLogsContainer">
+          <!-- Render bởi JS -->
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-primary btn-sm" id="btnManualDeadlineScanModal" onclick="triggerManualDeadlineScan()" style="font-size: 0.78rem;">
+          <i class="fa-solid fa-arrows-rotate"></i> Quét hạn Đề tài & Gửi Email Thông báo
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="closeEmailLogsModal()">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/rbac-header.js"></script>
+  <script src="js/calls.js"></script>
+</body>
+</html>

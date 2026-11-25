@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <script src="js/mount-path.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ma trận Phân quyền Hệ thống (RBAC) | Quản lý Đề tài Cấp Viện SCI</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    .role-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    .role-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .role-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .role-card.active {
+      border-color: var(--primary);
+      background: #f0f9ff;
+      box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+    }
+
+    .role-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .role-card-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+    }
+
+    .role-card-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #1e293b;
+      line-height: 1.2;
+    }
+
+    .role-card-desc {
+      font-size: 0.72rem;
+      color: #64748b;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Ma trận Table styling */
+    .matrix-group-row {
+      background: #f1f5f9;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #0f172a;
+      border-top: 2px solid #cbd5e1;
+      border-bottom: 1px solid #cbd5e1;
+    }
+
+    .matrix-group-row td {
+      padding: 10px 14px !important;
+    }
+
+    .perm-name {
+      font-weight: 600;
+      font-size: 0.82rem;
+      color: #1e293b;
+    }
+
+    .perm-desc {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .access-cell {
+      text-align: center;
+      vertical-align: middle;
+      font-size: 0.85rem;
+      padding: 8px 4px !important;
+      transition: background 0.15s;
+    }
+
+    .access-cell.highlight {
+      background: #eff6ff !important;
+    }
+
+    .access-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .access-yes {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .access-no {
+      color: #cbd5e1;
+      font-size: 0.75rem;
+    }
+
+    .role-col-header {
+      text-align: center;
+      vertical-align: middle;
+      font-size: 0.75rem;
+      padding: 10px 6px !important;
+      white-space: normal;
+      line-height: 1.25;
+      min-width: 100px;
+    }
+
+    /* Modal đổi vai trò */
+    .profile-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .profile-item:hover {
+      border-color: var(--primary);
+      background: #f8fafc;
+    }
+
+    .profile-item.current {
+      border-color: var(--primary);
+      background: #f0f9ff;
+    }
+
+    @media print {
+      .navbar, .page-header button, .filter-card, .role-grid {
+        display: none !important;
+      }
+      .table-card {
+        border: none !important;
+        box-shadow: none !important;
+      }
+      .data-table {
+        font-size: 0.65rem !important;
+      }
+      .access-badge {
+        width: 18px;
+        height: 18px;
+        font-size: 0.7rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="navbar">
+    <a href="./" class="nav-brand">
+      <div class="brand-text">
+        <h1>QUẢN LÝ ĐỀ TÀI CẤP VIỆN</h1>
+        <p>Nhiệm vụ KHCN cấp cơ sở - Viện Tế bào gốc</p>
+      </div>
+    </a>
+
+    <nav class="nav-menu">
+      <a href="./" class="nav-link">
+        <i class="fa-solid fa-chart-pie"></i> Tổng quan
+      </a>
+      <a href="ban-lam-viec-khcn.html" class="nav-link nav-khcn-only" style="display:none;">
+        <i class="fa-solid fa-diagram-project"></i> Điều phối KH&CN
+        <span class="khcn-work-badge" style="display:none; background:#ef4444; color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:3px;"></span>
+      </a>
+      <a href="quan-ly-dot.html" class="nav-link">
+        <i class="fa-solid fa-file-signature"></i> Đăng ký Đề tài
+      </a>
+      <a href="kiem-tra-ho-so.html" class="nav-link">
+        <i class="fa-solid fa-clipboard-check"></i> Hồ sơ & Kiểm toán
+      </a>
+      <a href="phan-quyen.html" class="nav-link active">
+        <i class="fa-solid fa-users-gear"></i> Phân quyền
+      </a>
+    </nav>
+
+    <div class="nav-user">
+      <div class="user-badge" id="btnRoleSwitcher" onclick="openRoleModal()" style="cursor: pointer;" title="Bấm vào để đổi vai trò kiểm thử">
+        <i class="fa-solid fa-user-shield" id="currentUserIcon"></i>
+        <span id="navUserRole">Đang tải...</span>
+        <i class="fa-solid fa-chevron-down" style="font-size: 0.65rem; margin-left: 4px; opacity: 0.7;"></i>
+      </div>
+      <a href="/" data-eoffice-root="1" class="btn btn-outline btn-sm"  title="Trở về trang E-Office mẹ">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> E-Office SCI
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Page Header & Action Buttons -->
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">
+          <i class="fa-solid fa-users-gear" style="color: var(--primary);"></i> Ma trận Phân quyền Hệ thống (RBAC)
+        </h2>
+        <p class="page-subtitle">
+          Phân định quyền hạn chi tiết theo 7 vai trò chuẩn của Viện Tế bào gốc (SCI), sẵn sàng đấu nối và đồng bộ với hạ tầng E-Office 2.0.
+        </p>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="btn btn-outline" onclick="openRoleModal()">
+          <i class="fa-solid fa-user-pen"></i> Đổi vai trò đang xem
+        </button>
+        <button class="btn btn-outline" onclick="window.print()">
+          <i class="fa-solid fa-print"></i> In ma trận (A4)
+        </button>
+        <button class="btn btn-outline" onclick="exportMatrixCSV()">
+          <i class="fa-solid fa-file-excel"></i> Xuất Excel
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Role Alert Banner -->
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 38px; height: 38px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;" id="bannerRoleIcon">
+          <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <div>
+          <div style="font-size: 0.8rem; color: #166534; font-weight: 500;">BẠN ĐANG XEM HỆ THỐNG VỚI VAI TRÒ:</div>
+          <div style="font-weight: 800; font-size: 1.05rem; color: #14532d;" id="bannerRoleName">Phòng Khoa học & Công nghệ</div>
+          <div style="font-size: 0.75rem; color: #4b5563; margin-top: 1px;" id="bannerRoleDesc">Đơn vị thường trực quản lý đề tài...</div>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="openRoleModal()">
+        <i class="fa-solid fa-repeat"></i> Chuyển vai trò khác
+      </button>
+    </div>
+
+    <!-- 7 Role Cards Summary -->
+    <div class="role-grid" id="rolesCardsContainer">
+      <!-- Populated by JS -->
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="filter-card">
+      <div class="filter-group" style="flex: 2;">
+        <input type="text" id="searchInput" class="filter-input" placeholder="🔍 Tìm kiếm tên chức năng, nghiệp vụ hoặc quyền hạn..." oninput="filterMatrix()">
+      </div>
+      <div class="filter-group" style="flex: 1.2;">
+        <select id="roleFilterSelect" class="filter-select" onchange="filterMatrix()">
+          <option value="">-- Làm nổi bật tất cả 7 vai trò --</option>
+          <option value="VIEN_TRUONG">1. Viện trưởng</option>
+          <option value="SUPER_ADMIN">2. Admin toàn hệ thống</option>
+          <option value="PHONG_KHCN">3. Phòng Khoa học & Công nghệ</option>
+          <option value="PHONG_TCHC">4. Phòng Tổ chức - Hành chính</option>
+          <option value="CHU_NHIEM">5. Chủ nhiệm đề tài (PI)</option>
+          <option value="THU_KHO">6. Thủ kho (Hóa chất/Vật tư)</option>
+          <option value="PHONG_TC_CU">7. Phòng Tài chính - Cung ứng</option>
+        </select>
+      </div>
+      <div class="filter-group" style="flex: 0 0 auto;">
+        <button class="btn btn-outline" onclick="resetMatrixFilter()">
+          <i class="fa-solid fa-filter-circle-xmark"></i> Xóa lọc
+        </button>
+      </div>
+    </div>
+
+    <!-- RBAC Matrix Table -->
+    <div class="table-card">
+      <div class="table-responsive" style="border-radius: var(--radius-md); overflow: hidden; overflow-x: auto;">
+        <table class="data-table" id="matrixTable" style="min-width: 1000px;">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">STT</th>
+              <th style="min-width: 280px;">CHỨC NĂNG / NGHIỆP VỤ HỆ THỐNG</th>
+              <th class="role-col-header" data-role="VIEN_TRUONG">
+                <i class="fa-solid fa-user-tie" style="color: #7e22ce;"></i><br>
+                <strong>Viện trưởng</strong>
+              </th>
+              <th class="role-col-header" data-role="SUPER_ADMIN">
+                <i class="fa-solid fa-screwdriver-wrench" style="color: #b91c1c;"></i><br>
+                <strong>Admin HT</strong>
+              </th>
+              <th class="role-col-header" data-role="PHONG_KHCN">
+                <i class="fa-solid fa-microscope" style="color: #0284c7;"></i><br>
+                <strong>Phòng KHCN</strong>
+              </th>
+              <th class="role-col-header" data-role="PHONG_TCHC">
+                <i class="fa-solid fa-building-user" style="color: #b45309;"></i><br>
+                <strong>Phòng TC-HC</strong>
+              </th>
+              <th class="role-col-header" data-role="CHU_NHIEM">
+                <i class="fa-solid fa-user-graduate" style="color: #15803d;"></i><br>
+                <strong>Chủ nhiệm ĐT</strong>
+              </th>
+              <th class="role-col-header" data-role="THU_KHO">
+                <i class="fa-solid fa-boxes-stacked" style="color: #c2410c;"></i><br>
+                <strong>Thủ kho</strong>
+              </th>
+              <th class="role-col-header" data-role="PHONG_TC_CU">
+                <i class="fa-solid fa-sack-dollar" style="color: #4338ca;"></i><br>
+                <strong>P. TC-Cung ứng</strong>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="matrixTableBody">
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                <i class="fa-solid fa-spinner fa-spin"></i> Đang tải ma trận phân quyền...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Bảng Phân định Trách nhiệm Nộp & Quản lý 18 Đầu mục Hồ sơ Pháp lý -->
+    <div class="table-card" style="margin-top: 1.5rem;">
+      <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0;">
+          <i class="fa-solid fa-file-shield" style="color: var(--primary);"></i>
+          Phân định Trách nhiệm Lập, Upload & Xác thực 18 Đầu mục Hồ sơ Đề tài (Theo Thông lệ Quản lý KHCN Việt Nam)
+        </h3>
+        <p style="font-size: 0.8rem; color: #64748b; margin: 4px 0 0 0;">
+          Quy định rõ văn bản nào do <strong>Chủ nhiệm đề tài</strong> lập và tự upload bổ sung trong quá trình thực hiện; văn bản nào do <strong>Phòng KHCN / Viện trưởng</strong> ban hành, ký duyệt và xác thực bản gốc.
+        </p>
+      </div>
+      <div class="table-responsive" style="overflow-x: auto;">
+        <table class="data-table" style="min-width: 900px;">
+          <thead>
+            <tr>
+              <th style="width: 45px; text-align: center;">STT</th>
+              <th style="width: 95px;">Giai đoạn</th>
+              <th style="min-width: 240px;">Tên Văn bản / Hồ sơ Pháp lý</th>
+              <th style="width: 170px;">Chủ thể Chịu trách nhiệm chính</th>
+              <th style="width: 240px;">Quyền Upload & Cập nhật trên Web</th>
+              <th style="width: 180px;">Quyền Ký duyệt / Xác thực Bản cứng</th>
+            </tr>
+          </thead>
+          <tbody id="docResponsibilityTableBody">
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">Đang tải danh mục 18 văn bản...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL ĐỔI VAI TRÒ MÔ PHỎNG (ROLE SWITCHER) -->
+  <div class="modal-overlay" id="roleSwitcherModal">
+    <div class="modal" style="max-width: 600px; width: 95%;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Chọn Vai trò Kiểm thử Hệ thống</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+            Mô phỏng trải nghiệm giao diện và quyền hạn của 7 bộ phận tại Viện Tế bào gốc
+          </p>
+        </div>
+        <button class="modal-close" onclick="closeRoleModal()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem;" id="profilesListContainer">
+        <!-- Populated by JS -->
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.75rem; color: var(--text-muted);">
+          <i class="fa-solid fa-circle-info"></i> Sau này khi tích hợp vào E-Office, vai trò sẽ tự động nhận diện từ tài khoản đăng nhập.
+        </span>
+        <button class="btn btn-outline" onclick="closeRoleModal()">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/rbac-header.js"></script>
+  <script src="js/phan-quyen.js"></script>
+</body>
+</html>

@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <script src="js/mount-path.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi tiết Đề tài Cấp Viện | Viện Tế bào gốc (SCI)</title>
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <a href="./" class="nav-brand">
+      <div class="brand-text">
+        <h1>QUẢN LÝ ĐỀ TÀI CẤP VIỆN</h1>
+        <p>Nhiệm vụ KHCN cấp cơ sở - Viện Tế bào gốc</p>
+      </div>
+    </a>
+
+    <nav class="nav-menu">
+      <a href="./" class="nav-link">
+        <i class="fa-solid fa-chart-pie"></i> Tổng quan
+      </a>
+      <a href="ban-lam-viec-khcn.html" class="nav-link nav-khcn-only" style="display:none;">
+        <i class="fa-solid fa-diagram-project"></i> Điều phối KH&CN
+        <span class="khcn-work-badge" style="display:none; background:#ef4444; color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:3px;"></span>
+      </a>
+      <a href="quan-ly-dot.html" class="nav-link">
+        <i class="fa-solid fa-file-signature"></i> Đăng ký Đề tài
+      </a>
+      <a href="kiem-tra-ho-so.html" class="nav-link">
+        <i class="fa-solid fa-clipboard-check"></i> Hồ sơ & Kiểm toán
+      </a>
+      <a href="phan-quyen.html" class="nav-link">
+        <i class="fa-solid fa-users-gear"></i> Phân quyền
+      </a>
+    </nav>
+
+    <div class="nav-user">
+      <a href="./" class="btn btn-outline btn-sm">
+        <i class="fa-solid fa-arrow-left"></i> Quay lại Tổng quan
+      </a>
+      <a href="phan-quyen.html" class="user-badge" title="Bấm để xem và chuyển đổi 7 vai trò trong Ma trận phân quyền" style="text-decoration: none;">
+        <i class="fa-solid fa-user-shield"></i>
+        <span>Phòng KHCN & ĐN</span>
+        <i class="fa-solid fa-chevron-down" style="font-size: 0.65rem; margin-left: 4px; opacity: 0.7;"></i>
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Thông báo ngữ cảnh chỉ hiện khi CNĐT xem đề tài của người khác -->
+    <div id="detailRoleContextBanner" style="display: none; background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #d97706; border-radius: 6px; padding: 8px 14px; margin-bottom: 1rem; font-size: 0.85rem; color: #92400e;">
+      <span id="detailRoleContextText"></span>
+    </div>
+
+    <!-- Thông tin định danh đề tài -->
+    <section class="table-card" style="padding: 1.25rem 1.5rem; margin-bottom: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div style="flex: 1; min-width: 320px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;">
+            <span class="badge" style="background: var(--primary-light); color: var(--primary); font-size: 0.88rem; padding: 3px 10px;" id="headerCode">
+              NCKH-SCI...
+            </span>
+            <span class="badge badge-gray" id="headerCategory">Cơ bản</span>
+            <span class="badge badge-blue" id="headerGroup">Nhóm nghiên cứu</span>
+          </div>
+          <h2 style="font-size: 1.3rem; font-weight: 700; color: #0f172a; line-height: 1.4;" id="headerTitle">
+            Đang tải tên đề tài...
+          </h2>
+          <div style="margin-top: 8px; font-size: 0.9rem; color: #475569; display: flex; gap: 24px; flex-wrap: wrap;">
+            <span>Chủ nhiệm: <strong id="headerLeader" style="color: #0f172a;">--</strong></span>
+            <span>Kinh phí phê duyệt: <strong id="headerBudget" style="color: #0f172a;">--</strong></span>
+          </div>
+        </div>
+
+        <!-- Trạng thái thời hạn -->
+        <div style="text-align: right; min-width: 220px;">
+          <div id="headerAlertBadge" style="margin-bottom: 6px;">
+            <span class="badge badge-gray" style="font-size: 0.9rem; padding: 5px 12px;">Đang kiểm tra...</span>
+          </div>
+          <div style="font-size: 0.85rem; color: #475569;" id="headerDeadlineNote">
+            Hạn hoàn thành: --
+          </div>
+          <div id="headerWarningMsg" style="display: none;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TIẾN TRÌNH THỰC HIỆN NHIỆM VỤ KH&CN -->
+    <section class="milestone-timeline-card" id="projectMilestoneOverviewSection">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h3 style="font-size: 0.96rem; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.02em;">
+            Tiến trình Thực hiện Nhiệm vụ KH&amp;CN
+          </h3>
+          <span id="milestoneTotalEventsBadge" class="badge badge-gray" style="font-size: 0.74rem;">--</span>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary btn-sm" id="btnTimelineModeStepper" onclick="switchTimelineMode('stepper')" style="font-size: 0.76rem;">
+            Tiến trình ngang
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" id="btnTimelineModeStream" onclick="switchTimelineMode('stream')" style="font-size: 0.76rem;">
+            Nhật ký dọc
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" id="btnToggleMilestonePanel" onclick="toggleMilestoneDetailCollapse()" style="font-size: 0.76rem;">
+            Ẩn / Hiện chi tiết
+          </button>
+        </div>
+      </div>
+
+      <!-- Chế độ 1: Trục Tiến Trình Ngang Đơn Giản + Khung Chi Tiết Giai Đoạn -->
+      <div id="timelineModeStepperContainer">
+        <div class="milestone-stepper-track" id="milestoneStepperTrack" role="group" aria-label="Tiến trình thực hiện nhiệm vụ">
+          <!-- Render 7 điểm mốc trên trục ngang qua JS -->
+        </div>
+
+        <!-- Khu vực chứa Chi tiết của từng giai đoạn -->
+        <div id="milestoneDetailPanelsWrapper">
+          <!-- Render 7 khung chi tiết qua JS -->
+        </div>
+      </div>
+
+      <!-- Chế độ 2: Nhật ký Sự kiện Dọc theo Trình tự Thời gian -->
+      <div id="timelineModeStreamContainer" hidden="until-found">
+        <div class="milestone-panel-inner" style="background: #ffffff; border-color: #cbd5e1;">
+          <div class="event-stream-list" id="fullChronologicalStreamList">
+            <!-- Render toàn bộ sự kiện theo thời gian qua JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Thanh điều hướng 4 phân mục chính -->
+    <div class="tabs-header" id="mainDetailTabsHeader">
+      <button class="tab-btn active" onclick="switchTab('tab-overview')">
+        1. Thông tin chung &amp; Gia hạn
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-docs')">
+        2. Hồ sơ văn bản (7 giai đoạn)
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-reports')">
+        3. Báo cáo định kỳ
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-supplies')">
+        4. Dự toán &amp; Cấp phát vật tư
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-acceptance')">
+        5. Sản phẩm KHCN &amp; Nghiệm thu
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-logs')">
+        6. Nhật ký hoạt động
+      </button>
+    </div>
+
+    <!-- PHÂN MỤC 1: THÔNG TIN CHUNG & GIA HẠN -->
+    <div id="tab-overview" class="tab-content active">
+      <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 1.5rem;">
+        
+        <!-- Cột trái: Bảng thông tin hành chính & nhân sự -->
+        <div class="table-card" id="overviewDecisionCardSection" style="padding: 1.5rem;">
+          <h3 style="font-size: 1.02rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; color: #0f172a;">
+            Thông tin Quyết định &amp; Nhân sự thực hiện
+          </h3>
+
+          <table class="data-table">
+            <tr>
+              <td style="width: 210px; font-weight: 600; color: #475569;">Số Quyết định giao nhiệm vụ:</td>
+              <td id="infoDecisionNumber" style="font-weight: 700; color: #0f172a;">--</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #475569;">Ngày ký Quyết định:</td>
+              <td id="infoDecisionDate" style="font-weight: 600;">--</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #475569;">Thời gian thực hiện:</td>
+              <td id="infoDuration" style="font-weight: 600;">12 tháng</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #475569;">Hạn hoàn thành hiện tại:</td>
+              <td id="infoCurrentEndDate" style="font-weight: 700; color: var(--color-red);">--</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #475569;">Chủ nhiệm đề tài:</td>
+              <td id="infoLeader" style="font-weight: 600;">--</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #475569;">Thành viên tham gia:</td>
+              <td id="infoMembers">--</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #475569;">Đơn vị / Nhóm chuyên môn:</td>
+              <td id="infoGroup">--</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #475569;">Kết quả nghiệm thu:</td>
+              <td id="infoEvaluation">--</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600; color: #475569;">Tình trạng hồ sơ pháp lý:</td>
+              <td id="infoMissingDocs">--</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Cột phải: Gia hạn thời gian thực hiện -->
+        <div class="table-card" id="overviewExtensionCardSection" style="padding: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; gap: 8px; flex-wrap: wrap;">
+            <h3 style="font-size: 1.02rem; font-weight: 700; color: #0f172a; margin: 0;">
+              Gia hạn thời gian thực hiện
+            </h3>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span id="extPendingBadge" style="display: none;" class="badge badge-yellow">Đang trình duyệt</span>
+              <span class="badge badge-purple" id="extCountBadge" style="font-size: 0.78rem;">0 / 2 lần đã duyệt</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 0.85rem;">
+            <div style="width: 100%; background: #e2e8f0; height: 6px; border-radius: 4px; overflow: hidden;">
+              <div id="extProgressBar" style="width: 0%; background: #7e22ce; height: 100%; transition: width 0.3s;"></div>
+            </div>
+            <div style="font-size: 0.73rem; color: #475569; margin-top: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 6px 9px; line-height: 1.4;">
+              <strong>Quy trình 3 bước:</strong> (1) Chủ nhiệm lập đề xuất &amp; tải mẫu Đơn (.docx) ➔ (2) Chủ nhiệm tải lên bản scan Đơn có chữ ký ➔ (3) P. KH&amp;CN trình Viện trưởng ký Quyết định (mộc đỏ) hoặc phản hồi từ chối. <em>Hạn đề tài chỉ được cộng thêm 06 tháng sau khi hoàn tất Bước 3.</em>
+            </div>
+          </div>
+
+          <div id="extActionBox" style="margin-bottom: 1rem;">
+            <button class="btn btn-warning" id="btnOpenExtendModal" style="width: 100%; justify-content: center;" onclick="openExtendModal()">
+              Lập đề xuất xin gia hạn (06 tháng)
+            </button>
+            <div id="extRoleHintNotice" style="display: none; font-size: 0.78rem; color: #475569; background: #f1f5f9; border-radius: 6px; padding: 8px 10px; text-align: center;"></div>
+            <div id="extLockNotice" style="display: none; color: var(--color-red); font-size: 0.82rem; font-weight: 600; margin-top: 8px; text-align: center;">
+              Đã hết định mức gia hạn tối đa (2/2 lần đã phê duyệt).
+            </div>
+          </div>
+
+          <div style="font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 8px;">Tiến trình &amp; Lịch sử các đợt đề xuất gia hạn:</div>
+          <div id="extHistoryList" style="font-size: 0.85rem; color: var(--text-muted);">
+            Chưa phát sinh đề xuất gia hạn.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHÂN MỤC 2: HỒ SƠ VĂN BẢN 7 GIAI ĐOẠN -->
+    <div id="tab-docs" class="tab-content">
+      <div class="split-view">
+        <!-- Cột 1: Danh mục hồ sơ 7 giai đoạn -->
+        <div class="table-card" style="padding: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 1rem;">
+            <div>
+              <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0;">Danh mục Hồ sơ theo 7 Giai đoạn</h3>
+              <div id="docsRoleScopeBadge" style="font-size: 0.76rem; color: #475569; margin-top: 3px;"></div>
+            </div>
+            <button id="btnTopUploadDoc" class="btn btn-primary btn-sm" onclick="openUploadModal()">
+              Nộp văn bản theo phân quyền
+            </button>
+          </div>
+
+          <div id="stagesContainer">
+            <!-- Render 7 Giai đoạn qua JS -->
+          </div>
+        </div>
+
+        <!-- Cột 2: Khung Xem Nội Dung Văn Bản -->
+        <div class="preview-container">
+          <div class="preview-header">
+            <div>
+              <span id="previewTitle" style="font-weight: 700;">Nội dung văn bản</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <a id="previewOpenNewTab" href="#" target="_blank" class="btn btn-outline btn-sm" style="display: none;">
+                Mở cửa sổ mới
+              </a>
+              <a id="previewDownloadBtn" href="#" class="btn btn-outline btn-sm" style="display: none;">
+                Tải về
+              </a>
+            </div>
+          </div>
+          <div style="flex: 1; position: relative; background: #525659;">
+            <div id="previewPlaceholder" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #e2e8f0; padding: 1.5rem; text-align: center;">
+              <p style="font-size: 0.92rem;">Chọn <strong>"Xem văn bản"</strong> ở danh sách bên trái để hiển thị nội dung tại đây.</p>
+            </div>
+            <iframe id="previewIframe" class="preview-iframe" style="display: none;"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHÂN MỤC 3: BÁO CÁO ĐỊNH KỲ -->
+    <div id="tab-reports" class="tab-content">
+      <div class="table-card" id="reportsCardSection" style="padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a;">Báo cáo tiến độ định kỳ (06 tháng/lần)</h3>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 70px;">Kỳ</th>
+              <th>Đợt báo cáo</th>
+              <th style="width: 130px;">Hạn nộp</th>
+              <th style="width: 130px;">Ngày nộp</th>
+              <th style="width: 150px;">Trạng thái</th>
+              <th>Văn bản báo cáo</th>
+              <th>Ý kiến P. KH&amp;CN</th>
+              <th style="width: 150px; text-align: center;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="reportsTableBody">
+            <!-- Render danh sách báo cáo 6 tháng -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PHÂN MỤC 4: DỰ TOÁN & CẤP PHÁT VẬT TƯ -->
+    <div id="tab-supplies" class="tab-content">
+
+      <!-- Phần 0: Bảng điều khiển Đối chiếu Tiến độ Thực tế so với Dự toán (Budget vs. Actual) -->
+      <div class="table-card" id="budgetVsActualSection" style="padding: 1.5rem; margin-bottom: 1.5rem; border-top: 3px solid #0284c7;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 1rem;">
+          <div>
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0;">
+              <i class="fa-solid fa-scale-balanced" style="color: #0284c7; margin-right: 6px;"></i>
+              Đối chiếu Tiến độ Thực tế so với Dự toán (Budget vs. Actual)
+            </h3>
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">
+              Tự động tổng hợp hạn mức (Quota), giá trị thực chi theo chứng từ/MISA và cảnh báo lệch pha tiến độ.
+            </div>
+          </div>
+          <div id="suppliesRoleScopeBadge" style="font-size: 0.76rem; color: #334155; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 5px 10px;">
+            Vai trò thao tác: <strong>--</strong>
+          </div>
+        </div>
+
+        <!-- Thanh Pháp lý Dự toán có dấu mộc đỏ & Chốt khóa bản gốc (Baseline Lock) -->
+        <div id="budgetLegalBaselineBar" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div style="font-size: 0.82rem; color: #334155;">Đang kiểm tra trạng thái phê duyệt dự toán có dấu mộc đỏ...</div>
+        </div>
+
+        <!-- 4 Thẻ KPI Tài chính & Vật tư -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 1rem;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.76rem; color: #64748b; font-weight: 600;">Dự toán hiệu lực</div>
+            <div id="kpiEffectiveBudget" style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-top: 4px;">0 đ</div>
+            <div id="kpiBudgetSubnote" style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">--</div>
+          </div>
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.76rem; color: #1d4ed8; font-weight: 600;">Giá trị đã đề xuất (Cam kết)</div>
+            <div id="kpiCommittedAmount" style="font-size: 1.25rem; font-weight: 800; color: #1d4ed8; margin-top: 4px;">0 đ</div>
+            <div id="kpiCommittedSubnote" style="font-size: 0.72rem; color: #3b82f6; margin-top: 2px;">0% dự toán</div>
+          </div>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.76rem; color: #15803d; font-weight: 600;">Thực chi / Đã cấp phát</div>
+            <div id="kpiActualDisbursed" style="font-size: 1.25rem; font-weight: 800; color: #15803d; margin-top: 4px;">0 đ</div>
+            <div id="kpiDisbursedSubnote" style="font-size: 0.72rem; color: #16a34a; margin-top: 2px;">0% dự toán</div>
+          </div>
+          <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px;">
+            <div style="font-size: 0.76rem; color: #b45309; font-weight: 600;">Kinh phí còn lại</div>
+            <div id="kpiRemainingBudget" style="font-size: 1.25rem; font-weight: 800; color: #b45309; margin-top: 4px;">0 đ</div>
+            <div id="kpiRiskCountSubnote" style="font-size: 0.72rem; color: #92400e; margin-top: 2px;">0 dòng vượt/ngoài DT</div>
+          </div>
+        </div>
+
+        <!-- Thanh so sánh Tiến độ Thời gian vs Giải ngân vs Nhận vật tư -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 1rem;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; margin-bottom: 5px;">
+                <span style="color: #475569;">Tiến độ Thời gian đã trôi qua</span>
+                <span id="barTimeElapsedText" style="color: #0f172a;">0%</span>
+              </div>
+              <div style="height: 8px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+                <div id="barTimeElapsedFill" style="height: 100%; width: 0%; background: #64748b; transition: width 0.4s;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; margin-bottom: 5px;">
+                <span style="color: #15803d;">Tiến độ Giải ngân thực chi / Dự toán</span>
+                <span id="barDisbursementText" style="color: #15803d;">0%</span>
+              </div>
+              <div style="height: 8px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+                <div id="barDisbursementFill" style="height: 100%; width: 0%; background: #16a34a; transition: width 0.4s;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; margin-bottom: 5px;">
+                <span style="color: #0284c7;">Tiến độ Giao nhận vật tư (SL nhận / đề xuất)</span>
+                <span id="barSupplyProgressText" style="color: #0284c7;">0%</span>
+              </div>
+              <div style="height: 8px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+                <div id="barSupplyProgressFill" style="height: 100%; width: 0%; background: #0284c7; transition: width 0.4s;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Khối Cảnh báo tự động -->
+        <div id="budgetAlertsContainer" style="display: flex; flex-direction: column; gap: 6px;"></div>
+      </div>
+
+      <!-- Phần 1: Điều chỉnh dự toán kinh phí -->
+      <div class="table-card" id="budgetAdjustmentCardSection" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 12px;">
+          <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a;">
+            Điều chỉnh dự toán kinh phí
+          </h3>
+          <button class="btn btn-primary btn-sm" id="btnOpenBudgetAdjustment" onclick="openBudgetAdjustmentModal()">
+            Đề xuất điều chỉnh dự toán
+          </button>
+        </div>
+
+        <div class="table-responsive" style="overflow-x: auto;">
+          <table class="data-table" style="min-width: 850px;">
+            <thead>
+              <tr>
+                <th style="width: 60px; text-align: center;">Lần</th>
+                <th style="width: 110px;">Ngày trình</th>
+                <th style="width: 180px;">Kinh phí điều chỉnh</th>
+                <th>Lý do &amp; Nội dung điều chỉnh</th>
+                <th style="width: 180px;">Ý kiến P. KH&amp;CN</th>
+                <th style="width: 180px;">Quyết định phê duyệt</th>
+                <th style="width: 140px; text-align: center;">Trạng thái</th>
+                <th style="width: 120px; text-align: center;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="budgetAdjustmentsTableBody">
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 1.25rem; color: var(--text-muted);">
+                  Đang tải dữ liệu...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Phần 2: Danh mục Dự toán Đã duyệt (Kèm Trừ lùi Hạn mức / Quota) -->
+      <div class="table-card" id="approvedBudgetCardSection" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0;">
+              Danh mục dự toán kinh phí đã phê duyệt (Theo dõi Hạn mức / Quota)
+            </h3>
+            <div style="font-size: 0.76rem; color: #64748b; margin-top: 2px;">
+              Tự động trừ lùi số lượng đã đề xuất &amp; đã cấp phát trên từng hạng mục.
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="budgetHeaderActions">
+            <button class="btn btn-outline btn-sm" id="btnImportBudgetExcel" onclick="openImportBudgetExcelModal()" style="color: #15803d; border-color: #86efac; background: #f0fdf4;">
+              <i class="fa-solid fa-file-excel"></i> Import Excel (BM02)
+            </button>
+            <button class="btn btn-outline btn-sm" id="btnAddBudgetItem" onclick="openAddBudgetModal()">
+              + Thêm hạng mục dự toán
+            </button>
+          </div>
+        </div>
+
+        <div id="budgetLockedNoticeBar" style="display: none; background: #f0fdf4; border: 1px solid #86efac; border-left: 4px solid #15803d; border-radius: 6px; padding: 8px 12px; font-size: 0.78rem; color: #166534; margin-bottom: 10px;">
+          <i class="fa-solid fa-lock" style="margin-right: 6px;"></i>
+          <strong>Dự toán gốc đã được Chốt &amp; Khóa theo bản phê duyệt có dấu mộc đỏ.</strong> Không cho phép sửa tay trực tiếp; mọi thay đổi số lượng/đơn giá hoặc bổ sung hạng mục phải thực hiện qua quy trình <strong>Điều chỉnh dự toán</strong> ở trên.
+        </div>
+
+        <div class="table-responsive" style="overflow-x: auto;">
+          <table class="data-table" style="min-width: 980px;">
+            <thead>
+              <tr>
+                <th style="width: 45px; text-align: center;">STT</th>
+                <th>Tên hàng hóa / Hóa chất / Vật tư</th>
+                <th>Quy cách</th>
+                <th style="width: 65px;">ĐVT</th>
+                <th style="width: 85px; text-align: center;">SL duyệt</th>
+                <th style="width: 85px; text-align: center;">Đã xin</th>
+                <th style="width: 85px; text-align: center;">Đã nhận</th>
+                <th style="width: 95px; text-align: center;">Còn lại (Quota)</th>
+                <th style="width: 110px; text-align: right;">Đơn giá DT</th>
+                <th style="width: 120px; text-align: right;">Thành tiền DT</th>
+                <th style="width: 115px; text-align: right;">Thực chi</th>
+                <th style="width: 85px; text-align: center;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="budgetTableBody">
+              <!-- Render danh mục dự toán -->
+            </tbody>
+            <tfoot id="budgetTableFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Phần 3: Bảng Theo dõi Cấp phát Hóa chất & Vật tư (Theo Vai trò RBAC) -->
+      <div class="table-card" id="suppliesChecklistCardSection" style="padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0;">
+              Theo dõi cấp phát hóa chất, vật tư thực tế
+            </h3>
+            <div style="font-size: 0.76rem; color: #64748b; margin-top: 2px;">
+              Luồng chuẩn: Chủ nhiệm đề xuất ➔ P. KH&amp;CN đối chiếu dự toán ➔ Thủ kho / P. TC-Cung ứng cấp phát &amp; nhập giá thực chi MISA ➔ Chủ nhiệm xác nhận nhận hàng.
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <select id="suppliesQuickFilter" class="filter-select" onchange="applySuppliesQuickFilter()" style="font-size: 0.8rem; padding: 5px 8px;">
+              <option value="ALL">Tất cả dòng cấp phát</option>
+              <option value="OVER_OR_OUTSIDE">Vượt định mức / Ngoài dự toán</option>
+              <option value="PENDING_KHCN">Chờ P. KH&amp;CN duyệt / Gắn cờ</option>
+              <option value="UNFULFILLED">Chưa nhận đủ / Chưa cấp</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="btnOpenRequestSupply" onclick="openRequestSupplyModal()">
+              + Đề xuất cấp phát vật tư
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive" style="overflow-x: auto;">
+          <table class="data-table" style="min-width: 1220px;">
+            <thead>
+              <tr>
+                <th style="width: 40px;">STT</th>
+                <th style="min-width: 190px;">Tên hóa chất / Vật tư</th>
+                <th style="width: 70px; text-align: center;">SL xin</th>
+                <th style="width: 130px;">Đối chiếu DT</th>
+                <th style="width: 120px;">Duyệt KH&amp;CN</th>
+                <th style="width: 125px;">Tình trạng kho</th>
+                <th style="width: 85px;">SL đã cấp</th>
+                <th style="width: 75px; text-align: center;">Thiếu</th>
+                <th style="width: 135px;">Đơn giá thực tế &amp; Thực chi</th>
+                <th style="width: 120px;">Trạng thái nhận</th>
+                <th style="width: 115px;">Mã MISA</th>
+                <th style="min-width: 120px;">Ghi chú</th>
+                <th style="width: 110px; text-align: center;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="suppliesTableBody">
+              <!-- Render bảng cấp phát -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHÂN MỤC 5: KHO SẢN PHẨM KHCN & LUỒNG NGHIỆM THU - THANH LÝ KHÉP KÍN -->
+    <div id="tab-acceptance" class="tab-content">
+      <div id="acceptanceWorkflowContainer" class="table-card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+        <div style="color: #64748b; font-size: 0.9rem;">Đang tải luồng Nghiệm thu &amp; Thanh lý...</div>
+      </div>
+      <div id="productsWarehouseContainer" class="table-card" style="padding: 1.5rem;">
+        <div style="color: #64748b; font-size: 0.9rem;">Đang tải Kho Sản phẩm KHCN...</div>
+      </div>
+    </div>
+
+    <!-- PHÂN MỤC 6: NHẬT KÝ HOẠT ĐỘNG HỆ THỐNG (nckh_activity_logs) -->
+    <div id="tab-logs" class="tab-content">
+      <div id="activityLogsContainer" class="table-card" style="padding: 1.5rem;">
+        <div style="color: #64748b; font-size: 0.9rem;">Đang tải nhật ký hoạt động...</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal 1: Nộp tài liệu theo giai đoạn -->
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>Nộp Văn bản / Hồ sơ Đề tài</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('uploadModal')">&times;</button>
+      </div>
+      <form id="uploadDocForm" onsubmit="handleUploadDoc(event)">
+        <input type="hidden" name="replace_doc_id" id="uploadReplaceDocId" value="">
+        <div class="modal-body">
+          <div id="uploadModalRoleNotice" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.8rem; color: #334155;"></div>
+          <div class="form-group">
+            <label class="form-label">1. Chọn Giai đoạn thực hiện *</label>
+            <select name="stage" class="form-control" required id="uploadStageSelect" onchange="onUploadStageChange(this.value)">
+              <option value="1">Giai đoạn 1: Đăng ký đề xuất &amp; Trình nộp thuyết minh</option>
+              <option value="2">Giai đoạn 2: Họp Hội đồng xét duyệt đề cương</option>
+              <option value="3">Giai đoạn 3: Quyết định giao nhiệm vụ, Hợp đồng &amp; Dự toán</option>
+              <option value="4">Giai đoạn 4: Triển khai &amp; Cấp phát vật tư</option>
+              <option value="5">Giai đoạn 5: Báo cáo tiến độ định kỳ (06 tháng/lần)</option>
+              <option value="6">Giai đoạn 6: Gia hạn thời gian thực hiện</option>
+              <option value="7">Giai đoạn 7: Nghiệm thu &amp; Thanh lý hợp đồng</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" id="uploadDocTypeLabel">2. Chọn Văn bản thuộc Giai đoạn 1 *</label>
+            <select name="doc_type" id="uploadDocTypeSelect" class="form-control" required onchange="onUploadDocTypeChange(this)">
+              <!-- Tự động lọc danh mục văn bản con theo Giai đoạn đã chọn -->
+            </select>
+            <div id="uploadLegalRequirementBox" style="margin-top: 8px; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; line-height: 1.45;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tên văn bản hiển thị *</label>
+            <input type="text" name="title" id="uploadTitleInput" class="form-control" placeholder="VD: Quyết định giao nhiệm vụ KHCN năm 2025" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tệp đính kèm (PDF, Word, Excel, Hình ảnh) *</label>
+            <input type="file" name="file" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ghi chú</label>
+            <input type="text" name="notes" class="form-control" placeholder="Ghi chú thêm (nếu có)...">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.8rem; color: #0f172a; font-weight: 600; cursor: pointer;">
+              <input type="checkbox" id="uploadLegalConfirmCheck" required style="margin-top: 3px; width: 15px; height: 15px; flex-shrink: 0;">
+              <span id="uploadLegalConfirmLabel">Tôi xác nhận tệp tải lên là bản đã được ký duyệt / đóng dấu mộc đỏ đúng quy định pháp lý.</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('uploadModal')">Đóng</button>
+          <button type="submit" class="btn btn-primary">Lưu văn bản</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 1B: Chỉnh sửa / Đổi phân loại / Thay tệp / Gỡ bỏ văn bản tải nhầm -->
+  <div class="modal-overlay" id="editDocModal">
+    <div class="modal-dialog" style="max-width: 580px;">
+      <div class="modal-header">
+        <div>Chỉnh sửa / Xử lý Văn bản đã tải lên</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('editDocModal')">&times;</button>
+      </div>
+      <form id="editDocForm" onsubmit="handleEditDocSubmit(event)">
+        <input type="hidden" name="doc_id" id="editDocIdInput">
+        <div class="modal-body">
+          <div id="editDocCurrentFileInfo" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.8rem; color: #1e293b;"></div>
+
+          <div class="form-group">
+            <label class="form-label">1. Giai đoạn thực hiện (Đổi giai đoạn nếu tải nhầm) *</label>
+            <select name="stage" class="form-control" required id="editDocStageSelect" onchange="onEditDocStageChange(this.value)">
+              <option value="1">Giai đoạn 1: Đăng ký đề xuất &amp; Trình nộp thuyết minh</option>
+              <option value="2">Giai đoạn 2: Họp Hội đồng xét duyệt đề cương</option>
+              <option value="3">Giai đoạn 3: Quyết định giao nhiệm vụ, Hợp đồng &amp; Dự toán</option>
+              <option value="4">Giai đoạn 4: Triển khai &amp; Cấp phát vật tư</option>
+              <option value="5">Giai đoạn 5: Báo cáo tiến độ định kỳ (06 tháng/lần)</option>
+              <option value="6">Giai đoạn 6: Gia hạn thời gian thực hiện</option>
+              <option value="7">Giai đoạn 7: Nghiệm thu &amp; Thanh lý hợp đồng</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" id="editDocTypeLabel">2. Phân loại Danh mục Văn bản (Đổi mục nếu chọn sai) *</label>
+            <select name="doc_type" id="editDocTypeSelect" class="form-control" required onchange="onEditDocTypeChange(this)">
+            </select>
+            <div id="editDocLegalBox" style="margin-top: 8px; padding: 8px 12px; border-radius: 6px; font-size: 0.78rem; line-height: 1.4;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tên văn bản hiển thị *</label>
+            <input type="text" name="title" id="editDocTitleInput" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Thay thế bằng tệp mới từ máy tính (Để trống nếu chỉ sửa tên / đổi phân loại)</label>
+            <input type="file" name="file" id="editDocFileInput" class="form-control">
+          </div>
+
+          <div class="form-group" id="editDocVerifyStatusGroup" style="display: none;">
+            <label class="form-label">Trạng thái hậu kiểm pháp lý (Dành cho Phòng KH&amp;CN)</label>
+            <select id="editDocVerifyStatusSelect" class="form-control">
+              <option value="UPLOADED">Đã nộp bản số hóa (Cho phép Chủ nhiệm / Đơn vị cập nhật lại)</option>
+              <option value="VERIFIED">Đã đối chiếu bản chính / Đủ dấu mộc đỏ (Khóa duyệt lưu trữ)</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Ghi chú</label>
+            <input type="text" name="notes" id="editDocNotesInput" class="form-control" placeholder="Ghi chú kiểm tra / lý do điều chỉnh...">
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-outline" style="color: #dc2626; border-color: #fca5a5; background: #fef2f2;" onclick="handleDeleteEditedDocument()">
+            Gỡ bỏ văn bản tải nhầm
+          </button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('editDocModal')">Đóng</button>
+            <button type="submit" class="btn btn-primary">Lưu cập nhật</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2A: Chủ nhiệm Lập / Cập nhật Đề xuất Gia Hạn 06 Tháng (Bước 1 & 2) -->
+  <div class="modal-overlay" id="extendModal">
+    <div class="modal-dialog" style="max-width: 560px;">
+      <div class="modal-header">
+        <div id="extendModalTitle">Lập Đề xuất Gia hạn Thời gian Thực hiện (06 tháng)</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('extendModal')">&times;</button>
+      </div>
+      <form id="extendForm" onsubmit="handleExtendProject(event)">
+        <input type="hidden" name="edit_ext_id" id="modalEditExtId" value="">
+        <input type="hidden" name="ext_num" id="modalExtNumHidden" value="1">
+        <div class="modal-body">
+          <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.78rem; color: #0c4a6e; line-height: 1.45;">
+            <strong>Lưu ý quy trình pháp lý:</strong> Khi lưu đề xuất tại bước này, hệ thống <strong>chưa cộng thêm hạn đề tài</strong>. Sau khi lưu, Chủ nhiệm tải mẫu Đơn (.docx) điền sẵn thông tin, in ra ký tên và tải bản scan Đơn có chữ ký lên hệ thống để Phòng KH&amp;CN trình Viện trưởng xét duyệt.
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Đợt đề nghị gia hạn:</label>
+              <input type="text" class="form-control" id="modalExtNumberText" readonly style="background: #f1f5f9; font-weight: 700;">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ngày lập đơn đề nghị *</label>
+              <input type="date" name="request_date" id="modalExtRequestDate" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Hạn hiện tại ➔ Hạn đề xuất mới (Dự kiến nếu được Viện trưởng phê duyệt):</label>
+            <input type="text" class="form-control" id="modalExtProposedDateText" readonly style="background: #f8fafc; color: #7e22ce; font-weight: 700;">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Lý do xin gia hạn &amp; Nội dung công việc cần hoàn thiện *</label>
+            <textarea name="reason" id="modalExtReasonInput" class="form-control" rows="3" placeholder="Nêu rõ nguyên nhân khách quan/chủ quan và các hạng mục thí nghiệm cần thêm thời gian thực hiện..." required></textarea>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Đính kèm bản scan Đơn đề nghị gia hạn đã ký (PDF) (Nếu đã có sẵn bản ký)</label>
+            <input type="file" id="modalExtSignedRequestFile" class="form-control" accept=".pdf,.doc,.docx,.jpg,.png">
+            <div style="font-size: 0.73rem; color: #64748b; margin-top: 4px;">
+              Nếu chưa có bản ký, hãy để trống ô này và bấm <strong>Lưu đề xuất</strong> trước để tải biểu mẫu Đơn (.docx) đã điền sẵn thông tin.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('extendModal')">Đóng</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitExtendForm">Lưu đề xuất gia hạn</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2B: Phòng KH&CN / Viện trưởng Xử lý & Khai báo Kết quả Phê duyệt Gia hạn (Bước 3) -->
+  <div class="modal-overlay" id="khcnProcessExtensionModal">
+    <div class="modal-dialog" style="max-width: 600px;">
+      <div class="modal-header">
+        <div id="khcnExtModalTitle">Cập nhật Kết quả Thẩm định &amp; Phê duyệt Gia hạn</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('khcnProcessExtensionModal')">&times;</button>
+      </div>
+      <form id="khcnProcessExtensionForm" onsubmit="handleKhcnProcessExtensionSubmit(event)">
+        <input type="hidden" id="khcnExtIdInput" name="ext_id">
+        <input type="hidden" id="khcnExtNumInput" name="ext_num">
+        <div class="modal-body">
+          <div id="khcnExtSummaryBox" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 9px 12px; margin-bottom: 12px; font-size: 0.8rem; color: #1e293b; line-height: 1.45;"></div>
+
+          <div class="form-group">
+            <label class="form-label">1. Chọn Kết quả xử lý hồ sơ gia hạn (Phòng KH&amp;CN / Viện trưởng) *</label>
+            <select id="khcnExtActionTypeSelect" name="action_type" class="form-control" required onchange="onKhcnExtActionTypeChange(this.value)" style="font-weight: 700;">
+              <option value="APPROVED">1. Viện trưởng ĐỒNG Ý phê duyệt — Ban hành Quyết định gia hạn (+06 tháng)</option>
+              <option value="REJECTED">2. Viện trưởng KHÔNG phê duyệt — Từ chối đơn xin gia hạn (Giữ nguyên hạn cũ)</option>
+              <option value="REVISION_NEEDED">3. Phòng KH&amp;CN yêu cầu Chủ nhiệm bổ sung / chỉnh sửa hồ sơ trước khi trình</option>
+              <option value="REVERT_TO_PENDING">4. Mở khóa / Đưa về lại trạng thái Đang chờ trình duyệt (Nếu khai báo nhầm)</option>
+            </select>
+          </div>
+
+          <!-- Khối trường khi Viện trưởng ĐỒNG Ý PHÊ DUYỆT (APPROVED) -->
+          <div id="khcnExtApprovedFields">
+            <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 8px 12px; border-radius: 6px; font-size: 0.77rem; margin-bottom: 10px; line-height: 1.4;">
+              <strong>Yêu cầu pháp lý bắt buộc khi phê duyệt:</strong> Phải nhập đúng Số Quyết định, Ngày ký và tải lên bản scan Quyết định cho phép gia hạn có chữ ký của Viện trưởng và đóng dấu mộc đỏ. Khi lưu, hệ thống mới chính thức cộng thêm 06 tháng vào hạn đề tài.
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Số Quyết định cho phép gia hạn *</label>
+                <input type="text" id="khcnExtDecisionNumber" name="decision_number" class="form-control" placeholder="VD: 45/QĐ-TBG">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Ngày ký Quyết định *</label>
+                <input type="date" id="khcnExtDecisionDate" name="decision_date" class="form-control">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" id="khcnExtDecisionFileLabel">Bản scan Quyết định gia hạn (có chữ ký Viện trưởng &amp; dấu mộc đỏ) *</label>
+              <input type="file" id="khcnExtDecisionFileInput" class="form-control" accept=".pdf,.doc,.docx,.jpg,.png">
+              <div id="khcnExtExistingDecisionFileNote" style="font-size: 0.74rem; color: #0369a1; margin-top: 4px;"></div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Ý kiến phê duyệt / Ghi chú lưu hồ sơ</label>
+              <input type="text" id="khcnExtApproveNote" class="form-control" placeholder="VD: Đồng ý gia hạn 06 tháng theo Quyết định của Viện trưởng...">
+            </div>
+          </div>
+
+          <!-- Khối trường khi Viện trưởng KHÔNG PHÊ DUYỆT / TỪ CHỐI (REJECTED) -->
+          <div id="khcnExtRejectedFields" style="display: none;">
+            <div style="background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; padding: 8px 12px; border-radius: 6px; font-size: 0.77rem; margin-bottom: 10px; line-height: 1.4;">
+              <strong>Khi Viện trưởng không duyệt đơn xin gia hạn:</strong> Hạn hoàn thành hiện tại của đề tài sẽ <strong>giữ nguyên như cũ</strong> (không cộng thêm 06 tháng). Lý do không phê duyệt và chỉ đạo của Viện trưởng sẽ được hiển thị rõ cho Chủ nhiệm đề tài thực hiện.
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Ngày có kết luận / trả lời *</label>
+                <input type="date" id="khcnExtRejectDate" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Số văn bản thông báo (nếu có)</label>
+                <input type="text" id="khcnExtRejectDocNum" class="form-control" placeholder="VD: TB-KHCN...">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Lý do Viện trưởng không phê duyệt &amp; Chỉ đạo xử lý tiếp theo *</label>
+              <textarea id="khcnExtRejectReason" class="form-control" rows="3" placeholder="VD: Viện trưởng không đồng ý gia hạn do lý do chưa thuyết phục; yêu cầu Chủ nhiệm khẩn trương hoàn thiện báo cáo tổng kết để nghiệm thu đúng hạn..."></textarea>
+            </div>
+          </div>
+
+          <!-- Khối trường khi P. KH&CN YÊU CẦU CHỦ NHIỆM BỔ SUNG HỒ SƠ (REVISION_NEEDED) -->
+          <div id="khcnExtRevisionFields" style="display: none;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label">Nội dung yêu cầu Chủ nhiệm bổ sung / hoàn thiện trước khi trình Viện trưởng *</label>
+              <textarea id="khcnExtRevisionNote" class="form-control" rows="3" placeholder="VD: Đề nghị Chủ nhiệm tải lên bản scan Đơn xin gia hạn đã có chữ ký trực tiếp và nộp Báo cáo định kỳ 6 tháng trước khi P. KH&CN trình Viện trưởng..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-outline" style="color: #dc2626; border-color: #fca5a5; background: #fef2f2;" onclick="handleDeleteExtensionFromModal()">
+            Xóa đợt đề xuất tạo nhầm
+          </button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('khcnProcessExtensionModal')">Đóng</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitKhcnExtProcess">Lưu kết quả xử lý</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Nộp Báo Cáo Định Kỳ 06 Tháng -->
+  <div class="modal-overlay" id="reportModal">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.02rem;">Nộp Báo cáo Tiến độ Định kỳ (06 tháng)</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('reportModal')">&times;</button>
+      </div>
+      <form id="submitReportForm" onsubmit="handleSubmitReport(event)">
+        <input type="hidden" name="report_id" id="modalReportId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Kỳ báo cáo:</label>
+            <input type="text" id="modalReportPeriodLabel" class="form-control" readonly style="background: #f1f5f9; font-weight: 700;">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Biểu mẫu chuẩn (Đã điền sẵn thông tin đề tài):</label>
+            <div>
+              <a id="modalReportDownloadTemplateBtn" href="#" target="_blank" class="btn btn-outline btn-sm" style="color: #0284c7; border-color: #38bdf8; text-decoration: none;">
+                Tải biểu mẫu báo cáo (.docx)
+              </a>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tệp báo cáo hoàn chỉnh (Word / PDF)</label>
+            <input type="file" id="modalReportFileInput" class="form-control" accept=".pdf,.doc,.docx">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Tiến độ thực hiện (%)</label>
+              <input type="number" name="progress_percent" class="form-control" min="0" max="100" value="50">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tóm tắt kết quả</label>
+              <input type="text" name="progress_summary" class="form-control" placeholder="Tóm tắt ngắn gọn kết quả đạt được...">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('reportModal')">Đóng</button>
+          <button type="submit" id="btnSubmitReportModal" class="btn btn-primary">Lưu &amp; Nộp báo cáo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Thêm / Sửa Hạng Mục Dự Toán -->
+  <div class="modal-overlay" id="addBudgetModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div id="addBudgetModalTitle">Thêm Hạng mục Dự toán Kinh phí</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('addBudgetModal')">&times;</button>
+      </div>
+      <form id="addBudgetForm" onsubmit="handleAddBudget(event)">
+        <input type="hidden" name="edit_item_id" id="budgetEditItemId" value="">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nhóm khoản mục chi</label>
+            <input type="text" name="category" id="budgetCategoryInput" class="form-control" value="Hóa chất & Vật tư thí nghiệm" placeholder="VD: Hóa chất thí nghiệm, Vật tư tiêu hao, Thuê khoán...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tên hàng hóa / Hóa chất / Vật tư *</label>
+            <input type="text" name="item_name" id="budgetItemNameInput" class="form-control" placeholder="VD: RPMI 1640 Medium" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Quy cách</label>
+              <input type="text" name="specification" id="budgetSpecInput" class="form-control" placeholder="VD: Chai 500 mL">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Đơn vị tính</label>
+              <input type="text" name="unit" id="budgetUnitInput" class="form-control" placeholder="VD: Chai, Lọ, Hộp">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Số lượng phê duyệt *</label>
+              <input type="number" name="approved_quantity" id="budgetQtyInput" class="form-control" min="0.1" step="any" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Đơn giá (VNĐ)</label>
+              <input type="number" name="unit_price" id="budgetPriceInput" class="form-control" value="0" min="0">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ghi chú</label>
+            <input type="text" name="notes" id="budgetNotesInput" class="form-control" placeholder="Ghi chú nguồn mua, hãng SX...">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('addBudgetModal')">Đóng</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveBudgetItem">Lưu hạng mục</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4B: Import Dự toán từ Excel (BM02) / CSV -->
+  <div class="modal-overlay" id="importBudgetExcelModal">
+    <div class="modal-dialog" style="max-width: 760px;">
+      <div class="modal-header">
+        <div><i class="fa-solid fa-file-excel" style="color: #15803d; margin-right: 6px;"></i> Import Danh mục Dự toán từ Excel (BM02) / CSV</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('importBudgetExcelModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 9px 12px; font-size: 0.78rem; color: #166534; margin-bottom: 12px;">
+          Hỗ trợ trực tiếp tệp <strong>BM02_Du_toan_kinh_phi_de_tai_cap_Vien.xlsx</strong> hoặc tệp Excel/CSV có các cột: <em>Tên hàng hóa, Quy cách, ĐVT, Số lượng, Đơn giá, Thành tiền</em>.
+        </div>
+        <div class="form-row" style="align-items: flex-end;">
+          <div class="form-group" style="flex: 2; margin-bottom: 0;">
+            <label class="form-label">Chọn tệp Excel (.xlsx) hoặc CSV *</label>
+            <input type="file" id="importBudgetFileInput" class="form-control" accept=".xlsx,.csv,.txt">
+          </div>
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label class="form-label">Chế độ nhập</label>
+            <select id="importBudgetModeSelect" class="form-control">
+              <option value="append">Bổ sung vào danh mục hiện có</option>
+              <option value="replace">Thay thế toàn bộ danh mục dự toán</option>
+            </select>
+          </div>
+          <div>
+            <button type="button" class="btn btn-outline" onclick="previewBudgetExcelImport()">
+              Đọc &amp; Xem trước
+            </button>
+          </div>
+        </div>
+
+        <div id="importBudgetPreviewBox" style="margin-top: 14px; display: none;">
+          <div id="importBudgetPreviewSummary" style="font-size: 0.82rem; font-weight: 700; color: #0f172a; margin-bottom: 8px;"></div>
+          <div style="max-height: 280px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;">
+            <table class="data-table" style="font-size: 0.78rem;">
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Tên hàng hóa / Vật tư</th>
+                  <th>Quy cách</th>
+                  <th>ĐVT</th>
+                  <th style="text-align: center;">SL</th>
+                  <th style="text-align: right;">Đơn giá</th>
+                  <th style="text-align: right;">Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody id="importBudgetPreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('importBudgetExcelModal')">Đóng</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmImportBudget" onclick="confirmBudgetExcelImport()" disabled>
+          Xác nhận Import vào Dự toán
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Đề xuất Cấp phát Vật tư (Kèm Kiểm tra Hạn mức Quota trực tiếp) -->
+  <div class="modal-overlay" id="requestSupplyModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>Đề xuất Cấp phát Hóa chất / Vật tư</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('requestSupplyModal')">&times;</button>
+      </div>
+      <form id="requestSupplyForm" onsubmit="handleRequestSupply(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Chọn từ danh mục Dự toán đã phê duyệt</label>
+            <select name="budget_item_id" class="form-control" id="budgetSelectDropdown" onchange="handleSelectBudgetItem(this)">
+              <option value="">-- Hạng mục ngoài dự toán / Nhập thủ công --</option>
+            </select>
+          </div>
+
+          <!-- Hộp thông tin Quota trực tiếp -->
+          <div id="supplyQuotaInfoBox" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 8px 12px; font-size: 0.78rem; color: #1e40af; margin-bottom: 10px;"></div>
+
+          <div class="form-group">
+            <label class="form-label">Tên hóa chất / Vật tư *</label>
+            <input type="text" name="item_name" id="reqItemName" class="form-control" placeholder="VD: FBS bất hoạt nhiệt" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Quy cách</label>
+              <input type="text" name="specification" id="reqSpec" class="form-control" placeholder="VD: Chai 500 mL">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Đơn vị tính</label>
+              <input type="text" name="unit" id="reqUnit" class="form-control" placeholder="VD: Chai">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Số lượng đề xuất *</label>
+              <input type="number" name="requested_quantity" id="reqQtyInput" class="form-control" min="0.1" step="any" placeholder="Nhập số lượng..." oninput="checkRequestSupplyQuotaLive()" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Đơn giá dự kiến (VNĐ)</label>
+              <input type="number" name="unit_price" id="reqUnitPrice" class="form-control" value="0" min="0">
+            </div>
+          </div>
+
+          <!-- Cảnh báo vượt định mức đỏ trực tiếp -->
+          <div id="supplyOverQuotaWarning" style="display: none; background: #fef2f2; border: 1px solid #fca5a5; border-left: 4px solid #dc2626; border-radius: 6px; padding: 8px 12px; font-size: 0.78rem; color: #991b1b; margin-bottom: 10px; line-height: 1.4;"></div>
+
+          <div class="form-group">
+            <label class="form-label">Ghi chú</label>
+            <input type="text" name="notes" class="form-control" placeholder="Ghi chú mục đích sử dụng...">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('requestSupplyModal')">Đóng</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitRequestSupply">Gửi đề xuất</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL ĐIỀU CHỈNH DỰ TOÁN (CHỦ NHIỆM TRÌNH - HỖ TRỢ ĐỒNG BỘ HẠNG MỤC) -->
+  <div class="modal-overlay" id="budgetAdjustmentModal">
+    <div class="modal-dialog" style="max-width: 680px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.02rem;">Đề xuất Điều chỉnh Dự toán Kinh phí</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('budgetAdjustmentModal')">&times;</button>
+      </div>
+      <form id="budgetAdjustmentForm" onsubmit="handleSubmitBudgetAdjustment(event)">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Kinh phí hiện hành (VNĐ)</label>
+              <input type="text" id="adjCurrentBudget" class="form-control" readonly style="background: #f1f5f9; font-weight: 700;">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kinh phí đề xuất mới (VNĐ) *</label>
+              <input type="number" name="new_budget" id="adjNewBudget" class="form-control" required placeholder="Nhập tổng kinh phí mới...">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Lý do điều chỉnh dự toán *</label>
+            <textarea name="reason" class="form-control" rows="2" placeholder="Nêu lý do điều chỉnh..." required></textarea>
+          </div>
+
+          <!-- Khu vực chọn hạng mục điều chỉnh đồng bộ xuống bảng Dự toán -->
+          <div class="form-group" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+              <label class="form-label" style="margin: 0; font-size: 0.8rem; color: #0f172a;">
+                Điều chỉnh chi tiết hạng mục (tự động tính chênh lệch &amp; cập nhật Quota khi duyệt)
+              </label>
+              <button type="button" class="btn btn-outline btn-sm" onclick="addAdjItemChangeRow()" style="padding: 2px 8px; font-size: 0.72rem;">
+                + Thêm dòng điều chỉnh
+              </button>
+            </div>
+            <div id="adjItemChangesList" style="display: flex; flex-direction: column; gap: 6px;">
+              <div class="adj-empty-hint" style="font-size: 0.75rem; color: #64748b;">Chưa chọn hạng mục điều chỉnh cụ thể (bấm "+ Thêm dòng điều chỉnh" để tăng/giảm SL, điều chuyển nội bộ hoặc bổ sung hạng mục mới).</div>
+            </div>
+            <div id="adjAutoCalcBar" style="display: none; margin-top: 8px; padding: 7px 10px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 5px; font-size: 0.76rem; color: #1e40af;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Bản scan Tờ trình đề nghị điều chỉnh có chữ ký Chủ nhiệm (PDF)</label>
+            <input type="file" id="adjSignedRequestFileInput" class="form-control" accept=".pdf,.doc,.docx,.jpg,.png">
+            <div style="font-size: 0.72rem; color: #64748b; margin-top: 3px;">Tệp này sẽ được lưu trực tiếp vào Kho hồ sơ Giai đoạn 3 (<code>DON_DIEU_CHINH_DU_TOAN</code>).</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nội dung giải trình chi tiết</label>
+            <textarea name="proposal_details" class="form-control" rows="2" placeholder="Chi tiết các hạng mục tăng/giảm hoặc điều chuyển nội bộ..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('budgetAdjustmentModal')">Đóng</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitBudgetAdj">Trình đề xuất</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL PHÒNG KH&CN THẨM TRA -->
+  <div class="modal-overlay" id="khcnReviewModal">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.02rem;">Thẩm tra Đề xuất Điều chỉnh Dự toán (Phòng KH&amp;CN)</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('khcnReviewModal')">&times;</button>
+      </div>
+      <form id="khcnReviewForm" onsubmit="handleKhcnReviewSubmit(event)">
+        <input type="hidden" id="khcnAdjId" name="adjId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Ý kiến thẩm tra chuyên môn *</label>
+            <textarea name="opinion" id="khcnOpinionInput" class="form-control" rows="3" required placeholder="Nhập ý kiến thẩm tra của Phòng KH&CN..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Kết luận thẩm tra</label>
+            <select name="status" class="form-control">
+              <option value="KHCN_REVIEWED">Đạt yêu cầu — Trình Viện trưởng phê duyệt</option>
+              <option value="REJECTED">Không đạt — Yêu cầu chỉnh sửa, bổ sung</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('khcnReviewModal')">Đóng</button>
+          <button type="submit" class="btn btn-primary">Xác nhận thẩm tra</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL VIỆN TRƯỞNG PHÊ DUYỆT & BAN HÀNH QĐ -->
+  <div class="modal-overlay" id="directorApproveModal">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; font-size: 1.02rem;">Phê duyệt Điều chỉnh Dự toán (Viện trưởng)</div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('directorApproveModal')">&times;</button>
+      </div>
+      <form id="directorApproveForm" onsubmit="handleDirectorApproveSubmit(event)">
+        <input type="hidden" id="directorAdjId" name="adjId">
+        <div class="modal-body">
+          <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 8px 12px; border-radius: 6px; font-size: 0.77rem; margin-bottom: 10px; line-height: 1.4;">
+            <strong>Yêu cầu pháp lý bắt buộc khi phê duyệt:</strong> Phải nhập đúng Số Quyết định, Ngày ký và <strong>tải lên Bản scan Quyết định điều chỉnh dự toán có chữ ký Viện trưởng &amp; dấu mộc đỏ (PDF)</strong>. Chỉ khi hoàn tất, hệ thống mới kích hoạt số liệu dự toán và hạn mức (Quota) mới.
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Số Quyết định / Phụ lục *</label>
+              <input type="text" name="decision_number" id="decNumberInput" class="form-control" placeholder="VD: QĐ-SCI.28/ĐC-2025" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ngày ký Quyết định *</label>
+              <input type="date" name="decision_date" id="decDateInput" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Bản scan Quyết định điều chỉnh dự toán (Có dấu mộc đỏ - PDF) *</label>
+            <input type="file" id="directorAdjDecisionFileInput" class="form-control" accept=".pdf,.jpg,.png,.doc,.docx">
+            <div id="directorAdjExistingFileNote" style="font-size: 0.73rem; color: #0369a1; margin-top: 4px;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ý kiến phê duyệt của Viện trưởng</label>
+            <textarea name="director_decision" class="form-control" rows="2" placeholder="Đồng ý phê duyệt điều chỉnh dự toán theo đề xuất."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('directorApproveModal')">Đóng</button>
+          <button type="submit" class="btn btn-primary" style="background: #15803d; border-color: #15803d;">
+            Phê duyệt &amp; Ban hành Quyết định
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4C: Đối chiếu 2 cột (PDF Mộc đỏ ↔ Bảng Soft-copy & Dán nhanh từ Excel) -->
+  <div class="modal-overlay" id="budgetReconcileModal">
+    <div class="modal-dialog" style="max-width: 1280px; width: 96vw; height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header" style="flex-shrink: 0;">
+        <div style="font-weight: 700; font-size: 1rem;">
+          <i class="fa-solid fa-columns" style="color: #0284c7; margin-right: 6px;"></i>
+          Đối chiếu Bản scan Dự toán có dấu mộc đỏ ↔ Số liệu Soft-copy
+        </div>
+        <button class="btn btn-sm btn-outline" onclick="closeModal('budgetReconcileModal')">&times;</button>
+      </div>
+
+      <div class="modal-body" style="flex: 1; overflow: hidden; padding: 12px; display: grid; grid-template-columns: 1fr 1.15fr; gap: 12px; min-height: 0;">
+        <!-- Cột Trái: Xem trực tiếp Bản scan PDF có dấu mộc đỏ -->
+        <div style="display: flex; flex-direction: column; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #1e293b; min-height: 0;">
+          <div style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: #0f172a;" id="reconcilePdfHeaderTitle">
+              Bản scan Dự toán mộc đỏ (DU_TOAN_DA_DUYET)
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <a id="reconcilePdfNewTabBtn" href="#" target="_blank" class="btn btn-outline btn-sm" style="display: none; padding: 2px 8px; font-size: 0.72rem; text-decoration: none;">
+                Mở tab mới
+              </a>
+              <button type="button" id="reconcileUploadPdfBtn" class="btn btn-primary btn-sm" style="padding: 2px 8px; font-size: 0.72rem;" onclick="openUploadModalForCriteria('DU_TOAN_DA_DUYET', 3, 'Bản Dự toán kinh phí đã phê duyệt (Có dấu mộc đỏ)')">
+                Tải lên / Thay PDF
+              </button>
+            </div>
+          </div>
+          <div style="flex: 1; position: relative; min-height: 0;">
+            <div id="reconcilePdfEmpty" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #e2e8f0; padding: 1.5rem; text-align: center;">
+              <i class="fa-solid fa-file-pdf" style="font-size: 2.2rem; color: #f87171; margin-bottom: 10px;"></i>
+              <div style="font-size: 0.9rem; font-weight: 600;">Chưa có bản scan PDF Dự toán có dấu mộc đỏ</div>
+              <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 4px;">Bấm <strong>Tải lên / Thay PDF</strong> ở góc trên bên phải khung này để đính kèm bản đã được Viện trưởng phê duyệt.</div>
+            </div>
+            <iframe id="reconcilePdfIframe" style="width: 100%; height: 100%; border: none; display: none; background: #fff;"></iframe>
+          </div>
+        </div>
+
+        <!-- Cột Phải: Số liệu Soft-copy, Dán nhanh Excel & Kiểm tra khớp tổng -->
+        <div style="display: flex; flex-direction: column; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #fff; min-height: 0;">
+          <!-- Thanh đối chiếu tổng tiền trực tiếp -->
+          <div id="reconcileTotalMatchBar" style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0;">
+            Đang tính đối chiếu tổng kinh phí...
+          </div>
+
+          <!-- Thanh công cụ nhập/dán nhanh (ẩn khi đã khóa) -->
+          <div id="reconcileToolsBar" style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; background: #fff; flex-shrink: 0;">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline btn-sm" style="padding: 3px 9px; font-size: 0.74rem;" onclick="openAddBudgetModal()">
+                + Thêm 1 dòng
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" style="padding: 3px 9px; font-size: 0.74rem; color: #0284c7; border-color: #7dd3fc; background: #f0f9ff;" onclick="toggleReconcilePasteBox()">
+                <i class="fa-solid fa-paste"></i> Dán nhanh từ Excel / Sheet
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" style="padding: 3px 9px; font-size: 0.74rem; color: #15803d; border-color: #86efac; background: #f0fdf4;" onclick="openImportBudgetExcelModal()">
+                <i class="fa-solid fa-file-excel"></i> Import file BM02
+              </button>
+            </div>
+            <span style="font-size: 0.72rem; color: #64748b;" id="reconcileItemsCountLabel">0 hạng mục</span>
+          </div>
+
+          <!-- Khung Dán nhanh từ Excel / Google Sheet -->
+          <div id="reconcilePasteBox" style="display: none; padding: 10px 12px; background: #f0f9ff; border-bottom: 1px solid #bae6fd; flex-shrink: 0;">
+            <div style="font-size: 0.75rem; color: #0369a1; font-weight: 600; margin-bottom: 5px;">
+              Copy nhiều dòng từ Excel / Google Sheet rồi dán vào đây (Thứ tự cột: <code>Tên hàng hóa [Tab] Quy cách [Tab] ĐVT [Tab] SL [Tab] Đơn giá [Tab] Thành tiền</code> — có thể có hoặc không có cột STT đầu dòng):
+            </div>
+            <textarea id="reconcilePasteTextarea" class="form-control" rows="4" style="font-size: 0.76rem; font-family: monospace;" placeholder="VD:&#10;Môi trường RPMI-1640	Chai 500ml	Chai	10	350000	3500000&#10;Huyết thanh FBS	Chai 500ml	Chai	2	8500000	17000000"></textarea>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; gap: 8px;">
+              <span id="reconcilePasteHint" style="font-size: 0.72rem; color: #475569;">Hỗ trợ định dạng số có dấu chấm/phẩy (VD: 8.500.000).</span>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-outline btn-sm" style="padding: 3px 8px; font-size: 0.73rem;" onclick="toggleReconcilePasteBox(false)">Hủy</button>
+                <button type="button" class="btn btn-primary btn-sm" style="padding: 3px 10px; font-size: 0.73rem;" onclick="handleApplyReconcilePaste()">Phân tích &amp; Lưu vào Dự toán</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bảng Soft-copy cuộn độc lập -->
+          <div style="flex: 1; overflow-y: auto; min-height: 0;">
+            <table class="data-table" style="font-size: 0.78rem;">
+              <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 2;">
+                <tr>
+                  <th style="width: 36px; text-align: center;">STT</th>
+                  <th>Tên hàng hóa / Quy cách</th>
+                  <th style="width: 55px;">ĐVT</th>
+                  <th style="width: 55px; text-align: center;">SL</th>
+                  <th style="width: 95px; text-align: right;">Đơn giá</th>
+                  <th style="width: 105px; text-align: right;">Thành tiền</th>
+                  <th style="width: 68px; text-align: center;">Sửa</th>
+                </tr>
+              </thead>
+              <tbody id="reconcileSoftCopyBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div id="reconcileFooterNote" style="font-size: 0.78rem; color: #475569;"></div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('budgetReconcileModal')">Đóng</button>
+          <button type="button" class="btn btn-success" id="btnReconcileConfirmLock" onclick="confirmLockFromReconcileModal()">
+            <i class="fa-solid fa-shield-halved"></i> Xác nhận khớp &amp; Chốt khóa dự toán gốc
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/rbac-header.js"></script>
+  <script src="js/detail.js"></script>
+  <script src="js/detail-phase2.js"></script>
+</body>
+</html>

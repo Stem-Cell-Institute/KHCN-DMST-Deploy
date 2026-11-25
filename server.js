@@ -2970,6 +2970,7 @@ const uploadToTrinhTemplateYtnn = multer({
 // Cấu hình mặc định cho các module trên trang chủ
 const HOMEPAGE_MODULES_DEFAULT = [
   { code: 'missions', label: 'Quản lý nhiệm vụ KHCN', enabled: 1 },
+  { code: 'cap_vien', label: 'Quản lý đề tài cấp Viện', enabled: 1 },
   { code: 'ethics_ace', label: 'Hội đồng đạo đức trên động vật (SCI-ACE)', enabled: 1 },
   { code: 'personnel', label: 'Quản lý Nhân lực KHCN', enabled: 0 },
   { code: 'ip', label: 'Quản lý Tài sản Trí tuệ', enabled: 0 },
@@ -8995,23 +8996,12 @@ app.get('/api/homepage-stats', (req, res) => {
   } catch (e) {
     /* bảng submissions (SCI-ACE) chưa có */
   }
-  /** Thẻ module «Ngân hàng Tế bào & Kháng thể» */
   const sampleStorageMini = require('./routes/nganHangTeBaoKhangThe').miniStats(db);
+  const capVienMini = require('./modules/de-tai-cap-vien/eofficeMount').miniStats();
   return res.json({
-    missions,
-    missionMini,
-    personnel,
-    ip,
-    publications,
-    publicationMini,
-    cooperation,
-    cooperationMini,
-    facilities,
-    dmsMini,
-    equipmentMini,
-    sampleStorageMini,
-    documentWorkflowMini,
-    aceMini,
+    missions, missionMini, capVienMini, personnel, ip,
+    publications, publicationMini, cooperation, cooperationMini,
+    facilities, dmsMini, equipmentMini, sampleStorageMini, documentWorkflowMini, aceMini,
   });
 });
 
@@ -15820,6 +15810,8 @@ function coopBuildTitle(loai, r) {
 }
 
 console.log('[Cooperation] ✅ Các route Hợp tác Quốc tế mới đã được đăng ký.');
+// Tích hợp Sub-App Quản lý Đề tài Cấp Viện chuyên biệt tại /de-tai-cap-vien/
+require('./modules/de-tai-cap-vien/eofficeMount').mount(app, { db, jwt, JWT_SECRET, getTokenFromReq, userIdIsBanned, clearAuthCookie });
 // Lưu ý: middleware 404 cho /api phải đăng ký SAU mountSciKhcnPublicationsRouters()
 // (enrich, journal-metrics, …). Nếu đặt trước, mọi /api/enrich/* sẽ 404.
 

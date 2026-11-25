@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <script src="js/mount-path.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giám sát Hồ sơ Pháp lý & Phục vụ Thanh tra - Kiểm toán | Quản lý Đề tài Cấp Viện SCI</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    .audit-filter-banner {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius-sm);
+      padding: 10px 16px;
+      margin-bottom: 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.875rem;
+      color: #1e40af;
+    }
+
+    .modal-audit {
+      max-width: 900px;
+      width: 95%;
+    }
+
+    .audit-group-title {
+      background: #f8fafc;
+      padding: 8px 12px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #334155;
+      border-top: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .audit-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s;
+    }
+
+    .audit-item-row:hover {
+      background: #f8fafc;
+    }
+
+    .audit-status-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Fix bảng không bị cắt khi viewport nhỏ */
+    .table-responsive {
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f1f5f9;
+    }
+    .table-responsive::-webkit-scrollbar {
+      height: 6px;
+    }
+    .table-responsive::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .table-responsive::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    .data-table th, .data-table td {
+      vertical-align: top;
+    }
+
+    @media print {
+      .table-responsive {
+        overflow: visible !important;
+      }
+      .data-table {
+        min-width: unset !important;
+        font-size: 0.72rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="navbar">
+    <a href="./" class="nav-brand">
+      <div class="brand-text">
+        <h1>QUẢN LÝ ĐỀ TÀI CẤP VIỆN</h1>
+        <p>Nhiệm vụ KHCN cấp cơ sở - Viện Tế bào gốc</p>
+      </div>
+    </a>
+
+    <nav class="nav-menu">
+      <a href="./" class="nav-link">
+        <i class="fa-solid fa-chart-pie"></i> Tổng quan
+      </a>
+      <a href="ban-lam-viec-khcn.html" class="nav-link nav-khcn-only" style="display:none;">
+        <i class="fa-solid fa-diagram-project"></i> Điều phối KH&CN
+        <span class="khcn-work-badge" style="display:none; background:#ef4444; color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:3px;"></span>
+      </a>
+      <a href="quan-ly-dot.html" class="nav-link">
+        <i class="fa-solid fa-file-signature"></i> Đăng ký Đề tài
+      </a>
+      <a href="kiem-tra-ho-so.html" class="nav-link active">
+        <i class="fa-solid fa-clipboard-check"></i> Hồ sơ & Kiểm toán
+      </a>
+      <a href="phan-quyen.html" class="nav-link">
+        <i class="fa-solid fa-users-gear"></i> Phân quyền
+      </a>
+    </nav>
+
+    <div class="nav-user">
+      <a href="phan-quyen.html" class="user-badge" title="Bấm để xem và chuyển đổi 7 vai trò trong Ma trận phân quyền" style="text-decoration: none;">
+        <i class="fa-solid fa-user-shield"></i>
+        <span>Phòng KHCN & ĐN</span>
+        <i class="fa-solid fa-chevron-down" style="font-size: 0.65rem; margin-left: 4px; opacity: 0.7;"></i>
+      </a>
+      <a href="/" data-eoffice-root="1" class="btn btn-outline btn-sm"  title="Trở về trang E-Office mẹ">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> E-Office SCI
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Page Header & Action Buttons -->
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">
+          <i class="fa-solid fa-clipboard-check" style="color: var(--primary);"></i> Giám sát Hồ sơ Pháp lý & Phục vụ Thanh tra - Kiểm toán
+        </h2>
+        <p class="page-subtitle">
+          Theo dõi danh mục văn bản còn thiếu cho từng đề tài để nghiệm thu, thanh lý và hoàn thiện hồ sơ lưu trữ theo chuẩn thanh tra kiểm toán.
+        </p>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="btn btn-outline" onclick="loadAuditData()">
+          <i class="fa-solid fa-arrows-rotate"></i> Làm mới
+        </button>
+        <button class="btn btn-outline" onclick="window.print()">
+          <i class="fa-solid fa-print"></i> In danh sách
+        </button>
+        <button class="btn btn-outline" onclick="exportAuditCSV()">
+          <i class="fa-solid fa-file-excel"></i> Xuất Excel
+        </button>
+        <a href="/api/audit/export-html?download=1" class="btn btn-primary" target="_blank" title="Tải file HTML độc lập hoàn chỉnh để gửi cho Chuyên viên P. KHCN làm việc với các Chủ nhiệm đề tài">
+          <i class="fa-solid fa-file-code"></i> Xuất Báo cáo HTML (Gửi P. KHCN)
+        </a>
+      </div>
+    </div>
+
+    <!-- Active Role Context Banner -->
+    <div id="roleContextBanner" style="background: #ffffff; border: 1px solid #cbd5e1; border-left: 4px solid var(--primary); border-radius: 8px; padding: 10px 16px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 0.85rem;" id="roleContextText">
+        <i class="fa-solid fa-user-shield" style="color: var(--primary);"></i>
+        <span>Đang tải phân quyền hệ thống...</span>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;" id="roleContextActions">
+        <button class="btn btn-outline btn-sm" onclick="openGlobalRoleSwitcherModal()" style="font-size: 0.75rem;">
+          <i class="fa-solid fa-repeat"></i> Đổi vai trò (Admin / Viện trưởng / P. KHCN / Chủ nhiệm)
+        </button>
+      </div>
+    </div>
+
+    <!-- Top KPI Stat Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card" id="cardAuditTotal" onclick="filterAuditStatus('')" title="Bấm để xem tất cả đề tài">
+        <div class="kpi-info">
+          <h3>Tổng số đề tài theo dõi</h3>
+          <div class="kpi-number" id="statAuditTotal">--</div>
+        </div>
+        <div class="kpi-icon" style="background: #f1f5f9; color: #475569;">
+          <i class="fa-solid fa-flask-vial"></i>
+        </div>
+      </div>
+
+      <div class="kpi-card" id="cardMissingLiquidation" onclick="filterAuditStatus('MISSING_LIQUIDATION')" title="Bấm để lọc đề tài thiếu hồ sơ thanh lý / quyết toán">
+        <div class="kpi-info">
+          <h3 style="color: #b45309;">THIẾU HỒ SƠ THANH LÝ</h3>
+          <div class="kpi-number" style="color: #b45309;" id="statMissingLiquidation">--</div>
+          <div style="font-size: 0.72rem; color: #d97706; margin-top: 2px;">Đã nghiệm thu - Chưa thanh lý HĐ</div>
+        </div>
+        <div class="kpi-icon" style="background: #fef3c7; color: #d97706;">
+          <i class="fa-solid fa-handshake-slash"></i>
+        </div>
+      </div>
+
+      <div class="kpi-card" id="cardExtendedNeedsDocs" onclick="filterAuditStatus('EXTENDED')" title="Bấm để lọc đề tài đã gia hạn cần chuẩn bị hồ sơ nghiệm thu">
+        <div class="kpi-info">
+          <h3 style="color: #7e22ce;">ĐÃ GIA HẠN - CHUẨN BỊ NT</h3>
+          <div class="kpi-number" style="color: #9333ea;" id="statExtendedNeedsDocs">--</div>
+          <div style="font-size: 0.72rem; color: #7e22ce; margin-top: 2px;">Cần chuẩn bị hồ sơ Giai đoạn 7</div>
+        </div>
+        <div class="kpi-icon" style="background: #f3e8ff; color: #9333ea;">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+      </div>
+
+      <div class="kpi-card" id="cardAuditReady" onclick="filterAuditStatus('READY')" title="Bấm để xem các đề tài đã đủ 100% hồ sơ">
+        <div class="kpi-info">
+          <h3 style="color: var(--color-green);">ĐỦ 100% HỒ SƠ KIỂM TOÁN</h3>
+          <div class="kpi-number" style="color: var(--color-green);" id="statAuditReady">--</div>
+          <div style="font-size: 0.72rem; color: var(--color-green); margin-top: 2px;">Sẵn sàng thanh tra kiểm toán</div>
+        </div>
+        <div class="kpi-icon" style="background: var(--color-green-bg); color: var(--color-green);">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- Institute-wide 18 Document Criteria Breakdown -->
+    <section class="card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
+      <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleCriteriaBreakdown()">
+        <div>
+          <h3 style="font-size: 0.92rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-chart-column" style="color: var(--primary);"></i>
+            Thống kê Tình trạng Nộp / Thiếu Cấp Cơ sở theo 18 Đầu mục Văn bản Pháp lý
+            <span id="avgCompletionBadge" class="badge badge-blue" style="font-size: 0.72rem;">Đang tính...</span>
+          </h3>
+          <p style="font-size: 0.76rem; color: #64748b; margin: 2px 0 0 0;">
+            Bấm vào bất kỳ loại văn bản nào bên dưới để lọc danh sách các đề tài đang thiếu văn bản đó.
+          </p>
+        </div>
+        <button class="btn btn-outline btn-sm" id="btnToggleBreakdown" type="button" style="font-size: 0.75rem;">
+          <i class="fa-solid fa-chevron-up"></i> Thu gọn / Mở rộng
+        </button>
+      </div>
+      <div id="criteriaBreakdownGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(235px, 1fr)); gap: 8px; margin-top: 12px;">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- Filter Card -->
+    <section class="filter-card">
+      <div class="filter-group" style="flex: 1.8; min-width: 220px;">
+        <input type="text" id="searchInput" class="filter-input" placeholder="🔍 Tìm Mã đề tài (NCKH-SCI...), tên đề tài, chủ nhiệm..." oninput="debounceFilter()">
+      </div>
+
+      <div class="filter-group" style="flex: 1.4; min-width: 200px;">
+        <select id="missingDocSelect" class="filter-select" onchange="applyAuditFilters()">
+          <option value="">-- Lọc theo văn bản còn thiếu (18 loại) --</option>
+        </select>
+      </div>
+
+      <div class="filter-group" style="flex: 1.3; min-width: 190px;">
+        <select id="leaderFilterSelect" class="filter-select" onchange="applyAuditFilters()">
+          <option value="">-- Tất cả Chủ nhiệm đề tài --</option>
+        </select>
+      </div>
+
+      <div class="filter-group" style="flex: 1.3; min-width: 190px;">
+        <select id="statusSelect" class="filter-select" onchange="applyAuditFilters()">
+          <option value="">-- Tất cả tình trạng hồ sơ --</option>
+          <option value="MISSING_LIQUIDATION">⚠️ Thiếu hồ sơ Thanh lý / Quyết toán (Đã nghiệm thu)</option>
+          <option value="EXTENDED">🟣 Đã gia hạn - Cần hoàn thiện hồ sơ nghiệm thu</option>
+          <option value="COMPLETED">🔵 Các đề tài đã nghiệm thu</option>
+          <option value="INCOMPLETE">🔴 Hồ sơ còn thiếu (Chưa đủ 100%)</option>
+          <option value="READY">✅ Đầy đủ 100% hồ sơ kiểm toán</option>
+        </select>
+      </div>
+
+      <div class="filter-group" style="flex: 1; min-width: 160px;">
+        <select id="groupSelect" class="filter-select" onchange="applyAuditFilters()">
+          <option value="">-- Tất cả Nhóm NC --</option>
+          <option value="Biochip">Biochip</option>
+          <option value="Stem Cell Biology">Stem Cell Biology</option>
+          <option value="Cancer Biology">Cancer Biology</option>
+          <option value="Neural Regenerative Medicine">Neural Regenerative Medicine</option>
+          <option value="Diagnostic and Therapeutic Research and Development">Diagnostic & Therapeutic R&D</option>
+        </select>
+      </div>
+
+      <div class="filter-group" style="flex: 0 0 auto;">
+        <button class="btn btn-outline" onclick="resetFilters()">
+          <i class="fa-solid fa-filter-circle-xmark"></i> Xóa lọc
+        </button>
+      </div>
+    </section>
+
+    <!-- Active Filter Banner -->
+    <div id="filterBanner" class="audit-filter-banner" style="display: none;">
+      <div>
+        <i class="fa-solid fa-filter"></i>
+        <span id="filterBannerText">Đang lọc...</span>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="resetFilters()" style="padding: 2px 8px; font-size: 0.75rem;">
+        <i class="fa-solid fa-xmark"></i> Xem tất cả đề tài
+      </button>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-card">
+      <div class="table-responsive" style="border-radius: var(--radius-md);">
+        <table class="data-table" style="min-width: 900px;">
+          <thead>
+            <tr>
+              <th style="width: 36px; text-align: center; padding: 10px 8px;">STT</th>
+              <th style="width: 115px; padding: 10px 10px;">MÃ ĐỀ TÀI</th>
+              <th style="min-width: 220px; padding: 10px 10px;">TÊN ĐỀ TÀI & CHỦ NHIỆM</th>
+              <th style="width: 130px; padding: 10px 8px;">TÌNH TRẠNG</th>
+              <th style="width: 150px; padding: 10px 10px;">TIẾN ĐỘ HỒ SƠ</th>
+              <th style="min-width: 260px; padding: 10px 10px;">VĂN BẢN CÒN THIẾU (ĐỂ NGHIỆM THU / THANH LÝ / KIỂM TOÁN)</th>
+              <th style="width: 120px; text-align: center; padding: 10px 8px;">THAO TÁC</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody">
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                <i class="fa-solid fa-spinner fa-spin"></i> Đang tải danh mục hồ sơ pháp lý các đề tài...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL: KIỂM TRA CHI TIẾT 13 HẠNG MỤC HỒ SƠ CỦA 1 ĐỀ TÀI -->
+  <div class="modal-overlay" id="auditDetailModal">
+    <div class="modal modal-audit">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="modalAuditTitle">Chi tiết Danh mục Hồ sơ Pháp lý & Kiểm toán</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;" id="modalAuditSubtitle">
+            Mã đề tài • Chủ nhiệm đề tài
+          </p>
+        </div>
+        <button class="modal-close" onclick="closeAuditModal()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem;">
+        <!-- Top Status Summary -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 1.25rem;">
+          <div style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Tiến độ hoàn thiện hồ sơ</div>
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary);" id="modalAuditPercent">--%</div>
+            <div class="audit-progress-container">
+              <div class="audit-progress-bar" id="modalAuditProgressBar" style="width: 0%; background: var(--primary);"></div>
+            </div>
+          </div>
+
+          <div style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Hồ sơ Nghiệm thu</div>
+            <div style="font-size: 0.95rem; font-weight: 700; margin-top: 4px;" id="modalAuditAcceptanceStatus">--</div>
+          </div>
+
+          <div style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Hồ sơ Thanh lý & Quyết toán</div>
+            <div style="font-size: 0.95rem; font-weight: 700; margin-top: 4px;" id="modalAuditLiquidationStatus">--</div>
+          </div>
+        </div>
+
+        <!-- Checklist Table -->
+        <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;" id="modalAuditItemsContainer">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.8rem; color: var(--text-muted);">
+          <i class="fa-solid fa-circle-info"></i> Bấm "Xem trước" để đọc trực tiếp file PDF hoặc bấm "Upload" để bổ sung văn bản.
+        </span>
+        <button class="btn btn-outline" onclick="closeAuditModal()">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PREVIEW INLINE DOCUMENT -->
+  <div class="modal-overlay" id="previewModal">
+    <div class="modal" style="max-width: 950px; width: 95%; height: 88vh; display: flex; flex-direction: column;">
+      <div class="modal-header" style="padding: 10px 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-file-pdf" style="color: var(--color-red);"></i>
+          <h3 class="modal-title" id="previewModalTitle" style="font-size: 1rem;">Xem trước tài liệu</h3>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <a href="#" id="previewOpenTabBtn" class="btn btn-outline btn-sm" target="_blank">
+            <i class="fa-solid fa-up-right-from-square"></i> Mở tab mới
+          </a>
+          <button class="modal-close" onclick="closePreviewModal()">&times;</button>
+        </div>
+      </div>
+      <div style="flex: 1; padding: 0; background: #525659;">
+        <iframe id="previewModalIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: QUICK UPLOAD / BỔ SUNG HỒ SƠ TRỰC TIẾP -->
+  <div class="modal-overlay" id="quickUploadModal">
+    <div class="modal" style="max-width: 560px; width: 95%;">
+      <div class="modal-header" style="background: #f8fafc;">
+        <div>
+          <h3 class="modal-title" style="font-size: 1rem;">
+            <i class="fa-solid fa-cloud-arrow-up" style="color: var(--primary);"></i>
+            Upload Bổ sung / Cập nhật Hồ sơ Đề tài
+          </h3>
+          <p id="quickUploadSubtitle" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+            Đề tài • Hạng mục văn bản
+          </p>
+        </div>
+        <button class="modal-close" onclick="closeQuickUploadModal()">&times;</button>
+      </div>
+      <form id="quickUploadForm" onsubmit="submitQuickUpload(event)">
+        <div class="modal-body" style="padding: 1.25rem;">
+          <input type="hidden" id="quProjectId" name="project_id">
+          <input type="hidden" id="quStage" name="stage">
+          <input type="hidden" id="quDocType" name="doc_type">
+
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.8rem; color: #1e40af;">
+            <div><strong>Hạng mục:</strong> <span id="quCriteriaName">--</span></div>
+            <div style="margin-top: 2px;"><strong>Giai đoạn:</strong> <span id="quStageLabel">--</span> • <strong>Người đang nộp:</strong> <span id="quUploaderLabel">--</span></div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">Tên văn bản / Quyết định / Báo cáo hiển thị <span style="color: red;">*</span></label>
+            <input type="text" id="quTitle" name="title" class="form-control" required placeholder="VD: Thuyết minh đề tài NCKH-SCI.01/24 đã phê duyệt">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label">Chọn file số hóa đính kèm (PDF, Word, Excel, Ảnh scan - tối đa 25MB) <span style="color: red;">*</span></label>
+            <input type="file" id="quFile" name="file" class="form-control" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.zip" required style="padding: 8px;">
+            <small style="color: var(--text-muted); font-size: 0.72rem;">Khuyến nghị sử dụng định dạng <strong>.PDF</strong> để xem trước trực tiếp (Preview) trên hệ thống.</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Ghi chú bổ sung / Số hiệu văn bản (nếu có)</label>
+            <input type="text" id="quNotes" name="notes" class="form-control" placeholder="VD: Số QĐ 28/QĐ-SCI, bản scan có chữ ký & dấu đỏ...">
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeQuickUploadModal()">Hủy</button>
+          <button type="submit" class="btn btn-primary" id="quSubmitBtn">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Tải lên & Cập nhật Tiến độ
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/rbac-header.js"></script>
+  <script src="js/audit.js"></script>
+</body>
+</html>

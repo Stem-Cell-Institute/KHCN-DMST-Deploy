@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <script src="js/mount-path.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trung Tâm Điều Phối KH&CN Cấp Cơ Sở | Viện Tế Bào Gốc</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    .workstation-header {
+      background: linear-gradient(135deg, #0369a1 0%, #0c4a6e 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(3, 105, 161, 0.15);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin-bottom: 1.5rem;
+    }
+    .action-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+      border-left: 5px solid #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .action-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    }
+    .action-card.active {
+      box-shadow: 0 0 0 2px #0284c7, 0 6px 16px rgba(2, 132, 199, 0.15);
+      background: #f8fafc;
+    }
+    .action-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .action-card-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .action-card-count {
+      font-size: 1.6rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .action-card-desc {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin: 0 0 10px 0;
+      line-height: 1.45;
+    }
+    .action-card-footer {
+      border-top: 1px solid #f1f5f9;
+      padding-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+    }
+    .section-tab-btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #475569;
+      font-weight: 600;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .section-tab-btn.active {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #0284c7;
+    }
+    .badge-urgent {
+      background: #fee2e2;
+      color: #b91c1c;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+    }
+    .badge-warn {
+      background: #fef3c7;
+      color: #b45309;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+    }
+    .badge-info {
+      background: #e0f2fe;
+      color: #0369a1;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+    }
+    .badge-success {
+      background: #dcfce7;
+      color: #15803d;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+    }
+    .table-subtext {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <a href="./" class="nav-brand">
+      <div class="brand-text">
+        <h1>QUẢN LÝ ĐỀ TÀI CẤP VIỆN</h1>
+        <p>Nhiệm vụ KHCN cấp cơ sở - Viện Tế bào gốc</p>
+      </div>
+    </a>
+
+    <nav class="nav-menu">
+      <a href="./" class="nav-link">
+        <i class="fa-solid fa-chart-pie"></i> Tổng quan
+      </a>
+      <a href="ban-lam-viec-khcn.html" class="nav-link active nav-khcn-only">
+        <i class="fa-solid fa-diagram-project"></i> Điều phối KH&CN
+        <span class="khcn-work-badge" id="navWorkBadge" style="display:none; background:#ef4444; color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:3px;"></span>
+      </a>
+      <a href="quan-ly-dot.html" class="nav-link">
+        <i class="fa-solid fa-file-signature"></i> Đăng ký Đề tài
+      </a>
+      <a href="kiem-tra-ho-so.html" class="nav-link">
+        <i class="fa-solid fa-clipboard-check"></i> Hồ sơ & Kiểm toán
+      </a>
+      <a href="phan-quyen.html" class="nav-link">
+        <i class="fa-solid fa-users-gear"></i> Phân quyền
+      </a>
+    </nav>
+
+    <div class="nav-user">
+      <a href="phan-quyen.html" class="user-badge" id="activeRoleBadgeHeader" title="Bấm để đổi vai trò" style="text-decoration: none;">
+        <i class="fa-solid fa-user-shield"></i>
+        <span>Phòng KHCN & ĐN</span>
+      </a>
+      <a href="/" data-eoffice-root="1" class="btn btn-outline btn-sm"  title="Trở về trang E-Office mẹ">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> E-Office SCI
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Phân quyền guard warning nếu không phải P. KHCN / Admin / Viện trưởng -->
+    <div id="roleAlertNonKhcn" style="display:none; background:#fef3c7; border:1px solid #fde68a; border-radius:8px; padding:14px; margin-bottom:1.5rem; color:#92400e;">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <strong>Lưu ý phân quyền:</strong> Trang này là khu vực điều phối nghiệp vụ chuyên trách của <strong>Phòng Khoa học & Công nghệ</strong>. Bạn đang xem với vai trò <strong id="lblCurrentRoleName">--</strong>. 
+      <a href="javascript:void(0)" onclick="openGlobalRoleSwitcherModal()" style="color:#b45309; font-weight:700; text-decoration:underline; margin-left:6px;">Chuyển sang vai trò Phòng KHCN &rarr;</a>
+    </div>
+
+    <!-- Header Bàn làm việc KHCN -->
+    <section class="workstation-header">
+      <div>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+          <span style="background:rgba(255,255,255,0.2); padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; text-transform:uppercase;">
+            <i class="fa-solid fa-shield-halved"></i> Trung tâm Điều phối KH&CN Cấp Cơ sở Viện Tế bào gốc
+          </span>
+          <span id="headerTotalPendingPill" class="badge-urgent" style="font-size:0.75rem;">Đang tải...</span>
+        </div>
+        <h2 style="font-size:1.35rem; font-weight:800; margin:0;">Điều Phối Nghiệp Vụ Phòng Khoa Học & Công Nghệ</h2>
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-outline btn-sm" id="btnActionCenterScan" onclick="triggerActionCenterScan()" style="background:rgba(255,255,255,0.15); color:white; border-color:rgba(255,255,255,0.4); font-size:0.78rem;">
+          <i class="fa-solid fa-arrows-rotate"></i> Quét hạn & Gửi email thông báo
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="openEmailLogsModal()" style="background:rgba(255,255,255,0.15); color:white; border-color:rgba(255,255,255,0.4); font-size:0.78rem;">
+          <i class="fa-solid fa-envelopes-bulk"></i> Nhật ký Email đã gửi
+        </button>
+        <a href="quan-ly-dot.html" class="btn btn-primary btn-sm" style="background:#ffffff; color:#0369a1; font-weight:700; border:none; font-size:0.78rem; text-decoration:none;">
+          <i class="fa-solid fa-file-circle-plus"></i> Trang Đăng ký Đề tài &rarr;
+        </a>
+      </div>
+    </section>
+
+    <!-- 4 Khối Thống kê Hành động (4 Action Cards) -->
+    <div class="action-grid">
+      <!-- Thẻ 1: Đề xuất chờ duyệt -->
+      <div class="action-card active" id="cardTabProposals" style="border-left-color: #0284c7;" onclick="switchActionTab('proposals')">
+        <div>
+          <div class="action-card-header">
+            <span class="action-card-title"><i class="fa-solid fa-inbox" style="color: #0284c7;"></i> Hồ sơ Đề xuất mới</span>
+            <span class="action-card-count" id="cntProposals" style="display:none; color: #0284c7;"></span>
+          </div>
+          <p class="action-card-desc">Hồ sơ đề xuất mới nộp từ Nhà khoa học cần P. KHCN sơ duyệt thể thức & lên lịch họp Hội đồng.</p>
+        </div>
+        <div class="action-card-footer">
+          <span style="color:#0284c7; font-weight:700;">Xem chi tiết</span>
+          <i class="fa-solid fa-chevron-right" style="color:#0284c7;"></i>
+        </div>
+      </div>
+
+      <!-- Thẻ 2: Thiếu QĐ & Hợp đồng -->
+      <div class="action-card" id="cardTabMissing" style="border-left-color: #d97706;" onclick="switchActionTab('missing')">
+        <div>
+          <div class="action-card-header">
+            <span class="action-card-title"><i class="fa-solid fa-file-signature" style="color: #d97706;"></i> Thiếu Hồ sơ Pháp lý</span>
+            <span class="action-card-count" id="cntMissing" style="display:none; color: #d97706;"></span>
+          </div>
+          <p class="action-card-desc">Đề tài đã giao nhưng chưa tải File scan Quyết định giao nhiệm vụ hoặc File scan Hợp đồng NCKH có mộc đỏ.</p>
+        </div>
+        <div class="action-card-footer">
+          <span style="color:#d97706; font-weight:700;">Xem & Upload bổ sung</span>
+          <i class="fa-solid fa-chevron-right" style="color:#d97706;"></i>
+        </div>
+      </div>
+
+      <!-- Thẻ 3: Đề tài Cận hạn & Quá hạn -->
+      <div class="action-card" id="cardTabDeadlines" style="border-left-color: #dc2626;" onclick="switchActionTab('deadlines')">
+        <div>
+          <div class="action-card-header">
+            <span class="action-card-title"><i class="fa-solid fa-bell" style="color: #dc2626;"></i> Cảnh báo Hạn (30-15-7-0)</span>
+            <span class="action-card-count" id="cntDeadlines" style="display:none; color: #dc2626;"></span>
+          </div>
+          <p class="action-card-desc">Đề tài đến mốc 30 ngày (nộp NT/gia hạn), 15 ngày, 7 ngày hoặc Quá hạn (kích hoạt thanh lý hợp đồng).</p>
+        </div>
+        <div class="action-card-footer">
+          <span style="color:#dc2626; font-weight:700;">Xem danh sách đôn đốc</span>
+          <i class="fa-solid fa-chevron-right" style="color:#dc2626;"></i>
+        </div>
+      </div>
+
+      <!-- Thẻ 4: Tờ trình & Báo cáo tiến độ -->
+      <div class="action-card" id="cardTabAdjustments" style="border-left-color: #9333ea;" onclick="switchActionTab('adjustments')">
+        <div>
+          <div class="action-card-header">
+            <span class="action-card-title"><i class="fa-solid fa-sliders" style="color: #9333ea;"></i> Tờ trình & Báo cáo Chờ duyệt</span>
+            <span class="action-card-count" id="cntAdjustments" style="display:none; color: #9333ea;"></span>
+          </div>
+          <p class="action-card-desc">Tờ trình xin điều chỉnh cơ cấu dự toán hoặc Báo cáo tiến độ 6 tháng từ Chủ nhiệm đề tài gửi lên.</p>
+        </div>
+        <div class="action-card-footer">
+          <span style="color:#9333ea; font-weight:700;">Thẩm tra & Phê duyệt</span>
+          <i class="fa-solid fa-chevron-right" style="color:#9333ea;"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bảng Chi tiết theo Tab đang chọn -->
+    <div class="table-card" style="margin-bottom: 2rem;">
+      <div style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h3 style="font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0; display:flex; align-items:center; gap:8px;" id="currentTabTitle">
+            <i class="fa-solid fa-inbox" style="color: #0284c7;"></i>
+            <span>Hồ sơ Đề xuất Mới Tiếp nhận Chờ Phòng KHCN Sơ duyệt</span>
+          </h3>
+          <p style="font-size: 0.75rem; color: #64748b; margin: 3px 0 0 0;" id="currentTabSub">
+            Thẩm tra tính hợp lệ về Thuyết minh và Bảng dự toán kinh phí để chuyển Hội đồng xét duyệt đề cương.
+          </p>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="actionCenterSearch" placeholder="🔍 Tìm kiếm nhanh..." oninput="filterCurrentTable()" style="font-size:0.78rem; padding:5px 10px; border:1px solid #cbd5e1; border-radius:6px; min-width:200px;">
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table" id="actionCenterTable" style="min-width: 900px;">
+          <thead id="actionCenterThead">
+            <!-- Render bởi JS -->
+          </thead>
+          <tbody id="actionCenterTbody">
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 2rem; color: #64748b;">
+                <i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu nghiệp vụ Phòng KH&CN...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL: NHẬT KÝ EMAIL THÔNG BÁO TỰ ĐỘNG ĐÃ GỬI -->
+  <div class="modal-overlay" id="emailLogsModal">
+    <div class="modal" style="max-width: 800px; width: 95%;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="font-size: 1rem;">
+          <i class="fa-solid fa-envelopes-bulk" style="color: var(--primary);"></i>
+          Nhật Ký Email Tự Động Theo Ma Trận Phân Quyền
+        </h3>
+        <button class="modal-close" onclick="closeEmailLogsModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 1rem; max-height: 70vh; overflow-y: auto;">
+        <div id="emailLogsContainer"></div>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button class="btn btn-primary btn-sm" onclick="triggerActionCenterScan()" style="font-size:0.78rem;">
+          <i class="fa-solid fa-arrows-rotate"></i> Quét hạn Đề tài & Gửi Email Thông báo
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="closeEmailLogsModal()">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/rbac-header.js"></script>
+  <script src="js/action-center.js"></script>
+</body>
+</html>
