@@ -54,7 +54,12 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 | └ 4.0 | Lưới test `tests/capVien.test.js` (8 test phủ 49 route) | 0 | 🔵 Chờ review (`69d0b7c`) | `refactor/routes-cap-vien-1` |
 | └ 4.1–4.9 | Nộp hồ sơ/danh mục, danh sách/chi tiết, Bước 6–8, BC định kỳ, Bước 5/HĐ, dispatcher Bước 2–9, vật tư/điều chỉnh, Bước 4/4A, deadline & bổ sung/tải/xóa | 49 | 🔵 Chờ review · −2.549 dòng | `refactor/routes-cap-vien-1` |
 | 5 | `cooperation` + `htqt` + `events` (84 route + 20 `/api/admin/cooperation/*` đan xen trong `vanBanWord.js`) | 84 | 🔵 **Tách xong — `server.js` hết `/api/cooperation`, `/api/htqt`, `/api/events`** (chờ review/merge) · −3.100 dòng | `refactor/routes-cooperation-1` |
-| 6 | `admin` | 79 | ⬜ Chưa bắt đầu | — |
+| 6 | `admin` — 104 route `/api/admin/*` (20 route đan xen trong `vanBanWord.js` ở Đợt 5 + 84 route còn lại sang 9 file dưới `routes/admin/`) | 104 | 🔵 **Tách xong — `server.js` hết `/api/admin/*`** (chờ review/merge) · −1.349 dòng | `refactor/routes-admin-1` |
+| └ 6.0 | Lưới test `tests/admin.test.js` (5 test phủ 105 route `/api/admin*`) | 0 | 🔵 Chờ review (`10a3ab6`) | `refactor/routes-admin-1` |
+| └ 6.1 | `routes/admin/capVien.js` (28 route `/api/admin/cap-vien/*` & sync) | 28 | 🔵 Chờ review (`83d4a78`) · −324 dòng | `refactor/routes-admin-1` |
+| └ 6.2 | `routes/admin/usersVaNhatKy.js` (5) + `routes/admin/phanQuyenVaTaiKhoan.js` (10) | 15 | 🔵 Chờ review (`0491e6d`) · −339 dòng | `refactor/routes-admin-1` |
+| └ 6.3 | `missionsQuanTri.js` (2), `aceTemplatesVaMissionsImport.js` (4), `homepageModules.js` (3), `caiDatVaThongBao.js` (4) + chuyển `GET notification-recipients` | 13 | 🔵 Chờ review (`778861d`) · −327 dòng | `refactor/routes-admin-1` |
+| └ 6.4 | `cooperationSettings.js` (7), `cooperationDeXuat.js` (12), `journalMetrics.js` (1) | 20 | 🔵 Chờ review (`b7da932`) · −359 dòng | `refactor/routes-admin-1` |
 | 7 | `core` + rút `server.js` < 300 dòng | ~15 | ⬜ Chưa bắt đầu | — |
 
 Ký hiệu: ⬜ chưa bắt đầu · 🟡 đang làm · 🔵 chờ review/merge · ✅ đã merge + deploy ổn định
@@ -312,6 +317,23 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-11-25 · refactor/routes-admin-1 · Đợt 6 — hoàn tất Đợt 6 (`/api/admin/*`, 104 route) · **Đợt 6 khép**
+
+- **Đã xong:** dựng lưới test [tests/admin.test.js](tests/admin.test.js) (5 test phủ 105 route `/api/admin*` gồm 104 `/api/admin/*` và `/api/admin-ui-status`, xanh trên code cũ) và tách toàn bộ 84 route `/api/admin/*` còn lại trong `server.js` (20 route `/api/admin/cooperation/*` đan xen đã tách trong Đợt 5 ở `vanBanWord.js`) sang 9 file dưới `routes/admin/`:
+  - `capVien.js` (28 route `/api/admin/cap-vien/*` & `/api/admin/missions/sync-from-cap-vien`)
+  - `usersVaNhatKy.js` (6 route: `GET/POST/DELETE /api/admin/users`, `GET /api/admin/activity-log`, `GET /api/admin/notification-recipients`, `DELETE /api/admin/missions/cache`)
+  - `phanQuyenVaTaiKhoan.js` (10 route: `council-role-grants*`, `budget-appraisal-team*`, `users/:id/roles`, `users/:id/ban`, `users/:id/reset-password`, `users/:id/password`, `users/:id/cap-vien-role`)
+  - `missionsQuanTri.js` (2 route: `PUT/DELETE /api/admin/missions/:id`)
+  - `aceTemplatesVaMissionsImport.js` (4 route: `POST/DELETE /api/admin/ace-templates*`, `POST /api/admin/missions/import`, `POST /api/admin/missions/manual`)
+  - `homepageModules.js` (3 route: `GET/PUT /api/admin/homepage-modules*`)
+  - `caiDatVaThongBao.js` (4 route: `GET/PUT /api/admin/settings/standard-label`, `POST/DELETE /api/admin/notification-recipients*`)
+  - `cooperationSettings.js` (7 route: `cooperation/notification-recipients*`, `cooperation/settings/thoa-thuan-expiry`, `cooperation/thoa-thuan/run-expiry-check`)
+  - `cooperationDeXuat.js` (12 route qua 4 factory theo thứ tự mount cũ: `doan-ra/:id/status`, `thoa-thuan/:id`, `su-kien/:id`, `doan-ra|doan-vao|mou|ytnn/:id`)
+  - `journalMetrics.js` (1 route: `POST /api/admin/journal-metrics/update-if`)
+  - `server.js` 11.006 → **9.657** (**−1.349 dòng**); hạ trần `.github/server-js-max-lines` xuống `9657`.
+- **Bằng chứng:** `route-inventory.js` trước/sau (816 route, cùng thứ tự) → diff **rỗng**; `route:compare` (1.401 yêu cầu) → 0 đổi mã trạng thái, 0 đổi nội dung ở `/api/admin*` (1 khác biệt timestamp `inLuc: gioInVn()` trên `GET /api/ngan-hang-te-bao-khang-the/reports/gmo/print`, cùng độ dài 3590 byte); `tests/admin.test.js` 5/5 xanh.
+- **Phiên sau làm:** (1) Review/merge `refactor/routes-cap-vien-1` → `refactor/routes-cooperation-1` → `refactor/routes-admin-1` vào `main`. (2) Tiếp tục **Đợt 7 (`core` + rút `server.js` < 300 dòng)** — gồm `/api/admin-ui-status` và các route nền còn lại.
 
 ### 2026-11-25 · refactor/routes-cooperation-1 · Đợt 5 — hoàn tất Đợt 5 (`cooperation` + `htqt` + `events`, 84 route) · **Đợt 5 khép**
 
