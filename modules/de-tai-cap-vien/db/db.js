@@ -99,6 +99,17 @@ const db = {
           ['nhattruong@sci.edu.vn', 'Trương Châu Nhật', 'PHONG_KHCN', 'Trưởng phòng Kế hoạch tổng hợp', 'system']
         );
       }
+      // Bảng cấu hình Ma trận Luồng Email Thông báo (chỉ Master Admin quản lý)
+      await this.run(`
+        CREATE TABLE IF NOT EXISTS nckh_email_matrix (
+          event_key TEXT PRIMARY KEY,
+          enabled INTEGER DEFAULT 1,
+          recipient_roles TEXT NOT NULL,
+          extra_cc TEXT DEFAULT '',
+          updated_by TEXT,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
       console.log('✅ SQLite Schema initialized successfully at:', config.DB_URL);
     }
   }

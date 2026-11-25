@@ -12,6 +12,7 @@ const subapp = require('./subapp');
 const config = require('./config/config');
 const db = require('./db/db');
 const schedulerService = require('./services/schedulerService');
+const emailNotificationService = require('./services/emailNotificationService');
 
 let initialized = false;
 
@@ -28,7 +29,17 @@ function mount(app, ctx = {}) {
     userIdIsBanned,
     clearAuthCookie,
     userEmailIsMasterAdmin,
+    transporter,
+    getSmtpFrom,
+    baseUrl,
   } = ctx;
+
+  emailNotificationService.configure({
+    transporter: transporter || null,
+    getSmtpFrom: typeof getSmtpFrom === 'function' ? getSmtpFrom : null,
+    eofficeDb: eofficeDb || null,
+    baseUrl: baseUrl || process.env.BASE_URL || 'https://eoffice.sci.edu.vn',
+  });
 
   // Đảm bảo /de-tai-cap-vien luôn có dấu "/" cuối và kiểm tra phiên đăng nhập Eoffice
   app.use('/de-tai-cap-vien', (req, res, next) => {

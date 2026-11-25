@@ -68,7 +68,7 @@ class CallService {
     return call;
   }
 
-  // Khởi tạo một email thông báo và lưu vào nhật ký nckh_email_logs
+  // Gửi email thật qua SMTP E-Office (nếu đã cấu hình) và lưu vào nhật ký nckh_email_logs
   async sendNotification({
     eventType,
     recipientRole,
@@ -81,26 +81,21 @@ class CallService {
     relatedProjectId = null
   }) {
     try {
-      const res = await db.run(`
-        INSERT INTO nckh_email_logs (
-          event_type, recipient_email, recipient_name, recipient_role,
-          subject, body_html, related_proposal_id, related_project_id,
-          action_url, sent_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'SENT')
-      `, [
+      const emailNotificationService = require('./emailNotificationService');
+      const r = await emailNotificationService.sendAndLogSingleEmail({
         eventType,
+        recipientRole,
         recipientEmail,
         recipientName,
-        recipientRole,
         subject,
         bodyHtml,
+        actionUrl,
         relatedProposalId,
-        relatedProjectId,
-        actionUrl
-      ]);
-      return res.lastInsertRowid;
+        relatedProjectId
+      });
+      return r.id || null;
     } catch (err) {
-      console.error('Lỗi lưu nhật ký email:', err);
+      console.error('Lỗi gửi/lưu nhật ký email:', err);
       return null;
     }
   }

@@ -154,27 +154,23 @@ class SchedulerService {
     }
   }
 
-  // Ghi nhật ký email thông báo
+  // Gửi email thật qua SMTP E-Office (tự chuẩn hóa link & email theo nckh_user_roles) và ghi nhật ký
   async logEmail({ eventType, recipientEmail, recipientName, recipientRole, subject, bodyHtml, relatedProjectId }) {
     try {
-      await db.run(`
-        INSERT INTO nckh_email_logs (
-          event_type, recipient_email, recipient_name, recipient_role,
-          subject, body_html, related_project_id, action_url, sent_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'SENT')
-      `, [
+      const emailNotificationService = require('./emailNotificationService');
+      await emailNotificationService.sendAndLogSingleEmail({
         eventType,
         recipientEmail,
         recipientName,
         recipientRole,
         subject,
         bodyHtml,
-        relatedProjectId,
-        `/chi-tiet.html?id=${relatedProjectId}`
-      ]);
+        actionUrl: `/de-tai-cap-vien/chi-tiet.html?id=${relatedProjectId}`,
+        relatedProjectId
+      });
       return true;
     } catch (err) {
-      console.error('Lỗi ghi nhật ký email nhắc hạn:', err);
+      console.error('Lỗi gửi/ghi nhật ký email nhắc hạn:', err);
       return false;
     }
   }

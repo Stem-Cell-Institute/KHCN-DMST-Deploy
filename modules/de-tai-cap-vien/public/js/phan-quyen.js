@@ -46,8 +46,9 @@ async function loadRBACData() {
       }
 
       updateCurrentUserUI();
-      if (currentUser && currentUser.can_switch_role) {
+      if (currentUser && currentUser.is_master_admin) {
         loadUserRoleAssignments();
+        loadEmailNotificationMatrix();
       }
     }
 
@@ -593,4 +594,156 @@ async function deleteUserRoleAssignment(id, email) {
   } catch (err) {
     showToast('Lỗi kết nối khi gỡ phân quyền.', 'error');
   }
+}
+
+
+// ============================================================================
+// MASTER ADMIN: MA TRẬN LUỒNG EMAIL THÔNG BÁO TỰ ĐỘNG (/api/rbac/email-matrix)
+// ============================================================================
+let emailMatrixRulesCache = [];
+
+async function loadEmailNotificationMatrix() {
+  const section = document.getElementById('adminEmailMatrixSection');
+  if (!section) return;
+  try {
+    const res = await fetch('/api/rbac/email-matrix');
+    if (res.status === 403) {
+      section.style.display = 'none';
+      return;
+    }
+    const json = await res.json();
+    if (!json.success || !json.data) return;
+
+    section.style.display = 'block';
+    const d = json.data;
+    emailMatrixRulesCache = d.rules || [];
+
+    const smtpBadge = document.getElementById('smtpStatusBadge');
+    if (smtpBadge) {
+      if (d.smtp_configured) {
+        smtpBadge.style.background = '#dcfce7';
+        smtpBadge.style.color = '#15803d';
+        smtpBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> SMTP E-Office: Đang hoạt động';
+      } else {
+        smtpBadge.style.background = '#fef3c7';
+        smtpBadge.style.color = '#b45309';
+        smtpBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Chưa cấu hình SMTP (chỉ ghi nhật ký)';
+      }
+    }
+
+    const dirEl = document.getElementById('roleDirectorySummary');
+    if (dirEl && d.role_directory) {
+      const labels = {
+        VIEN_TRUONG: 'Viện trưởng',
+        PHONG_KHCN: 'Phòng KHTH',
+        PHONG_TC_CU: 'P. TC-Cung ứng',
+        THU_KHO: 'Thủ kho',
+        SUPER_ADMIN: 'Master Admin'
+      };
+      const parts = Object.keys(labels).map((k) => {
+        const arr = d.role_directory[k] || [];
+        const emails = arr.length ? arr.map((x) => escapeHtml(x.email)).join(', ') : '<em>chưa gán</em>';
+        return `<strong>${labels[k]}:</strong> ${emails}`;
+      });
+      dirEl.innerHTML = `<i class="fa-solid fa-address-book"></i> <strong>Email thật đang nhận theo vai trò:</strong> ${parts.join(' &nbsp;|&nbsp; ')} &nbsp;|&nbsp; <strong>Chủ nhiệm:</strong> tự lấy theo email chủ nhiệm từng đề tài`;
+    }
+
+    renderEmailMatrixTable();
+    renderEmailLogsTable(d.recent_logs || []);
+  } catch (err) {
+    console.error('Lỗi tải Ma trận Email:', err);
+  }
+}
+
+function renderEmailMatrixTable() {
+  const tbody = document.getElementById('emailMatrixTableBody');
+  if (!tbody) return;
+  const cols = ['CHU_NHIEM', 'PHONG_KHCN', 'VIEN_TRUONG', 'PHONG_TC_CU', 'THU_KHO', 'SUPER_ADMIN'];
+
+  tbody.innerHTML = emailMatrixRulesCache
+    .map((rule) => {
+      const roleChecks = cols
+        .map((rk) => {
+          const checked = (rule.recipient_roles || []).includes(rk) ? 'checked' : '';
+          return `<td style="text-align:center;"><input type="checkbox" class="em-role-${rule.event_key}" value="${rk}" ${checked} style="width:16px;height:16px;cursor:pointer;"></td>`;
+        })
+        .join('');
+      return `
+        <tr data-event-key="${escapeHtml(rule.event_key)}">
+          <td style="text-align:center;">
+            <input type="checkbox" id="em-en-${escapeHtml(rule.event_key)}" ${rule.enabled ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;">
+          </td>
+          <td>
+            <div style="font-size:0.7rem; font-weight:700; color:#0284c7; text-transform:uppercase;">${escapeHtml(rule.stage_label)}</div>
+            <div style="font-weight:700; color:#0f172a; font-size:0.86rem;">${escapeHtml(rule.event_name)}</div>
+            <div style="font-size:0.75rem; color:#64748b;">${escapeHtml(rule.desc)}</div>
+          </td>
+          ${roleChecks}
+          <td>
+            <input type="text" id="em-cc-${escapeHtml(rule.event_key)}" class="filter-input" value="${escapeHtml(rule.extra_cc || '')}" placeholder="email1@sci.edu.vn..." style="width:100%; font-size:0.76rem; padding:5px 8px;">
+          </td>
+          <td style="text-align:right;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveEmailMatrixRow('${escapeHtml(rule.event_key)}')" style="font-size:0.75rem; padding:5px 10px;">Lưu</button>
+          </td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+async function saveEmailMatrixRow(eventKey) {
+  const enabledEl = document.getElementById('em-en-' + eventKey);
+  const ccEl = document.getElementById('em-cc-' + eventKey);
+  const roleEls = document.querySelectorAll('.em-role-' + eventKey);
+  const recipient_roles = Array.from(roleEls)
+    .filter((cb) => cb.checked)
+    .map((cb) => cb.value);
+
+  try {
+    const res = await fetch('/api/rbac/email-matrix/' + encodeURIComponent(eventKey), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enabled: enabledEl ? enabledEl.checked : true,
+        recipient_roles,
+        extra_cc: ccEl ? ccEl.value.trim() : ''
+      })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      showToast(json.error || 'Không thể lưu cấu hình email.', 'error');
+      return;
+    }
+    showToast(json.message || 'Đã lưu cấu hình luồng email!', 'success');
+  } catch (err) {
+    showToast('Lỗi kết nối khi lưu cấu hình email.', 'error');
+  }
+}
+
+function renderEmailLogsTable(logs) {
+  const cnt = document.getElementById('emailLogsCount');
+  const tbody = document.getElementById('emailLogsTableBody');
+  if (cnt) cnt.textContent = String(logs.length);
+  if (!tbody) return;
+  if (!logs.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:1rem; color:#64748b;">Chưa có nhật ký gửi email nào.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = logs
+    .map((l) => {
+      const st = String(l.status || 'SENT').toUpperCase();
+      const stColor = st === 'SENT' ? '#15803d' : (st === 'FAILED' ? '#b91c1c' : '#b45309');
+      const stBg = st === 'SENT' ? '#dcfce7' : (st === 'FAILED' ? '#fee2e2' : '#fef3c7');
+      return `
+        <tr>
+          <td style="white-space:nowrap; color:#64748b;">${escapeHtml(l.sent_at || '—')}</td>
+          <td><code>${escapeHtml(l.event_type || '')}</code></td>
+          <td>${escapeHtml(l.recipient_email || '')}</td>
+          <td>${escapeHtml(l.recipient_role || '')}</td>
+          <td>${escapeHtml(l.subject || '')}</td>
+          <td><span class="badge" style="background:${stBg}; color:${stColor}; font-weight:700;">${escapeHtml(st)}</span></td>
+        </tr>
+      `;
+    })
+    .join('');
 }

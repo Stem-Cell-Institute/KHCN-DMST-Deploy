@@ -250,6 +250,54 @@ test('gộp Phòng Kế hoạch tổng hợp (6 vai trò) và Admin gán vai tr�
   }
 });
 
+test('Master Admin xem và cấu hình Ma trận Luồng Email (/api/rbac/email-matrix); tài khoản khác bị 403', async () => {
+  const adminHeaders = {
+    Authorization: 'Bearer ' + srv.tokens.admin,
+    'Content-Type': 'application/json',
+  };
+
+  const getRes = await fetch(srv.baseUrl + '/de-tai-cap-vien/api/rbac/email-matrix', { headers: adminHeaders });
+  assert.equal(getRes.status, 200);
+  const data = (await getRes.json()).data;
+  assert.equal(data.rules.length, 13);
+  assert.ok(data.role_directory && Array.isArray(data.role_directory.PHONG_KHCN));
+  assert.ok(Array.isArray(data.recent_logs));
+
+  // Lưu cấu hình thử cho PROPOSAL_SUBMITTED rồi khôi phục mặc định
+  const putRes = await fetch(srv.baseUrl + '/de-tai-cap-vien/api/rbac/email-matrix/PROPOSAL_SUBMITTED', {
+    method: 'PUT',
+    headers: adminHeaders,
+    body: JSON.stringify({
+      enabled: true,
+      recipient_roles: ['CHU_NHIEM', 'PHONG_KHCN', 'VIEN_TRUONG'],
+      extra_cc: 'cc-test@sci.edu.vn',
+    }),
+  });
+  assert.equal(putRes.status, 200);
+  const saved = (await putRes.json()).data;
+  assert.ok(saved.recipient_roles.includes('VIEN_TRUONG'));
+  assert.equal(saved.extra_cc, 'cc-test@sci.edu.vn');
+
+  // Khôi phục lại mặc định sạch
+  await fetch(srv.baseUrl + '/de-tai-cap-vien/api/rbac/email-matrix/PROPOSAL_SUBMITTED', {
+    method: 'PUT',
+    headers: adminHeaders,
+    body: JSON.stringify({
+      enabled: true,
+      recipient_roles: ['CHU_NHIEM', 'PHONG_KHCN'],
+      extra_cc: '',
+    }),
+  });
+
+  // Người dùng thường bị chặn 403
+  if (srv.tokens.plain) {
+    const plainRes = await fetch(srv.baseUrl + '/de-tai-cap-vien/api/rbac/email-matrix', {
+      headers: { Authorization: 'Bearer ' + srv.tokens.plain },
+    });
+    assert.equal(plainRes.status, 403);
+  }
+});
+
 test('Quản lý nhiệm vụ KHCN: đã bỏ mục Cấp Viện thừa trên UI nhưng thống kê vẫn bao gồm đề tài từ module Cấp Viện', async () => {
   const adminHeaders = { Authorization: 'Bearer ' + srv.tokens.admin };
 

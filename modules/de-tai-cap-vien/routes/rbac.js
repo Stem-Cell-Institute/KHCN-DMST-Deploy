@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db/db');
 const { ROLES, PERMISSION_GROUPS, DEMO_PROFILES, getPermissionsByRole } = require('../config/roles');
 const { AUDIT_CRITERIA } = require('../services/auditService');
+const emailNotificationService = require('../services/emailNotificationService');
 
 // 1. Lấy danh sách 7 vai trò
 router.get('/roles', (req, res) => {
@@ -292,6 +293,67 @@ router.delete('/assignments/:id', async (req, res) => {
     res.json({ success: true, message: 'Đã gỡ phân quyền thành công.' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7. Ma trận Luồng Email Thông báo Tự động — CHỈ DÀNH CHO MASTER ADMIN
+router.get('/email-matrix', async (req, res) => {
+  try {
+    if (!req.user || !req.user.is_master_admin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Chỉ Master Admin E-Office mới có quyền xem và cấu hình Ma trận Email thông báo.'
+      });
+    }
+    const [rules, roleDirectory, recentLogs] = await Promise.all([
+      emailNotificationService.getMatrixRules(),
+      emailNotificationService.getRoleEmailDirectory(),
+      db.all(`
+        SELECT id, event_type, recipient_email, recipient_name, recipient_role, subject, sent_status AS status, sent_at
+        FROM nckh_email_logs
+        ORDER BY id DESC
+        LIMIT 30
+      `)
+    ]);
+    res.json({
+      success: true,
+      data: {
+        smtp_configured: emailNotificationService.isSmtpConfigured(),
+        base_module_url: emailNotificationService.getBaseModuleUrl(),
+        roles: Object.values(ROLES),
+        role_directory: roleDirectory,
+        rules,
+        recent_logs: recentLogs
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.put('/email-matrix/:eventKey', async (req, res) => {
+  try {
+    if (!req.user || !req.user.is_master_admin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Chỉ Master Admin E-Office mới có quyền cấu hình Ma trận Email thông báo.'
+      });
+    }
+    const { eventKey } = req.params;
+    const { enabled, recipient_roles, extra_cc } = req.body || {};
+    const updated = await emailNotificationService.saveMatrixRule(eventKey, {
+      enabled: enabled !== false && enabled !== 0,
+      recipient_roles,
+      extra_cc,
+      updated_by: req.user.email || req.user.fullname || 'master_admin'
+    });
+    res.json({
+      success: true,
+      message: `Đã lưu cấu hình email cho sự kiện "${updated.event_name}".`,
+      data: updated
+    });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
   }
 });
 

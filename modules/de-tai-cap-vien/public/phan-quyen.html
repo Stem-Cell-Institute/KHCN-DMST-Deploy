@@ -332,6 +332,67 @@
       </div>
     </section>
 
+
+    <!-- Ma trận Luồng Email Thông báo Tự động (Chỉ Master Admin) -->
+    <section id="adminEmailMatrixSection" class="table-card" style="display: none; margin-bottom: 1.5rem; border: 1px solid #cbd5e1;">
+      <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0;">
+            <i class="fa-solid fa-envelope-circle-check" style="color: #0284c7;"></i>
+            Ma trận Luồng Email Thông báo Tự động (Chỉ Master Admin)
+          </h3>
+          <p style="font-size: 0.8rem; color: #475569; margin: 4px 0 0 0;">
+            Cấu hình bật/tắt và chọn vai trò nhận email cho từng bước quy trình đề tài. Email gửi qua <strong>SMTP thật của E-Office</strong> và tự lấy đúng địa chỉ từ bảng <strong>Gán vai trò</strong> ở trên.
+          </p>
+        </div>
+        <span id="smtpStatusBadge" class="badge" style="background:#e2e8f0; color:#334155; font-weight:700; padding:6px 10px;">Đang kiểm tra SMTP...</span>
+      </div>
+      <div style="padding: 12px 20px; background: #f0f9ff; border-bottom: 1px solid #e0f2fe; font-size: 0.78rem; color: #0369a1;" id="roleDirectorySummary">
+        Đang tải danh bạ email theo vai trò...
+      </div>
+      <div class="table-responsive" style="overflow-x: auto;">
+        <table class="data-table" style="min-width: 1050px;">
+          <thead>
+            <tr>
+              <th style="width: 45px; text-align: center;">Bật</th>
+              <th style="min-width: 260px;">Sự kiện / Bước quy trình</th>
+              <th style="text-align: center; width: 85px;">Chủ nhiệm</th>
+              <th style="text-align: center; width: 85px;">Phòng KHTH</th>
+              <th style="text-align: center; width: 85px;">Viện trưởng</th>
+              <th style="text-align: center; width: 85px;">P. TC-CU</th>
+              <th style="text-align: center; width: 75px;">Thủ kho</th>
+              <th style="text-align: center; width: 85px;">Master Admin</th>
+              <th style="min-width: 170px;">CC bổ sung (tùy chọn)</th>
+              <th style="width: 80px; text-align: right;">Lưu</th>
+            </tr>
+          </thead>
+          <tbody id="emailMatrixTableBody">
+            <tr><td colspan="10" style="text-align:center; padding:1.5rem; color:#64748b;">Đang tải ma trận luồng email...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <details style="padding: 12px 20px; border-top: 1px solid #e2e8f0; background: #fafafa;">
+        <summary style="cursor:pointer; font-weight:700; font-size:0.85rem; color:#334155;">
+          <i class="fa-solid fa-clock-rotate-left"></i> Nhật ký gửi Email gần nhất (<span id="emailLogsCount">0</span> bản ghi)
+        </summary>
+        <div class="table-responsive" style="overflow-x:auto; margin-top: 10px;">
+          <table class="data-table" style="min-width: 780px; font-size: 0.8rem;">
+            <thead>
+              <tr>
+                <th>Thời gian</th>
+                <th>Sự kiện</th>
+                <th>Người nhận</th>
+                <th>Vai trò</th>
+                <th>Tiêu đề</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="emailLogsTableBody"></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
     <!-- 6 Role Cards Summary -->
     <div class="role-grid" id="rolesCardsContainer">
       <!-- Populated by JS -->
