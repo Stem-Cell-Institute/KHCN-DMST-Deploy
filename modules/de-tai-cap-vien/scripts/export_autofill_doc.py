@@ -203,9 +203,9 @@ def add_p(doc, text="", font_size=12, bold=False, italic=False, align=WD_ALIGN_P
         r.font.italic = italic
     return p
 
-def add_signatures_2cols(doc, left_title="XÁC NHẬN CỦA PHÒNG KHCN & QHĐN", right_title="CHỦ NHIỆM ĐỀ TÀI",
+def add_signatures_2cols(doc, left_title="XÁC NHẬN CỦA PHÒNG KẾ HOẠCH TỔNG HỢP", right_title="CHỦ NHIỆM ĐỀ TÀI",
                          left_sub="(Ký và ghi rõ họ tên)", right_sub="(Ký và ghi rõ họ tên)",
-                         left_name="ThS. Nguyễn Thị Huệ", right_name=""):
+                         left_name="Trương Châu Nhật", right_name=""):
     p_sp = doc.add_paragraph()
     p_sp.paragraph_format.space_before = Pt(8); p_sp.paragraph_format.space_after = Pt(4)
     tbl = doc.add_table(rows=4, cols=2)
@@ -234,9 +234,9 @@ def add_signatures_2cols(doc, left_title="XÁC NHẬN CỦA PHÒNG KHCN & QHĐN"
     )
     tbl._tbl.tblPr.append(tblBorders)
 
-def add_signatures_3cols(doc, left_title="VIỆN TRƯỞNG", mid_title="TRƯỞNG PHÒNG KHCN & QHĐN", right_title="CHỦ NHIỆM ĐỀ TÀI",
+def add_signatures_3cols(doc, left_title="VIỆN TRƯỞNG", mid_title="TRƯỞNG PHÒNG KẾ HOẠCH TỔNG HỢP", right_title="CHỦ NHIỆM ĐỀ TÀI",
                          left_sub="(Ký, đóng dấu và ghi rõ họ tên)", mid_sub="(Ký và ghi rõ họ tên)", right_sub="(Ký và ghi rõ họ tên)",
-                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="ThS. Nguyễn Thị Huệ", right_name=""):
+                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="Trương Châu Nhật", right_name=""):
     p_sp = doc.add_paragraph()
     p_sp.paragraph_format.space_before = Pt(8); p_sp.paragraph_format.space_after = Pt(4)
     tbl = doc.add_table(rows=4, cols=3)
@@ -306,8 +306,8 @@ def generate_autofill_hop_dong(p, out_path):
     add_p(doc, "Điều 4. Sản phẩm giao nộp: Bên B cam kết bàn giao đầy đủ: (1) Báo cáo tổng kết toàn văn và báo cáo tóm tắt; (2) Bài báo khoa học xuất bản hoặc đơn đăng ký giải pháp hữu ích/sáng chế; (3) Sản phẩm đào tạo học viên cao học/cử nhân theo đúng đăng ký.")
     add_p(doc, "Điều 5. Nghiệm thu và thanh lý: Sau khi hoàn thành toàn bộ khối lượng nghiên cứu, Bên B nộp Đơn đề nghị nghiệm thu. Hai bên tiến hành họp Hội đồng đánh giá và lập Biên bản thanh lý Hợp đồng để tất toán đề tài.")
     
-    add_signatures_3cols(doc, left_title="ĐẠI DIỆN BÊN A\nVIỆN TRƯỞNG", mid_title="TRƯỞNG PHÒNG KHCN & QHĐN", right_title="ĐẠI DIỆN BÊN B\nCHỦ NHIỆM ĐỀ TÀI",
-                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="ThS. Nguyễn Thị Huệ", right_name=p['leader_name'])
+    add_signatures_3cols(doc, left_title="ĐẠI DIỆN BÊN A\nVIỆN TRƯỞNG", mid_title="TRƯỞNG PHÒNG KẾ HOẠCH TỔNG HỢP", right_title="ĐẠI DIỆN BÊN B\nCHỦ NHIỆM ĐỀ TÀI",
+                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="Trương Châu Nhật", right_name=p['leader_name'])
     doc.save(out_path)
 
 def generate_autofill_bao_cao_6thang(p, out_path, report_row=None):
@@ -400,11 +400,11 @@ def generate_autofill_bao_cao_6thang(p, out_path, report_row=None):
     add_p(doc, f"- Ước tính tổng khối lượng công việc đã hoàn thành của toàn đề tài: {pct_display}")
     if khcn_eval:
         eval_actor = f" ({evaluated_by})" if evaluated_by else ""
-        add_p(doc, f"- Nhận xét / Đánh giá của Phòng KHCN & QHĐN{eval_actor}: {khcn_eval}")
+        add_p(doc, f"- Nhận xét / Đánh giá của Phòng Kế hoạch tổng hợp{eval_actor}: {khcn_eval}")
     add_p(doc, "- Khó khăn, kiến nghị (nếu có) và kế hoạch triển khai kỳ tiếp theo:\n..........................................................................................................................................................................")
     
-    add_signatures_3cols(doc, left_title="PHÊ DUYỆT CỦA VIỆN TRƯỞNG", mid_title="Ý KIẾN CỦA PHÒNG KHCN & QHĐN", right_title="CHỦ NHIỆM ĐỀ TÀI",
-                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="ThS. Nguyễn Thị Huệ", right_name=p['leader_name'])
+    add_signatures_3cols(doc, left_title="PHÊ DUYỆT CỦA VIỆN TRƯỞNG", mid_title="Ý KIẾN CỦA PHÒNG KẾ HOẠCH TỔNG HỢP", right_title="CHỦ NHIỆM ĐỀ TÀI",
+                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="Trương Châu Nhật", right_name=p['leader_name'])
     doc.save(out_path)
 
 def generate_autofill_don_gia_han(p, out_path, ext_row=None, doc_key="", report_row=None):
@@ -469,10 +469,10 @@ def generate_autofill_don_gia_han(p, out_path, ext_row=None, doc_key="", report_
     if not reason_text:
         reason_text = "Cần bổ sung các phép đo lặp lại trên các lô sinh học độc lập, hoàn thiện bản thảo bài báo khoa học và hỗ trợ học viên hoàn thành chỉnh sửa luận văn tốt nghiệp theo góp ý của Hội đồng chấm."
     add_p(doc, f"11. Lý do chi tiết xin gia hạn: {reason_text}")
-    add_p(doc, "Tôi làm đơn này kính đề nghị Ban Giám đốc Viện và Phòng KHCN xem xét phê duyệt gia hạn để hoàn thành đúng cam kết.")
+    add_p(doc, "Tôi làm đơn này kính đề nghị Ban Giám đốc Viện và Phòng Kế hoạch tổng hợp xem xét phê duyệt gia hạn để hoàn thành đúng cam kết.")
     
-    add_signatures_3cols(doc, left_title="PHÊ DUYỆT CỦA VIỆN TRƯỞNG", mid_title="Ý KIẾN CỦA PHÒNG KHCN & QHĐN", right_title="CHỦ NHIỆM ĐỀ TÀI",
-                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="ThS. Nguyễn Thị Huệ", right_name=p['leader_name'])
+    add_signatures_3cols(doc, left_title="PHÊ DUYỆT CỦA VIỆN TRƯỞNG", mid_title="Ý KIẾN CỦA PHÒNG KẾ HOẠCH TỔNG HỢP", right_title="CHỦ NHIỆM ĐỀ TÀI",
+                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="Trương Châu Nhật", right_name=p['leader_name'])
     doc.save(out_path)
 
 def generate_autofill_to_trinh_dieu_chinh_du_toan(p, out_path, adj_row=None):
@@ -574,15 +574,15 @@ def generate_autofill_to_trinh_dieu_chinh_du_toan(p, out_path, adj_row=None):
     doc.add_paragraph()
 
     if adj_row and adj_row.get('khcn_opinion'):
-        add_p(doc, f"12. Ý kiến thẩm tra của Phòng KHCN & QHĐN: {adj_row['khcn_opinion']}")
+        add_p(doc, f"12. Ý kiến thẩm tra của Phòng Kế hoạch tổng hợp: {adj_row['khcn_opinion']}")
     if adj_row and (adj_row.get('decision_number') or adj_row.get('director_decision')):
         dec_info = f" (Quyết định số: {adj_row['decision_number']} ngày {adj_row.get('decision_date') or ''})" if adj_row.get('decision_number') else ""
         add_p(doc, f"13. Ý kiến phê duyệt của Viện trưởng: {adj_row.get('director_decision') or 'Đồng ý phê duyệt điều chỉnh dự toán'}{dec_info}.")
 
-    add_p(doc, "Ban Chủ nhiệm đề tài cam kết việc điều chỉnh dự toán nêu trên hoàn toàn phù hợp với định mức chi tiêu nội bộ của Viện, không làm thay đổi mục tiêu và sản phẩm khoa học đã đăng ký trong Hợp đồng. Kính trình Viện trưởng và Phòng KHCN xem xét, phê duyệt.")
+    add_p(doc, "Ban Chủ nhiệm đề tài cam kết việc điều chỉnh dự toán nêu trên hoàn toàn phù hợp với định mức chi tiêu nội bộ của Viện, không làm thay đổi mục tiêu và sản phẩm khoa học đã đăng ký trong Hợp đồng. Kính trình Viện trưởng và Phòng Kế hoạch tổng hợp xem xét, phê duyệt.")
 
-    add_signatures_3cols(doc, left_title="PHÊ DUYỆT CỦA VIỆN TRƯỞNG", mid_title="THẨM TRA CỦA PHÒNG KHCN & QHĐN", right_title="CHỦ NHIỆM ĐỀ TÀI",
-                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="ThS. Nguyễn Thị Huệ", right_name=p['leader_name'])
+    add_signatures_3cols(doc, left_title="PHÊ DUYỆT CỦA VIỆN TRƯỞNG", mid_title="THẨM TRA CỦA PHÒNG KẾ HOẠCH TỔNG HỢP", right_title="CHỦ NHIỆM ĐỀ TÀI",
+                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="Trương Châu Nhật", right_name=p['leader_name'])
     doc.save(out_path)
 
 def generate_autofill_don_nghiem_thu(p, out_path, report_row=None):
@@ -616,11 +616,11 @@ def generate_autofill_don_nghiem_thu(p, out_path, report_row=None):
     add_p(doc, "- Các sản phẩm công bố khoa học (bài báo xuất bản/chấp nhận đăng hoặc giải pháp hữu ích).")
     add_p(doc, "- Sản phẩm đào tạo học viên cao học / cử nhân tốt nghiệp theo đúng hợp đồng.")
     add_p(doc, "Phương án nghiệm thu đề nghị: [X] Nghiệm thu theo Hội đồng Khoa học cấp Viện đánh giá.")
-    add_p(doc, "Kính đề nghị Viện trưởng Viện Tế bào gốc và Phòng KHCN xem xét thành lập Hội đồng nghiệm thu đề tài theo quy định.")
+    add_p(doc, "Kính đề nghị Viện trưởng Viện Tế bào gốc và Phòng Kế hoạch tổng hợp xem xét thành lập Hội đồng nghiệm thu đề tài theo quy định.")
     
-    add_signatures_2cols(doc, left_title="XÁC NHẬN CỦA PHÒNG KHCN & QHĐN", right_title="CHỦ NHIỆM ĐỀ TÀI",
+    add_signatures_2cols(doc, left_title="XÁC NHẬN CỦA PHÒNG KẾ HOẠCH TỔNG HỢP", right_title="CHỦ NHIỆM ĐỀ TÀI",
                          left_sub="(Kiểm tra đủ điều kiện nghiệm thu)", right_sub="(Ký và ghi rõ họ tên)",
-                         left_name="ThS. Nguyễn Thị Huệ", right_name=p['leader_name'])
+                         left_name="Trương Châu Nhật", right_name=p['leader_name'])
     doc.save(out_path)
 
 def generate_autofill_bien_ban_thanh_ly(p, out_path):
@@ -643,7 +643,7 @@ def generate_autofill_bien_ban_thanh_ly(p, out_path):
     add_p(doc, "Hôm nay, tại Viện Tế bào gốc, các bên gồm có:")
     
     add_p(doc, "BÊN A: VIỆN TẾ BÀO GỐC (SCI)", font_size=11.5, bold=True)
-    add_p(doc, "- Đại diện: PGS. TS. Phạm Văn Phúc                - Chức vụ: Viện trưởng\n- ThS. Nguyễn Thị Huệ                             - Chức vụ: Trưởng phòng KHCN & QHĐN")
+    add_p(doc, "- Đại diện: PGS. TS. Phạm Văn Phúc                - Chức vụ: Viện trưởng\n- Trương Châu Nhật                             - Chức vụ: Trưởng phòng Kế hoạch tổng hợp")
     
     add_p(doc, "BÊN B: CHỦ NHIỆM ĐỀ TÀI", font_size=11.5, bold=True)
     add_p(doc, f"- Họ và tên: {p['leader_name']}                 - Đơn vị công tác: Nhóm {p['research_group'] or 'Nghiên cứu'}")
@@ -654,8 +654,8 @@ def generate_autofill_bien_ban_thanh_ly(p, out_path):
     add_p(doc, f"Điều 2. Tình hình tài chính và quyết toán kinh phí:\n- Tổng kinh phí theo Hợp đồng: {budget_val:,.0f} VNĐ ({num_to_vietnamese_words(budget_val)})\n- Tổng kinh phí thực tế đã quyết toán hợp lệ: {budget_val:,.0f} VNĐ\n- Số dư kinh phí còn lại: 0 đồng.")
     add_p(doc, f"Điều 3. Hai bên thống nhất thanh lý Hợp đồng số {contract_num}. Kể từ ngày ký Biên bản này, Hợp đồng hết hiệu lực pháp lý và hai bên không còn bất kỳ nghĩa vụ hay khiếu nại nào liên quan.")
     
-    add_signatures_3cols(doc, left_title="ĐẠI DIỆN BÊN A\nVIỆN TRƯỞNG", mid_title="TRƯỞNG PHÒNG KHCN & QHĐN", right_title="ĐẠI DIỆN BÊN B\nCHỦ NHIỆM ĐỀ TÀI",
-                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="ThS. Nguyễn Thị Huệ", right_name=p['leader_name'])
+    add_signatures_3cols(doc, left_title="ĐẠI DIỆN BÊN A\nVIỆN TRƯỞNG", mid_title="TRƯỞNG PHÒNG KẾ HOẠCH TỔNG HỢP", right_title="ĐẠI DIỆN BÊN B\nCHỦ NHIỆM ĐỀ TÀI",
+                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="Trương Châu Nhật", right_name=p['leader_name'])
     doc.save(out_path)
 
 def generate_autofill_bien_ban_nghiem_thu(p, out_path):
@@ -678,12 +678,12 @@ def generate_autofill_bien_ban_nghiem_thu(p, out_path):
     add_p(doc, f"4. Căn cứ Quyết định giao nhiệm vụ số: {p['decision_number']} ngày {p['decision_date']}")
     add_p(doc, f"5. Căn cứ Hợp đồng NCKH số: {contract_num}")
     add_p(doc, "6. Thành phần Hội đồng đánh giá nghiệm thu:")
-    add_p(doc, "1. PGS. TS. Phạm Văn Phúc          - Viện trưởng, Viện Tế bào gốc               - Chủ tịch Hội đồng\n2. Cán bộ phản biện 1                     - Nhà khoa học chuyên ngành                  - Phản biện 1\n3. Cán bộ phản biện 2                     - Nhà khoa học chuyên ngành                  - Phản biện 2\n4. ThS. Nguyễn Thị Huệ                    - Trưởng phòng KHCN & QHĐN                   - Thư ký khoa học\n5. Cán bộ chuyên môn                      - Nhà khoa học Viện                          - Ủy viên Hội đồng")
+    add_p(doc, "1. PGS. TS. Phạm Văn Phúc          - Viện trưởng, Viện Tế bào gốc               - Chủ tịch Hội đồng\n2. Cán bộ phản biện 1                     - Nhà khoa học chuyên ngành                  - Phản biện 1\n3. Cán bộ phản biện 2                     - Nhà khoa học chuyên ngành                  - Phản biện 2\n4. Trương Châu Nhật                    - Trưởng phòng Kế hoạch tổng hợp                   - Thư ký khoa học\n5. Cán bộ chuyên môn                      - Nhà khoa học Viện                          - Ủy viên Hội đồng")
     add_p(doc, "7. Đánh giá của Hội đồng: Đề tài hoàn thành đầy đủ khối lượng, sản phẩm đạt và vượt chỉ tiêu đăng ký trong thuyết minh.")
     add_p(doc, "8. Kết quả đánh giá: ĐẠT LOẠI XUẤT SẮC (5/5 phiếu tán thành thông qua nghiệm thu).")
     
     add_signatures_3cols(doc, left_title="CHỦ TỊCH HỘI ĐỒNG", mid_title="THƯ KÝ KHOA HỌC", right_title="CHỦ NHIỆM ĐỀ TÀI",
-                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="ThS. Nguyễn Thị Huệ", right_name=p['leader_name'])
+                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="Trương Châu Nhật", right_name=p['leader_name'])
     doc.save(out_path)
 
 def generate_autofill_giai_trinh(p, out_path):
@@ -734,7 +734,7 @@ def generate_autofill_giai_trinh(p, out_path):
     add_p(doc, "Kính đề nghị Chủ tịch Hội đồng và Thư ký khoa học xem xét, xác nhận để Chủ nhiệm tiến hành thanh lý Hợp đồng theo quy định.")
     
     add_signatures_3cols(doc, left_title="XÁC NHẬN CỦA CHỦ TỊCH HĐ", mid_title="THƯ KÝ KHOA HỌC HỘI ĐỒNG", right_title="CHỦ NHIỆM ĐỀ TÀI",
-                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="ThS. Nguyễn Thị Huệ", right_name=p['leader_name'])
+                         left_name="PGS. TS. Phạm Văn Phúc", mid_name="Trương Châu Nhật", right_name=p['leader_name'])
     doc.save(out_path)
 
 # ==================== MAIN DISPATCHER ====================
@@ -787,7 +787,7 @@ def generate_autofill_quyet_dinh_giao_nhiem_vu(p, out_path):
     
     add_p(doc, f"Điều 2. Tổng kinh phí thực hiện đề tài là {budget_val:,.0f} VNĐ ({words_budget}). Nguồn kinh phí từ quỹ Nghiên cứu Khoa học thường xuyên của Viện Tế bào gốc.")
     add_p(doc, "Điều 3. Chủ nhiệm đề tài có trách nhiệm tổ chức triển khai nghiên cứu theo đúng thuyết minh đã phê duyệt, ký kết Hợp đồng NCKH với Viện, định kỳ báo cáo tiến độ 06 tháng và thực hiện nghiệm thu, quyết toán theo đúng quy định hiện hành.")
-    add_p(doc, "Điều 4. Trưởng phòng KHCN & QHĐN, Trưởng phòng TCHC, Trưởng phòng TC-CƯ và Chủ nhiệm đề tài có tên tại Điều 1 chịu trách nhiệm thi hành Quyết định này.")
+    add_p(doc, "Điều 4. Trưởng phòng Kế hoạch tổng hợp, Trưởng phòng TCHC, Trưởng phòng TC-CƯ và Chủ nhiệm đề tài có tên tại Điều 1 chịu trách nhiệm thi hành Quyết định này.")
     
     # Bảng chữ ký
     p_sp = doc.add_paragraph()

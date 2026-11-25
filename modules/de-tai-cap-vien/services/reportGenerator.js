@@ -307,7 +307,7 @@ function generateAuditHtmlReport(projects, summary) {
         <div style="font-weight: 700;">Chuyên viên P. KHCN & ĐN</div>
       </td>
       <td>
-        <div class="sig-title">TRƯỞNG PHÒNG KHCN & ĐN</div>
+        <div class="sig-title">TRƯỞNG PHÒNG KẾ HOẠCH TỔNG HỢP & ĐN</div>
         <div style="color: #64748b; font-size: 11px; margin-bottom: 50px;">(Ký và ghi rõ họ tên)</div>
         <div style="font-weight: 700;">Phòng KHCN & Đào tạo</div>
       </td>
