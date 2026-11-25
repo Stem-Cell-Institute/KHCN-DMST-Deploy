@@ -206,7 +206,7 @@
       <a href="kiem-tra-ho-so.html" class="nav-link">
         <i class="fa-solid fa-clipboard-check"></i> Hồ sơ & Kiểm toán
       </a>
-      <a href="phan-quyen.html" class="nav-link active">
+      <a href="phan-quyen.html" class="nav-link active" style="display:none;">
         <i class="fa-solid fa-users-gear"></i> Phân quyền
       </a>
     </nav>
@@ -231,7 +231,7 @@
           <i class="fa-solid fa-users-gear" style="color: var(--primary);"></i> Ma trận Phân quyền Hệ thống (RBAC)
         </h2>
         <p class="page-subtitle">
-          Phân định quyền hạn chi tiết theo 7 vai trò chuẩn của Viện Tế bào gốc (SCI), sẵn sàng đấu nối và đồng bộ với hạ tầng E-Office 2.0.
+          Phân định quyền hạn chi tiết theo 6 vai trò chuẩn của Viện Tế bào gốc (Phòng KHCN &amp; TC-HC đã gộp thành Phòng Kế hoạch tổng hợp), đồng bộ trực tiếp với tài khoản E-Office.
         </p>
       </div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -255,7 +255,7 @@
         </div>
         <div>
           <div style="font-size: 0.8rem; color: #166534; font-weight: 500;">BẠN ĐANG XEM HỆ THỐNG VỚI VAI TRÒ:</div>
-          <div style="font-weight: 800; font-size: 1.05rem; color: #14532d;" id="bannerRoleName">Phòng Khoa học & Công nghệ</div>
+          <div style="font-weight: 800; font-size: 1.05rem; color: #14532d;" id="bannerRoleName">Phòng Kế hoạch tổng hợp</div>
           <div style="font-size: 0.75rem; color: #4b5563; margin-top: 1px;" id="bannerRoleDesc">Đơn vị thường trực quản lý đề tài...</div>
         </div>
       </div>
@@ -264,7 +264,75 @@
       </button>
     </div>
 
-    <!-- 7 Role Cards Summary -->
+    <!-- Khu vực Admin E-Office gán vai trò thực tế cho từng tài khoản -->
+    <section id="adminRoleAssignSection" class="table-card" style="display: none; margin-bottom: 1.5rem; border: 1px solid #bfdbfe;">
+      <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; background: #eff6ff;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: #1e3a8a; margin: 0;">
+          <i class="fa-solid fa-user-check" style="color: #2563eb;"></i>
+          Gán vai trò thực tế cho tài khoản E-Office (Chỉ Admin)
+        </h3>
+        <p style="font-size: 0.8rem; color: #475569; margin: 4px 0 0 0;">
+          Chỉ định chính xác tài khoản nào là <strong>Viện trưởng</strong>, <strong>Trưởng phòng / Chuyên viên Phòng Kế hoạch tổng hợp</strong>, <strong>Thủ kho</strong>, <strong>Phòng TC-Cung ứng</strong>… Các tài khoản chưa gán sẽ mặc định là Chủ nhiệm đề tài.
+        </p>
+      </div>
+      <div style="padding: 16px 20px;">
+        <form id="assignRoleForm" onsubmit="saveUserRoleAssignment(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; align-items: end; margin-bottom: 16px;">
+          <div>
+            <label style="display:block; font-size:0.78rem; font-weight:600; color:#334155; margin-bottom:4px;">Chọn tài khoản E-Office</label>
+            <select id="assignUserSelect" class="filter-select" onchange="onAssignUserSelectChange()" style="width:100%;">
+              <option value="">-- Chọn từ E-Office hoặc nhập email --</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:0.78rem; font-weight:600; color:#334155; margin-bottom:4px;">Email tài khoản (@sci.edu.vn) *</label>
+            <input type="email" id="assignEmailInput" class="filter-input" placeholder="vd: nhattruong@sci.edu.vn" required style="width:100%;">
+          </div>
+          <div>
+            <label style="display:block; font-size:0.78rem; font-weight:600; color:#334155; margin-bottom:4px;">Họ và tên</label>
+            <input type="text" id="assignFullnameInput" class="filter-input" placeholder="vd: Trương Châu Nhật" style="width:100%;">
+          </div>
+          <div>
+            <label style="display:block; font-size:0.78rem; font-weight:600; color:#334155; margin-bottom:4px;">Vai trò trong module *</label>
+            <select id="assignRoleSelect" class="filter-select" required style="width:100%;">
+              <option value="VIEN_TRUONG">Viện trưởng</option>
+              <option value="PHONG_KHCN">Phòng Kế hoạch tổng hợp</option>
+              <option value="PHONG_TC_CU">Phòng Tài chính - Cung ứng</option>
+              <option value="THU_KHO">Thủ kho (Hóa chất/Vật tư)</option>
+              <option value="SUPER_ADMIN">Admin toàn hệ thống</option>
+              <option value="CHU_NHIEM">Chủ nhiệm đề tài (PI)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block; font-size:0.78rem; font-weight:600; color:#334155; margin-bottom:4px;">Chức danh cụ thể (tùy chọn)</label>
+            <input type="text" id="assignTitleInput" class="filter-input" placeholder="vd: Trưởng phòng Kế hoạch tổng hợp" style="width:100%;">
+          </div>
+          <div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">
+              <i class="fa-solid fa-floppy-disk"></i> Lưu gán vai trò
+            </button>
+          </div>
+        </form>
+        <div class="table-responsive" style="overflow-x:auto;">
+          <table class="data-table" style="min-width: 720px;">
+            <thead>
+              <tr>
+                <th style="width:45px; text-align:center;">STT</th>
+                <th>Họ và tên</th>
+                <th>Email E-Office</th>
+                <th>Vai trò được gán</th>
+                <th>Chức danh</th>
+                <th style="width:150px; text-align:right;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="assignmentsTableBody">
+              <tr><td colspan="6" style="text-align:center; padding:1rem; color:#64748b;">Đang tải danh sách phân quyền...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 Role Cards Summary -->
     <div class="role-grid" id="rolesCardsContainer">
       <!-- Populated by JS -->
     </div>
@@ -276,14 +344,13 @@
       </div>
       <div class="filter-group" style="flex: 1.2;">
         <select id="roleFilterSelect" class="filter-select" onchange="filterMatrix()">
-          <option value="">-- Làm nổi bật tất cả 7 vai trò --</option>
+          <option value="">-- Làm nổi bật tất cả 6 vai trò --</option>
           <option value="VIEN_TRUONG">1. Viện trưởng</option>
           <option value="SUPER_ADMIN">2. Admin toàn hệ thống</option>
-          <option value="PHONG_KHCN">3. Phòng Khoa học & Công nghệ</option>
-          <option value="PHONG_TCHC">4. Phòng Tổ chức - Hành chính</option>
-          <option value="CHU_NHIEM">5. Chủ nhiệm đề tài (PI)</option>
-          <option value="THU_KHO">6. Thủ kho (Hóa chất/Vật tư)</option>
-          <option value="PHONG_TC_CU">7. Phòng Tài chính - Cung ứng</option>
+          <option value="PHONG_KHCN">3. Phòng Kế hoạch tổng hợp</option>
+          <option value="CHU_NHIEM">4. Chủ nhiệm đề tài (PI)</option>
+          <option value="THU_KHO">5. Thủ kho (Hóa chất/Vật tư)</option>
+          <option value="PHONG_TC_CU">6. Phòng Tài chính - Cung ứng</option>
         </select>
       </div>
       <div class="filter-group" style="flex: 0 0 auto;">
@@ -310,12 +377,8 @@
                 <strong>Admin HT</strong>
               </th>
               <th class="role-col-header" data-role="PHONG_KHCN">
-                <i class="fa-solid fa-microscope" style="color: #0284c7;"></i><br>
-                <strong>Phòng KHCN</strong>
-              </th>
-              <th class="role-col-header" data-role="PHONG_TCHC">
-                <i class="fa-solid fa-building-user" style="color: #b45309;"></i><br>
-                <strong>Phòng TC-HC</strong>
+                <i class="fa-solid fa-briefcase" style="color: #0284c7;"></i><br>
+                <strong>Phòng KHTH</strong>
               </th>
               <th class="role-col-header" data-role="CHU_NHIEM">
                 <i class="fa-solid fa-user-graduate" style="color: #15803d;"></i><br>
@@ -333,7 +396,7 @@
           </thead>
           <tbody id="matrixTableBody">
             <tr>
-              <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+              <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
                 <i class="fa-solid fa-spinner fa-spin"></i> Đang tải ma trận phân quyền...
               </td>
             </tr>

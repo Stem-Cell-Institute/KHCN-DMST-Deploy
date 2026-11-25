@@ -72,6 +72,33 @@ const db = {
       if (!cols.some(c => c.name === 'leader_email')) {
         await this.run('ALTER TABLE nckh_projects ADD COLUMN leader_email TEXT');
       }
+      // Bảng gán vai trò thực tế theo tài khoản E-Office (do Admin E-Office quản lý trong trang Phân quyền)
+      await this.run(`
+        CREATE TABLE IF NOT EXISTS nckh_user_roles (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          eoffice_user_id INTEGER UNIQUE,
+          email TEXT NOT NULL UNIQUE,
+          fullname TEXT,
+          role_key TEXT NOT NULL,
+          position_title TEXT,
+          assigned_by TEXT,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      // Seed mặc định ban đầu nếu bảng gán vai trò còn trống (Viện trưởng & Trưởng phòng Kế hoạch tổng hợp)
+      const existingAssignments = await this.get('SELECT COUNT(*) AS c FROM nckh_user_roles');
+      if (!existingAssignments || Number(existingAssignments.c) === 0) {
+        await this.run(
+          `INSERT OR IGNORE INTO nckh_user_roles (email, fullname, role_key, position_title, assigned_by)
+           VALUES (?, ?, ?, ?, ?)`,
+          ['phucpham@sci.edu.vn', 'PGS. TS. Phạm Văn Phúc', 'VIEN_TRUONG', 'Viện trưởng', 'system']
+        );
+        await this.run(
+          `INSERT OR IGNORE INTO nckh_user_roles (email, fullname, role_key, position_title, assigned_by)
+           VALUES (?, ?, ?, ?, ?)`,
+          ['nhattruong@sci.edu.vn', 'Trương Châu Nhật', 'PHONG_KHCN', 'Trưởng phòng Kế hoạch tổng hợp', 'system']
+        );
+      }
       console.log('✅ SQLite Schema initialized successfully at:', config.DB_URL);
     }
   }

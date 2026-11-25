@@ -178,9 +178,9 @@ function renderNavbarRoleWidget() {
     link.style.display = isKhcnOrAdmin ? 'inline-flex' : 'none';
   });
 
-  const canAccessRbac = ['SUPER_ADMIN', 'PHONG_KHCN'].includes(u.role);
+  const isMasterAdmin = !!u.is_master_admin;
   document.querySelectorAll('.nav-menu a[href*="phan-quyen"]').forEach(link => {
-    link.style.display = canAccessRbac ? 'inline-flex' : 'none';
+    link.style.display = isMasterAdmin ? 'inline-flex' : 'none';
   });
 
   if (!canSwitch) {
@@ -222,7 +222,7 @@ window.openGlobalRoleSwitcherModal = function () {
   const activeLeader = window.getCurrentLeader() || 'Nguyễn Trường Sinh';
 
   const coreRoles = ['SUPER_ADMIN', 'VIEN_TRUONG', 'PHONG_KHCN', 'CHU_NHIEM'];
-  const supportRoles = ['PHONG_TCHC', 'PHONG_TC_CU', 'THU_KHO'];
+  const supportRoles = ['PHONG_TC_CU', 'THU_KHO'];
 
   const roleSummaryMap = {
     SUPER_ADMIN: {
