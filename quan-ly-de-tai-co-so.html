@@ -1226,14 +1226,6 @@
                         <span class="ct-hd-ngoai-label">Đề tài ngoại Viện chờ xét duyệt</span>
                         <span class="badge badge-ct-hd-ngoai" id="badge-ct-hd-ngoai-vien">—</span>
                     </a>
-                    <a href="theo-doi-tien-trinh-de-tai-cap-vien.html" id="menu-cap-vien-track" class="menu-item menu-item-cap-vien-track" title="Mở danh sách hồ sơ và tiến trình xét duyệt đề tài cấp Viện">
-                        <span class="cap-vien-track-text">
-                            <span class="cap-vien-track-title">Theo dõi tiến trình</span>
-                            <span class="cap-vien-track-sub">Hồ sơ đề tài cấp Viện</span>
-                        </span>
-                        <span class="badge badge-cap-vien-track" id="badge-cap-vien-track">—</span>
-                        <span class="cap-vien-track-arrow" aria-hidden="true">→</span>
-                    </a>
                 </div>
 
                 <details class="sidebar-accordion" open>
@@ -1332,7 +1324,7 @@
                     <div class="stat-box">
                         <div class="stat-label">Tổng số đề tài</div>
                         <div class="stat-value">—</div>
-                        <div class="stat-change">Từ tất cả nguồn (Cấp Viện + Import)</div>
+                        <div class="stat-change">Bao gồm đề tài các cấp &amp; Module Đề tài cấp Viện</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-label">Đang thực hiện</div>
@@ -1730,10 +1722,6 @@
                 <p style="margin-bottom: 1.25rem; font-weight: 600; color: #333;">Chọn cấp đề tài:</p>
                 <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                     <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer;">
-                        <input type="radio" name="addTaskLevel" value="institute">
-                        <span><strong>Cấp Viện</strong> — Form nội bộ (nộp tại trang Đề tài cấp Viện)</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer;">
                         <input type="radio" name="addTaskLevel" value="ministry">
                         <span><strong>Cấp Bộ</strong> — Cơ quan phê duyệt bên ngoài (Bộ KH&CN, Bộ chủ quản)</span>
                     </label>
@@ -1948,7 +1936,7 @@
                                 <option value="school">Cấp Trường ĐH KHTN</option>
                                 <option value="coe">COE</option>
                                 <option value="first">FIRST</option>
-                                <option value="institute" selected>Cấp Viện</option>
+                                <option value="institute">Cấp Viện</option>
                             </select>
                         </div>
                         <div class="form-group" style="grid-column: 1 / -1;">
@@ -2275,48 +2263,6 @@
             badge.classList.toggle('sidebar-badge--empty', n === 0);
         }
 
-        function loadCapVienTrackBadge() {
-            var token = localStorage.getItem('token');
-            var badge = document.getElementById('badge-cap-vien-track');
-            var link = document.getElementById('menu-cap-vien-track');
-            if (!badge) return;
-            function setLive(on) {
-                if (link) {
-                    if (on) link.classList.add('menu-item-cap-vien-track--live');
-                    else link.classList.remove('menu-item-cap-vien-track--live');
-                }
-            }
-            if (!token) {
-                badge.textContent = '—';
-                badge.classList.remove('badge-cap-vien--pulse', 'badge-cap-vien--empty');
-                setLive(false);
-                return;
-            }
-            fetch(apiBase + '/api/cap-vien/submissions', {
-                headers: { 'Authorization': 'Bearer ' + token },
-                cache: 'no-store'
-            })
-                .then(function(r) { return r.ok ? r.json() : Promise.resolve([]); })
-                .then(function(data) {
-                    var items = Array.isArray(data) ? data : [];
-                    var n = items.length;
-                    badge.textContent = n;
-                    badge.classList.toggle('badge-cap-vien--empty', n === 0);
-                    if (n > 0) {
-                        badge.classList.add('badge-cap-vien--pulse');
-                        setLive(true);
-                    } else {
-                        badge.classList.remove('badge-cap-vien--pulse');
-                        setLive(false);
-                    }
-                })
-                .catch(function() {
-                    badge.textContent = '—';
-                    badge.classList.remove('badge-cap-vien--pulse', 'badge-cap-vien--empty');
-                    setLive(false);
-                });
-        }
-
         function loadCtHdNgoaiVienBadge() {
             var token = localStorage.getItem('token');
             var badge = document.getElementById('badge-ct-hd-ngoai-vien');
@@ -2362,7 +2308,6 @@
                 document.querySelectorAll('.menu-item').forEach((item, idx) => {
                     const badge = item.querySelector('.badge');
                     if (!badge) return;
-                    if (item.id === 'menu-cap-vien-track' || item.classList.contains('menu-item-cap-vien-track')) return;
                     if (item.id === 'menu-ct-hd-ngoai-vien') return;
                     const text = (item.textContent || '').trim();
                     if (text.includes('Tất cả đề tài')) setSidebarStatBadge(badge, data.total || 0);
@@ -2622,11 +2567,6 @@
             const selected = document.querySelector('input[name="addTaskLevel"]:checked');
             if (!selected) { alert('Vui lòng chọn cấp đề tài.'); return; }
             const level = selected.value;
-            if (level === 'institute') {
-                closeAddTaskModal();
-                window.location.href = 'nop-de-tai-cap-vien.html';
-                return;
-            }
             closeAddTaskModal();
             window.location.href = 'dang-ky-de-tai-ngoai-vien.html?level=' + encodeURIComponent(level);
         }
@@ -3831,7 +3771,6 @@
                 updateHeaderGreeting();
                 applyAdminUiVisibility();
                 loadStats();
-                loadCapVienTrackBadge();
                 loadCtHdNgoaiVienBadge();
                 loadMissions();
                 if (isAdmin) loadReportPreview();

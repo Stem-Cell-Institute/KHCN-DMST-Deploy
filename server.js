@@ -8779,23 +8779,26 @@ function dbCount(sql) {
 
 app.get('/api/homepage-stats', (req, res) => {
   syncMissionsFromCapVien();
-  const missions = dbCount('SELECT COUNT(*) as c FROM missions');
-  /** Tháº» module Â«Nhiá»‡m vá»¥ KHCNÂ» â€” cÃ¹ng quy táº¯c vá»›i /api/missions/stats (hoÃ n thÃ nh / quÃ¡ háº¡n / Ä‘ang thá»±c hiá»‡n) */
+  const capVienMod = require('./modules/de-tai-cap-vien/eofficeMount');
+  let missions = 0;
   const missionMini = { inProgress: 0, completed: 0, overdue: 0 };
   try {
-    const mRows = db.prepare('SELECT status, end_date FROM missions').all();
+    const mRows = capVienMod.mergeCapVienModuleMissions(db.prepare('SELECT code, status, end_date FROM missions').all());
+    missions = mRows.length;
     const now = new Date().toISOString().slice(0, 10);
     for (const m of mRows || []) {
       const st = (m.status || 'planning').toLowerCase();
-      const isCompleted = st === 'completed' || st === 'hoan_thanh';
+      const isCompleted = st === 'completed' || st === 'hoan_thanh' || st === 'thanh_ly_hop_dong';
+      const isCancelled = st === 'khong_duoc_phe_duyet' || st === 'dung_khong_dat_dot';
       const ed = m.end_date ? String(m.end_date).slice(0, 10) : '';
       const isPastEnd = ed && ed < now;
       if (isCompleted) missionMini.completed += 1;
+      else if (isCancelled) { /* bo qua de tai huy */ }
       else if (isPastEnd) missionMini.overdue += 1;
       else missionMini.inProgress += 1;
     }
   } catch (e) {
-    /* báº£ng missions thiáº¿u cá»™t hoáº·c lá»—i DB â€” giá»¯ 0 */
+    missions = dbCount('SELECT COUNT(*) as c FROM missions');
   }
   /**
    * NhÃ¢n lá»±c KHCN: Ä‘áº¿m báº£ng `personnel` chá»‰ khi module Ä‘Æ°á»£c báº­t trÃªn trang chá»§.
