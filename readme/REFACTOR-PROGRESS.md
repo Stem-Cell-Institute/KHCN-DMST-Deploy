@@ -53,7 +53,7 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 | 4 | `cap-vien` — 49 route `/api/cap-vien/*` sang 9 file dưới `routes/cap-vien/` | 49 | 🔵 **Tách xong — `server.js` hết `/api/cap-vien`** (chờ review/merge vào `main`) | `refactor/routes-cap-vien-1` |
 | └ 4.0 | Lưới test `tests/capVien.test.js` (8 test phủ 49 route) | 0 | 🔵 Chờ review (`69d0b7c`) | `refactor/routes-cap-vien-1` |
 | └ 4.1–4.9 | Nộp hồ sơ/danh mục, danh sách/chi tiết, Bước 6–8, BC định kỳ, Bước 5/HĐ, dispatcher Bước 2–9, vật tư/điều chỉnh, Bước 4/4A, deadline & bổ sung/tải/xóa | 49 | 🔵 Chờ review · −2.549 dòng | `refactor/routes-cap-vien-1` |
-| 5 | `cooperation` + `htqt` + `events` | 84 | ⬜ Chưa bắt đầu | — |
+| 5 | `cooperation` + `htqt` + `events` (84 route + 20 `/api/admin/cooperation/*` đan xen trong `vanBanWord.js`) | 84 | 🔵 **Tách xong — `server.js` hết `/api/cooperation`, `/api/htqt`, `/api/events`** (chờ review/merge) · −3.100 dòng | `refactor/routes-cooperation-1` |
 | 6 | `admin` | 79 | ⬜ Chưa bắt đầu | — |
 | 7 | `core` + rút `server.js` < 300 dòng | ~15 | ⬜ Chưa bắt đầu | — |
 
@@ -87,7 +87,7 @@ Thứ tự **giữa** các router CRD không ảnh hưởng (đường dẫn kh�
 | 2 | `/api/crd` | 36 | ✅ `tests/crd.test.js` — 31 test: bảng phân quyền đối chiếu route thật, đặt lịch, trùng lịch, chat, khiếu nại, quản trị. **21/21 đột biến bị bắt** (xem bên dưới) | **Đã tách xong** (chờ merge và deploy) |
 | 3 | `/api/submissions` + `/api/publications` | 36 | ✅ `tests/submissions.test.js` (21 test, 21 route) + `tests/publications.test.js` (17 test, 15 route) | **Đã tách & merge (`01a8506`)** |
 | 4 | `/api/cap-vien` | 49 | ✅ `tests/capVien.test.js` (8 test: bảng phân quyền khớp 49 route thật, công khai/401/403, nộp hồ sơ + sinh mã DTSCI, mẫu công khai, luồng B2→B3→B4→tải/xóa) | **Đã tách xong** (chờ merge) |
-| 5 | `/api/cooperation` + `/api/htqt` + `/api/events` | 84 | ⚠️ 4 test nhưng chỉ chạm 2/84 route (dashboard-stats, tat-ca-de-xuat) | Cần dựng lưới trước, **rủi ro cao** |
+| 5 | `/api/cooperation` + `/api/htqt` + `/api/events` | 0 | ✅ `tests/cooperationHtqtEvents.test.js` (5 test: đối chiếu 84 route thật, công khai/401/403, luồng Events, HTQT, Cooperation đoàn ra/YTNN/thỏa thuận/sự kiện/thống kê) | **Đã tách xong** (chờ merge) |
 | 6 | `/api/admin` | 84 | ⚠️ 2 test kiểm ranh giới quyền, chạm 2/84 route | Cần dựng lưới trước, **rủi ro cao** |
 
 **Công cụ chung cho mọi đợt:** `npm run route:snapshot` + `npm run route:compare` — ảnh hành vi (mã trạng thái + nội dung) của
@@ -312,6 +312,20 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-11-25 · refactor/routes-cooperation-1 · Đợt 5 — hoàn tất Đợt 5 (`cooperation` + `htqt` + `events`, 84 route) · **Đợt 5 khép**
+
+- **Đã xong:** dựng lưới test [tests/cooperationHtqtEvents.test.js](tests/cooperationHtqtEvents.test.js) (5 test phủ 84 route `/api/cooperation/*`, `/api/htqt/*`, `/api/events/*`, xanh trên code cũ) và tách toàn bộ ra khỏi `server.js`:
+  - `routes/events.js` (13 route `/api/events/*`, kèm các helper/multer riêng của sự kiện)
+  - `routes/htqt.js` (6 route `/api/htqt/de-xuat/*`)
+  - 10 router dưới `routes/cooperation/`: `quanLyDeXuat.js` (7), `thamDinhVaDuyetCu.js` (5), `nopVaDanhSach.js` (6), `tongQuanVaThoaThuan.js` (6), `thoaThuanCapNhat.js` (3), `thongKeDashboard.js` (2), `danhSachVaChiTiet.js` (4), `vanBanWord.js` (28 route cho 4 loại — gộp cấu hình bảng để xóa lặp, gồm cả 20 route `/api/admin/cooperation/*` đan xen giữ nguyên thứ tự), `pheDuyetMoi.js` (9), `nopLaiVaSuKien.js` (15)
+  - `server.js` 14.106 → **11.006** (**−3.100 dòng**); hạ trần `.github/server-js-max-lines` xuống `11006`.
+- **Bằng chứng:** `route-inventory.js` trước/sau (816 route, cùng thứ tự) → diff **rỗng**; `route:compare` (1.401 yêu cầu) → **GIỐNG NHAU** (0 đổi mã trạng thái, 0 đổi nội dung, 0 chỉ có ở một bên); `npm test` xanh hoàn toàn.
+- **Cạm bẫy phát hiện:**
+  - `STATUS_LABELS_COOP` phải khai báo trước các điểm mount `routes/cooperation/*` (trước đây nằm ở dòng ~9670 nên chỉ hoạt động khi gọi trong callback runtime, truyền vào factory bị TDZ `ReferenceError`).
+  - `eventGenSoVanBan()` đang dùng `strftime("%Y", ...)` (dấu ngoặc kép) khiến `POST /api/events` trả 500 trên SQLite mới — giữ nguyên hành vi để không sửa bug trong đợt refactor (có thể xử lý ở đợt fix riêng).
+- **Phiên sau làm:** (1) Review/merge `refactor/routes-cap-vien-1` → `refactor/routes-cooperation-1` vào `main`. (2) Tiếp tục **Đợt 6 (`admin`, các route `/api/admin/*` còn lại)** — dựng lưới test trước khi tách.
+- **Nợ kỹ thuật thêm:** các helper `coop*`, `cooperationComputePartnerStats`, `thoaThuan*` dùng chung vẫn ở `server.js` (truyền qua factory; có thể gom sang `services/cooperation*.js` ở đợt dọn sau).
 
 ### 2026-11-25 · refactor/routes-cap-vien-1 · Đợt 4 — hoàn tất Đợt 4 (`/api/cap-vien`, 49 route) · **Đợt 4 khép**
 
