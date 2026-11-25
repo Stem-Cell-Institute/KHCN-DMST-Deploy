@@ -21,6 +21,7 @@
  */
 
 const express = require('express');
+const { mergeCapVienModuleMissions } = require('../../modules/de-tai-cap-vien/eofficeMount');
 
 module.exports = function createMissionsCoreRouter({
   db,
@@ -35,7 +36,8 @@ const router = express.Router();
 
 router.get('/missions/stats', authMiddleware, (req, res) => {
   syncMissionsFromCapVien();
-  const all = db.prepare('SELECT id, level, status, end_date, budget, start_date FROM missions').all();
+  const dbRows = db.prepare('SELECT id, code, level, status, end_date, budget, start_date FROM missions').all();
+  const all = mergeCapVienModuleMissions(dbRows);
   const now = new Date().toISOString().slice(0, 10);
   const thisMonthStart = now.slice(0, 7) + '-01';
   const byLevel = { national: 0, ministry: 0, university: 0, school: 0, coe: 0, first: 0, institute: 0 };
@@ -51,10 +53,11 @@ router.get('/missions/stats', authMiddleware, (req, res) => {
     const st = (m.status || 'planning').toLowerCase();
     if (byStatus[st] !== undefined) byStatus[st]++;
     if (m.budget != null) totalBudget += Number(m.budget);
-    const isCompleted = ['completed', 'hoan_thanh'].includes(st);
-    if (m.end_date && m.end_date < now && !isCompleted) overdue++;
+    const isCompleted = ['completed', 'hoan_thanh', 'thanh_ly_hop_dong'].includes(st);
+    const isCancelled = ['khong_duoc_phe_duyet', 'dung_khong_dat_dot'].includes(st);
+    if (m.end_date && m.end_date < now && !isCompleted && !isCancelled) overdue++;
     if (isCompleted) { completed++; totalEnded++; }
-    else if (m.end_date) totalEnded++;
+    else if (m.end_date && !isCancelled) totalEnded++;
     if (['review', 'nghiem_thu_trung_gian', 'nghiem_thu_tong_ket', 'cho_nghiem_thu_co_so', 'cho_nghiem_thu_bo_nn', 'hoan_thien_sau_nghiem_thu'].includes(st)) acceptanceThisMonth++;
   }
   const completionRate = totalEnded > 0 ? Math.round((completed / totalEnded) * 100) : 0;

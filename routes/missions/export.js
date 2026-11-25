@@ -13,6 +13,7 @@ const XLSX = require('xlsx');
 const { buildMissionReportBuffer } = require('../../services/missionReportBuilder');
 const { queryPeriodReportData } = require('../../services/periodReportService');
 const { buildPeriodReportExcelBuffer } = require('../../services/periodReportExcelBuilder');
+const { mergeCapVienModuleMissions } = require('../../modules/de-tai-cap-vien/eofficeMount');
 
 const MISSION_CSV_HEADER = 'code,title,principal,level,status,start_date,end_date,progress,budget';
 const MISSION_SELECT_BASIC =
@@ -141,32 +142,28 @@ module.exports = function createMissionsExportRouter({
       const levels = parseList(req.query.levels);
       const statuses = parseList(req.query.statuses);
 
-      const where = [];
-      const params = [];
-      if (fromYear != null) {
-        where.push("start_date IS NOT NULL AND TRIM(start_date) <> '' AND CAST(substr(start_date,1,4) AS INTEGER) >= ?");
-        params.push(fromYear);
-      }
-      if (toYear != null) {
-        where.push("start_date IS NOT NULL AND TRIM(start_date) <> '' AND CAST(substr(start_date,1,4) AS INTEGER) <= ?");
-        params.push(toYear);
-      }
-      if (levels.length) {
-        where.push(`level IN (${levels.map(() => '?').join(',')})`);
-        params.push(...levels);
-      }
-      if (statuses.length) {
-        where.push(`status IN (${statuses.map(() => '?').join(',')})`);
-        params.push(...statuses);
-      }
-
       const sql =
         'SELECT code, title, principal, level, status, start_date, end_date, progress, budget, ' +
         'managing_agency, contract_number, funding_source, field, mission_type ' +
-        'FROM missions' +
-        (where.length ? ' WHERE ' + where.join(' AND ') : '') +
-        ' ORDER BY level, start_date, code';
-      const rows = db.prepare(sql).all(...params);
+        'FROM missions ORDER BY level, start_date, code';
+      const allRows = mergeCapVienModuleMissions(db.prepare(sql).all());
+      const rows = allRows.filter((r) => {
+        if (fromYear != null || toYear != null) {
+          const sd = String(r.start_date || '').trim();
+          const y = parseYear(sd.slice(0, 4));
+          if (y == null) return false;
+          if (fromYear != null && y < fromYear) return false;
+          if (toYear != null && y > toYear) return false;
+        }
+        if (levels.length && !levels.includes(String(r.level || ''))) return false;
+        if (statuses.length && !statuses.includes(String(r.status || ''))) return false;
+        return true;
+      });
+      rows.sort((a, b) =>
+        String(a.level || '').localeCompare(String(b.level || '')) ||
+        String(a.start_date || '').localeCompare(String(b.start_date || '')) ||
+        String(a.code || '').localeCompare(String(b.code || ''))
+      );
 
       const buf = await buildMissionReportBuffer({
         rows,

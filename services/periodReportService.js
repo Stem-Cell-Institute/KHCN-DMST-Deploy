@@ -7,6 +7,7 @@
  */
 
 const { LEVEL_ORDER, LEVEL_LABEL, STATUS_LABEL } = require('./missionReportBuilder');
+const { mergeCapVienModuleMissions } = require('../modules/de-tai-cap-vien/eofficeMount');
 
 const DONE_STATUSES = new Set(['completed', 'hoan_thanh', 'thanh_ly_hop_dong']);
 const RUNNING_STATUSES = new Set(['ongoing', 'dang_thuc_hien', 'xin_dieu_chinh']);
@@ -524,7 +525,8 @@ async function queryPeriodReportData(db, opts = {}) {
           'managing_agency, contract_number, funding_source, field, mission_type FROM missions'
       ).all()
     );
-    missionsResult = filterMissionsByPeriod(rawMissions || [], opts);
+    const mergedMissions = mergeCapVienModuleMissions(rawMissions || []);
+    missionsResult = filterMissionsByPeriod(mergedMissions, opts);
   }
 
   if (scope === 'publications' || scope === 'both') {
