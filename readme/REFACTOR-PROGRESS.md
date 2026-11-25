@@ -44,16 +44,23 @@ routes/missions/templates.js     /missions-templates  (segment khác, không va 
 | └ 2.1 | đăng ký công khai + phần người dùng thường (state, đặt/sửa/hủy lịch, chat, khiếu nại) — **2 router** | 10 | 🔵 Chờ review (PR 2.1) · −296 dòng | `refactor/routes-crd-1` |
 | └ 2.2 | snapshot, thông báo phòng lab, thiết bị (admin) + kiểm duyệt tin, email-notif, khiếu nại (admin) — **2 router** | 14 | 🔵 Chờ review (PR 2.2) · −281 dòng | `refactor/routes-crd-2` |
 | └ 2.3 | hồ sơ CRD, tài khoản, vai trò, lịch (quản trị) | 12 | 🔵 Chờ review (PR 2.3) · −282 dòng | `refactor/routes-crd-3` |
-| 3 | `submissions` + `publications` — 36 route = 21 hồ sơ (20 `/api/submissions*` + `/api/users/council`) + 15 công bố (14 `/api/publications*` + `/api/researchers/list-for-disambiguation`). **26 route nằm trong `server.js`** (10 route công bố đã là router riêng `sci-khcn-publications/src/routes/publications.js`) | 36 | 🔵 **Tách xong — `server.js` hết `/api/submissions` & 5 route công bố** (chờ review/merge rồi deploy, theo dõi 48 giờ) | `refactor/routes-submissions-1` |
-| └ 3.0 | Lưới test `tests/submissions.test.js` + `tests/publications.test.js` | 0 | 🔵 Đã đưa lên nhánh Đợt 3 | `test/luoi-submissions-publications` |
-| └ 3.1 | Hồ sơ SCI-ACE cơ bản (nộp, danh sách, hội đồng, chi tiết) | 4 | 🔵 Chờ review · −209 dòng | `refactor/routes-submissions-1` |
-| └ 3.2 | Hồ sơ SCI-ACE GĐ6–GĐ7 (chấp thuận có điều kiện, họp, cấp QĐ, báo cáo) | 7 | 🔵 Chờ review · −303 dòng | `refactor/routes-submissions-1` |
-| └ 3.3 | Hồ sơ SCI-ACE GĐ3–GĐ5 + tải file + xóa | 10 | 🔵 Chờ review · −357 dòng | `refactor/routes-submissions-1` |
-| └ 3.4 | Công bố khoa học (5 endpoint bổ sung trong `server.js`) | 5 | 🔵 Chờ review · −101 dòng | `refactor/routes-submissions-1` |
-| 4 | `cap-vien` | 47 | ⬜ Chưa bắt đầu | — |
-| 5 | `cooperation` + `htqt` + `events` | 84 | ⬜ Chưa bắt đầu | — |
-| 6 | `admin` | 79 | ⬜ Chưa bắt đầu | — |
-| 7 | `core` + rút `server.js` < 300 dòng | ~15 | ⬜ Chưa bắt đầu | — |
+| 3 | `submissions` + `publications` — 36 route = 21 hồ sơ (20 `/api/submissions*` + `/api/users/council`) + 15 công bố (14 `/api/publications*` + `/api/researchers/list-for-disambiguation`). **26 route nằm trong `server.js`** | 36 | ✅ **Đã merge (`01a8506`)** | `refactor/routes-submissions-1` |
+| └ 3.0 | Lưới test `tests/submissions.test.js` + `tests/publications.test.js` | 0 | ✅ Đã merge | `test/luoi-submissions-publications` |
+| └ 3.1 | Hồ sơ SCI-ACE cơ bản (nộp, danh sách, hội đồng, chi tiết) | 4 | ✅ Đã merge · −209 dòng | `refactor/routes-submissions-1` |
+| └ 3.2 | Hồ sơ SCI-ACE GĐ6–GĐ7 (chấp thuận có điều kiện, họp, cấp QĐ, báo cáo) | 7 | ✅ Đã merge · −303 dòng | `refactor/routes-submissions-1` |
+| └ 3.3 | Hồ sơ SCI-ACE GĐ3–GĐ5 + tải file + xóa | 10 | ✅ Đã merge · −357 dòng | `refactor/routes-submissions-1` |
+| └ 3.4 | Công bố khoa học (5 endpoint bổ sung trong `server.js`) | 5 | ✅ Đã merge · −101 dòng | `refactor/routes-submissions-1` |
+| 4 | `cap-vien` — 49 route `/api/cap-vien/*` sang 9 file dưới `routes/cap-vien/` | 49 | ✅ **Đã merge vào `main`** · −2.549 dòng | `refactor/routes-cap-vien-1` |
+| └ 4.0 | Lưới test `tests/capVien.test.js` (8 test phủ 49 route) | 0 | ✅ Đã merge (`69d0b7c`) | `refactor/routes-cap-vien-1` |
+| └ 4.1–4.9 | Nộp hồ sơ/danh mục, danh sách/chi tiết, Bước 6–8, BC định kỳ, Bước 5/HĐ, dispatcher Bước 2–9, vật tư/điều chỉnh, Bước 4/4A, deadline & bổ sung/tải/xóa | 49 | ✅ Đã merge · −2.549 dòng | `refactor/routes-cap-vien-1` |
+| 5 | `cooperation` + `htqt` + `events` (84 route + 20 `/api/admin/cooperation/*` đan xen trong `vanBanWord.js`) | 84 | ✅ **Đã merge vào `main`** · −3.100 dòng | `refactor/routes-cooperation-1` |
+| 6 | `admin` — 104 route `/api/admin/*` (20 route đan xen trong `vanBanWord.js` ở Đợt 5 + 84 route còn lại sang 10 file dưới `routes/admin/`) | 104 | ✅ **Đã merge vào `main`** · −1.349 dòng | `refactor/routes-admin-1` |
+| └ 6.0 | Lưới test `tests/admin.test.js` (5 test phủ 105 route `/api/admin*`) | 0 | ✅ Đã merge (`10a3ab6`) | `refactor/routes-admin-1` |
+| └ 6.1 | `routes/admin/capVien.js` (28 route `/api/admin/cap-vien/*` & sync) | 28 | ✅ Đã merge (`83d4a78`) · −324 dòng | `refactor/routes-admin-1` |
+| └ 6.2 | `routes/admin/usersVaNhatKy.js` (5) + `routes/admin/phanQuyenVaTaiKhoan.js` (10) | 15 | ✅ Đã merge (`0491e6d`) · −339 dòng | `refactor/routes-admin-1` |
+| └ 6.3 | `missionsQuanTri.js` (2), `aceTemplatesVaMissionsImport.js` (4), `homepageModules.js` (3), `caiDatVaThongBao.js` (4) + chuyển `GET notification-recipients` | 13 | ✅ Đã merge (`778861d`) · −327 dòng | `refactor/routes-admin-1` |
+| └ 6.4 | `cooperationSettings.js` (7), `cooperationDeXuat.js` (12), `journalMetrics.js` (1) | 20 | ✅ Đã merge (`b7da932`) · −359 dòng | `refactor/routes-admin-1` |
+| 7 | `core` + rút `server.js` < 300 dòng (19.836 → **119 dòng**) | ~15 | ✅ **Xong — `server.js` chỉ còn 119 dòng bootstrap** | `refactor/routes-core-1` |
 
 Ký hiệu: ⬜ chưa bắt đầu · 🟡 đang làm · 🔵 chờ review/merge · ✅ đã merge + deploy ổn định
 
@@ -69,9 +76,9 @@ routes/crd/kiemDuyetThongBao.js  DELETE /crd/admin/chats/:id, /crd/email-notif, 
 
 Thứ tự **giữa** các router CRD không ảnh hưởng (đường dẫn không va chạm), nhưng thứ tự **trong** `quanTriThietBi.js` thì có — đã ghi ở đầu file và có test canh.
 
-**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → 17.647 (sau Đợt 2) → **16.677** (sau Đợt 3) → *mục tiêu < 300*. Route khai báo thẳng trong `server.js`: 360 → 284 → **258** (284 − 21 hồ sơ − 5 công bố).
+**Số dòng `server.js`:** 19.836 (mốc đầu, `3718304`) → 17.647 (sau Đợt 2) → 16.677 (sau Đợt 3) → **14.106** (sau Đợt 4) → *mục tiêu < 300*. Route khai báo thẳng trong `server.js`: 360 → 284 → 258 → **209** (258 − 49 cấp Viện).
 
-Đã cắt **2.255 dòng** qua các đợt refactor (trần hiện tại ở `.github/server-js-max-lines` là `16677`, CI đỏ nếu file dài ra). Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
+Đã cắt **4.804 dòng** qua các đợt refactor (trần hiện tại ở `.github/server-js-max-lines` là `14106`, CI đỏ nếu file dài ra). Mỗi đợt xong phải hạ con số đó xuống bằng số dòng mới.
 
 ---
 
@@ -83,9 +90,9 @@ Thứ tự **giữa** các router CRD không ảnh hưởng (đường dẫn kh�
 | Đợt | Miền | Route còn trong `server.js` | Lưới test | Trạng thái |
 |---|---|---|---|---|
 | 2 | `/api/crd` | 36 | ✅ `tests/crd.test.js` — 31 test: bảng phân quyền đối chiếu route thật, đặt lịch, trùng lịch, chat, khiếu nại, quản trị. **21/21 đột biến bị bắt** (xem bên dưới) | **Đã tách xong** (chờ merge và deploy) |
-| 3 | `/api/submissions` + `/api/publications` | 36 | ✅ `tests/submissions.test.js` (21 test, 21 route) + `tests/publications.test.js` (17 test, 15 route): bảng phân quyền đối chiếu route thật, máy trạng thái hồ sơ GĐ3→GĐ7 chạy bằng chính các route, lỗi 4xx, CRUD/BibTeX/xuất file. **68/75 đột biến bị bắt (48/48 của `/api/submissions`); 7 còn sống đều là "bỏ authMiddleware" bị cổng ngầm che — tương đương, xem nợ #16** | **Lưới đã dựng, chưa tách route** |
-| 4 | `/api/cap-vien` | 49 | ❌ 0 test | Cần dựng lưới trước (có DB riêng) |
-| 5 | `/api/cooperation` + `/api/htqt` + `/api/events` | 84 | ⚠️ 4 test nhưng chỉ chạm 2/84 route (dashboard-stats, tat-ca-de-xuat) | Cần dựng lưới trước, **rủi ro cao** |
+| 3 | `/api/submissions` + `/api/publications` | 36 | ✅ `tests/submissions.test.js` (21 test, 21 route) + `tests/publications.test.js` (17 test, 15 route) | **Đã tách & merge (`01a8506`)** |
+| 4 | `/api/cap-vien` | 49 | ✅ `tests/capVien.test.js` (8 test: bảng phân quyền khớp 49 route thật, công khai/401/403, nộp hồ sơ + sinh mã DTSCI, mẫu công khai, luồng B2→B3→B4→tải/xóa) | **Đã tách xong** (chờ merge) |
+| 5 | `/api/cooperation` + `/api/htqt` + `/api/events` | 0 | ✅ `tests/cooperationHtqtEvents.test.js` (5 test: đối chiếu 84 route thật, công khai/401/403, luồng Events, HTQT, Cooperation đoàn ra/YTNN/thỏa thuận/sự kiện/thống kê) | **Đã tách xong** (chờ merge) |
 | 6 | `/api/admin` | 84 | ⚠️ 2 test kiểm ranh giới quyền, chạm 2/84 route | Cần dựng lưới trước, **rủi ro cao** |
 
 **Công cụ chung cho mọi đợt:** `npm run route:snapshot` + `npm run route:compare` — ảnh hành vi (mã trạng thái + nội dung) của
@@ -310,6 +317,72 @@ branch `REFACTOR`, `main` không có.
 > - Phiên sau làm:
 > - Nợ kỹ thuật thêm:
 > ```
+
+### 2026-11-25 · refactor/routes-core-1 · Đợt 7 — hoàn tất `core` + rút `server.js` < 300 dòng · **Toàn bộ kế hoạch 8 đợt khép**
+
+- **Đã xong:**
+  - Dựng lưới test [tests/core.test.js](tests/core.test.js) (3 test phủ `health`, `server-time`, `homepage-stats`, `homepage-modules`, `standard-label`, `ace-templates`, `me`, `activity/track`, `users/search`, `dev/pub-analytics-access`, `admin-ui-status`, `login/logout/forgot/reset`).
+  - Tách các route lõi ra khỏi `server.js` sang `routes/core/`: `healthVaTime.js`, `auth.js`, `passwordReset.js`, `homepageStats.js`, `aceTemplates.js`, `homepageModulesVaLabel.js`, `crdVaMe.js`, `devVaUsers.js`.
+  - Chuyển toàn bộ khởi tạo schema, helper nghiệp vụ, multer/paths, email service, cron jobs và bootstrap mount sang kiến trúc phân lớp rõ ràng:
+    - `bootstrap/`: `appSetup.js`, `securityVaCors.js`, `modulesConVaAnalytics.js`, `trangHtmlVaVendor.js`, `adminUi.js`, `sciKhcnPublications.js`, `mountAuthVaSubmissions.js`, `mountCapVienVaUsers.js`, `mountMissionsVaTrangChu.js`, `mountCooperation1.js`, `mountCrdVaModulesCon.js`, `mountCooperationVaEvents.js`, `mountAllRoutes.js`, `startServer.js`
+    - `db/`: `capVienBaseSchema.js`, `capVienSchemaVaHelpers.js`, `crdInitVaHelpers.js`, `coreSchemaInit.js`, `homepageModulesInit.js`, `dmsInit.js`, `seedAdminVaMeeting.js`, `cooperationInit.js`
+    - `lib/`: `storagePaths.js`, `multerUploads.js`
+    - `middleware/`: `authVaPhanQuyen.js`
+    - `services/`: `cascadeVaTenFile.js`, `missionAccessHelpers.js`, `emailThongBao.js`, `emailCoopThongBao.js`, `cooperationPartnerHelpers.js`, `cooperationMailVaHetHan.js`, `cooperationVanBanHelpers.js`, `crdStateHelpers.js`
+    - `jobs/`: `nhacViecDinhKy.js`
+  - `server.js` 9.657 → **119 dòng** (toàn bộ Đợt 0→7: **19.836 → 119 dòng**, đạt mục tiêu `< 300 dòng`); hạ trần `.github/server-js-max-lines` xuống `119`.
+- **Bằng chứng:** `route-inventory.js` (816 route, giữ nguyên 100% thứ tự) → diff **rỗng**; `npm test` **693/693 xanh** (0 fail, 0 skipped).
+- **Merge & Push:** merge nối tiếp Đợt 4 → 5 → 6 → 7 (`refactor/routes-core-1`) vào `main` và push lên `origin/main`.
+
+### 2026-11-25 · refactor/routes-admin-1 · Đợt 6 — hoàn tất Đợt 6 (`/api/admin/*`, 104 route) · **Đợt 6 khép**
+
+- **Đã xong:** dựng lưới test [tests/admin.test.js](tests/admin.test.js) (5 test phủ 105 route `/api/admin*` gồm 104 `/api/admin/*` và `/api/admin-ui-status`, xanh trên code cũ) và tách toàn bộ 84 route `/api/admin/*` còn lại trong `server.js` (20 route `/api/admin/cooperation/*` đan xen đã tách trong Đợt 5 ở `vanBanWord.js`) sang 9 file dưới `routes/admin/`:
+  - `capVien.js` (28 route `/api/admin/cap-vien/*` & `/api/admin/missions/sync-from-cap-vien`)
+  - `usersVaNhatKy.js` (6 route: `GET/POST/DELETE /api/admin/users`, `GET /api/admin/activity-log`, `GET /api/admin/notification-recipients`, `DELETE /api/admin/missions/cache`)
+  - `phanQuyenVaTaiKhoan.js` (10 route: `council-role-grants*`, `budget-appraisal-team*`, `users/:id/roles`, `users/:id/ban`, `users/:id/reset-password`, `users/:id/password`, `users/:id/cap-vien-role`)
+  - `missionsQuanTri.js` (2 route: `PUT/DELETE /api/admin/missions/:id`)
+  - `aceTemplatesVaMissionsImport.js` (4 route: `POST/DELETE /api/admin/ace-templates*`, `POST /api/admin/missions/import`, `POST /api/admin/missions/manual`)
+  - `homepageModules.js` (3 route: `GET/PUT /api/admin/homepage-modules*`)
+  - `caiDatVaThongBao.js` (4 route: `GET/PUT /api/admin/settings/standard-label`, `POST/DELETE /api/admin/notification-recipients*`)
+  - `cooperationSettings.js` (7 route: `cooperation/notification-recipients*`, `cooperation/settings/thoa-thuan-expiry`, `cooperation/thoa-thuan/run-expiry-check`)
+  - `cooperationDeXuat.js` (12 route qua 4 factory theo thứ tự mount cũ: `doan-ra/:id/status`, `thoa-thuan/:id`, `su-kien/:id`, `doan-ra|doan-vao|mou|ytnn/:id`)
+  - `journalMetrics.js` (1 route: `POST /api/admin/journal-metrics/update-if`)
+  - `server.js` 11.006 → **9.657** (**−1.349 dòng**); hạ trần `.github/server-js-max-lines` xuống `9657`.
+- **Bằng chứng:** `route-inventory.js` trước/sau (816 route, cùng thứ tự) → diff **rỗng**; `route:compare` (1.401 yêu cầu) → 0 đổi mã trạng thái, 0 đổi nội dung ở `/api/admin*` (1 khác biệt timestamp `inLuc: gioInVn()` trên `GET /api/ngan-hang-te-bao-khang-the/reports/gmo/print`, cùng độ dài 3590 byte); `tests/admin.test.js` 5/5 xanh.
+- **Phiên sau làm:** (1) Review/merge `refactor/routes-cap-vien-1` → `refactor/routes-cooperation-1` → `refactor/routes-admin-1` vào `main`. (2) Tiếp tục **Đợt 7 (`core` + rút `server.js` < 300 dòng)** — gồm `/api/admin-ui-status` và các route nền còn lại.
+
+### 2026-11-25 · refactor/routes-cooperation-1 · Đợt 5 — hoàn tất Đợt 5 (`cooperation` + `htqt` + `events`, 84 route) · **Đợt 5 khép**
+
+- **Đã xong:** dựng lưới test [tests/cooperationHtqtEvents.test.js](tests/cooperationHtqtEvents.test.js) (5 test phủ 84 route `/api/cooperation/*`, `/api/htqt/*`, `/api/events/*`, xanh trên code cũ) và tách toàn bộ ra khỏi `server.js`:
+  - `routes/events.js` (13 route `/api/events/*`, kèm các helper/multer riêng của sự kiện)
+  - `routes/htqt.js` (6 route `/api/htqt/de-xuat/*`)
+  - 10 router dưới `routes/cooperation/`: `quanLyDeXuat.js` (7), `thamDinhVaDuyetCu.js` (5), `nopVaDanhSach.js` (6), `tongQuanVaThoaThuan.js` (6), `thoaThuanCapNhat.js` (3), `thongKeDashboard.js` (2), `danhSachVaChiTiet.js` (4), `vanBanWord.js` (28 route cho 4 loại — gộp cấu hình bảng để xóa lặp, gồm cả 20 route `/api/admin/cooperation/*` đan xen giữ nguyên thứ tự), `pheDuyetMoi.js` (9), `nopLaiVaSuKien.js` (15)
+  - `server.js` 14.106 → **11.006** (**−3.100 dòng**); hạ trần `.github/server-js-max-lines` xuống `11006`.
+- **Bằng chứng:** `route-inventory.js` trước/sau (816 route, cùng thứ tự) → diff **rỗng**; `route:compare` (1.401 yêu cầu) → **GIỐNG NHAU** (0 đổi mã trạng thái, 0 đổi nội dung, 0 chỉ có ở một bên); `npm test` xanh hoàn toàn.
+- **Cạm bẫy phát hiện:**
+  - `STATUS_LABELS_COOP` phải khai báo trước các điểm mount `routes/cooperation/*` (trước đây nằm ở dòng ~9670 nên chỉ hoạt động khi gọi trong callback runtime, truyền vào factory bị TDZ `ReferenceError`).
+  - `eventGenSoVanBan()` đang dùng `strftime("%Y", ...)` (dấu ngoặc kép) khiến `POST /api/events` trả 500 trên SQLite mới — giữ nguyên hành vi để không sửa bug trong đợt refactor (có thể xử lý ở đợt fix riêng).
+- **Phiên sau làm:** (1) Review/merge `refactor/routes-cap-vien-1` → `refactor/routes-cooperation-1` vào `main`. (2) Tiếp tục **Đợt 6 (`admin`, các route `/api/admin/*` còn lại)** — dựng lưới test trước khi tách.
+- **Nợ kỹ thuật thêm:** các helper `coop*`, `cooperationComputePartnerStats`, `thoaThuan*` dùng chung vẫn ở `server.js` (truyền qua factory; có thể gom sang `services/cooperation*.js` ở đợt dọn sau).
+
+### 2026-11-25 · refactor/routes-cap-vien-1 · Đợt 4 — hoàn tất Đợt 4 (`/api/cap-vien`, 49 route) · **Đợt 4 khép**
+
+- **Đã xong:** dựng lưới test [tests/capVien.test.js](tests/capVien.test.js) (8 test phủ 49 route `/api/cap-vien/*`, xanh trên code cũ) và tách toàn bộ 49 route ra khỏi `server.js` sang 9 file dưới `routes/cap-vien/`:
+  - `nopHoSoVaDanhMuc.js` (10 route: nộp hồ sơ, 5 danh mục công khai, 4 mẫu công khai)
+  - `danhSachVaChiTiet.js` (2 route: danh sách, chi tiết)
+  - `quyetDinhHopDongDaoDuc.js` (6 route: Bước 6, 7, 8)
+  - `baoCaoDinhKy.js` (2 route: upload kỳ, công cụ admin)
+  - `deadline.js` (1 route: deadline bước)
+  - `hoiDongBuoc5.js` (8 route: Bước 5 họp/biên bản/chỉnh sửa/thông qua & council)
+  - `cacBuocQuyTrinh.js` (1 route: dispatcher `steps/:step` cho Bước 2, 3, 6, 7, 8, 8a, 9)
+  - `vatTuVaDieuChinh.js` (2 route: `step9-supply/action`, `step11-adjustment/action`)
+  - `phanBienVaDuToan.js` (9 route: Bước 4, Bước 4A, gửi lại email)
+  - `boSungTaiVaXoa.js` (8 route: `revert-to-step-2`, `revert-to-step/:step`, `dev-reset-step/:step`, `resubmit`, `supplement`, `download`, `files/:fileId/download`, `DELETE`)
+  - `server.js` 16.655 → **14.106** (**−2.549 dòng**); hạ trần `.github/server-js-max-lines` xuống `14106`.
+- **Bằng chứng:** `route-inventory.js` trước/sau (816 route, cùng thứ tự) → diff **rỗng**; `route:compare` (1.401 yêu cầu) → 0 đổi mã trạng thái, 0 đổi nội dung ở `/api/cap-vien/*` (1 khác biệt timestamp trên `GET /api/ngan-hang-te-bao-khang-the/reports/gmo/print` do chạy cách nhau 23 phút); `npm test` xanh hoàn toàn.
+- **Đang dở:** `quan-tri-cap-vien.html` còn thay đổi chưa commit từ trước phiên làm việc (giữ nguyên trong working tree).
+- **Phiên sau làm:** (1) Review/merge `refactor/routes-cap-vien-1` vào `main`. (2) Tiếp tục **Đợt 5 (`cooperation` + `htqt` + `events`, 84 route)** — dựng lưới test trước khi tách.
+- **Nợ kỹ thuật thêm:** các hàm phụ `capVien*` dùng chung vẫn ở `server.js` (truyền qua factory; có thể gom sang `services/capVien*.js` ở đợt dọn sau).
 
 ### 2026-11-18 · refactor/routes-submissions-1 · Đợt 3.2–3.4 — hoàn tất Đợt 3 (`submissions` + `publications`) · **Đợt 3 khép**
 
